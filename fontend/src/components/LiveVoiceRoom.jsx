@@ -1,0 +1,198 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Mic, MicOff, PhoneOff, Volume2, ShieldCheck, Heart, Sparkles } from 'lucide-react';
+import { sendChatMessage } from '../api/client';
+
+export default function LiveVoiceRoom({ onClose }) {
+  const [isLiveActive, setIsLiveActive] = useState(true);
+  const [conversationState, setConversationState] = useState('idle'); // 'listening' | 'thinking' | 'speaking'
+  const [latestUserText, setLatestUserText] = useState('');
+  const [latestAgentReply, setLatestAgentReply] = useState('Namaste. Main Sanjeevani hoon. Aap kaisa mehsoos kar rahe hain? Kripya aaram se batayein...');
+  const [tier, setTier] = useState('Green');
+
+  const recognitionRef = useRef(null);
+  const synthRef = useRef(window.speechSynthesis);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge.');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'hi-IN'; // Default Hindi with regional accent recognition
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+      setConversationState('listening');
+    };
+
+    recognition.onresult = async (event) => {
+      const transcript = event.results[0][0].transcript;
+      if (!transcript.trim()) return;
+
+      setLatestUserText(transcript);
+      setConversationState('thinking');
+
+      try {
+        // Send to Sanjeevani's Triage Engine
+        const res = await sendChatMessage('live-session-' + Date.now(), transcript);
+        setLatestAgentReply(res.reply_text);
+        setTier(res.tier || 'Green');
+
+        // Speak the response back
+        speakAgentResponse(res.reply_text);
+      } catch (err) {
+        speakAgentResponse('Aapki aawaz theek se sunai nahi di, kripya dobara batayein.');
+      }
+    };
+
+    recognition.onerror = (e) => {
+      console.warn('Speech Recognition Event:', e.error);
+      if (isLiveActive && conversationState !== 'speaking') {
+        setTimeout(() => startListening(), 800);
+      }
+    };
+
+    recognition.onend = () => {
+      if (isLiveActive && conversationState === 'listening') {
+        // Restart listening if not currently speaking
+        setTimeout(() => startListening(), 500);
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    // Start with a welcoming spoken greeting
+    speakAgentResponse(latestAgentReply);
+
+    return () => {
+      if (recognitionRef.current) recognitionRef.current.abort();
+      if (synthRef.current) synthRef.current.cancel();
+    };
+  }, []);
+
+  const startListening = () => {
+    try {
+      if (recognitionRef.current && conversationState !== 'speaking') {
+        recognitionRef.current.start();
+        setConversationState('listening');
+      }
+    } catch (e) {
+      // Already running
+    }
+  };
+
+  const speakAgentResponse = (text) => {
+    if (!synthRef.current) return;
+
+    synthRef.current.cancel(); // Stop any pending speech
+    setConversationState('speaking');
+
+    // Clean markdown asterisks before text-to-speech
+    const cleanText = text.replace(/[*_#]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'hi-IN';
+    utterance.rate = 0.92; // Slightly slower, calm cadence
+
+    // Attempt to pick a natural soothing voice
+    const voices = synthRef.current.getVoices();
+    const hindiVoice = voices.find(v => v.lang.includes('hi') || v.name.includes('India'));
+    if (hindiVoice) utterance.voice = hindiVoice;
+
+    utterance.onend = () => {
+      // Once the agent finishes speaking, immediately listen to the user again
+      setConversationState('idle');
+      if (isLiveActive) {
+        setTimeout(() => startListening(), 400);
+      }
+    };
+
+    synthRef.current.speak(utterance);
+  };
+
+  const handleEndCall = () => {
+    setIsLiveActive(false);
+    if (recognitionRef.current) recognitionRef.current.abort();
+    if (synthRef.current) synthRef.current.cancel();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-warm-indigo/95 backdrop-blur-xl text-white flex flex-col items-center justify-between p-6 md:p-12 animate-fadeIn">
+      
+      {/* Top Calming Header */}
+      <div className="w-full max-w-xl flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-full bg-sage/30 border border-sage/60 flex items-center justify-center text-[#EFE9D9]">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="font-serif font-bold text-lg text-white">Sanjeevani Live</h3>
+            <p className="text-xs text-[#EFE9D9]/70">Continuous Compassionate Dialogue • Hands-Free</p>
+          </div>
+        </div>
+
+        <div className="px-3 py-1 rounded-full text-xs font-semibold bg-card/10 border border-white/15 text-gold-warm flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-sage animate-ping" />
+          {conversationState === 'listening' ? 'Listening to you...' : conversationState === 'speaking' ? 'Speaking softly...' : 'Understanding...'}
+        </div>
+      </div>
+
+      {/* Central Organic Breathing Aura (Visual Feedback) */}
+      <div className="flex flex-col items-center justify-center my-auto text-center max-w-lg px-4">
+        
+        {/* Breathing Sphere */}
+        <div className="relative mb-10">
+          <div className={`w-44 h-44 md:w-56 md:h-56 rounded-full flex items-center justify-center transition-all duration-700 ${
+            conversationState === 'speaking'
+              ? 'bg-gradient-to-tr from-[#5A7855] via-[#D4A359] to-[#5A7855] animate-calm-pulse'
+              : conversationState === 'listening'
+              ? 'bg-gradient-to-tr from-[#243B55] to-[#5A7855] scale-105 shadow-[0_0_60px_rgba(90,120,85,0.4)]'
+              : 'bg-card/10 scale-95 opacity-60'
+          }`}>
+            <div className="w-36 h-36 md:w-48 md:h-48 rounded-full bg-warm-indigo flex items-center justify-center">
+              {conversationState === 'speaking' ? (
+                <Volume2 className="w-12 h-12 text-gold-warm animate-bounce" />
+              ) : conversationState === 'listening' ? (
+                <Mic className="w-12 h-12 text-sage animate-pulse" />
+              ) : (
+                <Heart className="w-10 h-10 text-white/40" />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Real-time Spoken Subtitles (Soft & Readable) */}
+        <div className="min-h-[100px] flex flex-col items-center justify-center space-y-2">
+          {latestUserText && (
+            <p className="text-xs md:text-sm text-white/60 italic">
+              "{latestUserText}"
+            </p>
+          )}
+          <p className="font-serif text-lg md:text-xl text-[#F7F5EE] leading-relaxed max-w-md font-medium">
+            {latestAgentReply}
+          </p>
+        </div>
+      </div>
+
+      {/* Bottom Controls */}
+      <div className="w-full max-w-md flex flex-col items-center gap-4">
+        <p className="text-xs text-white/50 text-center">
+          Just speak naturally without pressing any buttons. Sanjeevani listens and responds continuously.
+        </p>
+
+        <button
+          onClick={handleEndCall}
+          className="flex items-center gap-2 bg-rose-soft hover:bg-[#a14336] text-white px-8 py-3.5 rounded-full font-bold shadow-lg transition-transform hover:scale-105"
+        >
+          <PhoneOff className="w-5 h-5" />
+          End Conversation
+        </button>
+      </div>
+
+    </div>
+  );
+}
