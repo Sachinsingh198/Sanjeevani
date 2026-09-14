@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Manrope', 'Noto Sans Devanagari', system-ui, sans-serif;
+  --font-serif: 'Fraunces', Georgia, serif;
+
+  /* Mapped Theme Colors */
+  --color-mist: var(--mist);
+  --color-sage: var(--sage);
+  --color-sage-light: var(--sage-light);
+  --color-warm-indigo: var(--warm-indigo);
+  --color-sand: var(--sand);
+  --color-gold-warm: var(--gold-warm);
+  --color-rose-soft: var(--rose-soft);
+  --color-primary: var(--text-primary);
+  --color-muted: var(--text-muted);
+  --color-card: var(--bg-card);
+  --color-border-subtle: var(--border-subtle);
+}
+
+:root {
+  --mist: #F7F5EE;
+  --sage: #5A7855;
+  --sage-light: #EBF1EA;
+  --warm-indigo: #1A263D;
+  --sand: #EFE9D9;
+  --gold-warm: #D4A359;
+  --rose-soft: #B85042;
+
+  --text-primary: #1A263D;
+  --text-muted: #6b7280;
+  --bg-card: rgba(255, 255, 255, 0.8);
+  --border-subtle: rgba(0, 0, 0, 0.05);
+
+  /* NEW — Sanjeevani identity tokens.
+     The "herb glow" is the one deliberately bold, recurring visual signature
+     (see SanjeevaniOrb) — a nod to the mythic life-restoring Sanjeevani
+     Booti glowing on the mountainside. Everything else around it stays
+     quiet and disciplined, per design principle. */
+  --herb-glow: #8FBF7F;
+  --herb-glow-light: #DCEFCF;
+}
+
+.dark {
+  --mist: #0F172A;
+  --sage: #6D8E67;
+  --sage-light: #1E293B;
+  --warm-indigo: #0F172A;
+  --sand: #1E293B;
+  --gold-warm: #E8A33D;
+  --rose-soft: #EF4444;
+
+  --text-primary: #F8FAFC;
+  --text-muted: #94A3B8;
+  --bg-card: rgba(30, 41, 59, 0.8);
+  --border-subtle: rgba(255, 255, 255, 0.1);
+
+  --herb-glow: #6FA85E;
+  --herb-glow-light: #2C4A28;
+}
+
+/* ── Sanjeevani Orb — shared breathing identity ───────────────────────── */
+.sj-orb { display: inline-block; }
+.sj-orb-halo { transform-origin: center; }
+
+.sj-orb-idle .sj-orb-halo {
+  animation: sj-breathe 4.5s ease-in-out infinite;
+}
+.sj-orb-listening .sj-orb-halo {
+  animation: sj-breathe 2.2s ease-in-out infinite;
+}
+.sj-orb-thinking .sj-orb-halo {
+  animation: sj-swirl 3s linear infinite;
+}
+.sj-orb-speaking .sj-orb-halo {
+  animation: sj-breathe 1.4s ease-in-out infinite;
+}
+
+@keyframes sj-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.16; }
+  50% { transform: scale(1.35); opacity: 0.32; }
+}
+
+@keyframes sj-swirl {
+  0% { transform: scale(1) rotate(0deg); opacity: 0.16; }
+  50% { transform: scale(1.15) rotate(180deg); opacity: 0.3; }
+  100% { transform: scale(1) rotate(360deg); opacity: 0.16; }
+}
+
+/* Soothing breathing aura animation for Live Voice */
+@keyframes calm-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+    box-shadow: 0 0 40px rgba(90, 120, 85, 0.35);
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+    box-shadow: 0 0 80px rgba(212, 163, 89, 0.5);
+  }
+}
+
+.animate-calm-pulse {
+  animation: calm-pulse 4s ease-in-out infinite;
+}
+
+@keyframes slow-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-slow-float {
+  animation: slow-float 6s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Respect reduced-motion preferences across all custom animations */
+@media (prefers-reduced-motion: reduce) {
+  .sj-orb-halo,
+  .animate-calm-pulse,
+  .animate-slow-float,
+  .animate-fadeIn {
+    animation: none !important;
+  }
+}
+
+/* Custom Scrollbar for a polished look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F7F5EE;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4A359;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #5A7855;
+}
