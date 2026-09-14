@@ -1,0 +1,17 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+models_cache
+sessions.db
+sanjeevani.db
+sessions.db-shm
+sessions.db-wal
+
+# Virtual environments
+.venv
+.env

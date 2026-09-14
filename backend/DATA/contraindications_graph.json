@@ -1,0 +1,34 @@
+{
+  "contraindications": [
+    {
+      "herb": "Ginger/Sunthi",
+      "target_condition": "Hyperacidity/PepticUlcer",
+      "severity": "HIGH",
+      "reason": "Increases Pitta and irritates inflamed gastric mucosa."
+    },
+    {
+      "herb": "Black Pepper/Maricha",
+      "target_condition": "Hyperacidity/PepticUlcer",
+      "severity": "HIGH",
+      "reason": "Direct irritant to active gastrointestinal ulcerations."
+    },
+    {
+      "herb": "Mulethi/Licorice",
+      "target_condition": "Hypertension",
+      "severity": "MEDIUM",
+      "reason": "Excessive licorice consumption can cause pseudoaldosteronism and elevate blood pressure."
+    },
+    {
+      "herb": "Guggulu",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Possesses mild emmenagogue properties; strictly avoided during pregnancy."
+    },
+    {
+      "herb": "Vasa/Adhatoda",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Contains uterotonic alkaloids (vasicine); unsafe in pregnancy."
+    }
+  ]
+}

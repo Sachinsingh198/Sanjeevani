@@ -1,0 +1,41 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-multipart
+langgraph
+langchain-core
+langsmith
+
+# Enterprise Gateway & LLMs
+portkey-ai
+langchain-groq
+langchain-google-genai
+
+# Vector Database & Embeddings
+qdrant-client[fastembed]
+networkx
+
+# Persistence & Storage
+sqlalchemy
+aiosqlite
+psycopg2-binary
+
+# Computer Vision & Diagnostics
+opencv-python-headless
+pillow
+numpy
+
+# Evaluation & Metrics
+ragas
+datasets
+pytest
+pytest-asyncio
+httpx
+requests
+
+langgraph-checkpoint-sqlite
+
+# Authentication
+bcrypt
+pyjwt
