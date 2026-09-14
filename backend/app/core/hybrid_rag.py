@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from typing import List, Dict, Any
 from qdrant_client import QdrantClient, models
 from fastembed import TextEmbedding
@@ -158,6 +159,28 @@ class HybridRemedyStore:
         else:
             print(f"[Qdrant] Collection '{self.garhwali_collection_name}' is active with {collection_info.points_count} points.")
 
+    def _extract_text_from_file(self, file_path: str, filename: str) -> str:
+        """Reads .txt, .md, or .docx files safely."""
+        if filename.endswith(".docx"):
+            try:
+                import docx
+                doc = docx.Document(file_path)
+                return "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+            except Exception as e:
+                import zipfile
+                import xml.etree.ElementTree as ET
+                try:
+                    with zipfile.ZipFile(file_path) as z:
+                        xml_content = z.read("word/document.xml")
+                    tree = ET.fromstring(xml_content)
+                    return "".join(node.text for node in tree.iter() if node.text)
+                except Exception as e2:
+                    print(f"[Qdrant Error] Failed reading docx {filename}: {e2}")
+                    return ""
+        else:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                return f.read()
+
     def seed_garhwali_dataset(self):
         if not os.path.exists(self.garhwali_data_dir):
             print(f"[Qdrant Error] Garhwali dataset folder not found: {self.garhwali_data_dir}")
@@ -169,19 +192,20 @@ class HybridRemedyStore:
         point_id = 1
 
         for filename in os.listdir(self.garhwali_data_dir):
-            if not filename.endswith((".txt", ".md")):
+            if not filename.endswith((".txt", ".md", ".docx")):
                 continue
             
             file_path = os.path.join(self.garhwali_data_dir, filename)
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    text = f.read()
+                text = self._extract_text_from_file(file_path, filename)
+                if not text:
+                    continue
                     
                 # Simple chunking by double newline (paragraphs)
-                chunks = [c.strip() for c in text.split("\n\n") if len(c.strip()) > 50]
+                chunks = [c.strip() for c in text.split("\n\n") if len(c.strip()) > 40]
                 
                 # Further split large chunks to avoid huge embeddings
-                max_chunk_len = 800
+                max_chunk_len = 700
                 final_chunks = []
                 for chunk in chunks:
                     if len(chunk) > max_chunk_len:
@@ -224,7 +248,34 @@ class HybridRemedyStore:
         print(f"[Qdrant] Successfully indexed {len(ids)} Garhwali vector points.")
 
     def search_garhwali(self, query_text: str, limit: int = 3) -> List[Dict[str, Any]]:
-        """Searches the Garhwali text collection for cultural/dialect context."""
+        """
+        Hybrid search in Garhwali documents:
+        Combines lexical keyword matching with dense vector search for high recall.
+        """
+        results = []
+        seen_contents = set()
+
+        # 1. Lexical keyword search over Garhwali files for exact anatomical/symptom matches
+        keywords = [w.lower() for w in re.findall(r"[\w\u0900-\u097F]+", query_text) if len(w) > 2]
+        if keywords and os.path.exists(self.garhwali_data_dir):
+            dict_file = os.path.join(self.garhwali_data_dir, "Dictionary_English-Garhwali-Hindi_FULL_Reference_Format.md")
+            if os.path.exists(dict_file):
+                try:
+                    with open(dict_file, "r", encoding="utf-8", errors="ignore") as f:
+                        lines = f.readlines()
+                    for line in lines:
+                        line_lower = line.lower()
+                        if any(kw in line_lower for kw in keywords) and ("*" in line or "**" in line):
+                            clean_line = line.strip()
+                            if clean_line and clean_line not in seen_contents:
+                                seen_contents.add(clean_line)
+                                results.append({"source_file": "Dictionary", "content": clean_line})
+                                if len(results) >= limit:
+                                    break
+                except Exception as e:
+                    print(f"[Garhwali Lexical Search Error]: {e}")
+
+        # 2. Dense Vector Search in Qdrant
         try:
             query_embedding = list(self.embedding_model.embed([query_text]))[0].tolist()
             search_result = self.client.query_points(
@@ -232,7 +283,13 @@ class HybridRemedyStore:
                 query=query_embedding,
                 limit=limit
             )
-            return [point.payload for point in search_result.points if point.payload]
+            for point in search_result.points:
+                if point.payload and point.payload.get("content"):
+                    c = point.payload["content"]
+                    if c not in seen_contents:
+                        seen_contents.add(c)
+                        results.append(point.payload)
         except Exception as e:
             print(f"[Qdrant Search Error (Garhwali)]: {e}")
-            return []
+
+        return results[:limit]

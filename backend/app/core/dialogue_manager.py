@@ -3,7 +3,9 @@ from typing import Tuple, Dict, Any
 
 GREETING_PATTERNS = [
     r"^(hi|hello|hey|namaste|pranam|namaskar|good\s+morning|good\s+evening)\b",
-    r"^(kaise\s+ho|how\s+are\s+you|kya\s+haal\s+hai)\b"
+    r"^(kaise\s+ho|how\s+are\s+you|kya\s+haal\s+hai)\b",
+    r"^(dainu|dainu\s+bhula|pailagon|jai\s+badri\s+vishal|badri\s+vishal|kani\s+chha|kani\s+chho|bhalu\s+chha|kya\s+haal\s+chhan)\b",
+    r"^(दैणु|दैन्यू|पहिलागण|कनि\s+छा|कनि\s+छो|भालु\s+छ)\b"
 ]
 
 ADVERSARIAL_PATTERNS = [

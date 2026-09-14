@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, PhoneOff, Volume2 } from 'lucide-react';
-import { sendChatMessage, getOrCreateConversationId } from '../api/client';
+import { Mic, MicOff, PhoneOff, Volume2, Globe } from 'lucide-react';
+import { sendChatMessage, getOrCreateConversationId, synthesizeSpeech } from '../api/client';
 import SanjeevaniOrb from './SanjeevaniOrb';
 
 export default function LiveVoiceRoom({ onClose }) {
@@ -9,16 +9,12 @@ export default function LiveVoiceRoom({ onClose }) {
   const [latestUserText, setLatestUserText] = useState('');
   const [latestAgentReply, setLatestAgentReply] = useState('Namaste. Main Sanjeevani hoon. Aap kaisa mehsoos kar rahe hain? Kripya aaram se batayein...');
   const [tier, setTier] = useState('Green');
+  const [detectedLang, setDetectedLang] = useState('hindi');
 
-  // FIX: previously each turn used a brand-new `'live-session-' + Date.now()`
-  // conversation id, so the backend had no way to link turns together —
-  // the exact "multi-turn bug" client.js's own comments say was fixed for
-  // text chat, but voice mode had silently regressed. We now share the
-  // same persisted conversation id as the text chat session.
   const conversationIdRef = useRef(getOrCreateConversationId());
-
   const recognitionRef = useRef(null);
-  const synthRef = useRef(window.speechSynthesis);
+  const currentAudioRef = useRef(null);
+  const synthRef = useRef(typeof window !== 'undefined' ? window.speechSynthesis : null);
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -29,7 +25,7 @@ export default function LiveVoiceRoom({ onClose }) {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'hi-IN'; // Hindi ASR — the closest supported locale for Garhwali speech
+    recognition.lang = 'hi-IN'; // Hindi/Devanagari acoustic model works best for Hindi & Garhwali speech
     recognition.interimResults = false;
     recognition.continuous = false;
 
@@ -45,16 +41,15 @@ export default function LiveVoiceRoom({ onClose }) {
       setConversationState('thinking');
 
       try {
-        // Send to Sanjeevani's Triage Engine using the SAME conversation id
-        // every turn, so multi-turn context (already-asked questions,
-        // phase progression) is preserved for voice sessions too.
-        const res = await sendChatMessage(conversationIdRef.current, transcript);
+        const res = await sendChatMessage(conversationIdRef.current, transcript, [], 'auto');
         setLatestAgentReply(res.reply_text);
         setTier(res.tier || 'Green');
+        const lang = res.detected_language || 'hindi';
+        setDetectedLang(lang);
 
-        speakAgentResponse(res.reply_text);
+        speakAgentResponse(res.reply_text, lang);
       } catch (err) {
-        speakAgentResponse('Aapki aawaz theek se sunai nahi di, kripya dobara batayein.');
+        speakAgentResponse('Aapki aawaz theek se sunai nahi di, kripya dobara batayein.', 'hindi');
       }
     };
 
@@ -72,10 +67,14 @@ export default function LiveVoiceRoom({ onClose }) {
     };
 
     recognitionRef.current = recognition;
-    speakAgentResponse(latestAgentReply);
+    speakAgentResponse(latestAgentReply, 'hindi');
 
     return () => {
       if (recognitionRef.current) recognitionRef.current.abort();
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
       if (synthRef.current) synthRef.current.cancel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -92,13 +91,55 @@ export default function LiveVoiceRoom({ onClose }) {
     }
   };
 
-  const speakAgentResponse = (text) => {
-    if (!synthRef.current) return;
+  const speakAgentResponse = async (text, language = 'hindi') => {
+    // 1. Cancel previous audio and speech
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if (synthRef.current) synthRef.current.cancel();
 
-    synthRef.current.cancel();
     setConversationState('speaking');
 
-    const cleanText = text.replace(/[*_#]/g, '');
+    // 2. Try Backend Neural Indian Accent Voice (AI4Bharat / Bhashini / Neural Indic)
+    try {
+      const audioUrl = await synthesizeSpeech(text, language, 'female');
+      if (audioUrl) {
+        const audio = new Audio(audioUrl);
+        currentAudioRef.current = audio;
+
+        audio.onended = () => {
+          setConversationState('idle');
+          if (isLiveActive) {
+            setTimeout(() => startListening(), 400);
+          }
+        };
+
+        audio.onerror = () => {
+          console.warn('[Audio Playback Error] Falling back to browser speech synthesis.');
+          fallbackBrowserSpeech(text);
+        };
+
+        await audio.play();
+        return;
+      }
+    } catch (e) {
+      console.warn('[Backend TTS Failed] Falling back to browser speech:', e);
+    }
+
+    // 3. Fallback to browser synthesis if offline or error
+    fallbackBrowserSpeech(text);
+  };
+
+  const fallbackBrowserSpeech = (text) => {
+    if (!synthRef.current) {
+      setConversationState('idle');
+      if (isLiveActive) setTimeout(() => startListening(), 400);
+      return;
+    }
+
+    synthRef.current.cancel();
+    const cleanText = text.replace(/[*_#`]/g, '');
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'hi-IN';
     utterance.rate = 0.92;
@@ -114,17 +155,32 @@ export default function LiveVoiceRoom({ onClose }) {
       }
     };
 
+    utterance.onerror = () => {
+      setConversationState('idle');
+      if (isLiveActive) setTimeout(() => startListening(), 400);
+    };
+
     synthRef.current.speak(utterance);
   };
 
   const handleEndCall = () => {
     setIsLiveActive(false);
     if (recognitionRef.current) recognitionRef.current.abort();
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
     if (synthRef.current) synthRef.current.cancel();
     onClose();
   };
 
   const orbState = conversationState === 'idle' ? 'idle' : conversationState;
+
+  const langDisplayMap = {
+    garhwali: 'गढ़वाली (Garhwali)',
+    hindi: 'हिन्दी (Hindi)',
+    english: 'English (Indian Accent)'
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-warm-indigo/95 backdrop-blur-xl text-white flex flex-col items-center justify-between p-6 md:p-12 animate-fadeIn">
@@ -135,17 +191,23 @@ export default function LiveVoiceRoom({ onClose }) {
           <SanjeevaniOrb state={orbState} size={36} />
           <div>
             <h3 className="font-serif font-bold text-lg text-white">Sanjeevani Live</h3>
-            <p className="text-xs text-[#EFE9D9]/70">Continuous Compassionate Dialogue • Hands-Free</p>
+            <p className="text-xs text-[#EFE9D9]/70">Continuous Compassionate Dialogue • Pure Indian Voice</p>
           </div>
         </div>
 
-        <div className="px-3 py-1 rounded-full text-xs font-semibold bg-card/10 border border-white/15 text-gold-warm flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-sage animate-ping" />
-          {conversationState === 'listening' ? 'Listening to you...' : conversationState === 'speaking' ? 'Speaking softly...' : 'Understanding...'}
+        <div className="flex items-center gap-2">
+          <span className="hidden sm:inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-white/10 text-[#EFE9D9]">
+            <Globe className="w-3 h-3 text-gold-warm" />
+            {langDisplayMap[detectedLang] || 'हिन्दी'}
+          </span>
+          <div className="px-3 py-1 rounded-full text-xs font-semibold bg-card/10 border border-white/15 text-gold-warm flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-sage animate-ping" />
+            {conversationState === 'listening' ? 'Listening...' : conversationState === 'speaking' ? 'Speaking...' : 'Understanding...'}
+          </div>
         </div>
       </div>
 
-      {/* Central Breathing Orb (Visual Feedback) — now the shared Sanjeevani identity */}
+      {/* Central Breathing Orb (Visual Feedback) */}
       <div className="flex flex-col items-center justify-center my-auto text-center max-w-lg px-4">
 
         <div className="relative mb-10">
@@ -183,7 +245,7 @@ export default function LiveVoiceRoom({ onClose }) {
       {/* Bottom Controls */}
       <div className="w-full max-w-md flex flex-col items-center gap-4">
         <p className="text-xs text-white/50 text-center">
-          Just speak naturally without pressing any buttons. Sanjeevani listens and responds continuously.
+          Speak naturally in Garhwali, Hindi, or English. Sanjeevani auto-detects your language and responds in pure Indian accent.
         </p>
 
         <button

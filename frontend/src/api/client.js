@@ -52,12 +52,12 @@ export const checkBackendHealth = async () => {
   }
 };
 
-export const sendChatMessage = async (conversationId, message, patientConditions = []) => {
+export const sendChatMessage = async (conversationId, message, patientConditions = [], languageHint = 'auto') => {
   try {
     const res = await api.post('/chat/message', {
       conversation_id: conversationId,
       message: message,
-      language_hint: 'hi',
+      language_hint: languageHint,
       patient_context: { known_conditions: patientConditions },
     });
     return res.data;
@@ -114,3 +114,25 @@ export const sendChatMessage = async (conversationId, message, patientConditions
     throw err;
   }
 };
+
+/**
+ * Calls backend Neural Indian Accent TTS (Bhashini / AI4Bharat / Neural Indic).
+ * Returns an audio object URL for seamless HTML5 Audio playback.
+ */
+export const synthesizeSpeech = async (text, language = 'hi', gender = 'female') => {
+  try {
+    const res = await api.post('/chat/tts', {
+      text: text,
+      language: language,
+      gender: gender,
+    }, {
+      responseType: 'blob',
+      timeout: 15000,
+    });
+    return URL.createObjectURL(res.data);
+  } catch (err) {
+    console.warn('[TTS API Error] Falling back to browser speech synthesis:', err);
+    return null;
+  }
+};
+

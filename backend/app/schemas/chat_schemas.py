@@ -9,7 +9,7 @@ class PatientContext(BaseModel):
 class ChatRequest(BaseModel):
     conversation_id: str
     message: str
-    language_hint: str = "hi"
+    language_hint: str = "auto"
     patient_context: PatientContext = Field(default_factory=PatientContext)
 
 class RemedyItem(BaseModel):
@@ -29,3 +29,9 @@ class ChatResponse(BaseModel):
     requires_immediate_doctor: bool
     # Dialogue phase exposed so the frontend PhaseProgress stepper is accurate
     phase: str = "GREETING"
+    detected_language: str = "hindi"
+
+class TTSRequest(BaseModel):
+    text: str
+    language: str = "hi"
+    gender: str = "female"

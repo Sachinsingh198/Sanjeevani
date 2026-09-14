@@ -1,8 +1,12 @@
-from fastapi import APIRouter, HTTPException
-from app.schemas.chat_schemas import ChatRequest, ChatResponse, RemedyItem
+import io
+import traceback
+from fastapi import APIRouter, HTTPException, Response
+from app.schemas.chat_schemas import ChatRequest, ChatResponse, RemedyItem, TTSRequest
 from app.agents.graph import sanjeevani_workflow
+from app.core.tts_engine import IndicTTSEngine
 
 router = APIRouter(prefix="/chat", tags=["Triage & Dialogue"])
+tts_engine = IndicTTSEngine()
 
 
 @router.post("/message", response_model=ChatResponse)
@@ -16,9 +20,6 @@ async def process_chat_message(req: ChatRequest):
     """
     try:
         # All required AND optional AgentState fields must be initialized here.
-        # Required fields (_AgentStateRequired) are always present.
-        # Optional fields are included with safe defaults so triage_node / responder_node
-        # can use state.get() safely without KeyError.
         initial_state = {
             # --- Required output fields (overwritten by nodes on every run) ---
             "conversation_id": req.conversation_id,
@@ -31,10 +32,6 @@ async def process_chat_message(req: ChatRequest):
             # --- Per-turn input: always comes from the request ---
             "normalized_message": "",
             "patient_conditions": req.patient_context.known_conditions,
-            # *** DO NOT include dialogue_phase / turn_count / symptom_profile here ***
-            # Passing them here would OVERRIDE the LangGraph checkpoint on every call,
-            # resetting the GREETING→INTAKE→PROBING→CONCLUDED flow back to GREETING.
-            # These fields are restored automatically from the SQLite checkpoint.
         }
 
         # Checkpointed execution — the same thread_id (conversation_id) is used
@@ -65,13 +62,40 @@ async def process_chat_message(req: ChatRequest):
             escalation_triggered=result.get("escalation_triggered", False),
             requires_immediate_doctor=(tier == "Red"),
             phase=result.get("dialogue_phase", "GREETING"),
+            detected_language=result.get("detected_language", "hindi"),
         )
 
     except Exception as e:
-        # Preserve stack trace in server logs while returning a clean client error
-        import traceback
         traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"Triage Pipeline Error: {type(e).__name__}: {str(e)}"
-        )
+        )
+
+
+@router.post("/tts")
+async def generate_speech(req: TTSRequest):
+    """
+    Synthesizes speech using authentic Pure Indian Accent TTS (Bhashini / AI4Bharat / Neural Indic).
+    Returns audio/mpeg binary stream.
+    """
+    try:
+        audio_bytes, media_type = await tts_engine.synthesize(
+            text=req.text,
+            language=req.language,
+            gender=req.gender
+        )
+        return Response(
+            content=audio_bytes,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": "inline; filename=speech.mp3",
+                "Cache-Control": "public, max-age=86400"
+            }
+        )
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"TTS Synthesis Failed: {str(e)}"
+        )

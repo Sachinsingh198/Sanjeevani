@@ -27,11 +27,12 @@ def test_workflow_green_tier_routine():
     """Routine cough query must retrieve verified AYUSH remedies and stay in Green tier."""
     initial_state = {
         "conversation_id": "test-routine-102",
-        "raw_user_message": "Gale me halki khasi aur kharash hai",
+        "raw_user_message": "Gale me halki khasi aur kharash hai, nuskha batao",
         "normalized_message": "",
         "patient_conditions": [],
         "detected_tier": "Green",
         "clinical_flags": [],
+        "dialogue_phase": "CONCLUDED",
         "retrieved_remedies": [],
         "final_reply_text": "",
         "escalation_triggered": False

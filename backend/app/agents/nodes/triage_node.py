@@ -16,16 +16,29 @@ def triage_node(state: AgentState) -> AgentState:
     tier, flags = triage_engine.evaluate(normalized)
     intent = classify_intent(normalized)
 
-    # 1.5 Detect Language (Garhwali vs Hindi/English)
-    detected_language = state.get("detected_language", "")
-    if not detected_language or intent != "GREETING":
+    # 1.5 Auto-Detect Language (Garhwali vs Hindi vs English)
+    heuristic_lang = bhashini_engine.detect_language(raw_text)
+    if heuristic_lang in ("garhwali", "english"):
+        detected_language = heuristic_lang
+    else:
+        # Check if LLM can detect regional nuances for longer queries
         llm = get_llm()
-        if llm:
-            sys_msg = SystemMessage(content="Analyze the language of the user's message. If it contains words from the Garhwali dialect (e.g., 'mund peed', 'bhyo', 'gale ma', 'jyu') or looks like Garhwali written in Roman/Devanagari script, output exactly 'garhwali'. Otherwise, output exactly 'hindi'.")
+        if llm and len(raw_text.split()) >= 3:
+            sys_msg = SystemMessage(
+                content="Analyze the language of the user's message. Output exactly one word: 'garhwali', 'english', or 'hindi'. "
+                        "If it contains words from the Garhwali dialect (e.g. 'mund', 'peed', 'peer', 'bhyo', 'chha', 'chhi', 'dainu', 'bhula', 'miku', 'twaku', 'syal'), output 'garhwali'. "
+                        "If in English, output 'english'. Otherwise output 'hindi'."
+            )
             hum_msg = HumanMessage(content=raw_text)
             detected = _try_llm(llm, [sys_msg, hum_msg])
             if detected:
-                detected_language = "garhwali" if "garhwali" in detected.lower() else "hindi"
+                det_clean = detected.lower().strip()
+                if "garhwali" in det_clean:
+                    detected_language = "garhwali"
+                elif "english" in det_clean:
+                    detected_language = "english"
+                else:
+                    detected_language = "hindi"
             else:
                 detected_language = "hindi"
         else:
