@@ -63,6 +63,11 @@ class IndicTTSEngine:
         if not (self.bhashini_user_id and self.bhashini_api_key):
             return None
 
+        # Skip if placeholder values
+        combined = (self.bhashini_user_id + self.bhashini_api_key).lower()
+        if "your-" in combined or "placeholder" in combined or "xxx" in combined:
+            return None
+
         try:
             lang_code = "hi" if language in ("hi", "garhwali", "hindi") else "en"
             headers = {

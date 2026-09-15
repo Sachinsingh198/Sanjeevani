@@ -5,13 +5,16 @@ from app.api import chat, screen
 from app.api import auth_api, admin_api
 from app.models import create_tables, seed_default_admin
 from app.config import settings
-
+from app.api import voice
+from app.core.ai4bharat_tts import ai4bharat_tts_engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: create database tables and seed the default admin account."""
     create_tables()
     seed_default_admin()
+    if settings.TTS_PROVIDER == "ai4bharat":
+        ai4bharat_tts_engine.start_background_load()
     print("[Sanjeevani] Database initialized, admin seeded.")
     yield
 
@@ -32,11 +35,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Mount Routers
 app.include_router(auth_api.router)
 app.include_router(admin_api.router)
 app.include_router(chat.router)
 app.include_router(screen.router)
+app.include_router(voice.router)
 
 
 @app.get("/health")

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send, Mic, MicOff, RefreshCw, User, AlertTriangle, RotateCcw,
-  Clock, Volume2, Settings2, Wifi, WifiOff, Globe, VolumeX,
+  Clock, Volume2, Settings2, Wifi, WifiOff,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import TierBadge from '../components/TierBadge';
@@ -15,8 +15,8 @@ import SessionHistoryDrawer from '../components/SessionHistoryDrawer';
 import AccessibilityBar from '../components/AccessibilityBar';
 import {
   sendChatMessage, getOrCreateConversationId, resetConversationId, checkBackendHealth,
-  synthesizeSpeech,
 } from '../api/client';
+import { speakText } from '../api/voiceClient';
 import { recordSessionTurn } from '../lib/sessionStore';
 
 // ---------------------------------------------------------------------------
@@ -76,15 +76,13 @@ export default function Chat() {
   const [detailsOpen, setDetailsOpen] = useState(false); // collapses tags/session id out of the default view
   const [textScale, setTextScale] = useState(1);
   const [uiLang, setUiLang] = useState('hi');
-  const [detectedLang, setDetectedLang] = useState('hindi');
-  const [playingIdx, setPlayingIdx] = useState(null);
   const [backendOnline, setBackendOnline] = useState(null); // null = checking
+  const [speakingMsgIdx, setSpeakingMsgIdx] = useState(null); // which bubble is currently being read aloud
 
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
-  const currentAudioRef = useRef(null);
-  const synthRef = useRef(typeof window !== 'undefined' ? window.speechSynthesis : null);
+  const stopSpeakingRef = useRef(null); // cleanup fn returned by speakText()
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -99,6 +97,12 @@ export default function Chat() {
     let mounted = true;
     checkBackendHealth().then((ok) => { if (mounted) setBackendOnline(ok); });
     return () => { mounted = false; };
+  }, []);
+
+  // Stop any in-flight speech (backend Bhashini audio or browser fallback)
+  // when the component unmounts.
+  useEffect(() => {
+    return () => { stopSpeakingRef.current?.(); };
   }, []);
 
   const toggleCondition = useCallback((value) => {
@@ -153,56 +157,22 @@ export default function Chat() {
     setIsListening(true);
   }, [isListening]);
 
-  const fallbackSpeech = useCallback((text) => {
-    if (!synthRef.current) return;
-    synthRef.current.cancel();
-    const clean = text.replace(/[*_#`]/g, '');
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.lang = 'hi-IN';
-    utterance.rate = 0.95;
-    synthRef.current.speak(utterance);
-  }, []);
+  // NEW: read a bot message aloud using the backend's Bhashini (AI4Bharat /
+  // Digital India) TTS pipeline for a natural Indian-accent Hindi voice.
+  // Automatically falls back to the browser's built-in speechSynthesis if
+  // Bhashini isn't configured or the request fails, so this never goes
+  // silent. Respects the Hindi/English toggle in AccessibilityBar.
+  const readAloud = useCallback((text, idx) => {
+    // Stop whatever was playing before (backend audio or browser fallback)
+    stopSpeakingRef.current?.();
 
-  // Pure Indian Accent TTS via backend (AI4Bharat / Bhashini / Neural Indic)
-  const readAloud = useCallback(async (text, idx, lang) => {
-    if (playingIdx === idx && currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-      setPlayingIdx(null);
-      return;
-    }
-
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-    if (synthRef.current) synthRef.current.cancel();
-
-    setPlayingIdx(idx);
-
-    try {
-      const audioUrl = await synthesizeSpeech(text, lang || detectedLang, 'female');
-      if (audioUrl) {
-        const audio = new Audio(audioUrl);
-        currentAudioRef.current = audio;
-        audio.onended = () => {
-          setPlayingIdx(null);
-          currentAudioRef.current = null;
-        };
-        audio.onerror = () => {
-          fallbackSpeech(text);
-          setPlayingIdx(null);
-        };
-        await audio.play();
-        return;
-      }
-    } catch (e) {
-      console.warn('[TTS Playback Error]:', e);
-    }
-
-    fallbackSpeech(text);
-    setPlayingIdx(null);
-  }, [playingIdx, detectedLang, fallbackSpeech]);
+    stopSpeakingRef.current = speakText(text, {
+      language: uiLang === 'hi' ? 'hi' : 'en',
+      gender: 'female',
+      onStart: () => setSpeakingMsgIdx(idx),
+      onEnd: () => setSpeakingMsgIdx((cur) => (cur === idx ? null : cur)),
+    });
+  }, [uiLang]);
 
   const inferPhase = (response) => {
     if (response.escalation_triggered || response.tier === 'Red') return 'EMERGENCY';
@@ -220,11 +190,9 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      const response = await sendChatMessage(conversationIdRef.current, trimmed, knownConditions, 'auto');
+      const response = await sendChatMessage(conversationIdRef.current, trimmed, knownConditions);
       const newPhase = response.phase ?? inferPhase(response);
       setCurrentPhase(newPhase);
-      const activeLang = response.detected_language || 'hindi';
-      setDetectedLang(activeLang);
 
       setMessages(prev => [
         ...prev,
@@ -236,7 +204,6 @@ export default function Chat() {
           remedies: response.remedies ?? [],
           escalation: response.escalation_triggered,
           phase: newPhase,
-          detected_language: activeLang,
         },
       ]);
 
@@ -374,10 +341,9 @@ export default function Chat() {
           {messages.map((msg, idx) => (
             <MessageBubble
               key={idx}
-              idx={idx}
               msg={msg}
-              isPlaying={playingIdx === idx}
-              onReadAloud={readAloud}
+              isSpeaking={speakingMsgIdx === idx}
+              onReadAloud={() => readAloud(msg.text, idx)}
             />
           ))}
 
@@ -443,32 +409,14 @@ export default function Chat() {
 // ---------------------------------------------------------------------------
 // MessageBubble — renders a single chat turn
 // ---------------------------------------------------------------------------
-function MessageBubble({ msg, idx, isPlaying, onReadAloud }) {
+function MessageBubble({ msg, onReadAloud, isSpeaking }) {
   const isUser = msg.sender === 'user';
-
-  const langPill = () => {
-    if (msg.detected_language === 'garhwali') {
-      return (
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gold-warm/20 text-[#8B6B23] border border-gold-warm/30 inline-flex items-center gap-1">
-          <Globe className="w-2.5 h-2.5" /> गढ़वाली
-        </span>
-      );
-    }
-    if (msg.detected_language === 'english') {
-      return (
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
-          <Globe className="w-2.5 h-2.5" /> English
-        </span>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
       {!isUser && (
         <div className="shrink-0 mt-1">
-          <SanjeevaniOrb state={isPlaying ? "speaking" : "idle"} size={32} />
+          <SanjeevaniOrb state={isSpeaking ? 'speaking' : 'idle'} size={32} />
         </div>
       )}
 
@@ -479,22 +427,17 @@ function MessageBubble({ msg, idx, isPlaying, onReadAloud }) {
           : 'bg-[#F3EFE4] text-[#2A2E35] rounded-bl-none border border-border-subtle'
         }
       `}>
-        {!isUser && (
+        {!isUser && msg.tier && (
           <div className="mb-2.5 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {msg.tier && <TierBadge tier={msg.tier} />}
-              {langPill()}
-            </div>
+            <TierBadge tier={msg.tier} />
             <button
-              onClick={() => onReadAloud(msg.text, idx, msg.detected_language)}
-              className={`p-1.5 rounded-full transition-colors shrink-0 ${
-                isPlaying
-                  ? 'bg-gold-warm text-warm-indigo animate-pulse'
-                  : 'text-muted hover:text-warm-indigo hover:bg-black/5'
+              onClick={onReadAloud}
+              className={`p-1 rounded-full hover:bg-black/5 transition-colors shrink-0 ${
+                isSpeaking ? 'text-sage animate-pulse' : 'text-muted hover:text-warm-indigo'
               }`}
-              title={isPlaying ? "Stop audio" : "Read aloud in Pure Indian Accent"}
+              title="Read aloud (natural Hindi voice)"
             >
-              {isPlaying ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+              <Volume2 className="w-3.5 h-3.5" />
             </button>
           </div>
         )}

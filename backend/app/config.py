@@ -12,16 +12,22 @@ class Settings(BaseSettings):
     # LLM Settings
     PRIMARY_LLM_PROVIDER: str = "groq"
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "qwen/qwen3.6-27b"
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
     
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-1.5-flash"
+
+    # Hugging Face Token (for gated models like ai4bharat/indic-parler-tts)
+    HF_TOKEN: Optional[str] = None
+
+    # Voice / TTS Settings: "neural" (instant authentic Indian accent) or "ai4bharat" (local 2.2B model, GPU recommended)
+    TTS_PROVIDER: str = "neural"
 
     # Portkey Gateway Settings
     PORTKEY_API_KEY: Optional[str] = None
     PORTKEY_PROVIDER_SLUG: str = "groq-prod"
     PORTKEY_CONFIG_ID: Optional[str] = None
-    LLM_MODEL: str = "@groq-prod/qwen-3.6-27b"
+    LLM_MODEL: str = "@groq-prod/openai/gpt-oss-120b"
 
     # Observability (LangSmith)
     LANGSMITH_TRACING: bool = True
@@ -42,6 +48,17 @@ class Settings(BaseSettings):
     # Relational Database & LangGraph State Persistence
     DATABASE_URL: str = "sqlite:///./sanjeevani.db"
     CHECKPOINT_DB_PATH: str = "sqlite:///./sessions.db"
+
+    # # Bhashini (Digital India / MeitY) TTS — pure Indian-accent voice
+    # BHASHINI_USER_ID: str = ""
+    # BHASHINI_ULCA_API_KEY: str = ""
+    # BHASHINI_PIPELINE_ID: str = "64392f96daac500b55c543cd"
+    # BHASHINI_AUTH_URL: str = "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline"
+
+    AI4BHARAT_TTS_MODEL: str = "ai4bharat/indic-parler-tts"
+    AI4BHARAT_TTS_DEVICE: str = "cpu"   # set to "cuda" if you have a GPU — much faster
+    AI4BHARAT_HINDI_FEMALE_SPEAKER: str = "Divya"
+    AI4BHARAT_HINDI_MALE_SPEAKER: str = "Rohit"
 
     model_config = SettingsConfigDict(
         env_file=".env",
