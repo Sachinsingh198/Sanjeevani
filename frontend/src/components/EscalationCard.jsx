@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { PhoneCall, Navigation, AlertOctagon, HeartHandshake, X } from 'lucide-react';
+import { PhoneCall, Navigation, AlertOctagon, HeartHandshake, X, MapPin } from 'lucide-react';
+import NearbyFacilityFinder from './NearbyFacilityFinder';
 
 export default function EscalationCard({ tier, flags = [] }) {
   const isRed = tier === 'Red';
   const [showMapModal, setShowMapModal] = useState(false);
+  const [showFinderModal, setShowFinderModal] = useState(false);
 
   return (
     <>
@@ -49,6 +51,13 @@ export default function EscalationCard({ tier, flags = [] }) {
                 104 Health Helpline
               </a>
               <button
+                onClick={() => setShowFinderModal(true)}
+                className="flex items-center gap-1.5 bg-sage text-white px-3.5 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-[#4a6346] transition-colors"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                Find Centers Near Me
+              </button>
+              <button
                 onClick={() => setShowMapModal(true)}
                 className="flex items-center gap-1.5 bg-card border border-warm-indigo/20 text-warm-indigo px-3.5 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-mist transition-colors"
               >
@@ -59,6 +68,21 @@ export default function EscalationCard({ tier, flags = [] }) {
           </div>
         </div>
       </div>
+
+      {showFinderModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-lg relative animate-fadeIn">
+            <NearbyFacilityFinder onClose={() => setShowFinderModal(false)} />
+            <button
+              onClick={() => setShowFinderModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-black/5 text-muted hover:text-primary"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
 
       {showMapModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
