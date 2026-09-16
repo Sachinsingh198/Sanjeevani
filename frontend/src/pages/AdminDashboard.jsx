@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { fetchAllUsers, createUser, deleteUser, fetchAdminStats } from '../api/authClient';
+import { fetchAllUsers, createUser, deleteUser, fetchAdminStats, resetPassword } from '../api/authClient';
 import TierDistributionChart from '../components/TierDistributionChart';
 import {
   Users, UserPlus, Trash2, Activity, BarChart3, Shield,
   RefreshCw, Search, ChevronDown, HeartPulse, Leaf,
-  Download, Radio, MapPin, AlertTriangle, CheckCircle2, Megaphone
+  Download, Radio, MapPin, AlertTriangle, CheckCircle2, Megaphone, KeyRound
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
 
 const ADVISORY_STORAGE_KEY = 'sanjeevani_district_advisory';
 
@@ -105,6 +106,17 @@ export default function AdminDashboard() {
       loadData();
     } catch (err) {
       toast.error(err?.response?.data?.detail || 'Failed to delete user');
+    }
+  };
+
+  const handleAdminResetPassword = async (phone, name) => {
+    const newPass = window.prompt(`Enter new password for ${name} (${phone}):`, 'sanjeevani2026');
+    if (!newPass || !newPass.trim()) return;
+    try {
+      await resetPassword(phone, newPass.trim());
+      toast.success(`Password updated for ${name}!`);
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || 'Failed to update password');
     }
   };
 
@@ -382,11 +394,23 @@ export default function AdminDashboard() {
                       {u.role}
                     </span>
                     <span className="text-[10px] text-gray-400">{u.created_at?.split('T')[0]}</span>
+                    <button
+                      onClick={() => handleAdminResetPassword(u.phone, u.name)}
+                      className="text-gray-400 hover:text-gold-warm transition-colors p-1"
+                      title="Reset user password"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                    </button>
                     {u.id !== user.id && (
-                      <button onClick={() => handleDeleteUser(u.id, u.name)} className="text-gray-300 hover:text-rose-soft transition-colors">
+                      <button
+                        onClick={() => handleDeleteUser(u.id, u.name)}
+                        className="text-gray-300 hover:text-rose-soft transition-colors p-1"
+                        title="Delete user"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     )}
+
                   </div>
                 </div>
               ))

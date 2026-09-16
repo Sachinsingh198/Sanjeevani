@@ -7,11 +7,16 @@ const authApi = axios.create({
   timeout: 15000,
 });
 
-// Attach token to every request if available
+// Attach token to every request if available, but skip public auth endpoints
 authApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('sanjeevani_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const isPublicAuth = config.url?.includes('/auth/login') ||
+                       config.url?.includes('/auth/register') ||
+                       config.url?.includes('/auth/reset-password');
+  if (!isPublicAuth) {
+    const token = localStorage.getItem('sanjeevani_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
@@ -22,6 +27,12 @@ export const loginUser = async (phone, password) => {
   const res = await authApi.post('/auth/login', { phone, password });
   return res.data;
 };
+
+export const resetPassword = async (phone, newPassword) => {
+  const res = await authApi.post('/auth/reset-password', { phone, new_password: newPassword });
+  return res.data;
+};
+
 
 export const registerUser = async (name, phone, password, village = '') => {
   const res = await authApi.post('/auth/register', {

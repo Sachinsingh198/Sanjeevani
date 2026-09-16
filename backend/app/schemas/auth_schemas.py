@@ -28,3 +28,9 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserProfile
+
+
+class ResetPasswordRequest(BaseModel):
+    phone: str
+    new_password: str
+
