@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
   HeartPulse, MessageSquare, Eye, Users, Info, PhoneCall,
-  LogOut, LogIn, Shield, Menu, X, User, Sun, Moon
+  LogOut, LogIn, Shield, Menu, X, User, Sun, Moon,
+  Wind, Activity, HeartHandshake, Sparkles
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -42,10 +43,13 @@ export default function Navbar() {
       ];
     }
 
-    // Patient
+    // Sanjeevani Mitra (Citizen Wellness & Triage)
     return [
-      { name: 'Dashboard', path: '/patient', icon: HeartPulse },
-      { name: 'Chat Room', path: '/patient/chat', icon: MessageSquare },
+      { name: 'Mitra Hub', path: '/mitra', icon: HeartPulse },
+      { name: 'Dhyan', path: '/mitra/meditation', icon: Wind },
+      { name: 'Yogashala', path: '/mitra/yoga', icon: Activity },
+      { name: 'Saathi', path: '/mitra/saathi', icon: HeartHandshake },
+      { name: 'Triage Chat', path: '/patient/chat', icon: MessageSquare },
       { name: 'Eye Scan', path: '/patient/screen', icon: Eye },
       { name: 'About', path: '/about', icon: Info },
     ];
@@ -122,7 +126,7 @@ export default function Navbar() {
                   isAdmin ? 'bg-warm-indigo text-white' :
                   isAsha ? 'bg-gold-warm text-white' :
                   'bg-sage text-white'
-                }`}>{user.role}</span>
+                }`}>{isAdmin ? 'Admin' : isAsha ? 'ASHA' : 'Sanjeevani Mitra'}</span>
               </div>
               <button
                 onClick={handleLogout}

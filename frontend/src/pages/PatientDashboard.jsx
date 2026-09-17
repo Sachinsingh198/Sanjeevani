@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import {
   Mic, MessageSquare, Eye, Heart, Leaf, MapPin, Clock, ShieldCheck,
   PhoneCall, AlertCircle, Plus, CheckCircle2, ChevronRight,
-  ShieldAlert, BookOpen, ChevronDown, ChevronUp, Sparkles, Navigation
+  ShieldAlert, BookOpen, ChevronDown, ChevronUp, Sparkles, Navigation,
+  Wind, Activity, HeartHandshake
 } from 'lucide-react';
 import LiveVoiceRoom from '../components/LiveVoiceRoom';
 import NearbyFacilityFinder from '../components/NearbyFacilityFinder';
@@ -122,12 +123,15 @@ export default function PatientDashboard() {
                 <Heart className="w-7 h-7" />
               </div>
               <div>
+                <div className="inline-flex items-center gap-1.5 bg-sage/15 text-sage px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-1">
+                  Sanjeevani Mitra Portal • संजीवनी मित्र
+                </div>
                 <h1 className="font-serif text-2xl md:text-3xl font-bold text-primary">
-                  Namaste, {user?.name || 'Friend'} 🙏
+                  Namaste, {user?.name || 'Aadarniya Mitra'} 🙏
                 </h1>
                 <p className="text-sm text-muted mt-1 flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-gold-warm" />
-                  {user?.village || 'Chamoli, Uttarakhand'} • Your round-the-clock Himalayan health companion
+                  {user?.village || 'Chamoli, Uttarakhand'} • Holistic Himalayan health, yoga, dhyan & companionship portal
                 </p>
               </div>
             </div>
@@ -216,41 +220,110 @@ export default function PatientDashboard() {
           </div>
         )}
 
-        {/* ── Quick Consultation Actions ───────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <button
-            onClick={() => setShowLiveRoom(true)}
-            className="group bg-card rounded-3xl p-6 border border-sage/15 shadow-sm hover:shadow-md transition-all text-left hover:border-sage/30"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-sage/10 flex items-center justify-center text-sage mb-4 group-hover:bg-sage group-hover:text-white transition-colors">
-              <Mic className="w-6 h-6" />
-            </div>
-            <h3 className="font-serif font-bold text-lg text-primary">Talk Live (आवाज से परामर्श)</h3>
-            <p className="text-xs text-muted mt-1">Speak your symptoms naturally in Hindi or Garhwali</p>
-            <span className="inline-block mt-3 text-[10px] bg-sage/10 text-sage px-2.5 py-0.5 rounded-full font-bold uppercase">Hands-Free</span>
-          </button>
+        {/* ── Featured Wellness & Companionship Pillars ───────────── */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-serif font-bold text-lg text-primary flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-gold-warm" />
+              Swasthya, Dhyan, Yoga & Saath (आरोग्य, योग, ध्यान व संग)
+            </h2>
+            <span className="text-[11px] text-muted">Holistic Himalayan Care</span>
+          </div>
 
-          <Link
-            to="/patient/chat"
-            className="group bg-card rounded-3xl p-6 border border-gold-warm/20 shadow-sm hover:shadow-md transition-all hover:border-gold-warm/40"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-gold-warm/15 flex items-center justify-center text-gold-warm mb-4 group-hover:bg-gold-warm group-hover:text-white transition-colors">
-              <MessageSquare className="w-6 h-6" />
-            </div>
-            <h3 className="font-serif font-bold text-lg text-primary">Chat Room (चैट परामर्श)</h3>
-            <p className="text-xs text-muted mt-1">Type your symptoms for detailed safe home remedies</p>
-          </Link>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* 1. Meditation Teacher */}
+            <Link
+              to="/mitra/meditation"
+              className="group bg-gradient-to-br from-sage/10 via-card to-card rounded-3xl p-6 border border-sage/25 shadow-sm hover:shadow-md transition-all hover:border-sage/50"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-sage/15 flex items-center justify-center text-sage mb-4 group-hover:bg-sage group-hover:text-white transition-colors">
+                <Wind className="w-6 h-6" />
+              </div>
+              <h3 className="font-serif font-bold text-lg text-primary">Dhyan Guru (ध्यान व प्राणायाम)</h3>
+              <p className="text-xs text-muted mt-1 leading-relaxed">
+                Animated breathing mandala, Anulom-Vilom, Tibetan singing bowls, and guided mindfulness.
+              </p>
+              <span className="inline-block mt-3 text-[10px] bg-sage/15 text-sage px-2.5 py-0.5 rounded-full font-bold uppercase">
+                Pranayama Studio
+              </span>
+            </Link>
 
-          <Link
-            to="/patient/screen"
-            className="group bg-card rounded-3xl p-6 border border-border-subtle shadow-sm hover:shadow-md transition-all hover:border-sage/20"
-          >
-            <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-muted mb-4 group-hover:bg-warm-indigo group-hover:text-white transition-colors">
-              <Eye className="w-6 h-6" />
-            </div>
-            <h3 className="font-serif font-bold text-lg text-primary">Eye Screening (आँखों की जांच)</h3>
-            <p className="text-xs text-muted mt-1">Non-invasive Anemia & Jaundice conjunctiva check</p>
-          </Link>
+            {/* 2. Yoga Teacher & Posture Checker */}
+            <Link
+              to="/mitra/yoga"
+              className="group bg-gradient-to-br from-warm-indigo/10 via-card to-card rounded-3xl p-6 border border-warm-indigo/25 shadow-sm hover:shadow-md transition-all hover:border-warm-indigo/50"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-warm-indigo/15 flex items-center justify-center text-warm-indigo mb-4 group-hover:bg-warm-indigo group-hover:text-white transition-colors">
+                <Activity className="w-6 h-6" />
+              </div>
+              <h3 className="font-serif font-bold text-lg text-primary">Yogashala (योग व मुद्रा जांच)</h3>
+              <p className="text-xs text-muted mt-1 leading-relaxed">
+                Real-time webcam AI posture check, joint angle scoring, and live spoken guidance.
+              </p>
+              <span className="inline-block mt-3 text-[10px] bg-warm-indigo/15 text-warm-indigo px-2.5 py-0.5 rounded-full font-bold uppercase">
+                AI Posture Camera
+              </span>
+            </Link>
+
+            {/* 3. Village Companion (Saathi) */}
+            <Link
+              to="/mitra/saathi"
+              className="group bg-gradient-to-br from-gold-warm/15 via-card to-card rounded-3xl p-6 border border-gold-warm/30 shadow-sm hover:shadow-md transition-all hover:border-gold-warm/50"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-gold-warm/20 flex items-center justify-center text-gold-warm mb-4 group-hover:bg-gold-warm group-hover:text-white transition-colors">
+                <HeartHandshake className="w-6 h-6" />
+              </div>
+              <h3 className="font-serif font-bold text-lg text-primary">Sanjeevani Saathi (अपनों सा साथी)</h3>
+              <p className="text-xs text-muted mt-1 leading-relaxed">
+                Caring companion for lonely villagers & elders living alone. Talk, share feelings & folk stories.
+              </p>
+              <span className="inline-block mt-3 text-[10px] bg-gold-warm/20 text-gold-warm px-2.5 py-0.5 rounded-full font-bold uppercase">
+                Emotional Company
+              </span>
+            </Link>
+          </div>
+        </div>
+
+        {/* ── Clinical Consultation & Triage Actions ────────────────── */}
+        <div>
+          <h3 className="font-serif font-bold text-sm uppercase tracking-wider text-muted mb-3">
+            Clinical Tele-Triage & Diagnostic Screening
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <button
+              onClick={() => setShowLiveRoom(true)}
+              className="group bg-card rounded-3xl p-5 border border-border-subtle shadow-sm hover:shadow-md transition-all text-left hover:border-sage/30"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-sage/10 flex items-center justify-center text-sage mb-3 group-hover:bg-sage group-hover:text-white transition-colors">
+                <Mic className="w-5 h-5" />
+              </div>
+              <h4 className="font-serif font-bold text-base text-primary">Talk Live (आवाज से परामर्श)</h4>
+              <p className="text-xs text-muted mt-1">Speak your symptoms naturally in Hindi or Garhwali</p>
+              <span className="inline-block mt-2 text-[10px] bg-sage/10 text-sage px-2 py-0.5 rounded-full font-bold uppercase">Hands-Free</span>
+            </button>
+
+            <Link
+              to="/patient/chat"
+              className="group bg-card rounded-3xl p-5 border border-border-subtle shadow-sm hover:shadow-md transition-all hover:border-gold-warm/40"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-gold-warm/15 flex items-center justify-center text-gold-warm mb-3 group-hover:bg-gold-warm group-hover:text-white transition-colors">
+                <MessageSquare className="w-5 h-5" />
+              </div>
+              <h4 className="font-serif font-bold text-base text-primary">Chat Room (चैट परामर्श)</h4>
+              <p className="text-xs text-muted mt-1">Type your symptoms for detailed safe home remedies</p>
+            </Link>
+
+            <Link
+              to="/patient/screen"
+              className="group bg-card rounded-3xl p-5 border border-border-subtle shadow-sm hover:shadow-md transition-all hover:border-warm-indigo/30"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center text-muted mb-3 group-hover:bg-warm-indigo group-hover:text-white transition-colors">
+                <Eye className="w-5 h-5" />
+              </div>
+              <h4 className="font-serif font-bold text-base text-primary">Eye Screening (आँखों की जांच)</h4>
+              <p className="text-xs text-muted mt-1">Non-invasive Anemia & Jaundice conjunctiva check</p>
+            </Link>
+          </div>
         </div>
 
         {/* ── Daily Herbal Remedy & Medicine Tracker ─────────────────── */}

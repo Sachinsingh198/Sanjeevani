@@ -31,9 +31,11 @@ export default function Login() {
 
       if (user.role === 'admin') navigate('/admin', { replace: true });
       else if (user.role === 'asha') navigate('/asha', { replace: true });
-      else navigate('/patient', { replace: true });
+      else navigate('/mitra', { replace: true });
     } catch (err) {
-      const msg = err?.response?.data?.detail || 'Login failed. Please verify your phone/username and password.';
+      const msg = !err?.response
+        ? 'Cannot connect to backend server. Please ensure the backend is running on port 8000.'
+        : err?.response?.data?.detail || 'Login failed. Please verify your phone/username and password.';
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -52,7 +54,7 @@ export default function Login() {
     } else if (role === 'patient') {
       setPhone('patient');
       setPassword('sanjeevani2026');
-      toast.success('Filled Patient demo credentials');
+      toast.success('Filled Sanjeevani Mitra demo credentials');
     }
   };
 
@@ -120,7 +122,7 @@ export default function Login() {
               className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-sage/15 hover:bg-sage hover:text-white text-primary transition-all text-center"
             >
               <User className="w-4 h-4 mb-1 text-sage group-hover:text-white" />
-              <span className="text-[11px] font-bold">Patient</span>
+              <span className="text-[11px] font-bold">Mitra (नागरिक)</span>
             </button>
           </div>
         </div>
@@ -180,9 +182,9 @@ export default function Login() {
         </form>
 
         <p className="text-center text-sm text-muted">
-          New patient?{' '}
+          New to Sanjeevani?{' '}
           <Link to="/register" className="text-sage font-semibold hover:underline">
-            Create an account
+            Create a Sanjeevani Mitra account
           </Link>
         </p>
 

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send, Mic, MicOff, RefreshCw, User, AlertTriangle, RotateCcw,
-  Clock, Volume2, Settings2, Wifi, WifiOff,
+  Clock, Volume2, Settings2, Wifi, WifiOff, FileDown,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import TierBadge from '../components/TierBadge';
@@ -17,6 +17,7 @@ import {
   sendChatMessage, getOrCreateConversationId, resetConversationId, checkBackendHealth,
 } from '../api/client';
 import { speakText } from '../api/voiceClient';
+import { downloadConsultationReport } from '../api/reportsClient';
 import { recordSessionTurn } from '../lib/sessionStore';
 
 // ---------------------------------------------------------------------------
@@ -78,6 +79,7 @@ export default function Chat() {
   const [uiLang, setUiLang] = useState('hi');
   const [backendOnline, setBackendOnline] = useState(null); // null = checking
   const [speakingMsgIdx, setSpeakingMsgIdx] = useState(null); // which bubble is currently being read aloud
+  const [downloadingIdx, setDownloadingIdx] = useState(null); // which bubble's report is being generated
 
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -173,6 +175,27 @@ export default function Chat() {
       onEnd: () => setSpeakingMsgIdx((cur) => (cur === idx ? null : cur)),
     });
   }, [uiLang]);
+
+  // NEW: lets the patient download the concluded consultation (tier,
+  // remedies, notes) as a .docx to print or show a PHC/CHC doctor. The
+  // idx param drives a per-bubble loading spinner on the download button.
+  const handleDownloadReport = useCallback(async (msg, idx) => {
+    setDownloadingIdx(idx);
+    try {
+      await downloadConsultationReport({
+        conversationId: conversationIdRef.current,
+        tier: msg.tier,
+        flags: msg.flags ?? [],
+        remedies: msg.remedies ?? [],
+        consultationSummary: msg.text,
+      });
+      toast.success('Consultation report downloaded');
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || 'Could not generate report. Please try again.');
+    } finally {
+      setDownloadingIdx(null);
+    }
+  }, []);
 
   const inferPhase = (response) => {
     if (response.escalation_triggered || response.tier === 'Red') return 'EMERGENCY';
@@ -343,7 +366,9 @@ export default function Chat() {
               key={idx}
               msg={msg}
               isSpeaking={speakingMsgIdx === idx}
+              isDownloading={downloadingIdx === idx}
               onReadAloud={() => readAloud(msg.text, idx)}
+              onDownloadReport={() => handleDownloadReport(msg, idx)}
             />
           ))}
 
@@ -409,7 +434,7 @@ export default function Chat() {
 // ---------------------------------------------------------------------------
 // MessageBubble — renders a single chat turn
 // ---------------------------------------------------------------------------
-function MessageBubble({ msg, onReadAloud, isSpeaking }) {
+function MessageBubble({ msg, onReadAloud, isSpeaking, onDownloadReport, isDownloading }) {
   const isUser = msg.sender === 'user';
 
   return (
@@ -455,6 +480,18 @@ function MessageBubble({ msg, onReadAloud, isSpeaking }) {
             {msg.remedies.map((remedy, i) => (
               <RemedyCard key={i} remedy={remedy} index={i} />
             ))}
+            <button
+              onClick={onDownloadReport}
+              disabled={isDownloading}
+              className="w-full mt-2 flex items-center justify-center gap-1.5 bg-warm-indigo/5 hover:bg-warm-indigo/10 text-warm-indigo text-xs font-bold py-2.5 rounded-xl border border-warm-indigo/15 transition-all disabled:opacity-60"
+              title="Download this consultation as a printable report"
+            >
+              {isDownloading ? (
+                <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Preparing report…</>
+              ) : (
+                <><FileDown className="w-3.5 h-3.5" /> Download Report for Doctor</>
+              )}
+            </button>
           </div>
         )}
       </div>

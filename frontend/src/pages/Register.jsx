@@ -22,8 +22,8 @@ export default function Register() {
     setLoading(true);
     try {
       const user = await register(name.trim(), phone.trim(), password, village.trim());
-      toast.success(`Swagat hai, ${user.name}! Aapka account ban gaya.`);
-      navigate('/patient', { replace: true });
+      toast.success(`Swagat hai, ${user.name}! Aapka Sanjeevani Mitra account ban gaya.`);
+      navigate('/mitra', { replace: true });
     } catch (err) {
       const msg = err?.response?.data?.detail || 'Registration failed. Please try again.';
       toast.error(msg);
@@ -46,7 +46,7 @@ export default function Register() {
           <h1 className="font-serif text-2xl font-bold text-primary">Join Sanjeevani</h1>
           <p className="text-sm text-muted mt-1 flex items-center justify-center gap-1.5">
             <Leaf className="w-3.5 h-3.5 text-sage" />
-            Create your patient account
+            Create your Sanjeevani Mitra account
           </p>
         </div>
 

@@ -18,45 +18,86 @@
   --color-border-subtle: var(--border-subtle);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   DESIGN REFRESH — "Himalayan Alpenglow"
+
+   The old palette (sage green / beige-gold / dusty rose) read as generic
+   wellness-SaaS. This one is pulled from the actual subject: the
+   Sanjeevani booti myth — a life-restoring herb glowing on a Himalayan
+   slope — set against the specific light of that place: deodar pine
+   forest, dawn/dusk alpenglow on snow, turmeric and ember from the
+   kitchen remedies this app actually recommends.
+
+     --dusk        #1E2A43  deep mountain-night slate — headings, dark UI
+     --pine        #2B4A30  deodar forest green — primary actions (was sage)
+     --pine-light  #E3EBDD  pale pine mist — soft green surfaces
+     --parchment   #F1E7D2  warm high-altitude parchment (was sand)
+     --ember       #C5762B  turmeric/ember — secondary accent (was gold)
+     --brick       #A23B33  brick-red — Red-tier alerts only (was rose)
+     --booti-glow  #8ED14C  the one deliberately vivid color — reserved for
+                            the SanjeevaniOrb "life-restoring herb" glow,
+                            nowhere else, so it stays meaningful.
+
+   Variable NAMES are unchanged from the previous palette on purpose —
+   every component already consumes bg-sage / bg-gold-warm / bg-rose-soft
+   etc. as semantic tokens, so retinting here reskins the whole app
+   without touching a single component file.
+   ───────────────────────────────────────────────────────────────────── */
+
 :root {
-  --mist: #F7F5EE;
-  --sage: #5A7855;
-  --sage-light: #EBF1EA;
-  --warm-indigo: #1A263D;
-  --sand: #EFE9D9;
-  --gold-warm: #D4A359;
-  --rose-soft: #B85042;
+  --mist: #F7F2E8;
+  --sage: #2B4A30;
+  --sage-light: #E3EBDD;
+  --warm-indigo: #1E2A43;
+  --sand: #F1E7D2;
+  --gold-warm: #C5762B;
+  --rose-soft: #A23B33;
 
-  --text-primary: #1A263D;
-  --text-muted: #6b7280;
-  --bg-card: rgba(255, 255, 255, 0.8);
-  --border-subtle: rgba(0, 0, 0, 0.05);
+  --text-primary: #1E2A43;
+  --text-muted: #6E6656;
+  --bg-card: rgba(255, 253, 248, 0.86);
+  --border-subtle: rgba(30, 42, 67, 0.08);
 
-  /* NEW — Sanjeevani identity tokens.
-     The "herb glow" is the one deliberately bold, recurring visual signature
-     (see SanjeevaniOrb) — a nod to the mythic life-restoring Sanjeevani
-     Booti glowing on the mountainside. Everything else around it stays
-     quiet and disciplined, per design principle. */
-  --herb-glow: #8FBF7F;
-  --herb-glow-light: #DCEFCF;
+  /* The Sanjeevani Booti glow — the single bold, recurring signature
+     (see SanjeevaniOrb). Everything else stays quiet by design. */
+  --herb-glow: #8ED14C;
+  --herb-glow-light: #E4F5D1;
 }
 
 .dark {
-  --mist: #0F172A;
-  --sage: #6D8E67;
-  --sage-light: #1E293B;
-  --warm-indigo: #0F172A;
-  --sand: #1E293B;
-  --gold-warm: #E8A33D;
-  --rose-soft: #EF4444;
+  --mist: #12181A;
+  --sage: #578C56;
+  --sage-light: #1C2A1E;
+  --warm-indigo: #12181A;
+  --sand: #22201A;
+  --gold-warm: #DE9245;
+  --rose-soft: #DD5A46;
 
-  --text-primary: #F8FAFC;
-  --text-muted: #94A3B8;
-  --bg-card: rgba(30, 41, 59, 0.8);
-  --border-subtle: rgba(255, 255, 255, 0.1);
+  --text-primary: #F2EEE3;
+  --text-muted: #A39B87;
+  --bg-card: rgba(26, 32, 27, 0.82);
+  --border-subtle: rgba(242, 238, 227, 0.10);
 
-  --herb-glow: #6FA85E;
-  --herb-glow-light: #2C4A28;
+  --herb-glow: #7BC750;
+  --herb-glow-light: #223420;
+}
+
+/* ── Typography refinement ────────────────────────────────────────────
+   Fraunces and Manrope were already good, deliberate choices — kept
+   as-is. What was missing was a disciplined scale: display serif text
+   needs tighter tracking and taller line-height than the default browser
+   rendering gives it, or big headings look loose and generic. */
+h1, h2, h3, .font-serif {
+  letter-spacing: -0.01em;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+h1, h2 {
+  line-height: 1.15;
+}
+
+p, li {
+  line-height: 1.6;
 }
 
 /* ── Sanjeevani Orb — shared breathing identity ───────────────────────── */
@@ -92,12 +133,12 @@
   0%, 100% {
     transform: scale(1);
     opacity: 0.7;
-    box-shadow: 0 0 40px rgba(90, 120, 85, 0.35);
+    box-shadow: 0 0 40px rgba(43, 74, 48, 0.35);
   }
   50% {
     transform: scale(1.12);
     opacity: 1;
-    box-shadow: 0 0 80px rgba(212, 163, 89, 0.5);
+    box-shadow: 0 0 80px rgba(197, 118, 43, 0.5);
   }
 }
 
@@ -133,18 +174,18 @@
   }
 }
 
-/* Custom Scrollbar for a polished look */
+/* Custom Scrollbar, retinted to match */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #F7F5EE;
+  background: #F7F2E8;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D4A359;
+  background: #C5762B;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #5A7855;
+  background: #2B4A30;
 }

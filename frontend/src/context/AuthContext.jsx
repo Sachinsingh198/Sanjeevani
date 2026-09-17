@@ -10,34 +10,44 @@ export function AuthProvider({ children }) {
 
   // On mount: if token exists, fetch user profile
   useEffect(() => {
+    // If we already have the user object in memory (e.g. freshly set by login/register),
+    // skip redundant revalidation to prevent race conditions during heavy backend load
+    if (user) {
+      setLoading(false);
+      return;
+    }
+
     if (token) {
       fetchCurrentUser()
         .then((profile) => setUser(profile))
-        .catch(() => {
-          // Token expired or invalid
-          localStorage.removeItem('sanjeevani_token');
-          setToken(null);
-          setUser(null);
+        .catch((err) => {
+          // Only clear the session on an actual 401 (truly invalid/expired token),
+          // never on temporary network drops or backend 5xx/timeout errors
+          if (err?.response?.status === 401) {
+            localStorage.removeItem('sanjeevani_token');
+            setToken(null);
+            setUser(null);
+          }
         })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, user]);
 
   const login = useCallback(async (phone, password) => {
     const data = await loginUser(phone, password);
     localStorage.setItem('sanjeevani_token', data.access_token);
-    setToken(data.access_token);
     setUser(data.user);
+    setToken(data.access_token);
     return data.user;
   }, []);
 
   const register = useCallback(async (name, phone, password, village) => {
     const data = await registerUser(name, phone, password, village);
     localStorage.setItem('sanjeevani_token', data.access_token);
-    setToken(data.access_token);
     setUser(data.user);
+    setToken(data.access_token);
     return data.user;
   }, []);
 
@@ -58,6 +68,7 @@ export function AuthProvider({ children }) {
     isAdmin: user?.role === 'admin',
     isAsha: user?.role === 'asha',
     isPatient: user?.role === 'patient',
+    isMitra: user?.role === 'patient',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

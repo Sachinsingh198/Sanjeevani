@@ -252,11 +252,23 @@ class AI4BharatTTSEngine:
         clean_text = self._maybe_transliterate(text, lang_code)
         desc = description or self._default_description(lang_code, gender)
 
-        desc_ids = self._description_tokenizer(desc, return_tensors="pt").input_ids.to(self._device)
-        prompt_ids = self._tokenizer(clean_text, return_tensors="pt").input_ids.to(self._device)
+        # Capture attention_mask alongside input_ids (not just .input_ids)
+        # and pass both to generate() explicitly. Without this, HF warns
+        # "attention mask is not set ... pad token is same as eos token"
+        # because it can't safely infer the mask itself in that case —
+        # passing it explicitly is the correct fix, not just a warning
+        # silencer, since Parler-TTS uses two separate input streams
+        # (description + prompt) that each need their own mask.
+        desc_inputs = self._description_tokenizer(desc, return_tensors="pt").to(self._device)
+        prompt_inputs = self._tokenizer(clean_text, return_tensors="pt").to(self._device)
 
         with torch.no_grad():
-            generation = self._model.generate(input_ids=desc_ids, prompt_input_ids=prompt_ids)
+            generation = self._model.generate(
+                input_ids=desc_inputs.input_ids,
+                attention_mask=desc_inputs.attention_mask,
+                prompt_input_ids=prompt_inputs.input_ids,
+                prompt_attention_mask=prompt_inputs.attention_mask,
+            )
 
         audio = generation.cpu().numpy().squeeze()
 
