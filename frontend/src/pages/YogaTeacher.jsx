@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import {
   Activity, Camera, CameraOff, Play, Pause, RotateCcw,
   Sparkles, CheckCircle2, AlertCircle, Volume2, VolumeX,
-  Award, ArrowLeft, ShieldCheck, ChevronRight, RefreshCw, Eye
+  Award, ArrowLeft, ShieldCheck, ChevronRight, RefreshCw, Eye, Flame, Trophy, Clock
 } from 'lucide-react';
 import {
-  YOGA_ASANAS, evaluatePosture, drawSkeletonOnCanvas, POSE_LANDMARKS
+  YOGA_ASANAS, evaluatePosture, drawSkeletonOnCanvas, detectPoseFromVideo, POSE_LANDMARKS
 } from '../lib/poseDetection';
 import { playSingingBowl, playMeditationChime, speakCue } from '../lib/audioSynthesizer';
 import toast from 'react-hot-toast';
@@ -18,6 +18,16 @@ export default function YogaTeacher() {
   const [isHoldingPose, setIsHoldingPose] = useState(false);
   const [holdTimerSec, setHoldTimerSec] = useState(selectedAsana.targetHoldsSec);
   const [poseCompleted, setPoseCompleted] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+
+  // Daily Yoga Mastery Stats
+  const [yogaStats, setYogaStats] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sanjeevani_yoga_stats');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { completedToday: 0, totalHoldSec: 0, streakDays: 3, completedAsanas: [] };
+  });
 
   // Posture assessment state
   const [alignmentScore, setAlignmentScore] = useState(0);
@@ -33,6 +43,7 @@ export default function YogaTeacher() {
   const animationFrameRef = useRef(null);
   const holdIntervalRef = useRef(null);
   const lastSpokenCueRef = useRef(0);
+  const currentScoreRef = useRef(0);
 
   const startCamera = async () => {
     try {
@@ -47,8 +58,9 @@ export default function YogaTeacher() {
         videoRef.current.play();
       }
       setIsCameraActive(true);
-      toast.success('Webcam connected! Stand back to fit your full body.');
-      playSingingBowl(216, 3.0);
+      toast.success('Camera connected! Stand back to fit your full body.');
+      if (soundEnabled) playSingingBowl(216, 3.0);
+      if (voiceCuesEnabled) speakCue('Camera chalu ho gaya hai. Kripya thoda peeche khade hokar apna poora sharir dikhayein.', 'hi-IN');
     } catch (err) {
       console.warn('Camera access error:', err);
       toast.error('Camera access nahi mila. Practice Simulation Mode shuru kiya gaya.');
@@ -77,6 +89,7 @@ export default function YogaTeacher() {
     setIsSimulatedMode(true);
     setIsCameraActive(true);
     toast('Practice Mode Active (Real-time simulated geometry).', { icon: '🧘' });
+    if (voiceCuesEnabled) speakCue('Abhyas mode chalu hua. Mudra ka santulan dekhein.', 'hi-IN');
   };
 
   const generateSimulatedLandmarks = (asanaId, tick) => {
@@ -107,6 +120,18 @@ export default function YogaTeacher() {
       rightAnkleX = 0.75;
       leftWristY = 0.35;
       rightWristY = 0.35;
+    } else if (asanaId === 'utkatasana') {
+      leftKneeY = 0.68;
+      rightKneeY = 0.68;
+      leftWristY = 0.18;
+      rightWristY = 0.18;
+    } else if (asanaId === 'bhujangasana') {
+      leftShoulderY = 0.42;
+      rightShoulderY = 0.42;
+      leftWristY = 0.52;
+      rightWristY = 0.52;
+      leftKneeY = 0.78;
+      rightKneeY = 0.78;
     }
 
     const landmarks = Array(33).fill(null).map(() => ({ x: 0.5, y: 0.5, z: 0 }));
@@ -127,6 +152,7 @@ export default function YogaTeacher() {
     return landmarks;
   };
 
+  // Real-time Frame Processing Loop
   useEffect(() => {
     if (!isCameraActive) return;
 
@@ -141,18 +167,30 @@ export default function YogaTeacher() {
       const width = canvas.width || 640;
       const height = canvas.height || 480;
 
-      const currentLandmarks = generateSimulatedLandmarks(selectedAsana.id, tick);
+      let currentLandmarks = null;
+
+      // 1. If in real camera mode, analyze live video frame!
+      if (!isSimulatedMode && videoRef.current && videoRef.current.readyState >= 2) {
+        currentLandmarks = detectPoseFromVideo(videoRef.current, selectedAsana.id);
+      }
+
+      // 2. Fallback to simulated geometry if user not detected or in Practice Mode
+      if (!currentLandmarks) {
+        currentLandmarks = generateSimulatedLandmarks(selectedAsana.id, tick);
+      }
       tick++;
 
       const result = evaluatePosture(currentLandmarks, selectedAsana.id);
       setAlignmentScore(result.score);
+      currentScoreRef.current = result.score;
       setPostureChecks(result.checks);
       setFeedbackMessage(result.feedbackText);
 
       drawSkeletonOnCanvas(ctx, currentLandmarks, result.checks, width, height);
 
+      // Voice coaching guidance
       const now = Date.now();
-      if (voiceCuesEnabled && now - lastSpokenCueRef.current > 7500) {
+      if (voiceCuesEnabled && now - lastSpokenCueRef.current > 7000) {
         if (result.score >= 80) {
           speakCue('Uttam posture! Sthir rahein.', 'hi-IN');
         } else if (result.feedbackText) {
@@ -161,8 +199,10 @@ export default function YogaTeacher() {
         lastSpokenCueRef.current = now;
       }
 
+      // Auto start hold when posture is locked (>= 70%)
       if (result.score >= 70 && !isHoldingPose && !poseCompleted) {
         setIsHoldingPose(true);
+        if (soundEnabled) playSingingBowl(216, 2.0);
       }
 
       animationFrameRef.current = requestAnimationFrame(processFrame);
@@ -175,8 +215,9 @@ export default function YogaTeacher() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isCameraActive, selectedAsana, voiceCuesEnabled, isHoldingPose, poseCompleted]);
+  }, [isCameraActive, isSimulatedMode, selectedAsana, voiceCuesEnabled, soundEnabled, isHoldingPose, poseCompleted]);
 
+  // Hold Timer Countdown with Break Pause
   useEffect(() => {
     if (!isHoldingPose || poseCompleted) {
       if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
@@ -184,13 +225,37 @@ export default function YogaTeacher() {
     }
 
     holdIntervalRef.current = setInterval(() => {
+      // Check if posture broke below threshold
+      if (currentScoreRef.current < 60) {
+        setIsHoldingPose(false);
+        if (voiceCuesEnabled) speakCue('Mudra toot gayi hai. Punah santulan banayein.', 'hi-IN');
+        toast('Mudra toot gayi hai. Timer ruk gaya hai.', { icon: '⚠️' });
+        return;
+      }
+
       setHoldTimerSec((prev) => {
         if (prev <= 1) {
           clearInterval(holdIntervalRef.current);
           setIsHoldingPose(false);
           setPoseCompleted(true);
-          if (soundEnabled) playSingingBowl(256, 5.0);
-          if (voiceCuesEnabled) speakCue('Shabaash! Asana sampurna hua!', 'hi-IN');
+          setShowCompletionModal(true);
+          if (soundEnabled) playSingingBowl(384, 5.0);
+          if (voiceCuesEnabled) speakCue('Shabaash! Asana safalta-purvak sampurna hua!', 'hi-IN');
+          
+          // Update stats in localStorage
+          setYogaStats((s) => {
+            const updated = {
+              completedToday: s.completedToday + 1,
+              totalHoldSec: s.totalHoldSec + selectedAsana.targetHoldsSec,
+              streakDays: s.streakDays,
+              completedAsanas: s.completedAsanas.includes(selectedAsana.id)
+                ? s.completedAsanas
+                : [...s.completedAsanas, selectedAsana.id],
+            };
+            try { localStorage.setItem('sanjeevani_yoga_stats', JSON.stringify(updated)); } catch {}
+            return updated;
+          });
+
           toast.success(`🎉 Asana Sampurna! ${selectedAsana.targetHoldsSec}s hold safalta-purvak kiya.`);
           return 0;
         }
@@ -207,6 +272,7 @@ export default function YogaTeacher() {
     setHoldTimerSec(selectedAsana.targetHoldsSec);
     setPoseCompleted(false);
     setIsHoldingPose(false);
+    setShowCompletionModal(false);
   };
 
   const handleSelectAsana = (asana) => {
@@ -214,7 +280,15 @@ export default function YogaTeacher() {
     setHoldTimerSec(asana.targetHoldsSec);
     setPoseCompleted(false);
     setIsHoldingPose(false);
+    setShowCompletionModal(false);
     toast.success(`${asana.name} chuna gaya`);
+    if (voiceCuesEnabled) speakCue(`${asana.hindiName} chuna gaya. Shuru karein.`, 'hi-IN');
+  };
+
+  const handleNextAsana = () => {
+    const currentIndex = YOGA_ASANAS.findIndex((a) => a.id === selectedAsana.id);
+    const nextIndex = (currentIndex + 1) % YOGA_ASANAS.length;
+    handleSelectAsana(YOGA_ASANAS[nextIndex]);
   };
 
   return (
@@ -248,20 +322,64 @@ export default function YogaTeacher() {
             {/* Controls */}
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className={`touch-target flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  soundEnabled ? 'bg-[#5A7855]/20 text-[#2B4A30] dark:text-[#8ED14C]' : 'bg-gray-100 dark:bg-gray-800 text-[#556376]'
+                }`}
+                title="Tibetan Bowl Chimes"
+              >
+                {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">Singing Bowl</span>
+              </button>
+
+              <button
                 onClick={() => setVoiceCuesEnabled(!voiceCuesEnabled)}
-                className={`touch-target flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                className={`touch-target flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
                   voiceCuesEnabled ? 'bg-[#D4A359]/20 text-[#8C5E24] dark:text-[#D4A359]' : 'bg-gray-100 dark:bg-gray-800 text-[#556376]'
                 }`}
               >
-                <Volume2 className="w-4 h-4" />
-                <span>Aawaz Nirdesh (Voice Guidance)</span>
+                <Sparkles className="w-3.5 h-3.5 text-[#D4A359]" />
+                <span>Aawaz Nirdesh (Voice Guide)</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-8 space-y-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-6 space-y-6">
+        
+        {/* ── DAILY YOGA MASTERY & STREAK RIBBON ───────────────────── */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 bg-white/90 dark:bg-[#1E2A43]/90 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-[#5A7855]/20 dark:border-gray-800 shadow-xs">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#5A7855]/15 text-[#5A7855] dark:text-[#8ED14C] flex items-center justify-center shrink-0">
+              <Trophy className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase text-gray-400 truncate">Aaj Ka Abhyas</p>
+              <p className="text-[11px] sm:text-xs font-bold text-[#1E2A43] dark:text-[#F4F6F0] truncate">{yogaStats.completedToday} Asanas</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3 border-x border-gray-100 dark:border-gray-800 px-2 sm:px-4">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#D4A359]/15 text-[#8C5E24] dark:text-[#D4A359] flex items-center justify-center shrink-0">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase text-gray-400 truncate">Kul Sthirta (Hold)</p>
+              <p className="text-[11px] sm:text-xs font-bold text-[#1E2A43] dark:text-[#F4F6F0] truncate">{yogaStats.totalHoldSec} Seconds</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#B85042]/15 text-[#B85042] flex items-center justify-center shrink-0">
+              <Flame className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase text-gray-400 truncate">Yoga Streak</p>
+              <p className="text-[11px] sm:text-xs font-bold text-[#1E2A43] dark:text-[#F4F6F0] truncate">{yogaStats.streakDays} Days</p>
+            </div>
+          </div>
+        </div>
         
         {/* ── ASANA SELECTION CAROUSEL / ROW ───────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -527,6 +645,59 @@ export default function YogaTeacher() {
           </div>
         </div>
       </div>
+
+      {/* ── ASANA COMPLETION CELEBRATION MODAL ───────────────────────── */}
+      {showCompletionModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl max-w-md w-full p-6 border border-[#D4A359]/40 shadow-2xl space-y-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-[#D4A359]/20 text-[#D4A359] mx-auto flex items-center justify-center animate-bounce">
+              <Award className="w-8 h-8" />
+            </div>
+
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#5A7855] dark:text-[#8ED14C]">
+                आसन सिद्धि • Asana Accomplished
+              </span>
+              <h3 className="font-serif text-2xl font-bold text-[#1E2A43] dark:text-[#F4F6F0] mt-1">
+                {selectedAsana.name}
+              </h3>
+              <p className="text-xs font-serif italic text-gray-500 dark:text-gray-400 mt-0.5">
+                "योगः कर्मसु कौशलम्" — Yoga is skill and steady balance in action.
+              </p>
+            </div>
+
+            <div className="bg-[#F4F6F0] dark:bg-[#151D28] rounded-2xl p-3.5 text-left text-xs space-y-1.5 border border-gray-200/80 dark:border-gray-800">
+              <div className="flex justify-between font-semibold">
+                <span className="text-gray-500">Hold Duration:</span>
+                <span className="text-[#5A7855] dark:text-[#8ED14C]">{selectedAsana.targetHoldsSec} seconds</span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span className="text-gray-500">Alignment Accuracy:</span>
+                <span className="text-[#D4A359]">{alignmentScore}%</span>
+              </div>
+              <div className="pt-2 border-t border-gray-200/60 dark:border-gray-800 text-[11px] text-gray-600 dark:text-gray-300">
+                <strong>Sharir Ko Labh:</strong> {selectedAsana.benefits}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                onClick={handleResetPose}
+                className="flex-1 py-3 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-bold text-[#1E2A43] dark:text-[#F4F6F0] hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
+              >
+                Punah Abhyas (Repeat)
+              </button>
+              <button
+                onClick={handleNextAsana}
+                className="flex-1 py-3 rounded-xl bg-[#5A7855] hover:bg-[#4a6346] text-white text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>Agla Asana</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

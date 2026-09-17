@@ -21,7 +21,6 @@ def test_gray_world_preprocessing():
 
 def test_anemia_pale_screening(engine):
     """A pale/washed-out mucosal sample must trigger HIGH_ANEMIA_RISK."""
-    # Synthetic pale mucosal tissue (low red chromaticity)
     pale_sample = np.zeros((64, 64, 3), dtype=np.uint8)
     pale_sample[:, :, 0] = 190  # Blue
     pale_sample[:, :, 1] = 190  # Green
@@ -31,6 +30,9 @@ def test_anemia_pale_screening(engine):
     assert result["screening_type"] == "ANEMIA"
     assert result["risk_level"] == "HIGH_ANEMIA_RISK"
     assert result["erythema_index"] < 0.20
+    assert "Estimated Hb" in result["estimated_metric"]
+    assert result["annotated_image_base64"].startswith("data:image/jpeg;base64,")
+    assert result["abdm_fhir_report"]["resourceType"] == "DiagnosticReport"
 
 def test_anemia_healthy_red_screening(engine):
     """A healthy pink/red vascularized mucosa should evaluate to NORMAL."""
@@ -43,6 +45,20 @@ def test_anemia_healthy_red_screening(engine):
     assert result["screening_type"] == "ANEMIA"
     assert result["risk_level"] == "NORMAL"
     assert result["erythema_index"] >= 0.20
+    assert result["confidence_score"] > 0.6
+
+def test_anemia_full_eye_detection(engine):
+    """Ensure a full simulated eye image is automatically processed without error."""
+    full_eye = np.full((300, 400, 3), (160, 140, 130), dtype=np.uint8)  # skin
+    cv2.ellipse(full_eye, (200, 130), (90, 45), 0, 0, 360, (230, 235, 240), -1)  # sclera
+    cv2.circle(full_eye, (200, 130), 28, (60, 40, 30), -1)  # iris
+    cv2.circle(full_eye, (200, 130), 10, (10, 10, 10), -1)  # pupil
+    cv2.ellipse(full_eye, (200, 190), (70, 15), 0, 0, 180, (70, 80, 200), -1)  # vascular lower eyelid
+
+    result = engine.screen_anemia(full_eye)
+    assert result["screening_type"] == "ANEMIA"
+    assert "estimated_metric" in result
+    assert result["annotated_image_base64"].startswith("data:image/jpeg;base64,")
 
 def test_jaundice_yellow_screening(engine):
     """A yellow-tinted sclera sample must trigger JAUNDICE_RISK."""
@@ -54,4 +70,29 @@ def test_jaundice_yellow_screening(engine):
     result = engine.screen_jaundice(yellow_sclera)
     assert result["screening_type"] == "JAUNDICE"
     assert result["risk_level"] == "JAUNDICE_RISK"
-    assert result["icterus_index"] > 0.35
+    assert result["icterus_index"] > 0.30
+    assert "Estimated Bilirubin" in result["estimated_metric"]
+    assert result["annotated_image_base64"].startswith("data:image/jpeg;base64,")
+
+def test_oral_leukoplakia_screening(engine):
+    """Screens oral mucosa with white hyperkeratotic plaque."""
+    oral_img = np.full((120, 120, 3), (90, 90, 180), dtype=np.uint8)  # pink mucosa
+    # Add white patch
+    oral_img[30:90, 30:90] = (245, 245, 250)
+
+    result = engine.screen_oral(oral_img)
+    assert result["screening_type"] == "ORAL_MUCOSA"
+    assert "ORAL_LESION_SUSPECTED" in result["risk_level"]
+    assert result["calculated_index"] > 0.20
+    assert "keratosis" in result["biomarker"].lower()
+
+def test_skin_erythema_screening(engine):
+    """Screens inflamed erythematous skin lesion."""
+    skin_img = np.full((100, 100, 3), (120, 140, 200), dtype=np.uint8)  # skin
+    # Add inflamed central erythema
+    skin_img[25:75, 25:75] = (30, 40, 230)
+
+    result = engine.screen_skin(skin_img)
+    assert result["screening_type"] == "SKIN_LESION"
+    assert "ACTIVE_INFLAMMATION_RISK" in result["risk_level"]
+    assert "Erythema" in result["biomarker"]

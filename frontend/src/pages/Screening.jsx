@@ -1,25 +1,142 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Camera, Eye, CheckCircle2, ShieldCheck, RefreshCw, FlaskConical,
-  AlertCircle, Info, Sparkles, ArrowRight, Upload, Volume2, Stethoscope, PhoneCall
+  AlertCircle, Info, Sparkles, ArrowRight, Upload, Volume2, Stethoscope,
+  PhoneCall, Download, Printer, X, FileText, Activity, Layers, HelpCircle
 } from 'lucide-react';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import { speakText } from '../api/voiceClient';
+import { runEdgeDiagnosticScreening, downloadAbdmFhirBundle } from '../api/screeningClient';
 
 export default function Screening() {
+  const [screeningType, setScreeningType] = useState('ANEMIA');
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [screeningType, setScreeningType] = useState('ANEMIA');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [activeStep, setActiveStep] = useState(1);
+  const [showAnnotated, setShowAnnotated] = useState(true);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [showReferralModal, setShowReferralModal] = useState(false);
+
   const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  // Screening modalities metadata
+  const modalities = {
+    ANEMIA: {
+      title: 'Khoon Ki Kami (Anemia)',
+      subtitle: 'Palpebral Conjunctiva Pallor • CIELAB Erythema Index',
+      icon: Eye,
+      color: '#B85042',
+      guideText: 'Aankh ki neeche wali palak ko halke se neeche kheenchiye taaki laal/gulabi hissa saaf dikhe. Daylight mein bina flash ke photo kheinchein.',
+      placeholderSample: 'anemia'
+    },
+    JAUNDICE: {
+      title: 'Peeliya (Jaundice)',
+      subtitle: 'Scleral Icterus • HSV Yellow-Shift & Bilirubin Estimation',
+      icon: Activity,
+      color: '#D4A359',
+      guideText: 'Aankh ke safed bhaag (sclera) ki saaf tasveer lein. Suraj ki prakritik roshni mein camera ke samne seedhe dekhein.',
+      placeholderSample: 'jaundice'
+    },
+    ORAL: {
+      title: 'Mukh Rog (Oral Lesions)',
+      subtitle: 'Leukoplakia White Patches & Tobacco Mucosa Screening',
+      icon: FlaskConical,
+      color: '#8C5E24',
+      guideText: 'Munh khol kar gaal ke andar ki deewar (buccal mucosa) ya jeebh par bane safed dhabbe par camera focus karein.',
+      placeholderSample: 'oral'
+    },
+    SKIN: {
+      title: 'Twacha Rog (Skin Lesions)',
+      subtitle: 'Cutaneous Erythema & Fungal Ringworm (Tinea) Screening',
+      icon: Layers,
+      color: '#5A7855',
+      guideText: 'Prabhavit twacha ke kshetra ko saaf roshni mein rakhein. Kharash ya daad ke ghere ko kendrit karein.',
+      placeholderSample: 'skin'
+    }
+  };
+
+  // Stop webcam stream when unmounting or toggling off
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  // Ensure stream is attached to video element as soon as isCameraActive mounts the video
+  useEffect(() => {
+    if (isCameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch((err) => {
+        console.warn('Video auto-play warning:', err);
+      });
+    }
+  }, [isCameraActive]);
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+      });
+      streamRef.current = stream;
+      setIsCameraActive(true);
+      setSelectedImage(null);
+      setSelectedFile(null);
+      setResult(null);
+      setActiveStep(1);
+      toast.success('Camera sakriya hua');
+    } catch (err) {
+      console.error('Camera access error:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        toast.error('Camera permission nahi mili. Kripya browser settings mein camera allow karein.');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        toast.error('Koi camera device nahi mila. Kripya tasveer upload karein.');
+      } else {
+        toast.error(`Camera shuru nahi ho saka (${err.message || 'Error'}). Kripya tasveer upload karein.`);
+      }
+      setIsCameraActive(false);
+    }
+  };
+
+  const capturePhotoFromCamera = () => {
+    if (!videoRef.current) return;
+    const v = videoRef.current;
+    const width = v.videoWidth || 640;
+    const height = v.videoHeight || 480;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(v, 0, 0, width, height);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        setSelectedFile(blob);
+        setSelectedImage(URL.createObjectURL(blob));
+        setResult(null);
+        setActiveStep(2);
+        stopCamera();
+        toast.success('Tasveer capture kar li gayi');
+      }
+    }, 'image/jpeg', 0.9);
+  };
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      stopCamera();
       setSelectedFile(file);
       setSelectedImage(URL.createObjectURL(file));
       setResult(null);
@@ -28,77 +145,135 @@ export default function Screening() {
     }
   };
 
+  // Pre-load synthetic clinical demonstration sample for instant 1-click test
+  const handleLoadDemoSample = () => {
+    stopCamera();
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 240;
+    const ctx = canvas.getContext('2d');
+
+    if (screeningType === 'ANEMIA') {
+      // Simulate lower eyelid conjunctiva with pallor/redness
+      ctx.fillStyle = '#C89680'; // skin
+      ctx.fillRect(0, 0, 320, 240);
+      ctx.fillStyle = '#E8EBEF'; // sclera
+      ctx.beginPath();
+      ctx.ellipse(160, 100, 80, 40, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#3E2A1D'; // iris
+      ctx.beginPath();
+      ctx.arc(160, 100, 24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#9C4E4E'; // palpebral mucosa
+      ctx.beginPath();
+      ctx.ellipse(160, 155, 60, 18, 0, 0, Math.PI);
+      ctx.fill();
+    } else if (screeningType === 'JAUNDICE') {
+      // Simulate eye with yellow-tinted icteric sclera
+      ctx.fillStyle = '#C89680'; // skin
+      ctx.fillRect(0, 0, 320, 240);
+      ctx.fillStyle = '#D6CE65'; // yellow sclera
+      ctx.beginPath();
+      ctx.ellipse(160, 120, 85, 45, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#2A1F18'; // iris
+      ctx.beginPath();
+      ctx.arc(160, 120, 26, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (screeningType === 'ORAL') {
+      // Simulate oral buccal mucosa with white leukoplakia patch
+      ctx.fillStyle = '#B34A5B'; // mucosal background
+      ctx.fillRect(0, 0, 320, 240);
+      ctx.fillStyle = '#EDE8EE'; // leukoplakia patch
+      ctx.beginPath();
+      ctx.ellipse(160, 120, 50, 35, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Simulate erythematous cutaneous lesion
+      ctx.fillStyle = '#D4A587'; // skin
+      ctx.fillRect(0, 0, 320, 240);
+      ctx.fillStyle = '#C23B38'; // inflamed lesion
+      ctx.beginPath();
+      ctx.ellipse(160, 120, 55, 45, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        setSelectedFile(blob);
+        setSelectedImage(URL.createObjectURL(blob));
+        setResult(null);
+        setActiveStep(2);
+        toast.success(`Namuna tasveer (${modalities[screeningType].title}) load hui`);
+      }
+    }, 'image/jpeg', 0.9);
+  };
+
   const handlePlayInstructions = () => {
-    const text = screeningType === 'ANEMIA'
-      ? 'Khoon ki kami ki jaanch ke liye, apni aankh ki neeche wali palak ko ungli se halke se neeche kheenchiye. Safed ya halka laal hissa achhi dhoop ya roshni mein camera ke samne rakhein aur photo kheinchein.'
-      : 'Peeliya ki jaanch ke liye, aankh ke safed bhaag ki saaf tasveer bina flash ke prakritik roshni mein kheinchein.';
+    const text = modalities[screeningType].guideText;
+    speakText(text, { language: 'hi', gender: 'female' });
+  };
+
+  const handlePlayResult = () => {
+    if (!result) return;
+    const text = `${result.type}. ${result.estimated_metric || ''}. ${result.clinical_recommendation}`;
     speakText(text, { language: 'hi', gender: 'female' });
   };
 
   const handleRunScreening = async () => {
-    if (!selectedImage) return;
+    if (!selectedFile && !selectedImage) {
+      toast.error('Kripya pehle tasveer chunein ya camera se photo lein.');
+      return;
+    }
+
     setLoading(true);
     setActiveStep(2);
 
-    const endpoint = screeningType === 'ANEMIA' ? '/screen/anemia' : '/screen/jaundice';
-
     try {
-      if (selectedFile) {
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-
-        const response = await axios.post(endpoint, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          timeout: 10000,
-        });
-
-        const data = response.data;
-        setResult({
-          type: data.screening_type || (screeningType === 'ANEMIA' ? 'Anemia Risk Screening' : 'Jaundice Screening'),
-          biomarker: data.biomarker,
-          score: data.calculated_index,
-          threshold: data.cutoff_threshold,
-          risk: data.risk_level,
-          recommendation: data.clinical_recommendation,
-          source: 'backend_cv',
-        });
-        setActiveStep(3);
-        toast.success('OpenCV AI Jaanch poori hui');
-        return;
+      let fileToSend = selectedFile;
+      if (!fileToSend && selectedImage) {
+        const res = await fetch(selectedImage);
+        fileToSend = await res.blob();
       }
-    } catch (err) {
-      console.warn('Backend screening API call failed, falling back to client-side CIELAB simulation:', err);
-    }
 
-    // Client-side fallback simulation with CIELAB models for resilience
-    setTimeout(() => {
-      if (screeningType === 'ANEMIA') {
-        setResult({
-          type: 'Anemia Risk Screening (Conjunctiva Pallor)',
-          biomarker: 'Erythema Index (CIELAB a*)',
-          score: 0.3241,
-          threshold: 0.38,
-          risk: 'HIGH_ANEMIA_RISK',
-          recommendation: 'Palpebral mucosal erythema index baseline se kam hai. Nazdeeki Prathmik Swasthya Kendra (PHC) par Complete Blood Count (CBC) jaanch ki salah di jaati hai.',
-          source: 'simulation_fallback',
-        });
-      } else {
-        setResult({
-          type: 'Jaundice / Bilirubin Screening (Sclera Icterus)',
-          biomarker: 'Scleral Yellow-Shift (HSV Hue/Sat)',
-          score: 0.2114,
-          threshold: 0.45,
-          risk: 'NORMAL',
-          recommendation: 'Aankh ke safed bhaag mein koi peelepan (icterus) ka sanket nahi mila. Lakshan samanya hain.',
-          source: 'simulation_fallback',
-        });
-      }
-      setLoading(false);
+      const data = await runEdgeDiagnosticScreening(screeningType, fileToSend);
+
+      setResult({
+        type: data.screening_type === 'ANEMIA'
+          ? 'Khoon Ki Kami (Anemia Screening)'
+          : data.screening_type === 'JAUNDICE'
+          ? 'Peeliya (Jaundice Screening)'
+          : data.screening_type === 'ORAL_MUCOSA'
+          ? 'Mukh Rog (Oral Leukoplakia Screening)'
+          : 'Twacha Rog (Skin Lesion Screening)',
+        biomarker: data.biomarker,
+        score: data.calculated_index,
+        threshold: data.cutoff_threshold,
+        estimated_metric: data.estimated_metric,
+        risk: data.risk_level,
+        confidence: data.confidence_score,
+        quality: data.quality_assessment,
+        recommendation: data.clinical_recommendation,
+        ayurveda: data.ayurvedic_recommendation,
+        annotated_image: data.annotated_image_base64,
+        fhir_report: data.abdm_fhir_report,
+        source: 'backend_cv',
+      });
+
+      setShowAnnotated(true);
       setActiveStep(3);
-    }, 1500);
+      toast.success('OpenCV AI Jaanch safalta-purvak poori hui');
+    } catch (err) {
+      console.error('Screening execution error:', err);
+      toast.error('Jaanch mein samasya aayi. Kripya tasveer dobara check karein.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReset = () => {
+    stopCamera();
     setSelectedFile(null);
     setSelectedImage(null);
     setResult(null);
@@ -107,37 +282,72 @@ export default function Screening() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-[#2E4057] dark:text-[#F4F6F0]">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-[#2E4057] dark:text-[#F4F6F0]">
       
-      {/* ── Page Header ────────────────────────────────────────── */}
+      {/* ── Header ────────────────────────────────────────────── */}
       <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
         <div className="inline-flex items-center gap-2 bg-[#5A7855]/10 dark:bg-[#5A7855]/20 text-[#5A7855] dark:text-[#8ED14C] px-4 py-1.5 rounded-full text-xs font-bold mb-3 border border-[#5A7855]/20">
           <Eye className="w-4 h-4 text-[#D4A359]" />
-          <span>Netra Jaanch Suvidha • Ocular Edge Diagnostics</span>
+          <span>Netra & Mukh Edge Jaanch • Non-Invasive Diagnostics</span>
         </div>
         <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-[#2E4057] dark:text-[#F4F6F0] leading-tight">
-          Aankhon Ki Non-Invasive Digital Jaanch
+          Pahadi Kshetra Digital Swasthya Jaanch
         </h1>
         <p className="text-xs sm:text-sm text-[#556376] dark:text-[#A8B4C2] mt-2 leading-relaxed">
-          Pahadi durasth gaaon mein bina suee chubhaaye, camera photo se Khoon Ki Kami (Anemia) aur Peeliya (Jaundice) ke prathmik lakshan pehchanein.
+          Bina suee chubhaaye, camera photo se Khoon Ki Kami (Anemia), Peeliya (Jaundice), Mukh Rog (Leukoplakia) aur Twacha ke lakshan pehchanein.
         </p>
       </div>
 
-      {/* ── 4-Stage Pipeline Progress Indicator ──────────────────── */}
-      <div className="max-w-3xl mx-auto mb-8 bg-white dark:bg-[#1E2A43] rounded-3xl p-3 sm:p-4 border border-[#5A7855]/20 shadow-xs">
+      {/* ── 4-Modality Tab Bar ──────────────────────────────────── */}
+      <div className="max-w-4xl mx-auto mb-6 grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+        {Object.entries(modalities).map(([key, item]) => {
+          const Icon = item.icon;
+          const isSelected = screeningType === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                setScreeningType(key);
+                setResult(null);
+                setActiveStep(1);
+              }}
+              className={`touch-target p-3 sm:p-4 rounded-2xl border text-left transition-all flex flex-col justify-between ${
+                isSelected
+                  ? 'bg-[#5A7855] text-white border-[#5A7855] shadow-md shadow-[#5A7855]/20 ring-2 ring-[#5A7855]/30'
+                  : 'bg-white dark:bg-[#1E2A43] text-[#556376] dark:text-[#A8B4C2] border-gray-200 dark:border-gray-800 hover:border-[#5A7855]/40'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? 'bg-white/20 text-white' : 'bg-[#5A7855]/10 text-[#5A7855] dark:text-[#8ED14C]'}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                {isSelected && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+              </div>
+              <div>
+                <div className="font-bold text-xs sm:text-sm leading-snug">{item.title}</div>
+                <div className="text-[10px] opacity-75 truncate mt-0.5">{item.subtitle.split('•')[0]}</div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── 4-Stage Pipeline Progress ────────────────────────────── */}
+      <div className="max-w-4xl mx-auto mb-6 bg-white dark:bg-[#1E2A43] rounded-2xl p-2.5 sm:p-3 border border-[#5A7855]/20 shadow-xs">
         <div className="grid grid-cols-4 gap-1 sm:gap-2 text-center text-[11px] sm:text-xs font-bold">
           {[
-            { num: 1, label: '1. SCAN', desc: 'Tasveer Chunein' },
-            { num: 2, label: '2. PROCESS', desc: 'Biomarker Aaklan' },
-            { num: 3, label: '3. RESULT', desc: 'Nishkarsh' },
-            { num: 4, label: '4. ACTION', desc: 'Agla Kadam' },
+            { num: 1, label: '1. SCAN', desc: 'Tasveer Lein' },
+            { num: 2, label: '2. PROCESS', desc: 'Biomarker Scan' },
+            { num: 3, label: '3. RESULT', desc: 'Clinical Report' },
+            { num: 4, label: '4. REFERRAL', desc: 'PHC Parcha' },
           ].map((stage) => {
             const isCompleted = activeStep > stage.num || (activeStep === 3 && stage.num <= 3);
             const isCurrent = activeStep === stage.num;
             return (
               <div
                 key={stage.num}
-                className={`py-2 px-1 rounded-2xl transition-all ${
+                className={`py-2 px-1 rounded-xl transition-all ${
                   isCurrent
                     ? 'bg-[#5A7855] text-white shadow-xs'
                     : isCompleted
@@ -153,81 +363,125 @@ export default function Screening() {
         </div>
       </div>
 
-      {/* ── Medical Disclaimer Banner ────────────────────────────── */}
-      <div className="max-w-3xl mx-auto mb-6 flex items-start gap-3 bg-[#D4A359]/10 dark:bg-[#D4A359]/15 border border-[#D4A359]/30 text-[#8C5E24] dark:text-[#D4A359] text-xs rounded-2xl p-4">
-        <FlaskConical className="w-5 h-5 shrink-0 mt-0.5" />
-        <div className="leading-relaxed">
-          <strong>Pahadi Kshetra Prathmik Screening Suchna:</strong> Yeh takneek CIELAB Erythema aur Scleral Icterus colorimetric model par aadharit hai. Yeh prathmik sanket deti hai aur laboratory blood test (CBC) ka vikalp nahi hai.
-        </div>
-      </div>
-
-      {/* ── 2-Column Work Area ────────────────────────────────────── */}
+      {/* ── 2-Column Work Area ──────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-        {/* Left Column: Image Capture & Pipeline Controls (7 cols) */}
+        {/* Left Column: Image Capture & Controls (7 cols) */}
         <div className="lg:col-span-7 bg-white dark:bg-[#1E2A43] p-5 sm:p-7 rounded-3xl shadow-sm border border-[#5A7855]/20 dark:border-gray-800 space-y-5">
           
-          {/* Screening Type Selector */}
-          <div>
-            <div className="flex items-center justify-between mb-2.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-[#556376] dark:text-[#A8B4C2]">
-                Kiski Jaanch Karni Hai?
-              </label>
-              <button
-                type="button"
-                onClick={handlePlayInstructions}
-                className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-[#5A7855] dark:text-[#8ED14C] hover:underline"
-              >
-                <Volume2 className="w-3.5 h-3.5" /> Sunein (Voice Guide)
-              </button>
+          {/* Section Heading & Audio Guide */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-[#2E4057] dark:text-[#F4F6F0]">
+                {modalities[screeningType].title}
+              </h2>
+              <p className="text-xs text-[#556376] dark:text-[#A8B4C2]">
+                {modalities[screeningType].subtitle}
+              </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => { setScreeningType('ANEMIA'); setResult(null); }}
-                className={`touch-target py-3 px-4 text-xs sm:text-sm font-bold rounded-2xl border transition-all text-left flex flex-col ${
-                  screeningType === 'ANEMIA'
-                    ? 'bg-[#5A7855] text-white border-[#5A7855] shadow-xs'
-                    : 'bg-gray-50 dark:bg-[#151D28] text-[#556376] dark:text-[#A8B4C2] border-gray-200 dark:border-gray-700 hover:border-[#5A7855]/40'
-                }`}
-              >
-                <span>Khoon Ki Kami (Anemia)</span>
-                <span className="text-[10px] font-normal opacity-80 mt-0.5">Palpebral Conjunctiva Pallor</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setScreeningType('JAUNDICE'); setResult(null); }}
-                className={`touch-target py-3 px-4 text-xs sm:text-sm font-bold rounded-2xl border transition-all text-left flex flex-col ${
-                  screeningType === 'JAUNDICE'
-                    ? 'bg-[#D4A359] text-[#2E4057] border-[#D4A359] shadow-xs'
-                    : 'bg-gray-50 dark:bg-[#151D28] text-[#556376] dark:text-[#A8B4C2] border-gray-200 dark:border-gray-700 hover:border-[#D4A359]/40'
-                }`}
-              >
-                <span>Peeliya (Jaundice)</span>
-                <span className="text-[10px] font-normal opacity-80 mt-0.5">Sclera Icterus Yellow-Shift</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handlePlayInstructions}
+              className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-[#5A7855] dark:text-[#8ED14C] hover:underline"
+            >
+              <Volume2 className="w-3.5 h-3.5" /> Sunein (Voice)
+            </button>
           </div>
 
-          {/* Photo Dropzone & Camera Area */}
-          <div className="border-2 border-dashed border-[#5A7855]/30 dark:border-gray-700 rounded-3xl p-5 text-center relative bg-[#F4F6F0]/40 dark:bg-[#151D28]/40 overflow-hidden">
-            {selectedImage ? (
-              <div className="space-y-3">
+          {/* Interactive Capture Frame / Dropzone */}
+          <div className="border-2 border-dashed border-[#5A7855]/30 dark:border-gray-700 rounded-3xl p-4 text-center relative bg-[#F4F6F0]/40 dark:bg-[#151D28]/40 overflow-hidden min-h-[260px] flex flex-col items-center justify-center">
+            
+            {/* Live Camera View */}
+            {isCameraActive ? (
+              <div className="w-full space-y-3 relative">
+                <div className="relative rounded-2xl overflow-hidden bg-black max-w-sm mx-auto shadow-md">
+                  <video
+                    ref={(el) => {
+                      videoRef.current = el;
+                      if (el && streamRef.current && el.srcObject !== streamRef.current) {
+                        el.srcObject = streamRef.current;
+                        el.play().catch((e) => console.warn('Play error:', e));
+                      }
+                    }}
+                    autoPlay
+                    playsInline
+                    muted
+                    onLoadedMetadata={(e) => {
+                      e.target.play().catch((err) => console.warn('Play error on metadata:', err));
+                    }}
+                    className="w-full h-56 object-cover"
+                  />
+                  {/* Viewfinder Target Guide */}
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div className="w-48 h-32 border-2 border-white/60 border-dashed rounded-3xl" />
+                    <div className="absolute text-[10px] text-white bg-black/50 px-2 py-0.5 rounded-full bottom-3">
+                      Lakshya ke andar rakhein
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={capturePhotoFromCamera}
+                    className="touch-target px-5 py-2.5 rounded-xl bg-[#5A7855] text-white font-bold text-xs flex items-center gap-2 shadow-sm hover:bg-[#4a6346]"
+                  >
+                    <Camera className="w-4 h-4" /> Photo Kheinchein (Snap)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    className="touch-target px-3 py-2.5 rounded-xl bg-gray-200 dark:bg-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-300"
+                  >
+                    Band Karein
+                  </button>
+                </div>
+              </div>
+            ) : selectedImage ? (
+              /* Image Preview with Original vs AI Overlay Toggle */
+              <div className="space-y-3 w-full">
                 <div className="relative inline-block max-w-full">
                   <img
-                    src={selectedImage}
-                    alt="Aankh ki tasveer preview"
-                    className="max-h-60 rounded-2xl object-contain mx-auto shadow-sm border border-gray-200 dark:border-gray-700"
+                    src={result && showAnnotated && result.annotated_image ? result.annotated_image : selectedImage}
+                    alt="Screening Preview"
+                    className="max-h-64 rounded-2xl object-contain mx-auto shadow-md border border-gray-200 dark:border-gray-700"
                   />
                   {loading && (
-                    <div className="absolute inset-0 bg-[#5A7855]/40 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center text-white">
-                      <RefreshCw className="w-8 h-8 animate-spin mb-2" />
-                      <span className="text-xs font-bold tracking-wider">OpenCV Biomarker Scan Ho Raha Hai…</span>
+                    <div className="absolute inset-0 bg-[#5A7855]/50 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center text-white p-4">
+                      <RefreshCw className="w-9 h-9 animate-spin mb-2" />
+                      <span className="text-xs font-bold tracking-wider">OpenCV Colorimetric Model Scan Ho Raha Hai…</span>
                     </div>
                   )}
                 </div>
+
+                {/* Overlay Toggle Bar if Result is available */}
+                {result && result.annotated_image && (
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowAnnotated(true)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        showAnnotated
+                          ? 'bg-[#5A7855] text-white shadow-xs'
+                          : 'bg-gray-100 dark:bg-gray-800 text-[#556376] dark:text-[#A8B4C2]'
+                      }`}
+                    >
+                      AI Biomarker Overlay
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAnnotated(false)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        !showAnnotated
+                          ? 'bg-[#5A7855] text-white shadow-xs'
+                          : 'bg-gray-100 dark:bg-gray-800 text-[#556376] dark:text-[#A8B4C2]'
+                      }`}
+                    >
+                      Mool Tasveer (Original)
+                    </button>
+                  </div>
+                )}
 
                 <div>
                   <button
@@ -240,57 +494,81 @@ export default function Screening() {
                 </div>
               </div>
             ) : (
-              <label className="cursor-pointer block py-6 sm:py-8">
-                <div className="w-16 h-16 rounded-3xl bg-[#5A7855]/15 dark:bg-[#5A7855]/25 text-[#5A7855] dark:text-[#8ED14C] flex items-center justify-center mx-auto mb-3 shadow-inner">
+              /* Dropzone Placeholder */
+              <div className="py-6 sm:py-8 space-y-4">
+                <div className="w-16 h-16 rounded-3xl bg-[#5A7855]/15 dark:bg-[#5A7855]/25 text-[#5A7855] dark:text-[#8ED14C] flex items-center justify-center mx-auto shadow-inner">
                   <Camera className="w-8 h-8" />
                 </div>
-                <span className="text-sm sm:text-base font-bold text-[#2E4057] dark:text-[#F4F6F0] block">
-                  Aankh Ki Tasveer Upload Karein Ya Kheinchein
-                </span>
-                <span className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-1 block max-w-sm mx-auto">
-                  Mobile camera se seedhe photo lein ya gallery se chunein (JPG, PNG)
-                </span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
+                <div>
+                  <span className="text-sm sm:text-base font-bold text-[#2E4057] dark:text-[#F4F6F0] block">
+                    Tasveer Upload Karein Ya Camera Se Kheinchein
+                  </span>
+                  <span className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-1 block max-w-sm mx-auto">
+                    Mobile gallery se photo chunein ya live camera se seedhe lein
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+                  <label className="touch-target cursor-pointer px-4 py-2.5 bg-[#5A7855] hover:bg-[#4a6346] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all">
+                    <Upload className="w-4 h-4" />
+                    <span>Gallery Se Chunein</span>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={startCamera}
+                    className="touch-target px-4 py-2.5 bg-white dark:bg-[#151D28] border border-[#5A7855]/30 text-[#5A7855] dark:text-[#8ED14C] rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-[#5A7855]/10 transition-all"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Live Camera Kholein</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleLoadDemoSample}
+                    className="touch-target px-3.5 py-2.5 bg-[#D4A359]/15 border border-[#D4A359]/30 text-[#8C5E24] dark:text-[#D4A359] rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-[#D4A359]/25 transition-all"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Demo Photo Load Karein</span>
+                  </button>
+                </div>
+              </div>
             )}
           </div>
 
-          {/* Clinical Photography Tips */}
+          {/* Clinical Photography Instructions */}
           <div className="bg-[#F4F6F0] dark:bg-[#182332] p-4 rounded-2xl border border-[#5A7855]/15 dark:border-gray-800 text-xs space-y-1.5 text-[#556376] dark:text-[#A8B4C2]">
             <div className="flex items-center gap-1.5 font-bold text-[#2E4057] dark:text-[#F4F6F0]">
               <Info className="w-4 h-4 text-[#5A7855]" />
-              <span>Sahi Tasveer Lene Ke Niyam:</span>
+              <span>Sahi Tasveer Lene Ke Niyam ({modalities[screeningType].title}):</span>
             </div>
-            {screeningType === 'ANEMIA' ? (
-              <p>• Neeche wali palak ko saaf haath se halka neeche karein taaki gulabi/laal hissa (conjunctiva) saaf dikhe.</p>
-            ) : (
-              <p>• Aankh ke safed bhaag (sclera) ko prakritik suraj ki roshni mein seedhe camera ke samne rakhein.</p>
-            )}
-            <p>• Camera flash off rakhein taaki roshni ka chamkaav na aaye aur rang bilkul sahi aaye.</p>
+            <p>• {modalities[screeningType].guideText}</p>
+            <p>• Camera flash off rakhein taaki natural tissue color reflect ho.</p>
           </div>
 
           {/* Action Trigger Button */}
           <button
             type="button"
             onClick={handleRunScreening}
-            disabled={!selectedImage || loading}
-            className="touch-target w-full bg-[#5A7855] hover:bg-[#4a6346] text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 shadow-sm transition-all"
+            disabled={(!selectedImage && !selectedFile) || loading}
+            className="touch-target w-full bg-[#5A7855] hover:bg-[#4a6346] text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 shadow-md shadow-[#5A7855]/20 transition-all"
           >
             {loading ? (
               <><RefreshCw className="w-5 h-5 animate-spin" /> Biomarker Scan Ho Raha Hai…</>
             ) : (
-              <><CheckCircle2 className="w-5 h-5" /> Biomarker Jaanch Shuru Karein</>
+              <><CheckCircle2 className="w-5 h-5" /> AI Biomarker Jaanch Shuru Karein</>
             )}
           </button>
         </div>
 
-        {/* Right Column: Stage 3 & 4 (Results & Referral Action) (5 cols) */}
+        {/* Right Column: Results & Clinical Actions (5 cols) */}
         <div className="lg:col-span-5 bg-white dark:bg-[#1E2A43] p-5 sm:p-7 rounded-3xl shadow-sm border border-[#5A7855]/20 dark:border-gray-800 space-y-5">
           {result ? (
             <div className="space-y-5 animate-fadeIn">
@@ -302,12 +580,20 @@ export default function Screening() {
                     Nishkarsh Report
                   </span>
                   <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                    result.risk?.includes('HIGH')
+                    result.risk?.includes('HIGH') || result.risk?.includes('SUSPECTED') || result.risk?.includes('ACTIVE')
                       ? 'bg-[#B85042] text-white'
+                      : result.risk?.includes('MILD') || result.risk?.includes('BORDERLINE')
+                      ? 'bg-[#D4A359] text-[#2E4057]'
                       : 'bg-[#5A7855] text-white'
                   }`}>
                     {result.risk === 'HIGH_ANEMIA_RISK'
                       ? 'Khoon Ki Kami Ka Sanket'
+                      : result.risk === 'JAUNDICE_RISK'
+                      ? 'Peeliya (Icterus) Sanket'
+                      : result.risk === 'ORAL_LESION_SUSPECTED'
+                      ? 'Mukh Rog (Lesion) Sanket'
+                      : result.risk === 'ACTIVE_INFLAMMATION_RISK'
+                      ? 'Twacha Sankraman Sanket'
                       : result.risk === 'NORMAL'
                       ? 'Samanya (Normal)'
                       : result.risk}
@@ -318,11 +604,33 @@ export default function Screening() {
                 </h3>
               </div>
 
+              {/* Estimated Clinical Metric Highlight Card */}
+              {result.estimated_metric && (
+                <div className="p-4 rounded-2xl bg-[#5A7855]/10 dark:bg-[#5A7855]/20 border border-[#5A7855]/25 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-[#556376] dark:text-[#A8B4C2] block uppercase tracking-wider">
+                      Anumaanit Clinical Metric:
+                    </span>
+                    <span className="font-serif font-bold text-base sm:text-lg text-[#2E4057] dark:text-[#F4F6F0]">
+                      {result.estimated_metric}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePlayResult}
+                    title="Audio Suniye"
+                    className="p-2.5 rounded-xl bg-white dark:bg-[#151D28] text-[#5A7855] dark:text-[#8ED14C] hover:bg-gray-50 shadow-xs"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               {/* Biomarker Index Breakdown */}
               <div className="bg-[#F4F6F0] dark:bg-[#151D28] p-4 rounded-2xl text-xs space-y-2.5 border border-[#5A7855]/15 dark:border-gray-800">
                 <div className="flex justify-between items-center">
                   <span className="text-[#556376] dark:text-[#A8B4C2]">Biomarker Model:</span>
-                  <span className="font-medium text-[#2E4057] dark:text-[#F4F6F0]">{result.biomarker || 'CIELAB / Colorimetric'}</span>
+                  <span className="font-medium text-[#2E4057] dark:text-[#F4F6F0] text-right truncate max-w-[200px]">{result.biomarker}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[#556376] dark:text-[#A8B4C2]">Calculated Index Score:</span>
@@ -332,24 +640,41 @@ export default function Screening() {
                   <span className="text-[#556376] dark:text-[#A8B4C2]">Clinical Cutoff Baseline:</span>
                   <span className="font-mono text-[#556376] dark:text-[#A8B4C2]">{result.threshold}</span>
                 </div>
+                {result.quality && (
+                  <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700">
+                    <span className="text-[#556376] dark:text-[#A8B4C2]">Lighting & Quality:</span>
+                    <span className="text-[11px] text-[#5A7855] dark:text-[#8ED14C] font-medium">{result.quality}</span>
+                  </div>
+                )}
               </div>
 
               {/* Clinical Advice */}
-              <div className="p-4 rounded-2xl bg-[#5A7855]/10 dark:bg-[#5A7855]/20 border border-[#5A7855]/25 text-xs leading-relaxed text-[#2E4057] dark:text-[#F4F6F0]">
-                <span className="font-bold block text-[#5A7855] dark:text-[#8ED14C] mb-1 flex items-center gap-1.5">
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs leading-relaxed text-[#2E4057] dark:text-[#F4F6F0]">
+                <span className="font-bold block text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1.5">
                   <Stethoscope className="w-4 h-4" /> Doctor Ki Prathmik Salah:
                 </span>
                 {result.recommendation}
               </div>
 
-              {/* Stage 4 Next Actions */}
+              {/* CCRAS Ayurvedic Care */}
+              {result.ayurveda && (
+                <div className="p-4 rounded-2xl bg-[#5A7855]/10 dark:bg-[#5A7855]/15 border border-[#5A7855]/20 text-xs leading-relaxed text-[#2E4057] dark:text-[#F4F6F0]">
+                  <span className="font-bold block text-[#5A7855] dark:text-[#8ED14C] mb-1 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4" /> CCRAS Ayurvedic Poshan & Upchar:
+                  </span>
+                  {result.ayurveda}
+                </div>
+              )}
+
+              {/* Referral Actions */}
               <div className="space-y-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => toast.success('ABDM FHIR DiagnosticReport referral bundle taiyar hua')}
+                  onClick={() => setShowReferralModal(true)}
                   className="touch-target w-full bg-[#D4A359] hover:bg-[#c49247] text-[#2E4057] font-bold py-3.5 px-4 rounded-2xl text-xs shadow-xs transition-all flex items-center justify-center gap-2"
                 >
-                  <span>PHC Doctor Ke Liye Referral Parcha Banayein</span>
+                  <FileText className="w-4 h-4" />
+                  <span>PHC Doctor Ke Liye Referral Parcha Kholein</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
@@ -372,7 +697,7 @@ export default function Screening() {
                 Tasveer chuniye aur jaanch shuru kijiye
               </p>
               <p className="text-xs text-[#556376] dark:text-[#A8B4C2] max-w-xs mx-auto leading-relaxed">
-                Biomarker calculation aur doctor recommendation yahan nishkarsh ke roop mein dikhega.
+                OpenCV colorimetric index, anumaanit clinical metric aur doctor recommendation yahan nishkarsh ke roop mein dikhega.
               </p>
             </div>
           )}
@@ -380,11 +705,108 @@ export default function Screening() {
 
       </div>
 
-      {/* Safety Notice Footer */}
-      <div className="max-w-3xl mx-auto mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#556376] dark:text-[#A8B4C2] text-center sm:text-left bg-white dark:bg-[#1E2A43] p-4 rounded-2xl border border-[#5A7855]/15">
+      {/* ── ABDM FHIR Referral Modal ────────────────────────────── */}
+      {showReferralModal && result && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-700 space-y-5 animate-scaleUp max-h-[90vh] overflow-y-auto">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#5A7855]/15 text-[#5A7855] dark:text-[#8ED14C] flex items-center justify-center font-bold">
+                  सं
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-base text-[#2E4057] dark:text-[#F4F6F0]">
+                    ABDM Diagnostic Referral Parcha
+                  </h3>
+                  <p className="text-[10px] text-[#556376] dark:text-[#A8B4C2]">
+                    Ayushman Bharat Digital Mission • FHIR R4 DiagnosticReport
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReferralModal(false)}
+                className="p-1 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Parcha Body */}
+            <div className="bg-[#F4F6F0] dark:bg-[#151D28] p-4 rounded-2xl text-xs space-y-2.5 border border-[#5A7855]/15 font-mono">
+              <div className="flex justify-between">
+                <span className="text-[#556376] dark:text-[#A8B4C2]">Report ID:</span>
+                <span className="font-bold text-[#2E4057] dark:text-[#F4F6F0]">{result.fhir_report?.id || 'SANJ-REF-001'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#556376] dark:text-[#A8B4C2]">Date / Time:</span>
+                <span>{new Date().toLocaleDateString('hi-IN')} {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#556376] dark:text-[#A8B4C2]">Screening Test:</span>
+                <span className="font-bold">{result.type}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#556376] dark:text-[#A8B4C2]">Calculated Score:</span>
+                <span className="font-bold">{result.score} (Cutoff: {result.threshold})</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#556376] dark:text-[#A8B4C2]">Estimated Metric:</span>
+                <span className="font-bold text-[#B85042] dark:text-[#FF7878]">{result.estimated_metric || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#556376] dark:text-[#A8B4C2]">Risk Grade:</span>
+                <span className="font-bold">{result.risk}</span>
+              </div>
+            </div>
+
+            {/* Referral Note */}
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs leading-relaxed">
+              <span className="font-bold text-amber-800 dark:text-amber-300 block mb-1">
+                Prathmik Swasthya Kendra (PHC) Chikitsak Hetu:
+              </span>
+              <p className="text-gray-700 dark:text-gray-300">
+                {result.recommendation}
+              </p>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (result.fhir_report) {
+                    downloadAbdmFhirBundle(result.fhir_report);
+                    toast.success('ABDM FHIR DiagnosticReport JSON download hua');
+                  }
+                }}
+                className="touch-target flex-1 py-3 px-4 rounded-xl bg-[#5A7855] text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-[#4a6346]"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download FHIR JSON</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="touch-target flex-1 py-3 px-4 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-bold flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Parcha Print Karein</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Safety Footer */}
+      <div className="max-w-4xl mx-auto mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#556376] dark:text-[#A8B4C2] text-center sm:text-left bg-white dark:bg-[#1E2A43] p-4 rounded-2xl border border-[#5A7855]/15">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-[#5A7855] shrink-0" />
-          <span>Yeh suvidha keval prathmik jagrukta ke liye hai. Kisi bhi asambhav sthiti mein doctor se milein.</span>
+          <span>Yeh suvidha prathmik edge screening hetu hai aur kisi bhi aapaat sthiti mein doctor se sampark karein.</span>
         </div>
         <a
           href="tel:108"

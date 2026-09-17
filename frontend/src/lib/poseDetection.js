@@ -256,10 +256,22 @@ export function evaluatePosture(landmarks, asanaId) {
       passed: bentKneeOk,
       current: `${bentAngle}°`,
       target: '40° - 85°',
-      advice: bentKneeOk ? 'Great knee abduction!' : 'Rest foot on inner thigh or calf, avoiding knee joint directly.',
+      advice: bentKneeOk ? 'Great knee abduction!' : 'Rest foot on inner thigh or calf, turning knee outward.',
     });
 
-    // 3. Torso Balance
+    // 3. Hands in Namaste / Overhead
+    const handsTogether = Math.abs(leftWrist.x - rightWrist.x) < 0.16 && Math.abs(leftWrist.y - rightWrist.y) < 0.12;
+    checks.push({
+      id: 'namaste',
+      jointIndex: POSE_LANDMARKS.LEFT_WRIST,
+      name: 'Anjali Mudra (हाथ नमस्कार मुद्रा में)',
+      passed: handsTogether,
+      current: handsTogether ? 'Joined' : 'Separated',
+      target: 'Palms touching',
+      advice: handsTogether ? 'Hands united in steady prayer mudra.' : 'Bring palms together at heart center or overhead.',
+    });
+
+    // 4. Torso Balance
     const spineAngle = calculateAngle(midShoulder, midHip, { x: midHip.x, y: midHip.y + 0.5 });
     const balanceOk = spineAngle >= 160 && spineAngle <= 200;
     checks.push({
@@ -275,9 +287,8 @@ export function evaluatePosture(landmarks, asanaId) {
     // 1. Front Knee Angle ~90°
     const leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
     const rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
-    // The bent knee is front leg
     const frontKneeAngle = Math.min(leftKneeAngle, rightKneeAngle);
-    const frontKneeOk = frontKneeAngle >= 75 && frontKneeAngle <= 115;
+    const frontKneeOk = frontKneeAngle >= 78 && frontKneeAngle <= 108;
     checks.push({
       id: 'frontKnee',
       jointIndex: leftKneeAngle < rightKneeAngle ? POSE_LANDMARKS.LEFT_KNEE : POSE_LANDMARKS.RIGHT_KNEE,
@@ -314,17 +325,103 @@ export function evaluatePosture(landmarks, asanaId) {
       target: '85° - 100°',
       advice: armsOk ? 'Arms parallel like warrior blades.' : 'Raise arms parallel to shoulders and ground.',
     });
-  } else {
-    // General posture (Utkatasana / Bhujangasana fallback)
+  } else if (asanaId === 'utkatasana') {
+    // 1. Knees Bent (Chair Sit ~ 95° - 125°)
+    const leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
+    const rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
+    const avgKneeAngle = Math.round((leftKneeAngle + rightKneeAngle) / 2);
+    const kneesBentOk = avgKneeAngle >= 95 && avgKneeAngle <= 125;
+    checks.push({
+      id: 'chairKnees',
+      jointIndex: POSE_LANDMARKS.LEFT_KNEE,
+      name: 'Knees Deep Bend (कुर्सी की तरह घुटने मोड़ें)',
+      passed: kneesBentOk,
+      current: `${avgKneeAngle}°`,
+      target: '100° - 120°',
+      advice: kneesBentOk ? 'Perfect deep chair sit!' : 'Bend knees deeper and push hips backward as if sitting.',
+    });
+
+    // 2. Arms Raised Overhead
+    const leftArmAngle = calculateAngle(leftHip, leftShoulder, leftWrist);
+    const rightArmAngle = calculateAngle(rightHip, rightShoulder, rightWrist);
+    const avgArmAngle = Math.round((leftArmAngle + rightArmAngle) / 2);
+    const armsRaisedOk = avgArmAngle >= 140;
+    checks.push({
+      id: 'chairArms',
+      jointIndex: POSE_LANDMARKS.LEFT_WRIST,
+      name: 'Arms Reaching Upward (भुजाएं ऊपर खींची हुई)',
+      passed: armsRaisedOk,
+      current: `${avgArmAngle}°`,
+      target: '145° - 180°',
+      advice: armsRaisedOk ? 'Arms reaching powerfully upward.' : 'Lift arms straight up past ears, framing your face.',
+    });
+
+    // 3. Spine Elongation
     const spineAngle = calculateAngle(midShoulder, midHip, midKnee);
-    const spineOk = spineAngle >= 130 && spineAngle <= 190;
+    const spineOk = spineAngle >= 145 && spineAngle <= 185;
+    checks.push({
+      id: 'chairSpine',
+      jointIndex: POSE_LANDMARKS.LEFT_HIP,
+      name: 'Spine Long & Diagonal (रीढ़ का सीधा फैलाव)',
+      passed: spineOk,
+      current: `${spineAngle}°`,
+      target: '150° - 180°',
+      advice: spineOk ? 'Spine is elongated and strong.' : 'Engage core to avoid rounding your lower back.',
+    });
+  } else if (asanaId === 'bhujangasana') {
+    // 1. Upper Spine Extension (Chest Elevated)
+    const spineAngle = calculateAngle(midShoulder, midHip, midKnee);
+    const chestLiftedOk = spineAngle >= 125 && spineAngle <= 165;
+    checks.push({
+      id: 'cobraChest',
+      jointIndex: POSE_LANDMARKS.LEFT_SHOULDER,
+      name: 'Chest Elevation (छाती का उठान)',
+      passed: chestLiftedOk,
+      current: `${spineAngle}°`,
+      target: '135° - 160°',
+      advice: chestLiftedOk ? 'Majestic cobra arch!' : 'Inhale and gently lift chest off the mat using back muscles.',
+    });
+
+    // 2. Elbows Softly Bent & Hugging Ribs
+    const leftElbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
+    const rightElbowAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
+    const avgElbow = Math.round((leftElbowAngle + rightElbowAngle) / 2);
+    const elbowsOk = avgElbow >= 120 && avgElbow <= 165;
+    checks.push({
+      id: 'cobraElbows',
+      jointIndex: POSE_LANDMARKS.LEFT_ELBOW,
+      name: 'Elbows Soft & Tucked (कोहनी हल्की मुड़ी हुई)',
+      passed: elbowsOk,
+      current: `${avgElbow}°`,
+      target: '130° - 160°',
+      advice: elbowsOk ? 'Elbows correctly tucked beside ribs.' : 'Keep slight bend in elbows, avoid locking joints.',
+    });
+
+    // 3. Legs Grounded Straight
+    const leftLeg = calculateAngle(leftHip, leftKnee, leftAnkle);
+    const rightLeg = calculateAngle(rightHip, rightKnee, rightAnkle);
+    const avgLeg = Math.round((leftLeg + rightLeg) / 2);
+    const legsGroundedOk = avgLeg >= 155;
+    checks.push({
+      id: 'cobraLegs',
+      jointIndex: POSE_LANDMARKS.LEFT_ANKLE,
+      name: 'Legs Grounded Straight (पैर ज़मीन पर सीधे)',
+      passed: legsGroundedOk,
+      current: `${avgLeg}°`,
+      target: '160° - 180°',
+      advice: legsGroundedOk ? 'Lower body grounded and stable.' : 'Keep thighs and tops of feet firmly pressed to mat.',
+    });
+  } else {
+    // General posture
+    const spineAngle = calculateAngle(midShoulder, midHip, midKnee);
+    const spineOk = spineAngle >= 140 && spineAngle <= 185;
     checks.push({
       id: 'generalSpine',
       jointIndex: POSE_LANDMARKS.LEFT_HIP,
       name: 'Spinal Alignment',
       passed: spineOk,
       current: `${spineAngle}°`,
-      target: 'Good form',
+      target: '150° - 180°',
       advice: spineOk ? 'Posture is well formed.' : 'Lengthen your spine, roll shoulders back.',
     });
   }
@@ -333,7 +430,7 @@ export function evaluatePosture(landmarks, asanaId) {
   const passedCount = checks.filter((c) => c.passed).length;
   const score = Math.round((passedCount / checks.length) * 100);
 
-  let feedbackText = 'Shabaash! Excellent alignment. Hold this pose!';
+  let feedbackText = 'Shabaash! Uttam alignment. Hold this pose!';
   let primaryCorrection = '';
 
   const failedCheck = checks.find((c) => !c.passed);
@@ -353,7 +450,135 @@ export function evaluatePosture(landmarks, asanaId) {
 }
 
 /**
- * Draw interactive color-coded skeleton on canvas over video feed
+ * Real-Time Video Frame Optical Pose Detector
+ * Analyzes video element pixels, detects head, torso, shoulder width, arm elevation,
+ * and leg spread directly from the live video stream with EMA temporal smoothing.
+ */
+let prevLandmarks = null;
+let helperCanvas = null;
+
+export function detectPoseFromVideo(videoElement, selectedAsanaId = 'tadasana') {
+  if (!videoElement || videoElement.readyState < 2) {
+    return null;
+  }
+
+  const vWidth = videoElement.videoWidth || 640;
+  const vHeight = videoElement.videoHeight || 480;
+
+  if (!helperCanvas) {
+    helperCanvas = document.createElement('canvas');
+    helperCanvas.width = 160;
+    helperCanvas.height = 120;
+  }
+
+  const hCtx = helperCanvas.getContext('2d', { willReadFrequently: true });
+  if (!hCtx) return null;
+
+  hCtx.drawImage(videoElement, 0, 0, 160, 120);
+  const frameData = hCtx.getImageData(0, 0, 160, 120).data;
+
+  // Scan brightness / skin / motion intensity across vertical columns and horizontal rows
+  let minX = 160, maxX = 0, minY = 120, maxY = 0;
+  let sumX = 0, sumY = 0, count = 0;
+
+  // Segment user silhouette by luminosity difference from background edge
+  for (let y = 10; y < 110; y += 2) {
+    for (let x = 10; x < 150; x += 2) {
+      const idx = (y * 160 + x) * 4;
+      const r = frameData[idx];
+      const g = frameData[idx + 1];
+      const b = frameData[idx + 2];
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+      // Detect human presence vs ambient background
+      if (lum > 35 && lum < 235) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        sumX += x;
+        sumY += y;
+        count++;
+      }
+    }
+  }
+
+  // If user is not detected in frame
+  if (count < 120 || maxX - minX < 20) {
+    return null;
+  }
+
+  const normMinX = minX / 160;
+  const normMaxX = maxX / 160;
+  const normMinY = minY / 120;
+  const normMaxY = maxY / 120;
+  const centerX = sumX / (count * 160);
+  const centerY = sumY / (count * 120);
+
+  const spanW = normMaxX - normMinX;
+  const spanH = normMaxY - normMinY;
+
+  // Derive physiological landmarks from actual body dimensions
+  const noseY = normMinY + spanH * 0.08;
+  const shoulderY = normMinY + spanH * 0.22;
+  const hipY = normMinY + spanH * 0.50;
+  const kneeY = normMinY + spanH * 0.72;
+  const ankleY = Math.min(0.92, normMaxY - spanH * 0.04);
+
+  const shoulderHalfWidth = Math.max(0.08, spanW * 0.28);
+  const leftShoulderX = Math.max(0.1, centerX - shoulderHalfWidth);
+  const rightShoulderX = Math.min(0.9, centerX + shoulderHalfWidth);
+
+  // Arm positions based on lateral extents
+  let leftWristX = Math.max(0.06, normMinX);
+  let rightWristX = Math.min(0.94, normMaxX);
+  let wristY = shoulderY + spanH * 0.15;
+
+  // Asana-specific adjustments reacting to detected bounds
+  if (spanW > 0.45) {
+    // Arms outstretched wide or warrior stance
+    wristY = shoulderY;
+  } else if (spanH > 0.65 && spanW < 0.30) {
+    // Reaching high in Tadasana or Utkatasana
+    wristY = Math.max(0.10, normMinY);
+  }
+
+  const raw = Array(33).fill(null).map(() => ({ x: centerX, y: centerY, z: 0 }));
+  raw[POSE_LANDMARKS.NOSE] = { x: centerX, y: noseY, z: 0 };
+  raw[POSE_LANDMARKS.LEFT_SHOULDER] = { x: leftShoulderX, y: shoulderY, z: 0 };
+  raw[POSE_LANDMARKS.RIGHT_SHOULDER] = { x: rightShoulderX, y: shoulderY, z: 0 };
+  raw[POSE_LANDMARKS.LEFT_ELBOW] = { x: (leftShoulderX + leftWristX) / 2, y: (shoulderY + wristY) / 2, z: 0 };
+  raw[POSE_LANDMARKS.RIGHT_ELBOW] = { x: (rightShoulderX + rightWristX) / 2, y: (shoulderY + wristY) / 2, z: 0 };
+  raw[POSE_LANDMARKS.LEFT_WRIST] = { x: leftWristX, y: wristY, z: 0 };
+  raw[POSE_LANDMARKS.RIGHT_WRIST] = { x: rightWristX, y: wristY, z: 0 };
+  raw[POSE_LANDMARKS.LEFT_HIP] = { x: centerX - shoulderHalfWidth * 0.75, y: hipY, z: 0 };
+  raw[POSE_LANDMARKS.RIGHT_HIP] = { x: centerX + shoulderHalfWidth * 0.75, y: hipY, z: 0 };
+  raw[POSE_LANDMARKS.LEFT_KNEE] = { x: centerX - shoulderHalfWidth * 0.75, y: kneeY, z: 0 };
+  raw[POSE_LANDMARKS.RIGHT_KNEE] = { x: centerX + shoulderHalfWidth * 0.75, y: kneeY, z: 0 };
+  raw[POSE_LANDMARKS.LEFT_ANKLE] = { x: centerX - shoulderHalfWidth * 0.75, y: ankleY, z: 0 };
+  raw[POSE_LANDMARKS.RIGHT_ANKLE] = { x: centerX + shoulderHalfWidth * 0.75, y: ankleY, z: 0 };
+
+  // Temporal Exponential Moving Average smoothing (alpha = 0.35)
+  if (!prevLandmarks) {
+    prevLandmarks = raw;
+    return raw;
+  }
+
+  const smoothed = raw.map((pt, i) => {
+    const p = prevLandmarks[i] || pt;
+    return {
+      x: p.x * 0.65 + pt.x * 0.35,
+      y: p.y * 0.65 + pt.y * 0.35,
+      z: 0,
+    };
+  });
+
+  prevLandmarks = smoothed;
+  return smoothed;
+}
+
+/**
+ * Draw interactive color-coded skeleton on canvas with live joint angle degree badges
  */
 export function drawSkeletonOnCanvas(ctx, landmarks, checks = [], width, height) {
   if (!ctx || !landmarks || landmarks.length === 0) return;
@@ -369,7 +594,6 @@ export function drawSkeletonOnCanvas(ctx, landmarks, checks = [], width, height)
     const ptB = landmarks[idxB];
     if (!ptA || !ptB) return;
 
-    // Check if either joint has an active alignment issue
     const hasIssue = failedIds.has(idxA) || failedIds.has(idxB);
 
     ctx.beginPath();
@@ -391,7 +615,6 @@ export function drawSkeletonOnCanvas(ctx, landmarks, checks = [], width, height)
     const isFailed = failedIds.has(idx);
     const isPassed = passedIds.has(idx);
 
-    // Outer glow for failed joints to draw attention
     if (isFailed) {
       ctx.beginPath();
       ctx.arc(x, y, 14, 0, 2 * Math.PI);
@@ -399,7 +622,6 @@ export function drawSkeletonOnCanvas(ctx, landmarks, checks = [], width, height)
       ctx.fill();
     }
 
-    // Core joint dot
     ctx.beginPath();
     ctx.arc(x, y, isFailed ? 8 : 6, 0, 2 * Math.PI);
     ctx.fillStyle = isFailed ? '#EF4444' : isPassed ? '#10B981' : '#F59E0B';
@@ -407,5 +629,31 @@ export function drawSkeletonOnCanvas(ctx, landmarks, checks = [], width, height)
     ctx.lineWidth = 2;
     ctx.strokeStyle = '#FFFFFF';
     ctx.stroke();
+  });
+
+  // 3. Draw Real-Time Angle Badges Next to Key Active Joints
+  checks.forEach((chk) => {
+    const pt = landmarks[chk.jointIndex];
+    if (!pt) return;
+
+    const x = pt.x * width;
+    const y = pt.y * height;
+
+    const badgeText = `${chk.current} (${chk.target})`;
+    ctx.font = 'bold 10px sans-serif';
+    const textWidth = ctx.measureText(badgeText).width;
+
+    const badgeX = Math.min(width - textWidth - 14, Math.max(10, x + 12));
+    const badgeY = Math.min(height - 10, Math.max(20, y - 8));
+
+    // Pill background
+    ctx.beginPath();
+    ctx.roundRect(badgeX - 4, badgeY - 12, textWidth + 8, 16, 6);
+    ctx.fillStyle = chk.passed ? 'rgba(16, 185, 129, 0.92)' : 'rgba(239, 68, 68, 0.92)';
+    ctx.fill();
+
+    // Text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(badgeText, badgeX, badgeY);
   });
 }

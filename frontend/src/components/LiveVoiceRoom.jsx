@@ -103,6 +103,15 @@ export default function LiveVoiceRoom({ onClose }) {
     onClose();
   };
 
+  /* ── Lock background scroll while Live room is open ────────────────── */
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
   /* ── Derived UI values ─────────────────────────────────────────────── */
   const tc = TIER_COLOR[tier] || TIER_COLOR.Green;
 
@@ -123,135 +132,155 @@ export default function LiveVoiceRoom({ onClose }) {
   /* ── RENDER ────────────────────────────────────────────────────────── */
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col"
-      style={{ background: 'linear-gradient(160deg, #0F1A2B 0%, #1C2B3A 45%, #16231C 100%)' }}
+      className="fixed inset-0 z-[99999] w-screen h-screen flex flex-col justify-between overflow-hidden select-none"
+      style={{ background: 'radial-gradient(ellipse at center top, #182838 0%, #0E1824 50%, #081118 100%)' }}
     >
-      {/* ── TOP BAR ────────────────────────────────────────────────── */}
-      <div className="shrink-0 flex items-center justify-between px-5 pt-5 pb-3">
-        <div className="flex items-center gap-2.5">
+      {/* ── TOP HEADER BAR (CLEAN & FULL-WIDTH) ─────────────────────── */}
+      <header className="shrink-0 flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4 border-b border-white/10 bg-black/20 backdrop-blur-md">
+        <div className="flex items-center gap-3">
           <SanjeevaniOrb state={convState === 'idle' ? 'idle' : convState} size={28} />
           <div>
-            <h2 className="font-serif font-bold text-white text-base leading-tight">Sanjeevani Live</h2>
-            <p className="text-[10px] text-white/40">Haath-mukt aawaz paramarsh</p>
+            <h2 className="font-serif font-bold text-white text-base sm:text-lg leading-tight tracking-wide">
+              Sanjeevani Live
+            </h2>
+            <p className="text-[11px] text-white/50">Haath-mukt aawaz paramarsh • Hands-free Voice Consultation</p>
           </div>
         </div>
 
-        {/* Tier + Status chip */}
-        <div className="flex items-center gap-2">
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border border-white/10 ${tc.bg} ${tc.text}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${tier === 'Green' ? 'animate-pulse' : ''} ${tc.dot}`} />
+        {/* Tier + Status chip + Close button */}
+        <div className="flex items-center gap-2.5">
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-white/10 ${tc.bg} ${tc.text}`}>
+            <span className={`w-2 h-2 rounded-full ${tier === 'Green' ? 'animate-pulse' : ''} ${tc.dot}`} />
             Tier {tier}
           </div>
           <button
             onClick={handleEndCall}
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-[#B85042]/80 text-white flex items-center justify-center transition-all"
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-[#B85042] text-white flex items-center justify-center transition-all shadow-md"
             aria-label="End call"
+            title="Baat Band Karein"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* ── CENTRAL ORB AREA ───────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-6 py-2">
+      {/* ── CENTRAL HERO & CONVERSATION AREA ───────────────────────── */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-2 sm:py-3 min-h-0 overflow-hidden">
+        
+        <div className="w-full max-w-md sm:max-w-lg flex flex-col items-center">
+          
+          {/* Majestic Centered Orb with ample breathing room for full radial animations */}
+          <div className="relative flex items-center justify-center mb-8 sm:mb-10">
+            {/* Ambient Outer Aura */}
+            <div
+              className={`absolute rounded-full transition-all duration-700 pointer-events-none ${
+                convState === 'speaking'
+                  ? 'w-52 h-52 sm:w-60 sm:h-60 bg-[#8ED14C]/15 shadow-[0_0_80px_rgba(142,209,76,0.3)]'
+                  : convState === 'listening'
+                  ? 'w-52 h-52 sm:w-60 sm:h-60 bg-[#D4A359]/15 shadow-[0_0_80px_rgba(212,163,89,0.3)]'
+                  : convState === 'thinking'
+                  ? 'w-52 h-52 sm:w-60 sm:h-60 bg-[#2E4057]/45 shadow-[0_0_70px_rgba(46,64,87,0.45)]'
+                  : 'w-40 h-40 sm:w-48 sm:h-48 bg-white/5'
+              }`}
+            />
 
-        {/* The large interactive orb */}
-        <div className="relative flex items-center justify-center mb-6">
-          {/* Glow ring behind orb */}
-          <div
-            className={`absolute rounded-full transition-all duration-700 ${
-              convState === 'speaking'
-                ? 'w-52 h-52 bg-[#8ED14C]/12 shadow-[0_0_80px_rgba(142,209,76,0.25)]'
-                : convState === 'listening'
-                ? 'w-52 h-52 bg-[#D4A359]/12 shadow-[0_0_80px_rgba(212,163,89,0.25)]'
-                : convState === 'thinking'
-                ? 'w-52 h-52 bg-[#2E4057]/40 shadow-[0_0_60px_rgba(46,64,87,0.4)]'
-                : 'w-40 h-40 bg-white/3'
-            }`}
-          />
+            {/* Pulsing Ripple Halo */}
+            <div
+              className={`absolute rounded-full border-2 transition-all duration-700 pointer-events-none ${
+                convState === 'listening'
+                  ? 'w-44 h-44 sm:w-52 sm:h-52 border-[#D4A359]/40 animate-ping'
+                  : convState === 'speaking'
+                  ? 'w-44 h-44 sm:w-52 sm:h-52 border-[#8ED14C]/35 animate-ping'
+                  : 'w-36 h-36 border-white/5'
+              }`}
+            />
 
-          {/* Pulsing outer ring */}
-          <div
-            className={`absolute rounded-full border-2 transition-all duration-500 ${
-              convState === 'listening'
-                ? 'w-44 h-44 border-[#D4A359]/40 animate-ping'
-                : convState === 'speaking'
-                ? 'w-44 h-44 border-[#8ED14C]/30 animate-ping'
-                : 'w-36 h-36 border-white/5'
-            }`}
-          />
+            {/* Majestic Sanjeevani Orb */}
+            <SanjeevaniOrb state={convState === 'idle' ? 'idle' : convState} size={124} />
 
-          {/* The actual big Orb SVG */}
-          <SanjeevaniOrb state={convState === 'idle' ? 'idle' : convState} size={160} />
-
-          {/* State icon overlay at bottom of orb */}
-          <div className="absolute -bottom-3 flex items-center justify-center">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 border-[#0F1A2B] shadow-lg transition-all ${
-              convState === 'listening'
-                ? 'bg-[#D4A359] text-[#1E2A43]'
-                : convState === 'speaking'
-                ? 'bg-[#5A7855] text-white'
-                : convState === 'thinking'
-                ? 'bg-[#2E4057] text-white'
-                : 'bg-white/10 text-white/60'
-            }`}>
-              {convState === 'speaking'
-                ? <Volume2 className="w-4 h-4" />
-                : <Mic className={`w-4 h-4 ${convState === 'listening' ? 'animate-pulse' : ''}`} />
+            {/* Mic / Volume State Badge */}
+            <div className="absolute -bottom-2.5 flex items-center justify-center shadow-xl">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 border-[#09121A] transition-all ${
+                convState === 'listening'
+                  ? 'bg-[#D4A359] text-[#1E2A43] shadow-[0_0_20px_rgba(212,163,89,0.5)]'
+                  : convState === 'speaking'
+                  ? 'bg-[#5A7855] text-white shadow-[0_0_20px_rgba(90,120,85,0.5)]'
+                  : convState === 'thinking'
+                  ? 'bg-[#2E4057] text-white'
+                  : 'bg-white/15 text-white/70'
+              }`}>
+                {convState === 'speaking'
+                  ? <Volume2 className="w-4 h-4" />
+                  : <Mic className={`w-4 h-4 ${convState === 'listening' ? 'animate-pulse' : ''}`} />
               }
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Status label */}
-        <div className="text-center mb-5 mt-2">
-          <p className="font-serif text-white text-xl font-bold leading-tight">{statusLabel}</p>
-          <p className="text-white/40 text-xs mt-1">{statusHint}</p>
-        </div>
-
-        {/* Live transcript area — scrollable, compact */}
-        <div className="w-full max-w-sm bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-          {/* Latest user utterance */}
-          {latestUserText ? (
-            <div className="px-4 pt-3 pb-2 border-b border-white/8">
-              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Aapne kaha:</p>
-              <p className="text-white/70 text-xs italic">"{latestUserText}"</p>
-            </div>
-          ) : (
-            <div className="px-4 pt-3 pb-2 border-b border-white/8">
-              <p className="text-[10px] text-white/25 italic">Aapki awaaz ka intezaar hai…</p>
-            </div>
-          )}
-
-          {/* AI reply */}
-          <div className="px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: TIER_COLOR[tier]?.text?.replace('text-', '') || '#8ED14C' }}>
-              <span className={tc.text}>Sanjeevani:</span>
-            </p>
-            <p className="font-serif text-white/90 text-sm leading-relaxed line-clamp-4">
-              {latestReply}
+          {/* Status Label & Micro Hint */}
+          <div className="text-center mb-3.5 sm:mb-4">
+            <h3 className="font-serif text-white text-lg sm:text-xl md:text-2xl font-bold leading-tight tracking-wide drop-shadow-sm">
+              {statusLabel}
+            </h3>
+            <p className="text-white/60 text-xs sm:text-sm mt-1 font-medium">
+              {statusHint}
             </p>
           </div>
+
+          {/* Live Response Card (lowered to give orb animation full clearance) */}
+          <div className="w-full bg-white/8 backdrop-blur-md border border-white/15 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl transition-all">
+            {/* User Speech Snippet */}
+            {latestUserText ? (
+              <div className="px-4 py-1.5 border-b border-white/10 bg-black/15 flex items-center gap-2">
+                <span className="text-[10px] font-bold text-white/45 uppercase tracking-wider shrink-0">Aapne kaha:</span>
+                <span className="text-white/90 text-xs italic truncate">"{latestUserText}"</span>
+              </div>
+            ) : (
+              <div className="px-4 py-1.5 border-b border-white/10 bg-black/15">
+                <span className="text-[10px] text-white/35 italic">Aapki awaaz ka intezaar hai… (Bolna shuru karein)</span>
+              </div>
+            )}
+
+            {/* Sanjeevani Reply Text */}
+            <div className="px-4 py-2.5 sm:py-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className={`text-[11px] font-bold uppercase tracking-wider ${tc.text}`}>
+                  Sanjeevani
+                </span>
+                <span className="text-[10px] text-white/40 font-mono">Real-time Voice</span>
+              </div>
+              <p className="font-serif text-white/95 text-xs sm:text-sm md:text-base leading-relaxed line-clamp-2 sm:line-clamp-3">
+                {latestReply}
+              </p>
+            </div>
+          </div>
+
+          {/* End Conversation Button — WITH A PROPER, GENEROUS GAP BELOW THE RESPONSE BLOCK */}
+          <div className="w-full mt-6 sm:mt-7 space-y-2">
+            <button
+              onClick={handleEndCall}
+              className="touch-target w-full flex items-center justify-center gap-2.5 bg-[#B85042] hover:bg-[#a03e31] active:scale-98 text-white py-3 px-6 rounded-2xl font-bold text-sm sm:text-base transition-all shadow-xl shadow-[#B85042]/35 border border-white/10"
+            >
+              <PhoneOff className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>Baat Khatam Karein • End Call</span>
+            </button>
+            
+            <div className="flex items-center justify-between px-2 text-[11px] text-white/45">
+              <span>Haath-mukt paramarsh sakriya</span>
+              <a href="tel:108" className="hover:text-red-400 font-semibold underline transition-colors">
+                108 Aapaatkaal (Ambulance)
+              </a>
+            </div>
+          </div>
+
         </div>
 
-        {/* Instruction hint */}
-        <p className="text-center text-white/25 text-[10px] mt-4 max-w-xs leading-relaxed">
-          Koi button dabaane ki zaroorat nahi — Sanjeevani apne aap sunaati aur sunti hai
-        </p>
-      </div>
+      </main>
 
-      {/* ── BOTTOM END CALL ────────────────────────────────────────── */}
-      <div className="shrink-0 flex flex-col items-center gap-3 px-6 pb-8 pt-4">
-        {/* Big Red End Call pill */}
-        <button
-          onClick={handleEndCall}
-          className="flex items-center gap-3 bg-[#B85042] hover:bg-[#9a4035] active:scale-95 text-white px-10 py-4 rounded-2xl font-bold text-base transition-all shadow-lg shadow-[#B85042]/30"
-        >
-          <PhoneOff className="w-5 h-5" />
-          Baat Khatam Karein
-        </button>
-        <p className="text-white/30 text-[10px]">108 Aapaatkaal ke liye call karein</p>
-      </div>
+      {/* Subtle Bottom Ambient Note */}
+      <footer className="shrink-0 py-2.5 text-center text-white/30 text-[11px]">
+        Koi button dabaane ki zaroorat nahi — Sanjeevani apne aap sunti aur bolti hai
+      </footer>
     </div>
   );
 }
