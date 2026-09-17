@@ -1,203 +1,257 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, PhoneOff, Volume2 } from 'lucide-react';
+import { PhoneOff, Volume2, Mic, X } from 'lucide-react';
 import { sendChatMessage, getOrCreateConversationId } from '../api/client';
 import { speakText } from '../api/voiceClient';
 import SanjeevaniOrb from './SanjeevaniOrb';
 
+/* ─── Tier colour mapping ──────────────────────────────────────────────── */
+const TIER_COLOR = {
+  Green:  { bg: 'bg-[#5A7855]/20', text: 'text-[#8ED14C]', dot: 'bg-[#8ED14C]' },
+  Yellow: { bg: 'bg-[#D4A359]/20', text: 'text-[#D4A359]', dot: 'bg-[#D4A359]' },
+  Red:    { bg: 'bg-[#B85042]/25', text: 'text-[#FF7878]', dot: 'bg-[#B85042]' },
+};
+
 export default function LiveVoiceRoom({ onClose }) {
-  const [isLiveActive, setIsLiveActive] = useState(true);
-  const [conversationState, setConversationState] = useState('idle'); // 'listening' | 'thinking' | 'speaking'
+  const [convState, setConvState]         = useState('idle'); // idle | listening | thinking | speaking
   const [latestUserText, setLatestUserText] = useState('');
-  const [latestAgentReply, setLatestAgentReply] = useState('Namaste. Main Sanjeevani hoon. Aap kaisa mehsoos kar rahe hain? Kripya aaram se batayein...');
-  const [tier, setTier] = useState('Green');
+  const [latestReply, setLatestReply]     = useState(
+    'Namaste! Main Sanjeevani hoon.\nAap kaisa mehsoos kar rahe hain? Baat karein…'
+  );
+  const [tier, setTier]                   = useState('Green');
+  const [isLiveActive, setIsLiveActive]   = useState(true);
+  const [transcript, setTranscript]       = useState([]); // array of {role, text}
 
-  // FIX: previously each turn used a brand-new `'live-session-' + Date.now()`
-  // conversation id, so the backend had no way to link turns together —
-  // the exact "multi-turn bug" client.js's own comments say was fixed for
-  // text chat, but voice mode had silently regressed. We now share the
-  // same persisted conversation id as the text chat session.
-  const conversationIdRef = useRef(getOrCreateConversationId());
-
+  const convId     = useRef(getOrCreateConversationId());
   const recognitionRef = useRef(null);
-  // Cleanup function returned by speakText() — stops whatever audio
-  // (backend Bhashini playback or browser-voice fallback) is currently
-  // in flight. Replaces the old `synthRef` (window.speechSynthesis) which
-  // voiceClient.js now owns internally.
-  const stopSpeakingRef = useRef(null);
+  const stopSpeakRef   = useRef(null);
 
-  // Initialize Speech Recognition
+  /* ── Init speech recognition + greet ─────────────────────────────── */
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge.');
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      alert('Speech recognition is not supported. Please use Chrome or Edge.');
       return;
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'hi-IN'; // Hindi ASR — the closest supported locale for Garhwali speech
-    recognition.interimResults = false;
-    recognition.continuous = false;
+    const rec = new SR();
+    rec.lang = 'hi-IN';
+    rec.interimResults = false;
+    rec.continuous = false;
 
-    recognition.onstart = () => {
-      setConversationState('listening');
-    };
+    rec.onstart = () => setConvState('listening');
 
-    recognition.onresult = async (event) => {
-      const transcript = event.results[0][0].transcript;
-      if (!transcript.trim()) return;
-
-      setLatestUserText(transcript);
-      setConversationState('thinking');
-
+    rec.onresult = async (e) => {
+      const text = e.results[0][0].transcript;
+      if (!text.trim()) return;
+      setLatestUserText(text);
+      setTranscript(prev => [...prev, { role: 'user', text }]);
+      setConvState('thinking');
       try {
-        // Send to Sanjeevani's Triage Engine using the SAME conversation id
-        // every turn, so multi-turn context (already-asked questions,
-        // phase progression) is preserved for voice sessions too.
-        const res = await sendChatMessage(conversationIdRef.current, transcript);
-        setLatestAgentReply(res.reply_text);
+        const res = await sendChatMessage(convId.current, text);
+        setLatestReply(res.reply_text);
         setTier(res.tier || 'Green');
-
-        speakAgentResponse(res.reply_text);
-      } catch (err) {
-        speakAgentResponse('Aapki aawaz theek se sunai nahi di, kripya dobara batayein.');
+        setTranscript(prev => [...prev, { role: 'ai', text: res.reply_text }]);
+        speakReply(res.reply_text);
+      } catch {
+        const fallback = 'Kshama karein, kuch gadbad hua. Dobara boliye.';
+        setLatestReply(fallback);
+        setTranscript(prev => [...prev, { role: 'ai', text: fallback }]);
+        speakReply(fallback);
       }
     };
 
-    recognition.onerror = (e) => {
-      console.warn('Speech Recognition Event:', e.error);
-      if (isLiveActive && conversationState !== 'speaking') {
-        setTimeout(() => startListening(), 800);
-      }
-    };
+    rec.onerror = () => { if (isLiveActive) setTimeout(startListening, 800); };
+    rec.onend   = () => { if (isLiveActive && convState === 'listening') setTimeout(startListening, 500); };
 
-    recognition.onend = () => {
-      if (isLiveActive && conversationState === 'listening') {
-        setTimeout(() => startListening(), 500);
-      }
-    };
-
-    recognitionRef.current = recognition;
-    speakAgentResponse(latestAgentReply);
+    recognitionRef.current = rec;
+    speakReply(latestReply); // greet
 
     return () => {
-      if (recognitionRef.current) recognitionRef.current.abort();
-      stopSpeakingRef.current?.();
-      window.speechSynthesis?.cancel(); // safety net for the browser-voice fallback
+      rec.abort();
+      stopSpeakRef.current?.();
+      window.speechSynthesis?.cancel();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startListening = () => {
     try {
-      if (recognitionRef.current && conversationState !== 'speaking') {
+      if (recognitionRef.current && convState !== 'speaking') {
         recognitionRef.current.start();
-        setConversationState('listening');
+        setConvState('listening');
       }
-    } catch (e) {
-      // Already running
-    }
+    } catch { /* already running */ }
   };
 
-  // NEW: plays natural Bhashini (AI4Bharat / Digital India) Hindi speech
-  // via the backend TTS endpoint. Automatically falls back to the
-  // browser's built-in voice if Bhashini isn't configured or the request
-  // fails, so the live room is never silent.
-  const speakAgentResponse = (text) => {
-    // Stop any previous playback before starting the new one.
-    stopSpeakingRef.current?.();
-    setConversationState('speaking');
-
-    stopSpeakingRef.current = speakText(text, {
-      language: 'hi',
-      gender: 'female',
+  const speakReply = (text) => {
+    stopSpeakRef.current?.();
+    setConvState('speaking');
+    stopSpeakRef.current = speakText(text, {
+      language: 'hi', gender: 'female',
       onEnd: () => {
-        setConversationState('idle');
-        if (isLiveActive) {
-          setTimeout(() => startListening(), 400);
-        }
+        setConvState('idle');
+        if (isLiveActive) setTimeout(startListening, 400);
       },
     });
   };
 
   const handleEndCall = () => {
     setIsLiveActive(false);
-    if (recognitionRef.current) recognitionRef.current.abort();
-    stopSpeakingRef.current?.();
+    recognitionRef.current?.abort();
+    stopSpeakRef.current?.();
     window.speechSynthesis?.cancel();
     onClose();
   };
 
-  const orbState = conversationState === 'idle' ? 'idle' : conversationState;
+  /* ── Derived UI values ─────────────────────────────────────────────── */
+  const tc = TIER_COLOR[tier] || TIER_COLOR.Green;
 
+  const statusLabel = {
+    idle: 'Taiyar hoon…',
+    listening: 'Aapki baat sun raha hoon…',
+    thinking: 'Soch raha hoon…',
+    speaking: 'Bol raha hoon…',
+  }[convState];
+
+  const statusHint = {
+    idle: 'Bolna shuru karein',
+    listening: 'Baat karte rahiye',
+    thinking: 'Thoda ruko…',
+    speaking: 'Sanjeevani bol rahi hai',
+  }[convState];
+
+  /* ── RENDER ────────────────────────────────────────────────────────── */
   return (
-    <div className="fixed inset-0 z-50 bg-warm-indigo/95 backdrop-blur-xl text-white flex flex-col items-center justify-between p-6 md:p-12 animate-fadeIn">
-
-      {/* Top Calming Header */}
-      <div className="w-full max-w-xl flex items-center justify-between">
+    <div
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ background: 'linear-gradient(160deg, #0F1A2B 0%, #1C2B3A 45%, #16231C 100%)' }}
+    >
+      {/* ── TOP BAR ────────────────────────────────────────────────── */}
+      <div className="shrink-0 flex items-center justify-between px-5 pt-5 pb-3">
         <div className="flex items-center gap-2.5">
-          <SanjeevaniOrb state={orbState} size={36} />
+          <SanjeevaniOrb state={convState === 'idle' ? 'idle' : convState} size={28} />
           <div>
-            <h3 className="font-serif font-bold text-lg text-white">Sanjeevani Live</h3>
-            <p className="text-xs text-[#EFE9D9]/70">Continuous Compassionate Dialogue • Hands-Free</p>
+            <h2 className="font-serif font-bold text-white text-base leading-tight">Sanjeevani Live</h2>
+            <p className="text-[10px] text-white/40">Haath-mukt aawaz paramarsh</p>
           </div>
         </div>
 
-        <div className="px-3 py-1 rounded-full text-xs font-semibold bg-card/10 border border-white/15 text-gold-warm flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-sage animate-ping" />
-          {conversationState === 'listening' ? 'Listening to you...' : conversationState === 'speaking' ? 'Speaking softly...' : 'Understanding...'}
+        {/* Tier + Status chip */}
+        <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border border-white/10 ${tc.bg} ${tc.text}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${tier === 'Green' ? 'animate-pulse' : ''} ${tc.dot}`} />
+            Tier {tier}
+          </div>
+          <button
+            onClick={handleEndCall}
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-[#B85042]/80 text-white flex items-center justify-center transition-all"
+            aria-label="End call"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {/* Central Breathing Orb (Visual Feedback) — now the shared Sanjeevani identity */}
-      <div className="flex flex-col items-center justify-center my-auto text-center max-w-lg px-4">
+      {/* ── CENTRAL ORB AREA ───────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col items-center justify-center min-h-0 px-6 py-2">
 
-        <div className="relative mb-10">
+        {/* The large interactive orb */}
+        <div className="relative flex items-center justify-center mb-6">
+          {/* Glow ring behind orb */}
           <div
-            className={`w-44 h-44 md:w-56 md:h-56 rounded-full flex items-center justify-center transition-all duration-700 ${
-              conversationState === 'speaking'
-                ? 'bg-gradient-to-tr from-[#5A7855] via-[#D4A359] to-[#5A7855] animate-calm-pulse'
-                : conversationState === 'listening'
-                ? 'bg-gradient-to-tr from-[#243B55] to-[#5A7855] scale-105 shadow-[0_0_60px_rgba(90,120,85,0.4)]'
-                : 'bg-card/10 scale-95 opacity-60'
+            className={`absolute rounded-full transition-all duration-700 ${
+              convState === 'speaking'
+                ? 'w-52 h-52 bg-[#8ED14C]/12 shadow-[0_0_80px_rgba(142,209,76,0.25)]'
+                : convState === 'listening'
+                ? 'w-52 h-52 bg-[#D4A359]/12 shadow-[0_0_80px_rgba(212,163,89,0.25)]'
+                : convState === 'thinking'
+                ? 'w-52 h-52 bg-[#2E4057]/40 shadow-[0_0_60px_rgba(46,64,87,0.4)]'
+                : 'w-40 h-40 bg-white/3'
             }`}
-          >
-            <div className="w-36 h-36 md:w-48 md:h-48 rounded-full bg-warm-indigo flex items-center justify-center">
-              {conversationState === 'speaking' ? (
-                <Volume2 className="w-12 h-12 text-gold-warm animate-bounce" />
-              ) : conversationState === 'listening' ? (
-                <Mic className="w-12 h-12 text-sage animate-pulse" />
-              ) : (
-                <SanjeevaniOrb state="idle" size={64} />
-              )}
+          />
+
+          {/* Pulsing outer ring */}
+          <div
+            className={`absolute rounded-full border-2 transition-all duration-500 ${
+              convState === 'listening'
+                ? 'w-44 h-44 border-[#D4A359]/40 animate-ping'
+                : convState === 'speaking'
+                ? 'w-44 h-44 border-[#8ED14C]/30 animate-ping'
+                : 'w-36 h-36 border-white/5'
+            }`}
+          />
+
+          {/* The actual big Orb SVG */}
+          <SanjeevaniOrb state={convState === 'idle' ? 'idle' : convState} size={160} />
+
+          {/* State icon overlay at bottom of orb */}
+          <div className="absolute -bottom-3 flex items-center justify-center">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 border-[#0F1A2B] shadow-lg transition-all ${
+              convState === 'listening'
+                ? 'bg-[#D4A359] text-[#1E2A43]'
+                : convState === 'speaking'
+                ? 'bg-[#5A7855] text-white'
+                : convState === 'thinking'
+                ? 'bg-[#2E4057] text-white'
+                : 'bg-white/10 text-white/60'
+            }`}>
+              {convState === 'speaking'
+                ? <Volume2 className="w-4 h-4" />
+                : <Mic className={`w-4 h-4 ${convState === 'listening' ? 'animate-pulse' : ''}`} />
+              }
             </div>
           </div>
         </div>
 
-        <div className="min-h-[100px] flex flex-col items-center justify-center space-y-2">
-          {latestUserText && (
-            <p className="text-xs md:text-sm text-white/60 italic">"{latestUserText}"</p>
-          )}
-          <p className="font-serif text-lg md:text-xl text-[#F7F5EE] leading-relaxed max-w-md font-medium">
-            {latestAgentReply}
-          </p>
+        {/* Status label */}
+        <div className="text-center mb-5 mt-2">
+          <p className="font-serif text-white text-xl font-bold leading-tight">{statusLabel}</p>
+          <p className="text-white/40 text-xs mt-1">{statusHint}</p>
         </div>
+
+        {/* Live transcript area — scrollable, compact */}
+        <div className="w-full max-w-sm bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+          {/* Latest user utterance */}
+          {latestUserText ? (
+            <div className="px-4 pt-3 pb-2 border-b border-white/8">
+              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Aapne kaha:</p>
+              <p className="text-white/70 text-xs italic">"{latestUserText}"</p>
+            </div>
+          ) : (
+            <div className="px-4 pt-3 pb-2 border-b border-white/8">
+              <p className="text-[10px] text-white/25 italic">Aapki awaaz ka intezaar hai…</p>
+            </div>
+          )}
+
+          {/* AI reply */}
+          <div className="px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: TIER_COLOR[tier]?.text?.replace('text-', '') || '#8ED14C' }}>
+              <span className={tc.text}>Sanjeevani:</span>
+            </p>
+            <p className="font-serif text-white/90 text-sm leading-relaxed line-clamp-4">
+              {latestReply}
+            </p>
+          </div>
+        </div>
+
+        {/* Instruction hint */}
+        <p className="text-center text-white/25 text-[10px] mt-4 max-w-xs leading-relaxed">
+          Koi button dabaane ki zaroorat nahi — Sanjeevani apne aap sunaati aur sunti hai
+        </p>
       </div>
 
-      {/* Bottom Controls */}
-      <div className="w-full max-w-md flex flex-col items-center gap-4">
-        <p className="text-xs text-white/50 text-center">
-          Just speak naturally without pressing any buttons. Sanjeevani listens and responds continuously.
-        </p>
-
+      {/* ── BOTTOM END CALL ────────────────────────────────────────── */}
+      <div className="shrink-0 flex flex-col items-center gap-3 px-6 pb-8 pt-4">
+        {/* Big Red End Call pill */}
         <button
           onClick={handleEndCall}
-          className="flex items-center gap-2 bg-rose-soft hover:bg-[#a14336] text-white px-8 py-3.5 rounded-full font-bold shadow-lg transition-transform hover:scale-105"
+          className="flex items-center gap-3 bg-[#B85042] hover:bg-[#9a4035] active:scale-95 text-white px-10 py-4 rounded-2xl font-bold text-base transition-all shadow-lg shadow-[#B85042]/30"
         >
           <PhoneOff className="w-5 h-5" />
-          End Conversation
+          Baat Khatam Karein
         </button>
+        <p className="text-white/30 text-[10px]">108 Aapaatkaal ke liye call karein</p>
       </div>
-
     </div>
   );
 }

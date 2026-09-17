@@ -4,7 +4,7 @@ import FollowUpPanel from '../components/FollowUpPanel';
 import {
   Users, WifiOff, RefreshCw, Plus, CheckCircle, Clock, MapPin,
   UserPlus, Leaf, PhoneCall, AlertTriangle, Search, Filter,
-  Activity, Thermometer, Heart, ShieldAlert, Copy, Check
+  Activity, Thermometer, Heart, ShieldAlert, Copy, Check, ChevronDown, CheckCircle2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -47,7 +47,6 @@ export default function AshaDashboard() {
     pulse: '',
   });
 
-  // Save to local storage on change
   useEffect(() => {
     try {
       localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(offlineQueue));
@@ -61,7 +60,7 @@ export default function AshaDashboard() {
     setTimeout(() => {
       setOfflineQueue((prev) => prev.map((p) => ({ ...p, synced: true })));
       setIsSyncing(false);
-      toast.success('All pending encounters successfully synced to PHC server');
+      toast.success('Sabhi pending records PHC server par sync ho gaye');
     }, 1200);
   };
 
@@ -72,7 +71,6 @@ export default function AshaDashboard() {
     toast.success('Patient check-in recorded as complete! ✨');
   };
 
-  // Auto-calculate suggested tier based on vitals
   const updateVitalsAndAutoTier = (field, value) => {
     const updated = { ...newPatient, [field]: value };
     const spo2Num = parseFloat(updated.spo2);
@@ -107,7 +105,7 @@ export default function AshaDashboard() {
     };
 
     setOfflineQueue((prev) => [newRecord, ...prev]);
-    toast.success(`Encounter logged for ${newPatient.name} (Tier ${newRecord.tier})`);
+    toast.success(`${newPatient.name} ka record darz hua (Tier ${newRecord.tier})`);
     setNewPatient({ name: '', village: '', symptom: '', tier: 'Green', spo2: '', temp: '', pulse: '' });
     setShowAddForm(false);
   };
@@ -130,366 +128,403 @@ export default function AshaDashboard() {
   }, [offlineQueue, searchQuery, tierFilter]);
 
   const handleCopySosDetails = () => {
-    const text = `🚨 EMERGENCY DISPATCH (ASHA Field Uplink)\nWorker: ${user?.name || 'ASHA Field'}\nLocation: ${user?.village || 'Chamoli District'}\nUrgent Cases: ${offlineQueue.filter(p => p.tier === 'Red' && !p.followedUp).map(p => `${p.name} (${p.village}) - ${p.symptom}`).join('; ')}`;
+    const urgentList = offlineQueue.filter(p => p.tier === 'Red' && !p.followedUp);
+    const text = `🚨 EMERGENCY DISPATCH (ASHA Field Uplink)\nWorker: ${user?.name || 'ASHA Field'}\nLocation: ${user?.village || 'Chamoli District'}\nUrgent Cases: ${urgentList.length > 0 ? urgentList.map(p => `${p.name} (${p.village}) - ${p.symptom}`).join('; ') : 'Routine SOS standby'}`;
     navigator.clipboard.writeText(text);
     setCopiedSos(true);
     setTimeout(() => setCopiedSos(false), 2000);
-    toast.success('Emergency dispatch details copied to clipboard');
+    toast.success('Emergency dispatch notes copied to clipboard');
   };
 
   return (
-    <div className="min-h-screen bg-mist text-primary">
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+    <div className="min-h-screen bg-[#F4F6F0] dark:bg-[#151D28] text-[#2E4057] dark:text-[#F4F6F0] transition-colors duration-300">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
 
-        {/* ── Header Banner ────────────────────────────────────────── */}
-        <div className="bg-gradient-to-r from-[#1A263D] to-[#2a3a5a] text-white p-6 md:p-8 rounded-3xl shadow-md">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+        {/* ── Mode B Header Banner ────────────────────────────────────────── */}
+        <div className="bg-[#2E4057] dark:bg-[#111722] text-white p-6 sm:p-8 rounded-3xl shadow-md border border-gray-800">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <div className="inline-flex items-center gap-1.5 bg-gold-warm text-primary text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-2">
-                <Users className="w-3 h-3" /> ASHA Field Portal
+              <div className="inline-flex items-center gap-1.5 bg-[#D4A359] text-[#2E4057] text-[10px] font-extrabold px-3.5 py-1 rounded-full uppercase tracking-wider mb-2.5 shadow-xs">
+                <Users className="w-3.5 h-3.5" /> ASHA Field Portal • आशा सहायिका
               </div>
-              <h1 className="font-serif text-2xl md:text-3xl font-bold">
-                Namaste, {user?.name || 'ASHA Worker'} 🌿
+              <h1 className="font-serif text-2xl sm:text-3xl font-bold leading-tight">
+                Namaste, {user?.name || 'ASHA Karyakarti'} 🌿
               </h1>
-              <p className="text-xs text-white/60 mt-1 flex items-center gap-1.5">
-                <MapPin className="w-3 h-3" />
-                {user?.village || 'Chamoli District'} • Offline door-to-door triage enabled
+              <p className="text-xs text-white/80 mt-1 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-[#D4A359]" />
+                <span>{user?.village || 'Chamoli District'} • Zero-Connectivity Offline Triage Enabled</span>
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
               <button
                 onClick={() => setShowSosCard(!showSosCard)}
-                className="flex items-center gap-1.5 bg-rose-soft hover:bg-[#a34437] text-white px-3.5 py-2.5 rounded-xl font-bold text-xs shadow transition-all"
+                className={`touch-target flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-xs shadow-sm transition-all ${
+                  showSosCard ? 'bg-white text-[#B85042]' : 'bg-[#B85042] hover:bg-[#a14336] text-white'
+                }`}
               >
-                <PhoneCall className="w-3.5 h-3.5" />
-                108 SOS Dispatch
+                <PhoneCall className="w-4 h-4" />
+                <span>108 SOS Dispatch</span>
               </button>
+              
               <button
                 onClick={() => setShowAddForm(!showAddForm)}
-                className="flex items-center gap-2 bg-gold-warm hover:bg-[#c4933a] text-primary px-4 py-2.5 rounded-xl font-bold text-xs shadow transition-all"
+                className={`touch-target flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-xs shadow-sm transition-all ${
+                  showAddForm ? 'bg-white text-[#2E4057]' : 'bg-[#D4A359] hover:bg-[#c29148] text-[#2E4057]'
+                }`}
               >
                 <UserPlus className="w-4 h-4" />
-                New Encounter
+                <span>Naya Marij (New)</span>
               </button>
+              
               <button
                 onClick={handleSyncAll}
                 disabled={isSyncing || pendingCount === 0}
-                className="flex items-center gap-2 bg-card/10 hover:bg-card/20 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all disabled:opacity-40"
+                className="touch-target flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-2xl font-bold text-xs transition-all disabled:opacity-40 border border-white/10"
               >
                 <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? 'Syncing...' : `Sync ${pendingCount} Pending`}
+                <span>{isSyncing ? 'Syncing...' : `Sync (${pendingCount})`}</span>
               </button>
             </div>
           </div>
 
           {/* Sync Status Pill */}
-          <div className="mt-4 flex items-center gap-3">
-            <div className={`flex items-center gap-1.5 text-xs ${pendingCount > 0 ? 'text-gold-warm' : 'text-emerald-400'}`}>
-              {pendingCount > 0 ? <WifiOff className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
-              {pendingCount > 0 ? `${pendingCount} records cached offline (ready to sync)` : 'All records synced to PHC server'}
+          <div className="mt-5 flex items-center gap-3 pt-3 border-t border-white/15">
+            <div className={`flex items-center gap-2 text-xs font-semibold ${pendingCount > 0 ? 'text-[#D4A359]' : 'text-[#8ED14C]'}`}>
+              {pendingCount > 0 ? <WifiOff className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+              <span>
+                {pendingCount > 0
+                  ? `${pendingCount} records offline me surakshit hain (Network aate hi sync karein)`
+                  : 'Sabhi records PHC server par sync ho chuke hain'}
+              </span>
             </div>
           </div>
         </div>
 
         {/* ── Emergency SOS Dispatcher Card (Collapsible) ──────────── */}
         {showSosCard && (
-          <div className="bg-rose-soft/10 border-2 border-rose-soft/30 rounded-3xl p-5 shadow-sm space-y-4 animate-fadeIn">
+          <div className="bg-[#B85042]/10 dark:bg-[#B85042]/20 border-2 border-[#B85042] rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 animate-fadeIn">
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2.5 text-rose-soft">
-                <ShieldAlert className="w-6 h-6" />
-                <h3 className="font-serif font-bold text-base text-primary">
+              <div className="flex items-center gap-2.5 text-[#B85042] dark:text-[#FF7878]">
+                <ShieldAlert className="w-6 h-6 shrink-0" />
+                <h3 className="font-serif font-bold text-base sm:text-lg text-[#2E4057] dark:text-[#F4F6F0]">
                   Uttarakhand Emergency 108 Ambulance Dispatcher
                 </h3>
               </div>
-              <span className="text-[10px] bg-rose-soft text-white px-2.5 py-0.5 rounded-full font-bold uppercase">Emergency</span>
+              <span className="text-[10px] bg-[#B85042] text-white px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                Emergency Hotline
+              </span>
             </div>
-            <p className="text-xs text-muted">
-              Direct emergency dispatch for Red-tier patient transfers, altitude sickness, or acute trauma.
+            <p className="text-xs text-[#556376] dark:text-[#A8B4C2] leading-relaxed">
+              Red-tier gambhir marijon ko turant 108 ambulance dispatch karne ke liye helpline ya dispatch copy ka upyog karein.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <a
                 href="tel:108"
-                className="inline-flex items-center gap-2 bg-rose-soft hover:bg-[#a34437] text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                className="touch-target inline-flex items-center gap-2 bg-[#B85042] hover:bg-[#a14336] text-white px-5 py-3 rounded-2xl text-xs font-bold transition-all shadow-sm"
               >
-                <PhoneCall className="w-4 h-4" /> Call 108 Ambulance
+                <PhoneCall className="w-4 h-4" />
+                <span>Call 108 Ambulance</span>
               </a>
               <a
                 href="tel:104"
-                className="inline-flex items-center gap-2 bg-warm-indigo text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#253655] transition-all"
+                className="touch-target inline-flex items-center gap-2 bg-[#2E4057] hover:bg-[#1E2A43] text-white px-5 py-3 rounded-2xl text-xs font-bold transition-all shadow-sm"
               >
-                <PhoneCall className="w-4 h-4" /> Call 104 Health Helpline
+                <PhoneCall className="w-4 h-4" />
+                <span>Call 104 Health Advice</span>
               </a>
               <button
                 onClick={handleCopySosDetails}
-                className="inline-flex items-center gap-1.5 bg-card border border-border-subtle text-primary px-3.5 py-2 rounded-xl text-xs font-medium hover:bg-mist transition-all"
+                className="touch-target inline-flex items-center gap-2 bg-white dark:bg-[#1E2A43] border border-gray-300 dark:border-gray-700 text-[#2E4057] dark:text-[#F4F6F0] px-5 py-3 rounded-2xl text-xs font-bold hover:bg-gray-100 transition-all shadow-xs"
               >
-                {copiedSos ? <Check className="w-4 h-4 text-sage" /> : <Copy className="w-4 h-4 text-muted" />}
-                {copiedSos ? 'Copied' : 'Copy Case Dispatch Notes'}
+                {copiedSos ? <Check className="w-4 h-4 text-[#5A7855]" /> : <Copy className="w-4 h-4 text-[#556376]" />}
+                <span>{copiedSos ? 'Copied!' : 'Copy Dispatch Notes'}</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* ── INTEGRATED FollowUpPanel ─────────────────────────────── */}
-        <FollowUpPanel
-          patients={offlineQueue}
-          onMarkFollowedUp={handleMarkFollowedUp}
-        />
+        {/* ── 2-COLUMN ASHA WORKSPACE: FIELD LOG & FOLLOW-UP ────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-        {/* ── Add Patient Form (collapsible) with Vitals & Auto-Tier ── */}
-        {showAddForm && (
-          <form onSubmit={handleAddPatient} className="bg-card rounded-3xl p-5 md:p-6 border border-gold-warm/30 shadow-sm space-y-4 animate-fadeIn">
-            <div className="flex items-center justify-between border-b border-border-subtle pb-3">
-              <h3 className="font-serif font-bold text-base text-primary flex items-center gap-2">
-                <UserPlus className="w-4 h-4 text-gold-warm" /> New Patient Field Encounter
-              </h3>
-              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full text-white ${
-                newPatient.tier === 'Red' ? 'bg-rose-soft' : newPatient.tier === 'Yellow' ? 'bg-gold-warm' : 'bg-sage'
-              }`}>
-                Auto Triage: Tier {newPatient.tier}
-              </span>
-            </div>
+          {/* LEFT COLUMN: Patient Encounter Form & Offline Field Log (7 cols) */}
+          <div className="lg:col-span-7 space-y-6">
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[10px] font-bold uppercase text-primary mb-1 block">Patient Name *</label>
-                <input
-                  type="text"
-                  value={newPatient.name}
-                  onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })}
-                  placeholder="e.g. Kamala Rawat"
-                  required
-                  className="w-full bg-mist text-primary border border-border-subtle rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#5A7855]/40"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase text-primary mb-1 block">Village / Hamlet</label>
-                <input
-                  type="text"
-                  value={newPatient.village}
-                  onChange={(e) => setNewPatient({ ...newPatient, village: e.target.value })}
-                  placeholder={user?.village || "Mandal / Ward 3"}
-                  className="w-full bg-mist text-primary border border-border-subtle rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#5A7855]/40"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase text-primary mb-1 block">Triage Tier Override</label>
-                <select
-                  value={newPatient.tier}
-                  onChange={(e) => setNewPatient({ ...newPatient, tier: e.target.value })}
-                  className="w-full bg-mist text-primary border border-border-subtle rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#5A7855]/40"
-                >
-                  <option value="Green">Green (Minor / Home Care)</option>
-                  <option value="Yellow">Yellow (Moderate / PHC Review)</option>
-                  <option value="Red">Red (Urgent / Hospital Referral)</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Vitals Assistant */}
-            <div className="bg-mist p-3.5 rounded-2xl border border-border-subtle">
-              <span className="text-[10px] font-bold uppercase text-muted tracking-wider block mb-2">
-                Field Vitals Assistant (Optional - Auto-suggests Tier)
-              </span>
-              <div className="grid grid-cols-3 gap-2.5">
-                <div>
-                  <span className="text-[10px] text-muted flex items-center gap-1 mb-1">
-                    <Activity className="w-3 h-3 text-rose-soft" /> SpO2 (%)
+            {/* Add Patient Form (collapsible) with Vitals & Auto-Tier */}
+            {showAddForm && (
+              <form onSubmit={handleAddPatient} className="bg-white dark:bg-[#1E2A43] rounded-3xl p-5 sm:p-7 border border-[#D4A359]/50 shadow-sm space-y-4 animate-fadeIn">
+                <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+                  <h3 className="font-serif font-bold text-base text-[#2E4057] dark:text-[#F4F6F0] flex items-center gap-2">
+                    <UserPlus className="w-4 h-4 text-[#D4A359]" /> Naya Field Record (New Patient Encounter)
+                  </h3>
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full text-white ${
+                    newPatient.tier === 'Red' ? 'bg-[#B85042]' : newPatient.tier === 'Yellow' ? 'bg-[#D4A359] text-[#2E4057]' : 'bg-[#5A7855]'
+                  }`}>
+                    Auto Triage: Tier {newPatient.tier}
                   </span>
-                  <input
-                    type="number"
-                    value={newPatient.spo2}
-                    onChange={(e) => updateVitalsAndAutoTier('spo2', e.target.value)}
-                    placeholder="e.g. 96"
-                    className="w-full bg-card border border-border-subtle rounded-lg px-2.5 py-1.5 text-xs"
-                  />
                 </div>
-                <div>
-                  <span className="text-[10px] text-muted flex items-center gap-1 mb-1">
-                    <Thermometer className="w-3 h-3 text-gold-warm" /> Temp (°F)
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div>
+                    <label className="text-[11px] font-bold uppercase text-[#2E4057] dark:text-[#F4F6F0] mb-1.5 block">Marij Ka Naam *</label>
+                    <input
+                      type="text"
+                      value={newPatient.name}
+                      onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })}
+                      placeholder="Jaise: Kamala Rawat"
+                      required
+                      className="w-full bg-gray-50 dark:bg-[#151D28] text-[#2E4057] dark:text-[#F4F6F0] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#5A7855]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold uppercase text-[#2E4057] dark:text-[#F4F6F0] mb-1.5 block">Gaon / Ward</label>
+                    <input
+                      type="text"
+                      value={newPatient.village}
+                      onChange={(e) => setNewPatient({ ...newPatient, village: e.target.value })}
+                      placeholder={user?.village || "Mandal / Ward 3"}
+                      className="w-full bg-gray-50 dark:bg-[#151D28] text-[#2E4057] dark:text-[#F4F6F0] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#5A7855]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold uppercase text-[#2E4057] dark:text-[#F4F6F0] mb-1.5 block">Triage Tier</label>
+                    <select
+                      value={newPatient.tier}
+                      onChange={(e) => setNewPatient({ ...newPatient, tier: e.target.value })}
+                      className="w-full bg-gray-50 dark:bg-[#151D28] text-[#2E4057] dark:text-[#F4F6F0] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#5A7855]"
+                    >
+                      <option value="Green">Green (Gharelu Upchar / Samanya)</option>
+                      <option value="Yellow">Yellow (PHC Doctor Review)</option>
+                      <option value="Red">Red (Urgent / Hospital Referral)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Vitals Assistant */}
+                <div className="bg-[#F4F6F0] dark:bg-[#182332] p-4 rounded-2xl border border-[#5A7855]/20 dark:border-gray-800">
+                  <span className="text-[11px] font-bold uppercase text-[#556376] dark:text-[#A8B4C2] tracking-wider block mb-2.5">
+                    Field Vitals Assistant (SpO2 & Temp Auto-Calculates Risk)
                   </span>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={newPatient.temp}
-                    onChange={(e) => updateVitalsAndAutoTier('temp', e.target.value)}
-                    placeholder="e.g. 99.2"
-                    className="w-full bg-card border border-border-subtle rounded-lg px-2.5 py-1.5 text-xs"
-                  />
-                </div>
-                <div>
-                  <span className="text-[10px] text-muted flex items-center gap-1 mb-1">
-                    <Heart className="w-3 h-3 text-sage" /> Pulse (bpm)
-                  </span>
-                  <input
-                    type="number"
-                    value={newPatient.pulse}
-                    onChange={(e) => setNewPatient({ ...newPatient, pulse: e.target.value })}
-                    placeholder="e.g. 78"
-                    className="w-full bg-card border border-border-subtle rounded-lg px-2.5 py-1.5 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold uppercase text-primary mb-1 block">Chief Complaint / Symptoms *</label>
-              <textarea
-                value={newPatient.symptom}
-                onChange={(e) => setNewPatient({ ...newPatient, symptom: e.target.value })}
-                placeholder="e.g. High fever for 3 days, body aches, shivering, loss of appetite"
-                rows={2}
-                required
-                className="w-full bg-mist text-primary border border-border-subtle rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#5A7855]/40"
-              />
-            </div>
-
-            {/* Quick symptom presets */}
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                'Cold & Dry Cough',
-                'Fever > 3 Days',
-                'Acute Hypoxia / Breathlessness',
-                'Diarrhea & Dehydration',
-                'Joint Pain / Arthritis',
-              ].map((s) => (
-                <button
-                  type="button"
-                  key={s}
-                  onClick={() => setNewPatient((prev) => ({ ...prev, symptom: prev.symptom ? `${prev.symptom}, ${s}` : s }))}
-                  className="text-[10px] bg-card border border-border-subtle hover:bg-sage-light text-primary px-2.5 py-1 rounded-full transition-colors"
-                >
-                  + {s}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="submit"
-                disabled={!newPatient.name || !newPatient.symptom}
-                className="bg-sage hover:bg-[#4a6346] text-white text-xs font-bold px-6 py-2.5 rounded-xl disabled:opacity-40 transition-all shadow-sm"
-              >
-                Log Encounter & Save Locally
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAddForm(false)}
-                className="text-xs text-muted hover:text-primary px-3 py-2"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* ── Patient Queue & Search/Filter Controls ───────────────── */}
-        <div className="bg-card rounded-3xl shadow-sm border border-border-subtle overflow-hidden">
-          {/* Queue Header & Filters */}
-          <div className="p-4 border-b border-border-subtle flex flex-wrap items-center justify-between gap-3 bg-gray-50/50">
-            <div>
-              <h3 className="font-serif font-bold text-base text-primary">
-                Offline Field Log ({filteredPatients.length} of {offlineQueue.length})
-              </h3>
-              <span className="text-[10px] text-muted">Auto-persisted to local browser storage</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search name, village..."
-                  className="bg-card border border-border-subtle rounded-xl pl-9 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#5A7855]/40 w-40 sm:w-48"
-                />
-              </div>
-
-              {/* Filter */}
-              <select
-                value={tierFilter}
-                onChange={(e) => setTierFilter(e.target.value)}
-                className="bg-card border border-border-subtle rounded-xl px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#5A7855]/40"
-              >
-                <option value="all">All Tiers</option>
-                <option value="needsFollowUp">Needs Follow-Up</option>
-                <option value="Red">Red Only</option>
-                <option value="Yellow">Yellow Only</option>
-                <option value="Green">Green Only</option>
-              </select>
-            </div>
-          </div>
-
-          {/* List */}
-          <div className="divide-y divide-black/5">
-            {filteredPatients.length === 0 ? (
-              <div className="p-8 text-center text-xs text-muted">No encounters match your search or filter criteria.</div>
-            ) : (
-              filteredPatients.map((patient) => (
-                <div key={patient.id} className="p-4 flex flex-wrap items-center justify-between gap-3 hover:bg-gray-50/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-sm ${
-                      patient.tier === 'Red' ? 'bg-rose-soft' :
-                      patient.tier === 'Yellow' ? 'bg-gold-warm' :
-                      'bg-sage'
-                    }`}>
-                      {patient.name.charAt(0)}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <span className="text-xs text-[#556376] dark:text-[#A8B4C2] flex items-center gap-1 mb-1 font-medium">
+                        <Activity className="w-3.5 h-3.5 text-[#B85042]" /> SpO2 (%)
+                      </span>
+                      <input
+                        type="number"
+                        value={newPatient.spo2}
+                        onChange={(e) => updateVitalsAndAutoTier('spo2', e.target.value)}
+                        placeholder="e.g. 96"
+                        className="w-full bg-white dark:bg-[#1E2A43] border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-[#2E4057] dark:text-[#F4F6F0]"
+                      />
                     </div>
                     <div>
-                      <div className="font-semibold text-primary text-sm flex items-center gap-2">
-                        {patient.name}
-                        <span className="text-xs font-normal text-muted">• {patient.village}</span>
-                        {patient.followedUp && (
-                          <span className="text-[10px] bg-sage-light text-sage px-2 py-0.2 rounded-full font-bold">
-                            Followed Up
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted mt-0.5">
-                        Chief Complaint: <span className="font-medium text-gray-800">{patient.symptom}</span>
-                      </div>
-                      {patient.vitals && (
-                        <div className="flex items-center gap-2.5 text-[10px] text-muted mt-1">
-                          {patient.vitals.spo2 !== '--' && <span>SpO2: <b className="text-primary">{patient.vitals.spo2}%</b></span>}
-                          {patient.vitals.temp !== '--' && <span>Temp: <b className="text-primary">{patient.vitals.temp}°F</b></span>}
-                          {patient.vitals.pulse !== '--' && <span>Pulse: <b className="text-primary">{patient.vitals.pulse} bpm</b></span>}
-                        </div>
-                      )}
+                      <span className="text-xs text-[#556376] dark:text-[#A8B4C2] flex items-center gap-1 mb-1 font-medium">
+                        <Thermometer className="w-3.5 h-3.5 text-[#D4A359]" /> Temp (°F)
+                      </span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={newPatient.temp}
+                        onChange={(e) => updateVitalsAndAutoTier('temp', e.target.value)}
+                        placeholder="e.g. 99.2"
+                        className="w-full bg-white dark:bg-[#1E2A43] border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-[#2E4057] dark:text-[#F4F6F0]"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs text-[#556376] dark:text-[#A8B4C2] flex items-center gap-1 mb-1 font-medium">
+                        <Heart className="w-3.5 h-3.5 text-[#5A7855]" /> Pulse (bpm)
+                      </span>
+                      <input
+                        type="number"
+                        value={newPatient.pulse}
+                        onChange={(e) => setNewPatient({ ...newPatient, pulse: e.target.value })}
+                        placeholder="e.g. 78"
+                        className="w-full bg-white dark:bg-[#1E2A43] border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-[#2E4057] dark:text-[#F4F6F0]"
+                      />
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                      patient.tier === 'Red' ? 'bg-rose-soft text-white' :
-                      patient.tier === 'Yellow' ? 'bg-gold-warm text-white' :
-                      'bg-sage text-white'
-                    }`}>
-                      Tier {patient.tier}
-                    </span>
-
-                    <span className={`inline-flex items-center gap-1 text-xs font-semibold ${patient.synced ? 'text-emerald-700' : 'text-amber-700'}`}>
-                      {patient.synced ? <CheckCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
-                      {patient.synced ? 'Synced' : 'Pending'}
-                    </span>
-                  </div>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
 
-        {/* ── Footer ───────────────────────────────────────────────── */}
-        <div className="text-center py-3">
-          <p className="text-xs text-gray-400 flex items-center justify-center gap-1.5">
-            <Leaf className="w-3.5 h-3.5 text-gold-warm" />
-            Field encounters are secured offline via browser storage for zero-connectivity Himalayan zones
-          </p>
+                <div>
+                  <label className="text-[11px] font-bold uppercase text-[#2E4057] dark:text-[#F4F6F0] mb-1.5 block">Takleef / Lakshan (Chief Complaint) *</label>
+                  <textarea
+                    value={newPatient.symptom}
+                    onChange={(e) => setNewPatient({ ...newPatient, symptom: e.target.value })}
+                    placeholder="Jaise: 3 din se tez bukhar hai, sharir dard aur thand lagna"
+                    rows={2}
+                    required
+                    className="w-full bg-gray-50 dark:bg-[#151D28] text-[#2E4057] dark:text-[#F4F6F0] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#5A7855]"
+                  />
+                </div>
+
+                {/* Quick symptom presets */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {[
+                    'Cold & Dry Cough',
+                    'Fever > 3 Days',
+                    'Acute Hypoxia / Breathlessness',
+                    'Diarrhea & Dehydration',
+                    'Joint Pain / Arthritis',
+                  ].map((s) => (
+                    <button
+                      type="button"
+                      key={s}
+                      onClick={() => setNewPatient((prev) => ({ ...prev, symptom: prev.symptom ? `${prev.symptom}, ${s}` : s }))}
+                      className="touch-target text-xs bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-[#5A7855]/15 text-[#2E4057] dark:text-[#F4F6F0] px-3.5 py-1.5 rounded-full transition-colors"
+                    >
+                      + {s}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3 pt-3">
+                  <button
+                    type="submit"
+                    disabled={!newPatient.name || !newPatient.symptom}
+                    className="touch-target bg-[#5A7855] hover:bg-[#4a6346] text-white text-xs sm:text-sm font-bold px-7 py-3.5 rounded-2xl disabled:opacity-40 transition-all shadow-sm"
+                  >
+                    Offline Record Darz Karein
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="touch-target text-xs font-semibold text-[#556376] dark:text-[#A8B4C2] hover:text-[#2E4057] px-4 py-3"
+                  >
+                    Radd Karein (Cancel)
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Patient Queue & Search/Filter Controls */}
+            <div className="bg-white dark:bg-[#1E2A43] rounded-3xl shadow-sm border border-gray-200/80 dark:border-gray-800 overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3 bg-gray-50/60 dark:bg-[#182332]">
+                <div>
+                  <h3 className="font-serif font-bold text-base sm:text-lg text-[#2E4057] dark:text-[#F4F6F0]">
+                    Offline Field Log ({filteredPatients.length} of {offlineQueue.length})
+                  </h3>
+                  <span className="text-[11px] text-[#556376] dark:text-[#A8B4C2]">Auto-persisted to local browser storage</span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Naam ya gaon..."
+                      className="bg-white dark:bg-[#1E2A43] border border-gray-300 dark:border-gray-700 rounded-2xl pl-9 pr-3.5 py-2 text-xs text-[#2E4057] dark:text-[#F4F6F0] focus:outline-none focus:ring-2 focus:ring-[#5A7855] w-36 sm:w-48"
+                    />
+                  </div>
+
+                  <select
+                    value={tierFilter}
+                    onChange={(e) => setTierFilter(e.target.value)}
+                    className="bg-white dark:bg-[#1E2A43] border border-gray-300 dark:border-gray-700 text-[#2E4057] dark:text-[#F4F6F0] rounded-2xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#5A7855]"
+                  >
+                    <option value="all">Sabhi Tiers</option>
+                    <option value="needsFollowUp">Follow-Up Chahiye</option>
+                    <option value="Red">Red Only (Aapaat)</option>
+                    <option value="Yellow">Yellow Only (Madhyam)</option>
+                    <option value="Green">Green Only (Samanya)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Patient List */}
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {filteredPatients.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-gray-400">Koi record nahi mila.</div>
+                ) : (
+                  filteredPatients.map((patient) => (
+                    <div key={patient.id} className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors">
+                      <div className="flex items-center gap-3.5">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white text-sm font-bold shadow-xs ${
+                          patient.tier === 'Red' ? 'bg-[#B85042]' :
+                          patient.tier === 'Yellow' ? 'bg-[#D4A359] text-[#2E4057]' :
+                          'bg-[#5A7855]'
+                        }`}>
+                          {patient.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-bold text-[#2E4057] dark:text-[#F4F6F0] text-sm sm:text-base flex items-center gap-2">
+                            {patient.name}
+                            <span className="text-xs font-normal text-[#556376] dark:text-[#A8B4C2]">• {patient.village}</span>
+                            {patient.followedUp && (
+                              <span className="text-[10px] bg-[#5A7855]/15 text-[#5A7855] dark:text-[#8ED14C] px-2 py-0.5 rounded-full font-bold">
+                                Followed Up ✓
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+                            Lakshan: <span className="font-medium text-[#2E4057] dark:text-[#F4F6F0]">{patient.symptom}</span>
+                          </div>
+                          {patient.vitals && (
+                            <div className="flex items-center gap-3 text-[11px] text-[#556376] dark:text-[#A8B4C2] mt-1 font-mono">
+                              {patient.vitals.spo2 !== '--' && <span>SpO2: <b className="text-[#2E4057] dark:text-[#F4F6F0]">{patient.vitals.spo2}%</b></span>}
+                              {patient.vitals.temp !== '--' && <span>Temp: <b className="text-[#2E4057] dark:text-[#F4F6F0]">{patient.vitals.temp}°F</b></span>}
+                              {patient.vitals.pulse !== '--' && <span>Pulse: <b className="text-[#2E4057] dark:text-[#F4F6F0]">{patient.vitals.pulse} bpm</b></span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                          patient.tier === 'Red' ? 'bg-[#B85042] text-white' :
+                          patient.tier === 'Yellow' ? 'bg-[#D4A359] text-[#2E4057]' :
+                          'bg-[#5A7855] text-white'
+                        }`}>
+                          Tier {patient.tier}
+                        </span>
+
+                        <span className={`inline-flex items-center gap-1 text-xs font-bold ${patient.synced ? 'text-[#5A7855] dark:text-[#8ED14C]' : 'text-[#D4A359]'}`}>
+                          {patient.synced ? <CheckCircle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                          <span>{patient.synced ? 'Synced' : 'Pending'}</span>
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+          </div>
+
+          {/* RIGHT COLUMN: Follow-Up Action Center & Operational Guidance (5 cols) */}
+          <div className="lg:col-span-5 space-y-6">
+            
+            {/* INTEGRATED FollowUpPanel */}
+            <FollowUpPanel
+              patients={offlineQueue}
+              onMarkFollowedUp={handleMarkFollowedUp}
+            />
+
+            {/* ASHA Field Guidance & Connectivity Card */}
+            <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-xs space-y-3">
+              <div className="flex items-center gap-2">
+                <Leaf className="w-4 h-4 text-[#5A7855]" />
+                <h4 className="font-serif font-bold text-sm text-[#2E4057] dark:text-[#F4F6F0]">
+                  Offline Field Triage Protocol
+                </h4>
+              </div>
+              <p className="text-xs text-[#556376] dark:text-[#A8B4C2] leading-relaxed">
+                ASHA Karyakarti tablet ya mobile par darz kiye gaye encounters bina internet ke browser local storage mein surakshit rehte hain.
+              </p>
+              <div className="bg-[#F4F6F0] dark:bg-[#182332] p-3.5 rounded-2xl border border-[#5A7855]/15 text-xs text-[#556376] dark:text-[#A8B4C2] space-y-1">
+                <p>• <strong>Red Tier:</strong> Turant 108 SOS dispatch karein ya nazdeeki Sub-Centre le jayein.</p>
+                <p>• <strong>Yellow Tier:</strong> 24 ghante ke bheetar PHC doctor ya CHC se paramarsh karein.</p>
+                <p>• <strong>Green Tier:</strong> Sanjeevani gharelu upchar v dhyan routine follow karein.</p>
+              </div>
+            </div>
+
+          </div>
+
         </div>
 
       </div>
     </div>
   );
-}
+}

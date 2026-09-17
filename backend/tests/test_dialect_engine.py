@@ -60,3 +60,20 @@ async def test_indic_tts_synthesis():
     audio_bytes, media_type = await tts.synthesize("Namaste! Main Sanjeevani hoon.", language="hi")
     assert media_type == "audio/mpeg"
     assert len(audio_bytes) > 500  # Valid MP3 audio data
+
+def test_expanded_garhwali_detection(engine):
+    """Verifies that various spoken Garhwali phrases in both scripts are correctly identified."""
+    assert engine.detect_language("meru mund dukh ro chha") == "garhwali"
+    assert engine.detect_language("दाज्यू म्यारु पेट मा घणी पीर हो रयी छ") == "garhwali"
+    assert engine.detect_language("रात बटि तेज बुखार और कपकपी लगणी छ") == "garhwali"
+    assert engine.detect_language("miku pait ma marod uthni chha") == "garhwali"
+    assert engine.detect_language("twari takleef kaba bati chha?") == "garhwali"
+
+def test_curated_garhwali_context(engine):
+    """Verifies that symptom-specific authentic Garhwali dialogues are retrieved."""
+    ctx_roman = engine.get_curated_garhwali_context("mund pid", is_devanagari=False)
+    assert "mund" in ctx_roman.lower()
+    assert "ma" in ctx_roman.lower()
+
+    ctx_dev = engine.get_curated_garhwali_context("पैट मा पीर", is_devanagari=True)
+    assert "पैट" in ctx_dev or "पीर" in ctx_dev

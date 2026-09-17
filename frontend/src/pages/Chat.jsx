@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send, Mic, MicOff, RefreshCw, User, AlertTriangle, RotateCcw,
-  Clock, Volume2, Settings2, Wifi, WifiOff, FileDown,
+  Volume2, Settings2, Wifi, WifiOff, FileDown, PhoneCall,
+  Sparkles, Stethoscope, X, ChevronLeft, ChevronRight,
+  MessageSquare, Plus, Clock, Trash2, Leaf,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import TierBadge from '../components/TierBadge';
@@ -11,33 +13,28 @@ import PhaseProgress from '../components/PhaseProgress';
 import CalmLoader from '../components/CalmLoader';
 import SanjeevaniOrb from '../components/SanjeevaniOrb';
 import SymptomChips from '../components/SymptomChips';
-import SessionHistoryDrawer from '../components/SessionHistoryDrawer';
 import AccessibilityBar from '../components/AccessibilityBar';
 import {
   sendChatMessage, getOrCreateConversationId, resetConversationId, checkBackendHealth,
 } from '../api/client';
 import { speakText } from '../api/voiceClient';
 import { downloadConsultationReport } from '../api/reportsClient';
-import { recordSessionTurn } from '../lib/sessionStore';
+import { listSessions, clearSessionHistory, recordSessionTurn } from '../lib/sessionStore';
 
-// ---------------------------------------------------------------------------
-// Simple inline markdown renderer — handles **bold**, *italic*, \n newlines.
-// ---------------------------------------------------------------------------
+/* ── Markdown renderer ────────────────────────────────────────────────── */
 function renderMarkdown(text) {
   if (!text) return null;
   return text.split('\n').map((line, li) => {
     if (!line.trim()) return <br key={li} />;
     const tokens = [];
     const regex = /\*\*(.+?)\*\*|\*(.+?)\*/g;
-    let lastIdx = 0;
-    let match;
+    let lastIdx = 0, match;
     while ((match = regex.exec(line)) !== null) {
       if (match.index > lastIdx) tokens.push(line.slice(lastIdx, match.index));
-      if (match[1] !== undefined) {
+      if (match[1] !== undefined)
         tokens.push(<strong key={`b-${li}-${match.index}`} className="font-semibold">{match[1]}</strong>);
-      } else if (match[2] !== undefined) {
+      else if (match[2] !== undefined)
         tokens.push(<em key={`i-${li}-${match.index}`} className="italic">{match[2]}</em>);
-      }
       lastIdx = regex.lastIndex;
     }
     if (lastIdx < line.length) tokens.push(line.slice(lastIdx));
@@ -46,459 +43,545 @@ function renderMarkdown(text) {
 }
 
 const COMORBIDITY_OPTIONS = [
-  { label: 'BP / Hypertension', value: 'hypertension' },
-  { label: 'Gastric Ulcer', value: 'Hyperacidity/PepticUlcer' },
-  { label: 'Pregnancy', value: 'Pregnancy' },
-  { label: 'Diabetes', value: 'diabetes' },
+  { label: 'BP', value: 'hypertension', icon: '❤️' },
+  { label: 'Acidity', value: 'Hyperacidity/PepticUlcer', icon: '🫁' },
+  { label: 'Pregnancy', value: 'Pregnancy', icon: '🤰' },
+  { label: 'Diabetes', value: 'diabetes', icon: '💉' },
 ];
 
+const QUICK_SYMPTOMS = [
+  { emoji: '🌡️', label: 'Bukhar', value: 'Mujhe bukhar hai aur thakan lag rahi hai.' },
+  { emoji: '🫁', label: 'Khansi', value: 'Mujhe khansi aur seene mein dard hai.' },
+  { emoji: '🤕', label: 'Pet Dard', value: 'Mera pet dard ho raha hai.' },
+  { emoji: '😣', label: 'Sar Dard', value: 'Mujhe sar dard aur chakkar aa rahe hain.' },
+];
+
+const INITIAL_BOT_MESSAGE = {
+  sender: 'bot',
+  text: 'Namaste! Main Sanjeevani hoon — aapki shaant swasthya sahayak.\n\nAap apni takleef ya lakshan yahan bolkar ya likhkar bata sakte hain. Aaram se, jaldi ki koi baat nahi.',
+  tier: 'Green',
+  remedies: [],
+  phase: 'GREETING',
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   Main Chat Component
+   ══════════════════════════════════════════════════════════════════ */
 export default function Chat() {
   const conversationIdRef = useRef(getOrCreateConversationId());
 
-  const [messages, setMessages] = useState([
-    {
-      sender: 'bot',
-      text: 'Namaste! Main Sanjeevani hoon — aapki shaant swasthya sahayak.\n\nAap apni bimaari ya lakshan yahan bolkar ya likhkar bata sakte hain. Aaram se, jaldi ki koi baat nahi.',
-      tier: 'Green',
-      remedies: [],
-      phase: 'GREETING',
-    },
-  ]);
-
-  const [inputText, setInputText] = useState('');
-  const [isListening, setIsListening] = useState(false);
-  const [loading, setLoading] = useState(false);
+  /* State */
+  const [messages, setMessages]             = useState([INITIAL_BOT_MESSAGE]);
+  const [inputText, setInputText]           = useState('');
+  const [isListening, setIsListening]       = useState(false);
+  const [loading, setLoading]               = useState(false);
   const [knownConditions, setKnownConditions] = useState([]);
-  const [currentPhase, setCurrentPhase] = useState('GREETING');
-  const [error, setError] = useState(null);
+  const [currentPhase, setCurrentPhase]     = useState('GREETING');
+  const [error, setError]                   = useState(null);
+  const [sidebarOpen, setSidebarOpen]       = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
+  const [settingsOpen, setSettingsOpen]     = useState(false);
+  const [textScale, setTextScale]           = useState(1);
+  const [uiLang, setUiLang]                 = useState('hi');
+  const [backendOnline, setBackendOnline]   = useState(null);
+  const [speakingMsgIdx, setSpeakingMsgIdx] = useState(null);
+  const [downloadingIdx, setDownloadingIdx] = useState(null);
+  const [sessions, setSessions]             = useState([]);
 
-  // ── New feature state ────────────────────────────────────────────────
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false); // collapses tags/session id out of the default view
-  const [textScale, setTextScale] = useState(1);
-  const [uiLang, setUiLang] = useState('hi');
-  const [backendOnline, setBackendOnline] = useState(null); // null = checking
-  const [speakingMsgIdx, setSpeakingMsgIdx] = useState(null); // which bubble is currently being read aloud
-  const [downloadingIdx, setDownloadingIdx] = useState(null); // which bubble's report is being generated
+  /* Refs */
+  const chatEndRef      = useRef(null);
+  const inputRef        = useRef(null);
+  const recognitionRef  = useRef(null);
+  const stopSpeakingRef = useRef(null);
 
-  const chatEndRef = useRef(null);
-  const inputRef = useRef(null);
-  const recognitionRef = useRef(null);
-  const stopSpeakingRef = useRef(null); // cleanup fn returned by speakText()
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
-
+  /* Auto-scroll */
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  // NEW: connection status pill — checked once on mount so the patient
-  // always knows whether they're talking to the real triage engine or the
-  // client-side demo simulation, instead of that switch happening silently.
+  /* Backend health */
   useEffect(() => {
-    let mounted = true;
-    checkBackendHealth().then((ok) => { if (mounted) setBackendOnline(ok); });
-    return () => { mounted = false; };
+    let ok = true;
+    checkBackendHealth().then(v => { if (ok) setBackendOnline(v); });
+    return () => { ok = false; };
   }, []);
 
-  // Stop any in-flight speech (backend Bhashini audio or browser fallback)
-  // when the component unmounts.
-  useEffect(() => {
-    return () => { stopSpeakingRef.current?.(); };
-  }, []);
+  /* Cleanup TTS on unmount */
+  useEffect(() => () => { stopSpeakingRef.current?.(); }, []);
 
-  const toggleCondition = useCallback((value) => {
-    setKnownConditions(prev =>
-      prev.includes(value) ? prev.filter(c => c !== value) : [...prev, value]
-    );
+  /* Load session history */
+  const refreshSessions = useCallback(() => setSessions(listSessions()), []);
+  useEffect(() => { if (sidebarOpen) refreshSessions(); }, [sidebarOpen, refreshSessions]);
+
+  /* ── Handlers ─────────────────────────────────────────────────── */
+  const toggleCondition = useCallback(v => {
+    setKnownConditions(p => p.includes(v) ? p.filter(c => c !== v) : [...p, v]);
   }, []);
 
   const handleNewSession = useCallback(() => {
     resetConversationId();
     conversationIdRef.current = getOrCreateConversationId();
-    setMessages([
-      {
-        sender: 'bot',
-        text: 'Namaste! Naya session shuru ho gaya hai. Kripya apne naye lakshan batayein.',
-        tier: 'Green',
-        remedies: [],
-        phase: 'GREETING',
-      },
-    ]);
+    setMessages([INITIAL_BOT_MESSAGE]);
     setCurrentPhase('GREETING');
     setKnownConditions([]);
     setError(null);
     inputRef.current?.focus();
-    toast.success('New consultation session started');
-  }, []);
+    refreshSessions();
+    toast.success('Naya paramarsh session shuru hua');
+  }, [refreshSessions]);
 
   const toggleListening = useCallback(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      toast.error('Voice input is not supported in this browser. Please type your symptoms.');
+      toast.error('Aapke browser mein aawaz pehchan upalabdh nahi hai.');
       return;
     }
-
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'hi-IN';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (e) => { setInputText(e.results[0][0].transcript); setIsListening(false); };
-    recognition.onerror = () => { setIsListening(false); toast.error('Voice input error. Please try again.'); };
-    recognition.onend = () => setIsListening(false);
-
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
+    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const r = new SR();
+    r.lang = 'hi-IN'; r.interimResults = false; r.maxAlternatives = 1;
+    r.onresult = e => { setInputText(e.results[0][0].transcript); setIsListening(false); toast.success('Aawaz pehchani gayi'); };
+    r.onerror  = () => { setIsListening(false); };
+    r.onend    = () => setIsListening(false);
+    recognitionRef.current = r;
+    r.start(); setIsListening(true);
+    toast('Sun raha hoon... Kahiye', { icon: '🎙️' });
   }, [isListening]);
 
-  // NEW: read a bot message aloud using the backend's Bhashini (AI4Bharat /
-  // Digital India) TTS pipeline for a natural Indian-accent Hindi voice.
-  // Automatically falls back to the browser's built-in speechSynthesis if
-  // Bhashini isn't configured or the request fails, so this never goes
-  // silent. Respects the Hindi/English toggle in AccessibilityBar.
   const readAloud = useCallback((text, idx) => {
-    // Stop whatever was playing before (backend audio or browser fallback)
     stopSpeakingRef.current?.();
-
     stopSpeakingRef.current = speakText(text, {
-      language: uiLang === 'hi' ? 'hi' : 'en',
-      gender: 'female',
+      language: uiLang === 'hi' ? 'hi' : 'en', gender: 'female',
       onStart: () => setSpeakingMsgIdx(idx),
-      onEnd: () => setSpeakingMsgIdx((cur) => (cur === idx ? null : cur)),
+      onEnd: () => setSpeakingMsgIdx(cur => cur === idx ? null : cur),
     });
   }, [uiLang]);
 
-  // NEW: lets the patient download the concluded consultation (tier,
-  // remedies, notes) as a .docx to print or show a PHC/CHC doctor. The
-  // idx param drives a per-bubble loading spinner on the download button.
   const handleDownloadReport = useCallback(async (msg, idx) => {
     setDownloadingIdx(idx);
     try {
-      await downloadConsultationReport({
-        conversationId: conversationIdRef.current,
-        tier: msg.tier,
-        flags: msg.flags ?? [],
-        remedies: msg.remedies ?? [],
-        consultationSummary: msg.text,
-      });
-      toast.success('Consultation report downloaded');
+      await downloadConsultationReport({ conversationId: conversationIdRef.current, tier: msg.tier, flags: msg.flags ?? [], remedies: msg.remedies ?? [], consultationSummary: msg.text });
+      toast.success('Doctor ke liye parcha download ho gaya (.docx)');
     } catch (err) {
-      toast.error(err?.response?.data?.detail || 'Could not generate report. Please try again.');
-    } finally {
-      setDownloadingIdx(null);
-    }
+      toast.error(err?.response?.data?.detail || 'Parcha taiyar nahi ho saka.');
+    } finally { setDownloadingIdx(null); }
   }, []);
 
-  const inferPhase = (response) => {
+  const inferPhase = response => {
     if (response.escalation_triggered || response.tier === 'Red') return 'EMERGENCY';
     if (response.remedies?.length > 0) return 'CONCLUDED';
     return currentPhase;
   };
 
-  const sendText = useCallback(async (rawText) => {
+  const sendText = useCallback(async rawText => {
     const trimmed = rawText.trim();
     if (!trimmed || loading) return;
-
-    setInputText('');
-    setError(null);
-    setMessages(prev => [...prev, { sender: 'user', text: trimmed }]);
+    setInputText(''); setError(null);
+    setMessages(p => [...p, { sender: 'user', text: trimmed }]);
     setLoading(true);
-
     try {
-      const response = await sendChatMessage(conversationIdRef.current, trimmed, knownConditions);
-      const newPhase = response.phase ?? inferPhase(response);
-      setCurrentPhase(newPhase);
-
-      setMessages(prev => [
-        ...prev,
-        {
-          sender: 'bot',
-          text: response.reply_text,
-          tier: response.tier,
-          flags: response.flags ?? [],
-          remedies: response.remedies ?? [],
-          escalation: response.escalation_triggered,
-          phase: newPhase,
-        },
-      ]);
-
-      // NEW: mirror this turn into local session history so it's browsable
-      // later from the History drawer.
-      recordSessionTurn({
-        conversationId: conversationIdRef.current,
-        summary: trimmed,
-        tier: response.tier,
-      });
+      const res = await sendChatMessage(conversationIdRef.current, trimmed, knownConditions);
+      const phase = res.phase ?? inferPhase(res);
+      setCurrentPhase(phase);
+      setMessages(p => [...p, { sender: 'bot', text: res.reply_text, tier: res.tier, flags: res.flags ?? [], remedies: res.remedies ?? [], escalation: res.escalation_triggered, phase }]);
+      recordSessionTurn({ conversationId: conversationIdRef.current, summary: trimmed, tier: res.tier });
+      refreshSessions();
     } catch (err) {
-      const detail = err?.response?.data?.detail ?? err.message ?? 'Unknown error';
-      setError(detail);
-      setMessages(prev => [
-        ...prev,
-        {
-          sender: 'bot',
-          text: 'Kshama karein, abhi sampark me asuvidha hai. Kripya kuch samay baad punah prayas karein.',
-          tier: 'Green',
-          remedies: [],
-        },
-      ]);
-    } finally {
-      setLoading(false);
-      inputRef.current?.focus();
-    }
-  }, [loading, knownConditions, currentPhase]);
+      setError(err?.response?.data?.detail ?? err.message ?? 'Unknown error');
+      setMessages(p => [...p, { sender: 'bot', text: 'Kshama karein, abhi sampark me asuvidha hai.', tier: 'Green', remedies: [] }]);
+    } finally { setLoading(false); inputRef.current?.focus(); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, knownConditions, currentPhase, refreshSessions]);
 
-  const handleSend = useCallback((e) => {
-    e?.preventDefault();
-    sendText(inputText);
-  }, [inputText, sendText]);
+  const handleSend    = useCallback(e => { e?.preventDefault(); sendText(inputText); }, [inputText, sendText]);
+  const handleKeyDown = useCallback(e => { if (e.key === 'Enter' && !e.shiftKey) handleSend(e); }, [handleSend]);
 
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Enter' && !e.shiftKey) handleSend(e);
-  }, [handleSend]);
+  /* ── Derived UI ──────────────────────────────────────────────── */
+  const isEmptyChat = messages.length === 1 && messages[0].sender === 'bot';
 
-  const showQuickChips = messages.length <= 2 && !loading;
+  const orbState = loading ? 'thinking'
+    : isListening ? 'listening'
+    : speakingMsgIdx !== null ? 'speaking'
+    : currentPhase === 'EMERGENCY' ? 'emergency'
+    : 'idle';
 
+  const stateLabel = { idle: 'Taiyar hoon', listening: 'Sun raha hoon…', thinking: 'Soch raha hoon…', speaking: 'Bol raha hoon…', emergency: 'Tatkal!' }[orbState] || '';
+  const stateColor = { idle: '#5A7855', listening: '#D4A359', thinking: '#6B8DB5', speaking: '#8ED14C', emergency: '#B85042' }[orbState] || '#5A7855';
+
+  /* ══════════════════════════════════════════════════════════════
+     RENDER — ChatGPT/Gemini-style 3-column layout
+     [Sidebar] [Chat Column]
+     ════════════════════════════════════════════════════════════ */
   return (
     <div
-      className="max-w-3xl mx-auto px-4 py-6 flex flex-col gap-4"
+      className="flex bg-[#F4F6F0] dark:bg-[#0F1521] text-[#2E4057] dark:text-[#F4F6F0] overflow-hidden w-full h-full"
       style={{ fontSize: `${textScale}rem` }}
     >
-      <SessionHistoryDrawer open={historyOpen} onClose={() => setHistoryOpen(false)} />
 
-      {/* ── Minimal Calm Header ───────────────────────────────────────── */}
-      <div className="bg-card rounded-3xl shadow-sm border border-border-subtle px-4 py-3.5 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <SanjeevaniOrb state={loading ? 'thinking' : 'idle'} size={40} />
-          <div className="min-w-0">
-            <h2 className="font-serif font-bold text-lg text-warm-indigo leading-tight truncate">
-              Dr. Sanjeevani
-            </h2>
-            <p className="text-[11px] text-muted flex items-center gap-1">
-              {backendOnline === null ? (
-                'Connecting…'
-              ) : backendOnline ? (
-                <><Wifi className="w-3 h-3 text-sage" /> Connected</>
+      {/* Mobile Backdrop for Sidebar */}
+      {sidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-xs animate-fadeIn"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ════════════════════════════════════════════════════════
+          LEFT SIDEBAR — History + Controls (like ChatGPT)
+          ════════════════════════════════════════════════════ */}
+      <div className={`
+        fixed md:relative inset-y-0 left-0 z-50 md:z-0
+        shrink-0 flex flex-col border-r border-[#5A7855]/15 dark:border-gray-800 bg-white dark:bg-[#131E2B]
+        transition-all duration-300 overflow-hidden h-full
+        ${sidebarOpen ? 'w-72 md:w-64 translate-x-0 shadow-2xl md:shadow-none' : 'w-0 -translate-x-full md:translate-x-0'}
+      `}>
+        {sidebarOpen && (
+          <>
+            {/* Sidebar Header */}
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#5A7855]/10 dark:border-gray-800 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-[#5A7855] flex items-center justify-center">
+                  <Stethoscope className="w-3.5 h-3.5 text-white" />
+                </div>
+                <span className="font-serif font-bold text-sm text-[#2E4057] dark:text-[#F4F6F0]">Sanjeevani</span>
+              </div>
+              <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* New Chat Button */}
+            <div className="px-3 py-2.5 shrink-0">
+              <button onClick={handleNewSession}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-[#5A7855]/25 dark:border-gray-700 text-[#5A7855] dark:text-[#8ED14C] hover:bg-[#5A7855]/8 dark:hover:bg-[#5A7855]/15 transition-all text-sm font-semibold group">
+                <Plus className="w-4 h-4 shrink-0" />
+                Naya Paramarsh
+              </button>
+            </div>
+
+            {/* Session History */}
+            <div className="flex-1 overflow-y-auto px-3 pb-3 min-h-0">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600 px-1 mb-2 mt-1">Itihas</p>
+
+              {sessions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Clock className="w-8 h-8 text-gray-200 dark:text-gray-700 mb-2" />
+                  <p className="text-xs text-gray-400 dark:text-gray-600 leading-relaxed">
+                    Abhi tak koi<br />consultation record nahi
+                  </p>
+                </div>
               ) : (
-                <><WifiOff className="w-3 h-3 text-gold-warm" /> Offline demo mode</>
+                <div className="space-y-1">
+                  {sessions.map(s => (
+                    <div key={s.conversationId}
+                      className="group flex items-start gap-2 px-2.5 py-2 rounded-xl hover:bg-[#5A7855]/6 dark:hover:bg-[#5A7855]/12 cursor-pointer transition-all">
+                      <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${s.tier === 'Red' ? 'bg-[#B85042]' : s.tier === 'Yellow' ? 'bg-[#D4A359]' : 'bg-[#5A7855]'}`} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-[#2E4057] dark:text-[#C8D4E0] leading-snug line-clamp-2 group-hover:text-[#1E2A43] dark:group-hover:text-[#F4F6F0]">{s.summary || 'Consultation'}</p>
+                        <p className="text-[9px] text-gray-400 mt-0.5">{new Date(s.updatedAt).toLocaleDateString('hi-IN', { day: 'numeric', month: 'short' })}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
-            </p>
-          </div>
-        </div>
+            </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <AccessibilityBar scale={textScale} onScaleChange={setTextScale} lang={uiLang} onLangChange={setUiLang} />
-          <button
-            onClick={() => setHistoryOpen(true)}
-            className="p-2 rounded-xl text-muted hover:text-primary hover:bg-black/5 transition-colors"
-            title="Past sessions"
-          >
-            <Clock className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setDetailsOpen(o => !o)}
-            className={`p-2 rounded-xl transition-colors ${detailsOpen ? 'bg-warm-indigo text-white' : 'text-muted hover:text-primary hover:bg-black/5'}`}
-            title="Consultation details"
-          >
-            <Settings2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleNewSession}
-            className="p-2 rounded-xl text-muted hover:text-primary hover:bg-black/5 transition-colors"
-            title="Start a new consultation session"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-        </div>
+            {/* Sidebar Bottom — Conditions + Emergency */}
+            <div className="shrink-0 border-t border-[#5A7855]/10 dark:border-gray-800 px-3 py-3 space-y-2">
+              {/* Comorbidities */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600 mb-1.5">Aapki Sthitiyan</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {COMORBIDITY_OPTIONS.map(opt => {
+                    const on = knownConditions.includes(opt.value);
+                    return (
+                      <button key={opt.value} onClick={() => toggleCondition(opt.value)}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border transition-all ${on ? 'bg-[#5A7855] text-white border-[#5A7855]' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#5A7855]/40'}`}>
+                        {opt.icon} {on ? '✓ ' : ''}{opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Clear History */}
+              {sessions.length > 0 && (
+                <button onClick={() => { clearSessionHistory(); setSessions([]); }}
+                  className="w-full flex items-center justify-center gap-1.5 text-[11px] text-[#B85042]/70 hover:text-[#B85042] hover:bg-[#B85042]/8 py-1.5 rounded-lg transition-all">
+                  <Trash2 className="w-3 h-3" /> Itihas Saaf Karein
+                </button>
+              )}
+
+              {/* Emergency */}
+              <a href="tel:108" className="w-full flex items-center justify-center gap-1.5 bg-[#B85042] hover:bg-[#9a4035] text-white py-2 rounded-xl text-xs font-bold transition-all shadow-sm">
+                <PhoneCall className="w-3.5 h-3.5" /> 108 Aapaatkaal
+              </a>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* ── Collapsible Details (phase + comorbidity tags) ───────────────
-          Kept out of the default view so the chat itself stays uncluttered
-          — a patient in distress shouldn't have to parse a dashboard. */}
-      {detailsOpen && (
-        <div className="bg-card rounded-2xl border border-border-subtle p-4 animate-fadeIn space-y-3">
-          <PhaseProgress currentPhase={currentPhase} />
-          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border-subtle">
-            <span className="text-xs font-semibold text-warm-indigo">Patient Tags:</span>
-            {COMORBIDITY_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => toggleCondition(opt.value)}
-                className={`px-2.5 py-1 rounded-full text-xs border font-medium transition-all ${
-                  knownConditions.includes(opt.value)
-                    ? 'bg-warm-indigo text-white border-warm-indigo'
-                    : 'bg-gray-100 text-primary border-gray-200 hover:border-warm-indigo/40'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+      {/* ════════════════════════════════════════════════════════
+          MAIN CHAT COLUMN
+          ════════════════════════════════════════════════════ */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden">
+
+        {/* ── Top Bar (permanently pinned) ──────────────────── */}
+        <div className="shrink-0 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-white/95 dark:bg-[#131E2B]/95 backdrop-blur-md border-b border-[#5A7855]/12 dark:border-gray-800 z-10">
+
+          {/* Sidebar toggle */}
+          <button onClick={() => setSidebarOpen(o => !o)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-[#5A7855] hover:bg-[#5A7855]/8 transition-all shrink-0">
+            {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+
+          {/* ── Orb + Identity — centred like Gemini ──── */}
+          <div className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group" onClick={toggleListening} title={isListening ? 'Sunna band karein' : 'Mic — tap to speak'}>
+            <div className="relative shrink-0">
+              <div className="hidden sm:block"><SanjeevaniOrb state={orbState} size={38} /></div>
+              <div className="sm:hidden"><SanjeevaniOrb state={orbState} size={30} /></div>
+              {/* Mic badge */}
+              <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 border-white dark:border-[#131E2B] flex items-center justify-center transition-all ${
+                isListening ? 'bg-[#B85042] animate-pulse' : 'bg-[#5A7855] group-hover:bg-[#D4A359]'
+              }`}>
+                {isListening ? <MicOff className="w-1.5 h-1.5 sm:w-2 sm:h-2 text-white" /> : <Mic className="w-1.5 h-1.5 sm:w-2 sm:h-2 text-white" />}
+              </div>
+            </div>
+            <div>
+              <p className="font-serif font-bold text-xs sm:text-sm text-[#2E4057] dark:text-[#F4F6F0] leading-tight">Dr. Sanjeevani</p>
+              <p className="text-[9px] sm:text-[10px] font-semibold" style={{ color: stateColor }}>{stateLabel}</p>
+            </div>
           </div>
-          <p className="text-[10px] text-gray-400">
-            Session ID: <code className="font-mono">{conversationIdRef.current}</code>
-          </p>
+
+          {/* Connection */}
+          <div className={`hidden sm:flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg ${
+            backendOnline === null ? 'text-gray-400' : backendOnline ? 'text-[#5A7855] bg-[#5A7855]/10' : 'text-[#D4A359] bg-[#D4A359]/10'
+          }`}>
+            {backendOnline === null ? <RefreshCw className="w-3 h-3 animate-spin" /> : backendOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+            <span className="hidden md:inline">{backendOnline === null ? 'Jud raha…' : backendOnline ? 'Online' : 'Offline'}</span>
+          </div>
+
+          <div className="flex-1" />
+
+          {/* Phase tracker (compact) */}
+          <div className="hidden lg:block">
+            <PhaseProgress currentPhase={currentPhase} />
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center gap-1 shrink-0">
+            <AccessibilityBar scale={textScale} onScaleChange={setTextScale} lang={uiLang} onLangChange={setUiLang} />
+            <button onClick={() => setSettingsOpen(o => !o)}
+              className={`p-1.5 sm:p-2 rounded-xl border text-xs transition-all ${settingsOpen ? 'bg-[#5A7855] text-white border-[#5A7855]' : 'border-gray-200 dark:border-gray-700 text-gray-400 hover:border-[#5A7855]/40'}`}>
+              <Settings2 className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={handleNewSession} className="p-1.5 sm:p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-400 hover:border-[#5A7855]/40 transition-all" title="Naya session">
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
-      )}
 
-      {/* ── Error Banner ──────────────────────────────────────────────── */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-start gap-2 text-sm text-red-700">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span><strong>Error:</strong> {error}</span>
-        </div>
-      )}
+        {/* ── Settings Panel ──────────────────────────────────── */}
+        {settingsOpen && (
+          <div className="shrink-0 bg-white dark:bg-[#1A2538] border-b border-[#5A7855]/12 dark:border-gray-800 px-4 py-3 animate-fadeIn">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-[#2E4057] dark:text-[#F4F6F0]">Pahle Se Maujood Sthitiyan:</span>
+              <button onClick={() => setSettingsOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-3.5 h-3.5" /></button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {COMORBIDITY_OPTIONS.map(opt => {
+                const on = knownConditions.includes(opt.value);
+                return (
+                  <button key={opt.value} onClick={() => toggleCondition(opt.value)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${on ? 'bg-[#5A7855] text-white border-[#5A7855]' : 'bg-gray-50 dark:bg-[#151D28] text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-[#5A7855]/40'}`}>
+                    {opt.icon} {on ? '✓ ' : ''}{opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Mobile Phase */}
+            <div className="lg:hidden mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <PhaseProgress currentPhase={currentPhase} />
+            </div>
+          </div>
+        )}
 
-      {/* ── Chat Window ───────────────────────────────────────────────── */}
-      <div
-        className="bg-card rounded-3xl shadow-sm border border-border-subtle flex flex-col overflow-hidden"
-        style={{ height: 'clamp(440px, 60vh, 660px)' }}
-      >
-        <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-4">
-          {messages.map((msg, idx) => (
-            <MessageBubble
-              key={idx}
-              msg={msg}
-              isSpeaking={speakingMsgIdx === idx}
-              isDownloading={downloadingIdx === idx}
-              onReadAloud={() => readAloud(msg.text, idx)}
-              onDownloadReport={() => handleDownloadReport(msg, idx)}
-            />
-          ))}
+        {/* ── Error Banner ────────────────────────────────────── */}
+        {error && (
+          <div className="shrink-0 mx-4 mt-2 bg-[#B85042]/10 border border-[#B85042]/30 rounded-2xl p-3 flex items-start gap-2 text-xs text-[#B85042] animate-fadeIn">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div><strong className="block font-bold">Takneeki Asuvidha:</strong>{error}</div>
+          </div>
+        )}
 
-          {showQuickChips && (
-            <div className="pt-1">
-              <p className="text-[11px] text-muted mb-1.5 px-1">Ya jaldi chunein:</p>
-              <SymptomChips disabled={loading} onPick={(val) => sendText(val)} />
+        {/* ── MESSAGE AREA (only this area scrolls) ── */}
+        <div className="flex-1 overflow-y-auto min-h-0 relative overscroll-contain">
+
+          {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+              EMPTY STATE — Big centred Orb when no convo yet
+              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+          {isEmptyChat ? (
+            <div className="flex flex-col items-center justify-center h-full py-4 sm:py-8 px-3 sm:px-6 animate-fadeIn">
+              {/* The hero Orb */}
+              <div className="relative mb-3 sm:mb-6 cursor-pointer group" onClick={toggleListening}>
+                {/* Glow behind orb */}
+                <div className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${stateColor}20 0%, transparent 70%)`, transform: 'scale(1.6)' }} />
+                <div className="hidden sm:block"><SanjeevaniOrb state={orbState} size={120} showLabel={false} /></div>
+                <div className="sm:hidden"><SanjeevaniOrb state={orbState} size={64} showLabel={false} /></div>
+                {/* Big mic ring */}
+                <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold shadow-md transition-all ${
+                  isListening
+                    ? 'bg-[#B85042] text-white animate-pulse'
+                    : 'bg-white dark:bg-[#1E2A43] text-[#5A7855] dark:text-[#8ED14C] border border-[#5A7855]/30 group-hover:border-[#5A7855]'
+                }`}>
+                  {isListening ? <><MicOff className="w-3 h-3" /> Ruk jaiye</> : <><Mic className="w-3 h-3" /> Boliye</>}
+                </div>
+              </div>
+
+              {/* Title */}
+              <h2 className="font-serif text-lg sm:text-2xl font-bold text-[#2E4057] dark:text-[#F4F6F0] text-center mt-2 sm:mt-4 mb-0.5 sm:mb-1">
+                Namaste! 🙏
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs mb-3 sm:mb-8">
+                Main Dr. Sanjeevani hoon. Aapki takleef sunne ke liye taiyar hoon.
+              </p>
+
+              {/* Symptom quick-pick tiles */}
+              <div className="w-full max-w-md">
+                <p className="text-[10px] sm:text-[11px] font-semibold text-gray-400 uppercase tracking-widest text-center mb-2 sm:mb-3">
+                  Ya yahan se chuniye
+                </p>
+                <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-2.5 sm:mb-4">
+                  {QUICK_SYMPTOMS.map(s => (
+                    <button key={s.value} onClick={() => sendText(s.value)}
+                      className="flex flex-col items-center gap-1 sm:gap-1.5 py-2 sm:py-3 px-1 sm:px-2 rounded-xl sm:rounded-2xl bg-white dark:bg-[#1A2538] border border-gray-200 dark:border-gray-700 hover:border-[#5A7855]/50 hover:shadow-sm transition-all active:scale-95 group">
+                      <span className="text-lg sm:text-2xl group-hover:scale-110 transition-transform">{s.emoji}</span>
+                      <span className="text-[10px] sm:text-[11px] font-bold text-[#2E4057] dark:text-[#C8D4E0] truncate max-w-full">{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+                {/* Text chips */}
+                <SymptomChips disabled={loading} onPick={val => sendText(val)} />
+              </div>
+            </div>
+          ) : (
+            /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                ACTIVE CHAT — message bubbles
+               ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-4 py-3 sm:py-6 space-y-2.5 sm:space-y-4">
+              {messages.map((msg, idx) => (
+                <MessageBubble
+                  key={idx}
+                  msg={msg}
+                  isSpeaking={speakingMsgIdx === idx}
+                  isDownloading={downloadingIdx === idx}
+                  onReadAloud={() => readAloud(msg.text, idx)}
+                  onDownloadReport={() => handleDownloadReport(msg, idx)}
+                />
+              ))}
+              {loading && <div className="py-1"><CalmLoader /></div>}
+              <div ref={chatEndRef} />
             </div>
           )}
-
-          {loading && <CalmLoader />}
-
-          <div ref={chatEndRef} />
         </div>
 
-        <form
-          onSubmit={handleSend}
-          className="p-3.5 bg-gray-50 border-t border-border-subtle flex items-center gap-2"
-        >
-          <button
-            type="button"
-            onClick={toggleListening}
-            className={`p-2.5 rounded-xl transition-all shrink-0 ${
-              isListening
-                ? 'bg-rose-soft text-white animate-pulse'
-                : 'bg-card border border-gray-300 text-warm-indigo hover:bg-gray-100'
-            }`}
-            title="Click to speak (Hindi / Garhwali)"
-          >
-            {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-          </button>
+        {/* ── INPUT BAR — permanently docked ─────────────────── */}
+        <div className="shrink-0 bg-white/95 dark:bg-[#131E2B]/95 backdrop-blur-md border-t border-[#5A7855]/12 dark:border-gray-800 z-10">
+          {/* Condition strip */}
+          {knownConditions.length > 0 && (
+            <div className="max-w-2xl mx-auto px-3 sm:px-4 pt-1.5 sm:pt-2 flex items-center gap-1.5">
+              <Leaf className="w-3 h-3 text-[#5A7855] shrink-0" />
+              <span className="text-[9px] sm:text-[10px] text-gray-400 truncate">Sthitiyan: {knownConditions.join(', ')}</span>
+            </div>
+          )}
+          <form onSubmit={handleSend} className="max-w-2xl mx-auto flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3">
+            {/* Mic */}
+            <button type="button" onClick={toggleListening}
+              className={`shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center transition-all ${
+                isListening
+                  ? 'bg-[#B85042] text-white animate-pulse ring-4 ring-[#B85042]/20 shadow-md'
+                  : 'bg-[#5A7855]/10 border border-[#5A7855]/25 text-[#5A7855] dark:text-[#8ED14C] hover:bg-[#5A7855]/15'
+              }`}
+              aria-label="Voice input"
+            >
+              {isListening ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+            </button>
 
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputText}
-            onChange={e => setInputText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Apne lakshan batayein (e.g. Gale me kharash aur sookhi khasi hai)…"
-            disabled={loading}
-            className="flex-1 bg-card border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-warm-indigo disabled:opacity-60"
-          />
+            {/* Text */}
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={isListening ? 'Sun raha hoon… 🎙️' : 'Apne lakshan batayein ya likhein…'}
+              disabled={loading}
+              className="flex-1 min-w-0 bg-[#F4F6F0] dark:bg-[#0F1521] border border-gray-200 dark:border-gray-700 rounded-lg sm:rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-[#2E4057] dark:text-[#F4F6F0] focus:outline-none focus:ring-2 focus:ring-[#5A7855]/50 disabled:opacity-60 placeholder-gray-400 dark:placeholder-gray-600"
+            />
 
-          <button
-            type="submit"
-            disabled={!inputText.trim() || loading}
-            className="bg-gold-warm hover:opacity-90 text-warm-indigo p-2.5 rounded-xl font-bold transition-all disabled:opacity-50 shrink-0"
-          >
-            {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-          </button>
-        </form>
+            {/* Send */}
+            <button type="submit" disabled={!inputText.trim() || loading}
+              className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 bg-[#5A7855] hover:bg-[#4a6346] text-white rounded-lg sm:rounded-xl flex items-center justify-center transition-all disabled:opacity-40 shadow-sm"
+              aria-label="Send"
+            >
+              {loading ? <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+            </button>
+          </form>
+        </div>
+
       </div>
-
-      <p className="text-center text-[10px] text-gray-400">
-        {knownConditions.length > 0
-          ? `Active tags: ${knownConditions.join(', ')}`
-          : 'Sanjeevani sirf saathi hai, doctor ka vikalp nahi.'}
-      </p>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// MessageBubble — renders a single chat turn
-// ---------------------------------------------------------------------------
+/* ── MessageBubble ─────────────────────────────────────────────────────── */
 function MessageBubble({ msg, onReadAloud, isSpeaking, onDownloadReport, isDownloading }) {
   const isUser = msg.sender === 'user';
-
   return (
-    <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex gap-1.5 sm:gap-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
       {!isUser && (
-        <div className="shrink-0 mt-1">
-          <SanjeevaniOrb state={isSpeaking ? 'speaking' : 'idle'} size={32} />
+        <div className="shrink-0 mt-0.5">
+          <div className="hidden sm:block"><SanjeevaniOrb state={isSpeaking ? 'speaking' : 'idle'} size={28} /></div>
+          <div className="sm:hidden"><SanjeevaniOrb state={isSpeaking ? 'speaking' : 'idle'} size={22} /></div>
         </div>
       )}
-
-      <div className={`
-        max-w-[88%] md:max-w-[76%] rounded-2xl p-4 text-sm shadow-sm
-        ${isUser
-          ? 'bg-sage text-white rounded-br-none'
-          : 'bg-[#F3EFE4] text-[#2A2E35] rounded-bl-none border border-border-subtle'
-        }
-      `}>
-        {!isUser && msg.tier && (
-          <div className="mb-2.5 flex items-center justify-between gap-2">
-            <TierBadge tier={msg.tier} />
-            <button
-              onClick={onReadAloud}
-              className={`p-1 rounded-full hover:bg-black/5 transition-colors shrink-0 ${
-                isSpeaking ? 'text-sage animate-pulse' : 'text-muted hover:text-warm-indigo'
-              }`}
-              title="Read aloud (natural Hindi voice)"
-            >
+      <div className={`max-w-[88%] sm:max-w-[75%] rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm shadow-xs ${
+        isUser
+          ? 'bg-[#5A7855] text-white rounded-br-none'
+          : 'bg-white dark:bg-[#1A2538] text-[#2E4057] dark:text-[#F4F6F0] rounded-bl-none border border-[#5A7855]/10 dark:border-gray-700/60'
+      }`}>
+        {!isUser && (
+          <div className="mb-1.5 sm:mb-2 flex items-center justify-between gap-2 border-b border-[#5A7855]/10 dark:border-gray-700/50 pb-1 sm:pb-1.5">
+            {(msg.tier === 'Red' || msg.tier === 'Yellow' || msg.remedies?.length > 0 || msg.phase === 'CONCLUDED') ? (
+              <TierBadge tier={msg.tier} />
+            ) : (
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#5A7855] dark:text-[#8ED14C] uppercase tracking-wider">
+                Dr. Sanjeevani
+              </span>
+            )}
+            <button onClick={onReadAloud}
+              className={`p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${isSpeaking ? 'text-[#8ED14C] animate-pulse' : 'text-gray-400 hover:text-[#5A7855]'}`}
+              aria-label="Read aloud">
               <Volume2 className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
-
-        <div className="whitespace-pre-line">
+        <div className="whitespace-pre-line leading-relaxed text-xs sm:text-sm">
           {isUser ? msg.text : renderMarkdown(msg.text)}
         </div>
-
         {!isUser && (msg.tier === 'Red' || msg.tier === 'Yellow') && (
-          <EscalationCard tier={msg.tier} flags={msg.flags ?? []} />
+          <div className="mt-2 sm:mt-2.5"><EscalationCard tier={msg.tier} flags={msg.flags ?? []} /></div>
         )}
-
         {!isUser && msg.remedies?.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {msg.remedies.map((remedy, i) => (
-              <RemedyCard key={i} remedy={remedy} index={i} />
-            ))}
-            <button
-              onClick={onDownloadReport}
-              disabled={isDownloading}
-              className="w-full mt-2 flex items-center justify-center gap-1.5 bg-warm-indigo/5 hover:bg-warm-indigo/10 text-warm-indigo text-xs font-bold py-2.5 rounded-xl border border-warm-indigo/15 transition-all disabled:opacity-60"
-              title="Download this consultation as a printable report"
-            >
-              {isDownloading ? (
-                <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Preparing report…</>
-              ) : (
-                <><FileDown className="w-3.5 h-3.5" /> Download Report for Doctor</>
-              )}
+          <div className="mt-2.5 sm:mt-3 space-y-2">
+            {msg.remedies.map((r, i) => <RemedyCard key={i} remedy={r} index={i} />)}
+            <button onClick={onDownloadReport} disabled={isDownloading}
+              className="w-full mt-1 flex items-center justify-center gap-1.5 sm:gap-2 bg-[#D4A359]/15 hover:bg-[#D4A359]/25 text-[#2E4057] dark:text-[#D4A359] text-[11px] sm:text-xs font-bold py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl border border-[#D4A359]/30 transition-all disabled:opacity-60">
+              {isDownloading ? <><RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-spin" /> Taiyar ho raha hai…</> : <><FileDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Doctor Ke Liye Parcha (.docx)</>}
             </button>
           </div>
         )}
       </div>
-
       {isUser && (
-        <div className="w-8 h-8 rounded-full bg-sage text-white flex items-center justify-center shrink-0 mt-1">
-          <User className="w-4 h-4" />
+        <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#5A7855] text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+          <User className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
         </div>
       )}
     </div>

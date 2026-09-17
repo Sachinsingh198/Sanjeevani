@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Wind, Volume2, VolumeX, Play, Pause, RotateCcw,
-  Sparkles, CheckCircle2, Heart, Leaf, Shield, Award,
-  Clock, ArrowLeft, Music, Info, HelpCircle
+  Sparkles, Heart, Leaf, Shield, Award,
+  Clock, ArrowLeft, Music, Info, Waves, HandMetal
 } from 'lucide-react';
 import {
   playSingingBowl, playMeditationChime, ambientSoundscape, speakCue
@@ -21,28 +21,31 @@ const PRANAYAMA_PATTERNS = [
     exhaleSec: 4,
     holdOutSec: 2,
     benefits: 'Calms anxiety, steadies heartbeat, relieves altitude headaches.',
+    audioIntro: 'Anulom Vilom sharir aur mastishk ko shant karne ke liye sabse uttam pranayama hai.',
   },
   {
     id: 'box-breathing',
     name: 'Box Breathing (Samavritti)',
     hindiName: 'समवृत्ति (बॉक्स ब्रीदिंग)',
-    description: 'Equal 4-part rhythmic breath used by yogis and protectors to enter a state of deep calm under stress.',
+    description: 'Equal 4-part rhythmic breath used by yogis to enter a state of deep calm under stress.',
     inhaleSec: 4,
     holdInSec: 4,
     exhaleSec: 4,
     holdOutSec: 4,
     benefits: 'Resets the autonomic nervous system and relieves sharp emotional panic.',
+    audioIntro: 'Samavritti pranayama tanaav ko turant door karta hai.',
   },
   {
     id: 'bhramari',
     name: 'Bhramari (Humming Bee Breath)',
     hindiName: 'भ्रामरी प्राणायाम',
-    description: 'Making a gentle humming sound like a bee on exhale produces nitric oxide, soothing the brain immediately.',
+    description: 'Gentle humming sound like a bee on exhale produces nitric oxide, soothing the brain immediately.',
     inhaleSec: 4,
     holdInSec: 2,
     exhaleSec: 7,
     holdOutSec: 1,
     benefits: 'Instant release of cerebral tension, high blood pressure, and sleeplessness.',
+    audioIntro: 'Bhramari me saans chhodte samay bhawre jaisi gungunahat karein.',
   },
   {
     id: 'relax-478',
@@ -54,6 +57,7 @@ const PRANAYAMA_PATTERNS = [
     exhaleSec: 8,
     holdOutSec: 1,
     benefits: 'Natural tranquilizer for anxious thoughts and insomnia.',
+    audioIntro: 'Chaar saat aath vidhi gehri sukhad neend ke liye anukool hai.',
   },
   {
     id: 'sahaj',
@@ -65,6 +69,7 @@ const PRANAYAMA_PATTERNS = [
     exhaleSec: 5,
     holdOutSec: 0,
     benefits: 'Deep physical relaxation without breath retention effort.',
+    audioIntro: 'Sahaj dhyan bina kisi dabav ke prakritik saans lene ka saral abhyas hai.',
   },
 ];
 
@@ -114,53 +119,49 @@ const MUDRAS = [
   {
     name: 'Gyan Mudra (ज्ञान मुद्रा)',
     element: 'Air & Consciousness',
+    icon: '👌',
     how: 'Touch tip of index finger with tip of thumb, keep other three fingers straight.',
     benefit: 'Enhances memory, cures insomnia, develops spiritual peace.',
+    audio: 'Gyan mudra me anguthe aur pehli ungli ke sire ko milayein.',
   },
   {
     name: 'Prana Mudra (प्राण मुद्रा)',
     element: 'Vital Life Force',
+    icon: '✌️',
     how: 'Touch tips of little finger and ring finger to tip of thumb.',
     benefit: 'Energizes whole body, removes fatigue, strengthens eyesight and immunity.',
+    audio: 'Prana mudra me choti aur anamik ungli ko anguthe se milayein.',
   },
   {
     name: 'Vayu Mudra (वायु मुद्रा)',
     element: 'Joint & Air Balance',
+    icon: '🤞',
     how: 'Bend index finger to base of thumb, press gently with thumb.',
     benefit: 'Relieves joint pain, arthritis, gas, and mountain muscle stiffness.',
+    audio: 'Vayu mudra gathiya aur jod ke dard me laabhdayak hai.',
   },
 ];
 
 export default function MeditationTeacher() {
+  const [activeTab, setActiveTab] = useState('pranayama'); // 'pranayama' | 'soundscapes' | 'guided' | 'mudras'
   const [selectedPattern, setSelectedPattern] = useState(PRANAYAMA_PATTERNS[0]);
   const [isBreathingActive, setIsBreathingActive] = useState(false);
-  const [breathPhase, setBreathPhase] = useState('inhale'); // 'inhale' | 'hold-in' | 'exhale' | 'hold-out'
+  const [breathPhase, setBreathPhase] = useState('inhale');
   const [phaseSecondsLeft, setPhaseSecondsLeft] = useState(selectedPattern.inhaleSec);
   const [cyclesCompleted, setCyclesCompleted] = useState(0);
 
   // Audio settings
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [voiceCuesEnabled, setVoiceCuesEnabled] = useState(true);
-  const [activeSoundscape, setActiveSoundscape] = useState(null); // 'river' | 'om' | 'bowls' | null
+  const [activeSoundscape, setActiveSoundscape] = useState(null);
 
-  // Active Guided Meditation Track
+  // Active Guided Track
   const [activeTrack, setActiveTrack] = useState(null);
   const [trackScriptIndex, setTrackScriptIndex] = useState(0);
   const [isTrackPlaying, setIsTrackPlaying] = useState(false);
 
-  // Streak & Statistics
-  const [stats, setStats] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sanjeevani_meditation_stats');
-      return saved ? JSON.parse(saved) : { totalMinutes: 18, sessions: 5, streak: 3 };
-    } catch {
-      return { totalMinutes: 18, sessions: 5, streak: 3 };
-    }
-  });
-
   const timerRef = useRef(null);
 
-  // Handle Breathing Timer Phase Progression
   useEffect(() => {
     if (!isBreathingActive) {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -173,7 +174,6 @@ export default function MeditationTeacher() {
           return prev - 1;
         }
 
-        // Phase finished — transition to next phase
         let nextPhase = 'inhale';
         let nextDuration = selectedPattern.inhaleSec;
 
@@ -231,7 +231,7 @@ export default function MeditationTeacher() {
     setPhaseSecondsLeft(selectedPattern.inhaleSec);
     if (soundEnabled) playSingingBowl(216, 4.0);
     if (voiceCuesEnabled) speakCue('Gehri saans lijiye... Inhale', 'hi-IN');
-    toast.success('Pranayama session started. Sit tall and relax.');
+    toast.success('Pranayama shuru hua. Shanti se baithein 🙏');
   };
 
   const handlePauseBreathing = () => {
@@ -256,7 +256,6 @@ export default function MeditationTeacher() {
     }
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       ambientSoundscape.stop();
@@ -264,7 +263,6 @@ export default function MeditationTeacher() {
     };
   }, []);
 
-  // Guided Track Player Loop
   useEffect(() => {
     if (!isTrackPlaying || !activeTrack) return;
 
@@ -280,7 +278,7 @@ export default function MeditationTeacher() {
         setIsTrackPlaying(false);
         setTrackScriptIndex(0);
         playSingingBowl(216, 5.0);
-        toast.success('Dhyana session concluded with peace 🙏');
+        toast.success('Dhyana session sampanna hua 🙏');
       }
     }, 9000);
 
@@ -288,322 +286,341 @@ export default function MeditationTeacher() {
   }, [isTrackPlaying, activeTrack, trackScriptIndex, voiceCuesEnabled]);
 
   const getPhaseText = () => {
-    if (breathPhase === 'inhale') return { hi: 'श्वास लें', en: 'Inhale Deeply', sub: 'Fill your chest with Himalayan air' };
-    if (breathPhase === 'hold-in') return { hi: 'श्वास रोकें', en: 'Hold Calmly', sub: 'Internal tranquility' };
-    if (breathPhase === 'exhale') return { hi: 'श्वास छोड़ें', en: 'Exhale Gently', sub: 'Release all tension and worries' };
-    return { hi: 'शांत रहें', en: 'Rest in Silence', sub: 'Stillness and awareness' };
+    if (breathPhase === 'inhale') return { hi: 'श्वास लें (Inhale)', en: 'Inhale Deeply', sub: 'Himalayi shuddh hawa se chhati bharein' };
+    if (breathPhase === 'hold-in') return { hi: 'श्वास रोकें (Hold)', en: 'Hold Calmly', sub: 'Aantrik sthirta aur shanti' };
+    if (breathPhase === 'exhale') return { hi: 'श्वास छोड़ें (Exhale)', en: 'Exhale Gently', sub: 'Saari chinta aur tanaav bahar nikaalein' };
+    return { hi: 'शांत रहें (Rest)', en: 'Rest in Silence', sub: 'Keval shant upasthiti' };
   };
 
   const phaseInfo = getPhaseText();
-
-  // Circle scale animation styling
   const isExpanding = breathPhase === 'inhale';
   const isContracting = breathPhase === 'exhale';
 
+  const meditationTabs = [
+    { id: 'pranayama', label: 'प्राणायाम', sub: 'Breathing', icon: Wind },
+    { id: 'soundscapes', label: 'प्राकृतिक ध्वनियां', sub: 'Sounds', icon: Waves },
+    { id: 'guided', label: 'कथा ध्यान', sub: 'Guided', icon: Sparkles },
+    { id: 'mudras', label: 'हस्त मुद्राएं', sub: 'Mudras', icon: HandMetal },
+  ];
+
   return (
-    <div className="min-h-screen bg-mist text-primary pb-16">
-      {/* Top Himalayan Header */}
-      <div className="bg-gradient-to-b from-[#5A7855]/15 via-white/80 to-mist border-b border-border-subtle pt-8 pb-10 px-4">
+    <div className="min-h-screen bg-[#F4F6F0] dark:bg-[#151D28] text-[#2E4057] dark:text-[#F4F6F0] pb-20 transition-colors duration-300">
+      
+      {/* ── Top Header ────────────────────────────────────────── */}
+      <div className="bg-gradient-to-b from-[#5A7855]/15 via-white/80 dark:via-[#1E2A43]/80 to-[#F4F6F0] dark:to-[#151D28] border-b border-gray-200/80 dark:border-gray-800 pt-6 pb-8 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <Link
-            to="/mitra"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-primary mb-4 transition-colors"
+            to="/patient"
+            className="touch-target inline-flex items-center gap-2 text-xs font-semibold text-[#556376] dark:text-[#A8B4C2] hover:text-[#2E4057] dark:hover:text-[#F4F6F0] mb-3 transition-colors"
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Mitra Dashboard
+            <ArrowLeft className="w-4 h-4" />
+            <span>Mitra Hub Par Wapas</span>
           </Link>
 
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-2 bg-sage/10 text-sage px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
-                <Wind className="w-3.5 h-3.5" /> Himalayan Dhyana Guru
+              <div className="inline-flex items-center gap-2 bg-[#5A7855]/10 dark:bg-[#5A7855]/25 text-[#5A7855] dark:text-[#8ED14C] px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                <Wind className="w-3.5 h-3.5 text-[#D4A359]" />
+                <span>Himalayan Dhyana Guru • ध्यान व प्राणायाम</span>
               </div>
-              <h1 className="font-serif text-3xl md:text-4xl font-bold text-primary">
-                Dhyan & Pranayama Kendra (ध्यान व प्राणायाम)
+              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2E4057] dark:text-[#F4F6F0]">
+                Dhyan & Pranayama Studio
               </h1>
-              <p className="text-xs md:text-sm text-muted mt-1 max-w-xl leading-relaxed">
-                Ancient Vedic breathwork and mindfulness crafted for Himalayan high-altitude vitality, anxiety reduction, and inner stillness.
-              </p>
             </div>
 
-            {/* Quick Stats Badge */}
-            <div className="bg-card border border-sage/20 rounded-2xl p-3.5 shadow-sm flex items-center gap-4">
-              <div className="text-center">
-                <p className="text-lg font-bold text-sage">{stats.streak} Days</p>
-                <p className="text-[10px] text-muted uppercase font-bold">Mindful Streak</p>
+            {/* Quick Cycles Badge */}
+            <div className="bg-white dark:bg-[#1E2A43] border border-[#5A7855]/20 dark:border-gray-800 rounded-2xl px-4 py-2.5 shadow-xs flex items-center gap-4 self-start sm:self-center">
+              <div>
+                <p className="text-lg font-bold text-[#5A7855] dark:text-[#8ED14C] leading-none">{cyclesCompleted}</p>
+                <p className="text-[10px] text-[#556376] dark:text-[#A8B4C2] uppercase font-bold mt-0.5">Aavartan Aaj</p>
               </div>
-              <div className="h-8 w-px bg-border-subtle" />
-              <div className="text-center">
-                <p className="text-lg font-bold text-gold-warm">{cyclesCompleted}</p>
-                <p className="text-[10px] text-muted uppercase font-bold">Rounds Today</p>
-              </div>
+              <button
+                onClick={() => playSingingBowl(216, 4.5)}
+                className="touch-target px-3 py-1.5 rounded-xl bg-[#D4A359]/15 text-[#8C5E24] dark:text-[#D4A359] text-xs font-bold hover:bg-[#D4A359]/25 transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Ring Tibetan Bowl"
+              >
+                <span>🔔 Bowl</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 mt-8 space-y-8">
-        {/* ── SECTION 1: INTERACTIVE PRANAYAMA STUDIO ───────────────── */}
-        <div className="bg-card rounded-3xl p-6 md:p-8 border border-border-subtle shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 mt-6 space-y-6">
+
+        {/* ── FOCUSED 4-TAB NAVIGATION (PAGE-INSIDE-PAGE) ───────────── */}
+        <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-2 border border-[#5A7855]/20 dark:border-gray-800 shadow-xs flex items-center justify-between gap-1 overflow-x-auto">
+          {meditationTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  speakCue(`${tab.label} khula`, 'hi-IN');
+                }}
+                className={`touch-target flex-1 min-w-[70px] sm:min-w-[90px] py-2.5 px-2 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-[#5A7855] text-white shadow-sm scale-102 font-bold'
+                    : 'text-[#556376] dark:text-[#A8B4C2] hover:bg-black/5 dark:hover:bg-white/5'
+                }`}
+              >
+                <Icon className="w-5 h-5 mb-1" />
+                <span className="text-xs font-bold leading-tight truncate">{tab.label}</span>
+                <span className={`text-[10px] hidden sm:block leading-none mt-0.5 ${isActive ? 'text-white/80' : 'opacity-70'}`}>
+                  {tab.sub}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── TAB 1: PRANAYAMA STUDIO (BREATHING MANDALA) ───────────── */}
+        {activeTab === 'pranayama' && (
+          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-6 animate-fadeIn">
+            
+            {/* Pattern Selection Pills */}
             <div>
-              <h2 className="font-serif text-xl font-bold text-primary flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-gold-warm" />
-                Pranayama Breathing Studio (प्राणायाम अभ्यास)
-              </h2>
-              <p className="text-xs text-muted mt-0.5">Select a breathing rhythm and sync your breath with the expanding mandala.</p>
-            </div>
-
-            {/* Controls: Audio, Voice & Bowl */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setSoundEnabled(!soundEnabled)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                  soundEnabled ? 'bg-sage/15 text-sage' : 'bg-gray-100 text-muted'
-                }`}
-                title="Toggle Bell Chimes"
-              >
-                {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-                <span>Chimes</span>
-              </button>
-
-              <button
-                onClick={() => setVoiceCuesEnabled(!voiceCuesEnabled)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                  voiceCuesEnabled ? 'bg-gold-warm/15 text-gold-warm' : 'bg-gray-100 text-muted'
-                }`}
-                title="Toggle Spoken Cues"
-              >
-                <Info className="w-3.5 h-3.5" />
-                <span>Voice Guidance</span>
-              </button>
-
-              <button
-                onClick={() => playSingingBowl(216, 4.5)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-warm-indigo/10 hover:bg-warm-indigo hover:text-white text-primary text-xs font-semibold transition-all"
-                title="Ring Tibetan Bowl"
-              >
-                🔔 Ring Bowl
-              </button>
-            </div>
-          </div>
-
-          {/* Pattern Selector Pills */}
-          <div className="flex flex-wrap gap-2 mb-8">
-            {PRANAYAMA_PATTERNS.map((p) => {
-              const isSelected = selectedPattern.id === p.id;
-              return (
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#556376] dark:text-[#A8B4C2]">
+                  Pranayama Vidhi Chuniye:
+                </span>
                 <button
-                  key={p.id}
-                  onClick={() => {
-                    setSelectedPattern(p);
-                    handleResetBreathing();
-                  }}
-                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all ${
-                    isSelected
-                      ? 'bg-sage text-white shadow-sm'
-                      : 'bg-mist text-primary hover:bg-black/5 border border-border-subtle'
-                  }`}
+                  onClick={() => speakCue(selectedPattern.audioIntro || selectedPattern.name, 'hi-IN')}
+                  className="touch-target inline-flex items-center gap-1 text-xs font-bold text-[#5A7855] dark:text-[#8ED14C] hover:underline"
                 >
-                  {p.name}
+                  <Volume2 className="w-3.5 h-3.5" />
+                  <span>Vidhi Sunein</span>
                 </button>
-              );
-            })}
-          </div>
+              </div>
 
-          {/* Mandala Breathing Visualizer Display */}
-          <div className="flex flex-col items-center justify-center py-8 relative overflow-hidden">
-            {/* Pulsing ambient background halo */}
-            <div
-              className={`absolute w-72 h-72 rounded-full transition-all duration-1000 ease-in-out pointer-events-none blur-2xl ${
-                breathPhase === 'inhale'
-                  ? 'bg-sage/25 scale-125'
-                  : breathPhase === 'exhale'
-                  ? 'bg-gold-warm/20 scale-75'
-                  : 'bg-warm-indigo/15 scale-100'
-              }`}
-            />
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {PRANAYAMA_PATTERNS.map((p) => {
+                  const isSelected = selectedPattern.id === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setSelectedPattern(p);
+                        handleResetBreathing();
+                        speakCue(`${p.hindiName} chuna gaya`, 'hi-IN');
+                      }}
+                      className={`touch-target p-3 rounded-2xl text-xs font-bold transition-all text-center flex flex-col items-center justify-center cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#5A7855] text-white shadow-xs scale-102'
+                          : 'bg-[#F4F6F0]/80 dark:bg-[#182332] text-[#2E4057] dark:text-[#F4F6F0] border border-gray-200 dark:border-gray-700 hover:border-[#5A7855]/40'
+                      }`}
+                    >
+                      <span className="truncate w-full">{p.hindiName.split(' ')[0]}</span>
+                      <span className={`text-[10px] font-normal truncate w-full ${isSelected ? 'text-white/80' : 'text-[#556376] dark:text-[#A8B4C2]'}`}>
+                        {p.name.split(' ')[0]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-            {/* Central Animated Breathing Orb */}
-            <div className="relative flex items-center justify-center w-64 h-64">
-              {/* Outer decorative ring */}
+            {/* Mandala Visualizer */}
+            <div className="flex flex-col items-center justify-center py-6 relative overflow-hidden">
               <div
-                className={`absolute inset-0 rounded-full border-2 border-dashed border-sage/40 transition-transform duration-1000 ease-in-out ${
-                  isExpanding ? 'scale-110 rotate-45' : isContracting ? 'scale-90 rotate-0' : 'scale-100'
+                className={`absolute w-64 h-64 rounded-full transition-all duration-1000 ease-in-out pointer-events-none blur-2xl ${
+                  breathPhase === 'inhale'
+                    ? 'bg-[#5A7855]/25 scale-125'
+                    : breathPhase === 'exhale'
+                    ? 'bg-[#D4A359]/20 scale-75'
+                    : 'bg-[#2E4057]/15 scale-100'
                 }`}
               />
 
-              {/* Inner glowing core */}
-              <div
-                className={`w-48 h-48 rounded-full shadow-2xl flex flex-col items-center justify-center text-center p-4 transition-all duration-1000 ease-in-out transform ${
-                  breathPhase === 'inhale'
-                    ? 'scale-115 bg-gradient-to-tr from-sage via-[#6b8e64] to-sage-light text-white shadow-sage/40'
-                    : breathPhase === 'exhale'
-                    ? 'scale-85 bg-gradient-to-tr from-gold-warm via-[#e0b268] to-amber-100 text-primary shadow-gold-warm/30'
-                    : 'scale-100 bg-gradient-to-tr from-warm-indigo via-[#425a80] to-indigo-200 text-white shadow-warm-indigo/30'
-                }`}
-              >
-                <span className="text-3xl font-extrabold tracking-tight mb-1 font-mono">
-                  {phaseSecondsLeft}s
-                </span>
-                <span className="font-serif text-lg font-bold">
-                  {phaseInfo.hi}
-                </span>
-                <span className="text-[11px] font-sans uppercase tracking-wider opacity-90">
-                  {phaseInfo.en}
-                </span>
+              <div className="relative flex items-center justify-center w-60 h-60">
+                <div
+                  className={`absolute inset-0 rounded-full border-2 border-dashed border-[#5A7855]/40 transition-transform duration-1000 ease-in-out ${
+                    isExpanding ? 'scale-110 rotate-45' : isContracting ? 'scale-90 rotate-0' : 'scale-100'
+                  }`}
+                />
+
+                <div
+                  className={`w-44 h-44 rounded-full shadow-xl flex flex-col items-center justify-center text-center p-4 transition-all duration-1000 ease-in-out transform ${
+                    breathPhase === 'inhale'
+                      ? 'scale-110 bg-gradient-to-tr from-[#5A7855] to-[#8ED14C] text-white shadow-[#5A7855]/40'
+                      : breathPhase === 'exhale'
+                      ? 'scale-85 bg-gradient-to-tr from-[#D4A359] to-[#F4F6F0] text-[#2E4057] shadow-[#D4A359]/30'
+                      : 'scale-100 bg-gradient-to-tr from-[#2E4057] to-[#5A7855] text-white shadow-[#2E4057]/30'
+                  }`}
+                >
+                  <span className="text-3xl font-extrabold tracking-tight mb-1 font-mono">
+                    {phaseSecondsLeft}s
+                  </span>
+                  <span className="font-serif text-sm font-bold">
+                    {phaseInfo.hi}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider opacity-90 mt-0.5">
+                    {phaseInfo.en}
+                  </span>
+                </div>
+              </div>
+
+              {/* Explanatory subtext */}
+              <div className="text-center mt-4">
+                <p className="text-xs sm:text-sm font-bold text-[#2E4057] dark:text-[#F4F6F0]">{phaseInfo.sub}</p>
+                <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5 max-w-sm mx-auto">
+                  {selectedPattern.benefits}
+                </p>
+              </div>
+
+              {/* Action Controls */}
+              <div className="flex items-center gap-3 mt-6">
+                {!isBreathingActive ? (
+                  <button
+                    onClick={handleStartBreathing}
+                    className="touch-target-lg flex items-center gap-2.5 bg-[#5A7855] hover:bg-[#4a6346] text-white font-bold px-8 py-4 rounded-2xl shadow-md shadow-[#5A7855]/25 transition-all text-sm sm:text-base cursor-pointer"
+                  >
+                    <Play className="w-5 h-5 fill-white" />
+                    <span>Dhyan Shuru Karein (Start)</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={handlePauseBreathing}
+                    className="touch-target-lg flex items-center gap-2.5 bg-[#D4A359] hover:bg-[#c29148] text-[#2E4057] font-bold px-8 py-4 rounded-2xl shadow-md transition-all text-sm sm:text-base cursor-pointer"
+                  >
+                    <Pause className="w-5 h-5 fill-[#2E4057]" />
+                    <span>Viraam (Pause)</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={handleResetBreathing}
+                  className="touch-target p-3.5 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-[#556376] dark:text-[#A8B4C2] transition-all cursor-pointer"
+                  title="Reset Pattern"
+                  aria-label="Reset Pattern"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                </button>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Step Explanation */}
-            <div className="text-center mt-6">
-              <p className="text-sm font-semibold text-primary">{phaseInfo.sub}</p>
-              <p className="text-xs text-muted mt-1 max-w-md mx-auto">
-                {selectedPattern.description}
+        {/* ── TAB 2: AMBIENT SOUNDSCAPES (ध्वनियां) ────────────────── */}
+        {activeTab === 'soundscapes' && (
+          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-5 animate-fadeIn">
+            <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
+              <h3 className="font-serif font-bold text-lg sm:text-xl text-[#2E4057] dark:text-[#F4F6F0] flex items-center gap-2">
+                <Music className="w-5 h-5 text-[#5A7855]" />
+                Himalayan Pure Soundscapes (शांत प्राकृतिक ध्वनियां)
+              </h3>
+              <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+                Bina internet ke Web Audio dwara sthir dhyan dhwaniyan
               </p>
             </div>
 
-            {/* Action Bar */}
-            <div className="flex items-center gap-3 mt-6">
-              {!isBreathingActive ? (
-                <button
-                  onClick={handleStartBreathing}
-                  className="flex items-center gap-2 bg-sage hover:bg-[#4a6346] text-white font-bold px-6 py-3 rounded-2xl shadow-md transition-all transform hover:-translate-y-0.5 text-sm"
-                >
-                  <Play className="w-4 h-4 fill-white" /> Start Breathing
-                </button>
-              ) : (
-                <button
-                  onClick={handlePauseBreathing}
-                  className="flex items-center gap-2 bg-gold-warm hover:bg-[#c29148] text-white font-bold px-6 py-3 rounded-2xl shadow-md transition-all text-sm"
-                >
-                  <Pause className="w-4 h-4 fill-white" /> Pause
-                </button>
-              )}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <button
+                onClick={() => handleToggleSoundscape('river')}
+                className={`touch-target p-5 rounded-3xl border text-left transition-all cursor-pointer ${
+                  activeSoundscape === 'river'
+                    ? 'bg-[#5A7855]/15 border-[#5A7855] shadow-xs'
+                    : 'bg-[#F4F6F0]/60 dark:bg-[#182332] border-gray-200 dark:border-gray-700 hover:border-[#5A7855]/40'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl">🌊</span>
+                  <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
+                    activeSoundscape === 'river' ? 'bg-[#5A7855] text-white' : 'bg-gray-200 dark:bg-gray-700 text-[#556376]'
+                  }`}>
+                    {activeSoundscape === 'river' ? 'Baj Raha Hai' : 'Bajayein'}
+                  </span>
+                </div>
+                <h4 className="font-bold text-base text-[#2E4057] dark:text-[#F4F6F0] mt-3">Alaknanda Nadi</h4>
+                <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">Pahadi nadi ka shaant bahav.</p>
+              </button>
 
               <button
-                onClick={handleResetBreathing}
-                className="p-3 rounded-2xl bg-mist hover:bg-black/5 text-muted hover:text-primary transition-all"
-                title="Reset Pattern"
+                onClick={() => handleToggleSoundscape('om')}
+                className={`touch-target p-5 rounded-3xl border text-left transition-all cursor-pointer ${
+                  activeSoundscape === 'om'
+                    ? 'bg-[#D4A359]/20 border-[#D4A359] shadow-xs'
+                    : 'bg-[#F4F6F0]/60 dark:bg-[#182332] border-gray-200 dark:border-gray-700 hover:border-[#D4A359]/40'
+                }`}
               >
-                <RotateCcw className="w-4 h-4" />
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl">🕉️</span>
+                  <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
+                    activeSoundscape === 'om' ? 'bg-[#D4A359] text-[#2E4057]' : 'bg-gray-200 dark:bg-gray-700 text-[#556376]'
+                  }`}>
+                    {activeSoundscape === 'om' ? 'Baj Raha Hai' : 'Bajayein'}
+                  </span>
+                </div>
+                <h4 className="font-bold text-base text-[#2E4057] dark:text-[#F4F6F0] mt-3">136.1Hz Om Drone</h4>
+                <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">Aatmik shanti aur naad dhyan.</p>
+              </button>
+
+              <button
+                onClick={() => handleToggleSoundscape('bowls')}
+                className={`touch-target p-5 rounded-3xl border text-left transition-all cursor-pointer ${
+                  activeSoundscape === 'bowls'
+                    ? 'bg-[#2E4057]/20 border-[#2E4057] shadow-xs'
+                    : 'bg-[#F4F6F0]/60 dark:bg-[#182332] border-gray-200 dark:border-gray-700 hover:border-[#2E4057]/40'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl">🔔</span>
+                  <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
+                    activeSoundscape === 'bowls' ? 'bg-[#2E4057] text-white' : 'bg-gray-200 dark:bg-gray-700 text-[#556376]'
+                  }`}>
+                    {activeSoundscape === 'bowls' ? 'Baj Raha Hai' : 'Bajayein'}
+                  </span>
+                </div>
+                <h4 className="font-bold text-base text-[#2E4057] dark:text-[#F4F6F0] mt-3">Tibetan Bowls</h4>
+                <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">Vichaaron ko sthir karne wali jhankaar.</p>
               </button>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* ── SECTION 2: HIMALAYAN SOUNDSCAPES ───────────────────────── */}
-        <div className="bg-card rounded-3xl p-6 border border-border-subtle shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-serif font-bold text-lg text-primary flex items-center gap-2">
-                <Music className="w-5 h-5 text-sage" />
-                Himalayan Ambient Soundscapes (शांत प्राकृतिक ध्वनियां)
+        {/* ── TAB 3: GUIDED DHYAN (कथा ध्यान) ────────────────────── */}
+        {activeTab === 'guided' && (
+          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4 animate-fadeIn">
+            <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
+              <h3 className="font-serif font-bold text-lg sm:text-xl text-[#2E4057] dark:text-[#F4F6F0] flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-[#D4A359]" />
+                Guided Himalayan Dhyana Tracks (निर्देशित ध्यान)
               </h3>
-              <p className="text-xs text-muted">Web Audio generated pure acoustic soundscapes — 100% offline & gentle.</p>
+              <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+                Aawaz dwara margdarshit dhyan katha jo dil ki chintaon ko door kare
+              </p>
             </div>
-            {activeSoundscape && (
-              <span className="text-[10px] bg-sage/15 text-sage px-2.5 py-0.5 rounded-full font-bold uppercase animate-pulse">
-                Playing Now
-              </span>
-            )}
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button
-              onClick={() => handleToggleSoundscape('river')}
-              className={`p-4 rounded-2xl border text-left transition-all ${
-                activeSoundscape === 'river'
-                  ? 'bg-sage/10 border-sage shadow-xs'
-                  : 'bg-mist border-border-subtle hover:border-sage/40'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-lg">🌊</span>
-                <span className={`text-[10px] font-bold uppercase ${activeSoundscape === 'river' ? 'text-sage' : 'text-muted'}`}>
-                  {activeSoundscape === 'river' ? 'Active' : 'Play'}
-                </span>
-              </div>
-              <h4 className="font-bold text-sm text-primary mt-2">Alaknanda Stream</h4>
-              <p className="text-[11px] text-muted mt-0.5">Gentle mountain river white noise for focus.</p>
-            </button>
-
-            <button
-              onClick={() => handleToggleSoundscape('om')}
-              className={`p-4 rounded-2xl border text-left transition-all ${
-                activeSoundscape === 'om'
-                  ? 'bg-gold-warm/15 border-gold-warm shadow-xs'
-                  : 'bg-mist border-border-subtle hover:border-gold-warm/40'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-lg">🕉️</span>
-                <span className={`text-[10px] font-bold uppercase ${activeSoundscape === 'om' ? 'text-gold-warm' : 'text-muted'}`}>
-                  {activeSoundscape === 'om' ? 'Active' : 'Play'}
-                </span>
-              </div>
-              <h4 className="font-bold text-sm text-primary mt-2">136.1Hz Om Drone</h4>
-              <p className="text-[11px] text-muted mt-0.5">Vedic cosmic resonance for deep relaxation.</p>
-            </button>
-
-            <button
-              onClick={() => handleToggleSoundscape('bowls')}
-              className={`p-4 rounded-2xl border text-left transition-all ${
-                activeSoundscape === 'bowls'
-                  ? 'bg-warm-indigo/15 border-warm-indigo shadow-xs'
-                  : 'bg-mist border-border-subtle hover:border-warm-indigo/40'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-lg">🔔</span>
-                <span className={`text-[10px] font-bold uppercase ${activeSoundscape === 'bowls' ? 'text-warm-indigo' : 'text-muted'}`}>
-                  {activeSoundscape === 'bowls' ? 'Active' : 'Play'}
-                </span>
-              </div>
-              <h4 className="font-bold text-sm text-primary mt-2">Tibetan Singing Bowls</h4>
-              <p className="text-[11px] text-muted mt-0.5">Harmonic bell chimes to quiet wandering thoughts.</p>
-            </button>
-          </div>
-        </div>
-
-        {/* ── SECTION 3: GUIDED DHYANA MEDITATIONS ──────────────────── */}
-        <div className="bg-card rounded-3xl p-6 border border-border-subtle shadow-sm space-y-4">
-          <div>
-            <h3 className="font-serif font-bold text-lg text-primary flex items-center gap-2">
-              <Leaf className="w-5 h-5 text-gold-warm" />
-              Guided Himalayan Dhyana Tracks (निर्देशित ध्यान)
-            </h3>
-            <p className="text-xs text-muted">Spoken step-by-step sessions with voice guidance for deep emotional grounding.</p>
-          </div>
-
-          <div className="space-y-3">
-            {GUIDED_MEDITATIONS.map((med) => {
-              const isPlayingThis = isTrackPlaying && activeTrack?.id === med.id;
-              return (
-                <div
-                  key={med.id}
-                  className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                    isPlayingThis ? 'bg-sage/5 border-sage/40' : 'bg-mist border-border-subtle'
-                  }`}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase bg-gold-warm/15 text-gold-warm px-2 py-0.5 rounded-md">
-                        {med.category}
-                      </span>
-                      <span className="text-[10px] text-muted flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {med.duration}
-                      </span>
+            <div className="space-y-3">
+              {GUIDED_MEDITATIONS.map((med) => {
+                const isPlayingThis = isTrackPlaying && activeTrack?.id === med.id;
+                return (
+                  <div
+                    key={med.id}
+                    className={`p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                      isPlayingThis ? 'bg-[#5A7855]/10 border-[#5A7855]/50' : 'bg-[#F4F6F0]/60 dark:bg-[#182332] border-gray-200 dark:border-gray-700'
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase bg-[#D4A359]/20 text-[#8C5E24] dark:text-[#D4A359] px-2.5 py-0.5 rounded-md">
+                          {med.category}
+                        </span>
+                        <span className="text-xs text-[#556376] dark:text-[#A8B4C2] flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" /> {med.duration}
+                        </span>
+                      </div>
+                      <h4 className="font-serif font-bold text-base text-[#2E4057] dark:text-[#F4F6F0] mt-1.5">{med.title}</h4>
+                      <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">{med.description}</p>
+                      {isPlayingThis && (
+                        <p className="text-xs font-semibold text-[#5A7855] dark:text-[#8ED14C] mt-2 italic animate-fadeIn bg-white/80 dark:bg-[#1E2A43]/80 p-3 rounded-xl border border-[#5A7855]/20">
+                          🗣️ "{med.script[trackScriptIndex]}"
+                        </p>
+                      )}
                     </div>
-                    <h4 className="font-bold text-sm text-primary mt-1">{med.title}</h4>
-                    <p className="text-xs text-muted mt-0.5 leading-relaxed">{med.description}</p>
-                    {isPlayingThis && (
-                      <p className="text-xs font-semibold text-sage mt-2 italic animate-fadeIn">
-                        🗣️ "{med.script[trackScriptIndex]}"
-                      </p>
-                    )}
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => {
                         if (isPlayingThis) {
@@ -615,50 +632,57 @@ export default function MeditationTeacher() {
                           playSingingBowl(216, 4.0);
                         }
                       }}
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      className={`touch-target flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                         isPlayingThis
-                          ? 'bg-gold-warm text-white'
-                          : 'bg-sage hover:bg-[#4a6346] text-white shadow-xs'
+                          ? 'bg-[#D4A359] text-[#2E4057]'
+                          : 'bg-[#5A7855] hover:bg-[#4a6346] text-white shadow-xs'
                       }`}
                     >
-                      {isPlayingThis ? (
-                        <>
-                          <Pause className="w-3.5 h-3.5" /> Pause Session
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-3.5 h-3.5" /> Start Dhyana
-                        </>
-                      )}
+                      {isPlayingThis ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
+                      <span>{isPlayingThis ? 'Viraam (Pause)' : 'Suniye (Play)'}</span>
                     </button>
                   </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 4: HASTA MUDRAS (हस्त मुद्राएं) ────────────────── */}
+        {activeTab === 'mudras' && (
+          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4 animate-fadeIn">
+            <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
+              <h3 className="font-serif font-bold text-lg sm:text-xl text-[#2E4057] dark:text-[#F4F6F0] flex items-center gap-2">
+                <Heart className="w-5 h-5 text-[#B85042]" />
+                Hasta Mudras for Seated Meditation (हस्त मुद्रा निर्देश)
+              </h3>
+              <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+                Baithte samay haathon ki ye mudraayein urja ka sanchar karti hain
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {MUDRAS.map((m, idx) => (
+                <div key={idx} className="p-5 rounded-3xl bg-[#F4F6F0]/60 dark:bg-[#182332] border border-gray-200 dark:border-gray-700 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{m.icon}</span>
+                    <button
+                      onClick={() => speakCue(`${m.name}. ${m.audio || m.how}`, 'hi-IN')}
+                      className="touch-target p-1 text-[#5A7855]"
+                      title="Audio sunein"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <h4 className="font-serif font-bold text-base text-[#2E4057] dark:text-[#F4F6F0]">{m.name}</h4>
+                  <p className="text-xs text-[#8C5E24] dark:text-[#D4A359] font-semibold">{m.element}</p>
+                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2] leading-relaxed"><strong>Vidhi:</strong> {m.how}</p>
+                  <p className="text-xs text-[#5A7855] dark:text-[#8ED14C] font-semibold"><strong>Laabh:</strong> {m.benefit}</p>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
-
-        {/* ── SECTION 4: HASTA MUDRA GUIDE ───────────────────────────── */}
-        <div className="bg-card rounded-3xl p-6 border border-border-subtle shadow-sm space-y-4">
-          <div>
-            <h3 className="font-serif font-bold text-lg text-primary flex items-center gap-2">
-              <Heart className="w-5 h-5 text-rose-soft" />
-              Hasta Mudras for Seated Meditation (हस्त मुद्रा निर्देश)
-            </h3>
-            <p className="text-xs text-muted">Hold these hand gestures gently while seated to direct subtle nerve energy.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {MUDRAS.map((m, idx) => (
-              <div key={idx} className="p-4 rounded-2xl bg-mist border border-border-subtle space-y-2">
-                <h4 className="font-serif font-bold text-sm text-primary">{m.name}</h4>
-                <p className="text-[11px] text-gold-warm font-semibold">{m.element}</p>
-                <p className="text-xs text-muted leading-relaxed"><strong className="text-primary">How:</strong> {m.how}</p>
-                <p className="text-xs text-sage font-medium"><strong className="text-primary">Benefit:</strong> {m.benefit}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
 
       </div>
     </div>

@@ -14,20 +14,35 @@ bhashini_engine = BhashiniVoiceEngine()
 AUDIO_CACHE_DIR = os.path.join(os.getcwd(), "models_cache", "audio_tts")
 os.makedirs(AUDIO_CACHE_DIR, exist_ok=True)
 
-# Best-in-class Neural Indian Accent voices
+# Best-in-class Neural Indian Accent voices via edge-tts (Microsoft Neural Network)
+# hi-IN-SwaraNeural  → Natural, warm, rural-friendly Hindi female
+# hi-IN-MadhurNeural → Clear, professional Hindi male
+# en-IN-NeerjaExpressiveNeural → Expressive, authentic Indian-English female (premium)
+# en-IN-PrabhatNeural → Professional Indian-English male
 INDIAN_VOICES = {
     "hindi": {
         "female": "hi-IN-SwaraNeural",
-        "male": "hi-IN-MadhurNeural"
+        "male":   "hi-IN-MadhurNeural",
     },
     "garhwali": {
+        # Garhwali is not supported directly; Hindi Neural is the closest accent
         "female": "hi-IN-SwaraNeural",
-        "male": "hi-IN-MadhurNeural"
+        "male":   "hi-IN-MadhurNeural",
     },
     "english": {
         "female": "en-IN-NeerjaNeural",
-        "male": "en-IN-PrabhatNeural"
-    }
+        "male":   "en-IN-PrabhatNeural",
+    },
+}
+
+# SSML prosody settings per voice for warm, natural cadence
+# rate: slightly slower for elderly / low-literacy users
+# pitch: slightly warm (+2Hz) for approachability
+VOICE_PROSODY = {
+    "hi-IN-SwaraNeural":  {"rate": "-8%",  "pitch": "+1Hz", "volume": "+10%"},
+    "hi-IN-MadhurNeural": {"rate": "-5%",  "pitch": "0Hz",  "volume": "+5%"},
+    "en-IN-NeerjaNeural": {"rate": "-6%",  "pitch": "+1Hz", "volume": "+8%"},
+    "en-IN-PrabhatNeural":{"rate": "-4%",  "pitch": "0Hz",  "volume": "+5%"},
 }
 
 
@@ -111,24 +126,46 @@ class IndicTTSEngine:
     async def _synthesize_neural_indic(self, text: str, language: str = "hi", gender: str = "female") -> Optional[bytes]:
         """
         Synthesizes speech with authentic native Indian accent and cadence using edge-tts.
+        Applies gentle rate, pitch, and volume prosody directly to edge-tts for a warm,
+        human-sounding delivery suitable for rural, elderly, and low-literacy users.
         """
         try:
             import edge_tts
 
             lang_key = "english" if language.lower() in ("en", "english") else "hindi"
             voice = INDIAN_VOICES.get(lang_key, {}).get(gender, "hi-IN-SwaraNeural")
+            prosody = VOICE_PROSODY.get(voice, {"rate": "-8%", "pitch": "+1Hz", "volume": "+10%"})
 
-            communicate = edge_tts.Communicate(text, voice)
+            communicate = edge_tts.Communicate(
+                text=text,
+                voice=voice,
+                rate=prosody.get("rate", "-8%"),
+                pitch=prosody.get("pitch", "+1Hz"),
+                volume=prosody.get("volume", "+10%"),
+            )
             audio_buffer = io.BytesIO()
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
                     audio_buffer.write(chunk["data"])
 
             data = audio_buffer.getvalue()
-            return data if len(data) > 0 else None
+            if data and len(data) > 0:
+                return data
+
+            # Fallback retry without prosody if edge server rejects custom prosody
+            communicate_plain = edge_tts.Communicate(text=text, voice=voice)
+            audio_buffer_plain = io.BytesIO()
+            async for chunk in communicate_plain.stream():
+                if chunk["type"] == "audio":
+                    audio_buffer_plain.write(chunk["data"])
+
+            data_plain = audio_buffer_plain.getvalue()
+            return data_plain if len(data_plain) > 0 else None
+
         except Exception as e:
             print(f"[Neural Indic TTS Error]: {e}")
             return None
+
 
     async def synthesize(self, text: str, language: str = "hi", gender: str = "female") -> Tuple[bytes, str]:
         """

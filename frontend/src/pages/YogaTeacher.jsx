@@ -22,7 +22,7 @@ export default function YogaTeacher() {
   // Posture assessment state
   const [alignmentScore, setAlignmentScore] = useState(0);
   const [postureChecks, setPostureChecks] = useState([]);
-  const [feedbackMessage, setFeedbackMessage] = useState('Position your whole body in camera view to begin.');
+  const [feedbackMessage, setFeedbackMessage] = useState('Camera ke samne pura sharir dikhayein taaki mudra ki jaanch ho sake.');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [voiceCuesEnabled, setVoiceCuesEnabled] = useState(true);
 
@@ -34,7 +34,6 @@ export default function YogaTeacher() {
   const holdIntervalRef = useRef(null);
   const lastSpokenCueRef = useRef(0);
 
-  // Handle camera start/stop
   const startCamera = async () => {
     try {
       setIsSimulatedMode(false);
@@ -52,7 +51,7 @@ export default function YogaTeacher() {
       playSingingBowl(216, 3.0);
     } catch (err) {
       console.warn('Camera access error:', err);
-      toast.error('Could not access camera. Switching to Guided Interactive Simulation mode.');
+      toast.error('Camera access nahi mila. Practice Simulation Mode shuru kiya gaya.');
       startSimulationMode();
     }
   };
@@ -77,16 +76,12 @@ export default function YogaTeacher() {
     stopCamera();
     setIsSimulatedMode(true);
     setIsCameraActive(true);
-    toast('Practice Simulation Mode active (Generates real-time pose geometry).', { icon: '🧘' });
+    toast('Practice Mode Active (Real-time simulated geometry).', { icon: '🧘' });
   };
 
-  // Generate realistic simulated human landmarks based on selected asana
   const generateSimulatedLandmarks = (asanaId, tick) => {
-    // Basic human standing posture baseline
     const wobble = Math.sin(tick / 15) * 0.015;
-    const legBend = Math.sin(tick / 20) * 0.05;
 
-    // Normal standing skeleton
     let leftKneeY = 0.72 + wobble;
     let rightKneeY = 0.72 - wobble;
     let leftAnkleX = 0.45;
@@ -98,23 +93,18 @@ export default function YogaTeacher() {
     let rightShoulderY = 0.35 + wobble;
 
     if (asanaId === 'tadasana') {
-      // Arms raised or straight
       leftWristY = 0.18 + wobble;
       rightWristY = 0.18 + wobble;
     } else if (asanaId === 'vrikshasana') {
-      // Right leg bent and placed on left inner thigh
       rightKneeX = 0.65;
       rightKneeY = 0.60;
-      // Hands together at chest
       leftWristY = 0.38;
       rightWristY = 0.38;
     } else if (asanaId === 'virabhadrasana') {
-      // Wide lunge, front right knee bent 90 degrees
       rightKneeX = 0.68;
       rightKneeY = 0.68;
       leftAnkleX = 0.32;
       rightAnkleX = 0.75;
-      // Arms horizontal
       leftWristY = 0.35;
       rightWristY = 0.35;
     }
@@ -137,7 +127,6 @@ export default function YogaTeacher() {
     return landmarks;
   };
 
-  // Main Pose Detection / Evaluation Loop
   useEffect(() => {
     if (!isCameraActive) return;
 
@@ -152,31 +141,26 @@ export default function YogaTeacher() {
       const width = canvas.width || 640;
       const height = canvas.height || 480;
 
-      // In simulated mode, generate continuous physiological landmarks
       const currentLandmarks = generateSimulatedLandmarks(selectedAsana.id, tick);
       tick++;
 
-      // Evaluate posture geometry
       const result = evaluatePosture(currentLandmarks, selectedAsana.id);
       setAlignmentScore(result.score);
       setPostureChecks(result.checks);
       setFeedbackMessage(result.feedbackText);
 
-      // Draw skeleton on canvas
       drawSkeletonOnCanvas(ctx, currentLandmarks, result.checks, width, height);
 
-      // Voice correction guidance (throttled to every 8 seconds)
       const now = Date.now();
       if (voiceCuesEnabled && now - lastSpokenCueRef.current > 7500) {
         if (result.score >= 80) {
-          speakCue('Uttam posture! Hold steady.', 'hi-IN');
+          speakCue('Uttam posture! Sthir rahein.', 'hi-IN');
         } else if (result.feedbackText) {
           speakCue(result.feedbackText, 'hi-IN');
         }
         lastSpokenCueRef.current = now;
       }
 
-      // Check if posture is good enough to count towards holding
       if (result.score >= 70 && !isHoldingPose && !poseCompleted) {
         setIsHoldingPose(true);
       }
@@ -193,7 +177,6 @@ export default function YogaTeacher() {
     };
   }, [isCameraActive, selectedAsana, voiceCuesEnabled, isHoldingPose, poseCompleted]);
 
-  // Hold Timer Progression
   useEffect(() => {
     if (!isHoldingPose || poseCompleted) {
       if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
@@ -208,7 +191,7 @@ export default function YogaTeacher() {
           setPoseCompleted(true);
           if (soundEnabled) playSingingBowl(256, 5.0);
           if (voiceCuesEnabled) speakCue('Shabaash! Asana sampurna hua!', 'hi-IN');
-          toast.success(`🎉 Asana Completed! Perfect alignment held for ${selectedAsana.targetHoldsSec}s.`);
+          toast.success(`🎉 Asana Sampurna! ${selectedAsana.targetHoldsSec}s hold safalta-purvak kiya.`);
           return 0;
         }
         return prev - 1;
@@ -231,31 +214,34 @@ export default function YogaTeacher() {
     setHoldTimerSec(asana.targetHoldsSec);
     setPoseCompleted(false);
     setIsHoldingPose(false);
-    toast.success(`Selected ${asana.name}`);
+    toast.success(`${asana.name} chuna gaya`);
   };
 
   return (
-    <div className="min-h-screen bg-mist text-primary pb-16">
-      {/* Top Header */}
-      <div className="bg-gradient-to-b from-[#5A7855]/15 via-white/80 to-mist border-b border-border-subtle pt-8 pb-10 px-4">
+    <div className="min-h-screen bg-[#F4F6F0] dark:bg-[#151D28] text-[#1E2A43] dark:text-[#EAEFEA] pb-16 transition-colors duration-300">
+      
+      {/* ── Top Header ──────────────────────────────────────────────────── */}
+      <div className="bg-gradient-to-b from-[#5A7855]/15 via-white/80 dark:via-[#1E2A43]/80 to-[#F4F6F0] dark:to-[#151D28] border-b border-gray-200/80 dark:border-gray-800 pt-8 pb-10 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
           <Link
-            to="/mitra"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-primary mb-4 transition-colors"
+            to="/patient"
+            className="touch-target inline-flex items-center gap-2 text-xs font-semibold text-[#556376] dark:text-[#A8B4C2] hover:text-[#1E2A43] dark:hover:text-[#F4F6F0] mb-4 transition-colors"
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Mitra Dashboard
+            <ArrowLeft className="w-4 h-4" />
+            <span>Mitra Dashboard Par Wapas</span>
           </Link>
 
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-2 bg-sage/10 text-sage px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
-                <Activity className="w-3.5 h-3.5" /> AI Yogashala & Posture Coach
+              <div className="inline-flex items-center gap-2 bg-[#5A7855]/10 dark:bg-[#5A7855]/25 text-[#2B4A30] dark:text-[#8ED14C] px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                <Activity className="w-3.5 h-3.5 text-[#D4A359]" />
+                <span>AI Yogashala & Posture Coach • योग व मुद्रा सुधारक</span>
               </div>
-              <h1 className="font-serif text-3xl md:text-4xl font-bold text-primary">
-                Himalayan Yoga Guru (योग व मुद्रा सुधारक)
+              <h1 className="font-serif text-3xl md:text-4xl font-bold text-[#1E2A43] dark:text-[#F4F6F0]">
+                Himalayan Yoga Guru
               </h1>
-              <p className="text-xs md:text-sm text-muted mt-1 max-w-xl leading-relaxed">
-                Computer-vision driven real-time posture check that detects joint angles, straightens spinal curvature, and guides safe yogic alignment.
+              <p className="text-xs md:text-sm text-[#556376] dark:text-[#A8B4C2] mt-1 max-w-xl leading-relaxed">
+                Computer-vision aadharit mudra jaanch. Reerh ki haddi ka santulan, jod ke kon (joint angles) aur aawaz dwara sudhar.
               </p>
             </div>
 
@@ -263,37 +249,39 @@ export default function YogaTeacher() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setVoiceCuesEnabled(!voiceCuesEnabled)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                  voiceCuesEnabled ? 'bg-gold-warm/15 text-gold-warm' : 'bg-gray-100 text-muted'
+                className={`touch-target flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  voiceCuesEnabled ? 'bg-[#D4A359]/20 text-[#8C5E24] dark:text-[#D4A359]' : 'bg-gray-100 dark:bg-gray-800 text-[#556376]'
                 }`}
               >
-                <Volume2 className="w-3.5 h-3.5" /> Voice Corrections
+                <Volume2 className="w-4 h-4" />
+                <span>Aawaz Nirdesh (Voice Guidance)</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 mt-8 space-y-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-8 space-y-8">
+        
         {/* ── ASANA SELECTION CAROUSEL / ROW ───────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {YOGA_ASANAS.map((asana) => {
             const isSelected = selectedAsana.id === asana.id;
             return (
               <button
                 key={asana.id}
                 onClick={() => handleSelectAsana(asana)}
-                className={`p-3.5 rounded-2xl border text-left transition-all ${
+                className={`touch-target p-4 rounded-2xl border text-left transition-all ${
                   isSelected
-                    ? 'bg-sage text-white border-sage shadow-md transform -translate-y-0.5'
-                    : 'bg-card text-primary border-border-subtle hover:border-sage/40'
+                    ? 'bg-[#5A7855] text-white border-[#5A7855] shadow-md transform -translate-y-0.5'
+                    : 'bg-white dark:bg-[#1E2A43] text-[#1E2A43] dark:text-[#F4F6F0] border-gray-200/80 dark:border-gray-800 hover:border-[#5A7855]/40'
                 }`}
               >
-                <span className={`text-[9px] font-bold uppercase block ${isSelected ? 'text-white/80' : 'text-gold-warm'}`}>
+                <span className={`text-[9px] font-bold uppercase block ${isSelected ? 'text-white/80' : 'text-[#8C5E24] dark:text-[#D4A359]'}`}>
                   {asana.difficulty}
                 </span>
                 <h4 className="font-serif font-bold text-xs md:text-sm mt-1 truncate">{asana.name}</h4>
-                <p className={`text-[10px] truncate ${isSelected ? 'text-white/70' : 'text-muted'}`}>
+                <p className={`text-[10px] truncate ${isSelected ? 'text-white/80' : 'text-[#556376] dark:text-[#A8B4C2]'}`}>
                   {asana.hindiName}
                 </p>
               </button>
@@ -305,44 +293,46 @@ export default function YogaTeacher() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Left Column: Live Camera & Posture Overlay (7 cols) */}
-          <div className="lg:col-span-7 bg-card rounded-3xl p-5 border border-border-subtle shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="lg:col-span-7 bg-white dark:bg-[#1E2A43] rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="font-serif font-bold text-base text-primary flex items-center gap-2">
-                  <Camera className="w-4 h-4 text-sage" />
+                <h3 className="font-serif font-bold text-base text-[#1E2A43] dark:text-[#F4F6F0] flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-[#5A7855]" />
                   Live Posture Camera (मुद्रा जांच स्क्रीन)
                 </h3>
-                <p className="text-[11px] text-muted">Webcam feed with real-time skeletal joint analysis.</p>
+                <p className="text-[11px] text-[#556376] dark:text-[#A8B4C2]">Real-time skeletal joint analysis feed</p>
               </div>
 
               {isCameraActive ? (
                 <button
                   onClick={stopCamera}
-                  className="flex items-center gap-1.5 bg-rose-soft/10 text-rose-soft hover:bg-rose-soft hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                  className="touch-target flex items-center gap-1.5 bg-[#A23B33]/10 text-[#A23B33] dark:text-[#FF7878] hover:bg-[#A23B33] hover:text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all"
                 >
-                  <CameraOff className="w-3.5 h-3.5" /> Stop Camera
+                  <CameraOff className="w-3.5 h-3.5" />
+                  <span>Camera Band Karein</span>
                 </button>
               ) : (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={startCamera}
-                    className="flex items-center gap-1.5 bg-sage hover:bg-[#4a6346] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs"
+                    className="touch-target flex items-center gap-1.5 bg-[#5A7855] hover:bg-[#4a6346] text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs"
                   >
-                    <Camera className="w-3.5 h-3.5" /> Open Camera
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Camera Kholein</span>
                   </button>
                   <button
                     onClick={startSimulationMode}
-                    className="flex items-center gap-1 bg-card border border-border-subtle text-primary hover:bg-mist px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                    className="touch-target flex items-center gap-1 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-[#1E2A43] dark:text-gray-200 hover:bg-gray-200 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all"
                   >
-                    <Eye className="w-3.5 h-3.5 text-gold-warm" /> Practice Mode
+                    <Eye className="w-3.5 h-3.5 text-[#D4A359]" />
+                    <span>Practice Mode</span>
                   </button>
                 </div>
               )}
             </div>
 
             {/* Video + Canvas Stage */}
-            <div className="relative w-full aspect-[4/3] bg-black/90 rounded-2xl overflow-hidden border border-border-subtle flex items-center justify-center">
-              {/* Actual Video Element */}
+            <div className="relative w-full aspect-[4/3] bg-black/90 rounded-3xl overflow-hidden border border-gray-800 flex items-center justify-center">
               <video
                 ref={videoRef}
                 playsInline
@@ -352,7 +342,6 @@ export default function YogaTeacher() {
                 }`}
               />
 
-              {/* In Simulated Mode: Himalayan Background Silhouette */}
               {isSimulatedMode && (
                 <div className="absolute inset-0 bg-gradient-to-b from-[#1a2319] via-[#0f1412] to-black flex items-center justify-center">
                   <div className="text-center opacity-30 pointer-events-none">
@@ -362,7 +351,6 @@ export default function YogaTeacher() {
                 </div>
               )}
 
-              {/* Canvas Overlay for Joint Skeleton & Angle Overlays */}
               <canvas
                 ref={canvasRef}
                 width={640}
@@ -370,29 +358,27 @@ export default function YogaTeacher() {
                 className="absolute inset-0 w-full h-full object-contain pointer-events-none z-10"
               />
 
-              {/* Standby Message if Camera Inactive */}
               {!isCameraActive && (
                 <div className="relative z-20 text-center p-6 max-w-sm">
-                  <div className="w-12 h-12 rounded-2xl bg-white/10 text-white flex items-center justify-center mx-auto mb-3">
-                    <Camera className="w-6 h-6" />
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 text-white flex items-center justify-center mx-auto mb-3">
+                    <Camera className="w-7 h-7" />
                   </div>
-                  <h4 className="text-white font-bold text-sm">Camera is currently turned off</h4>
-                  <p className="text-white/60 text-xs mt-1 leading-relaxed">
-                    Click "Open Camera" to activate real-time AI posture feedback, or select "Practice Mode" to practice with simulated geometry.
+                  <h4 className="text-white font-bold text-sm">Camera abhi band hai</h4>
+                  <p className="text-white/70 text-xs mt-1 leading-relaxed">
+                    "Camera Kholein" par click karke real-time AI jaanch shuru karein ya Practice Mode chunein.
                   </p>
                   <button
                     onClick={startCamera}
-                    className="mt-4 bg-sage hover:bg-[#4a6346] text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow transition-all"
+                    className="touch-target mt-4 bg-[#5A7855] hover:bg-[#4a6346] text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow transition-all"
                   >
-                    Enable Camera Posture Check
+                    Camera Shuru Karein
                   </button>
                 </div>
               )}
 
-              {/* Top HUD: Alignment Score Badge & Hold Countdown */}
               {isCameraActive && (
                 <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
-                  <div className="bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15 flex items-center gap-2">
+                  <div className="bg-black/75 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/15 flex items-center gap-2">
                     <div
                       className={`w-2.5 h-2.5 rounded-full ${
                         alignmentScore >= 80
@@ -403,19 +389,19 @@ export default function YogaTeacher() {
                       }`}
                     />
                     <span className="text-white font-mono font-bold text-xs">
-                      {alignmentScore}% Match
+                      {alignmentScore}% Santulan
                     </span>
                   </div>
 
                   {isHoldingPose && (
-                    <div className="bg-emerald-600/90 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-lg animate-pulse flex items-center gap-1.5">
+                    <div className="bg-emerald-600/90 text-white px-4 py-1.5 rounded-xl font-bold text-xs shadow-lg animate-pulse flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" /> Hold: {holdTimerSec}s
                     </div>
                   )}
 
                   {poseCompleted && (
-                    <div className="bg-gold-warm text-white px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-lg flex items-center gap-1.5">
-                      <Award className="w-3.5 h-3.5" /> Completed!
+                    <div className="bg-[#D4A359] text-[#1E2A43] px-4 py-1.5 rounded-xl font-bold text-xs shadow-lg flex items-center gap-1.5">
+                      <Award className="w-3.5 h-3.5" /> Sampurna!
                     </div>
                   )}
                 </div>
@@ -425,12 +411,12 @@ export default function YogaTeacher() {
             {/* Live Verbal Advice Banner */}
             <div className={`p-4 rounded-2xl border flex items-start gap-3 transition-colors ${
               alignmentScore >= 80
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800'
-                : 'bg-gold-warm/10 border-gold-warm/30 text-primary'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                : 'bg-[#D4A359]/10 border-[#D4A359]/30 text-[#1E2A43] dark:text-[#EAEFEA]'
             }`}>
-              <Sparkles className="w-4 h-4 text-gold-warm shrink-0 mt-0.5" />
+              <Sparkles className="w-4 h-4 text-[#D4A359] shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-bold">AI Posture Guru Guidance:</p>
+                <p className="text-xs font-bold">AI Posture Guru Margdarshan:</p>
                 <p className="text-xs mt-0.5 leading-relaxed">{feedbackMessage}</p>
               </div>
             </div>
@@ -440,21 +426,21 @@ export default function YogaTeacher() {
           <div className="lg:col-span-5 space-y-4">
             
             {/* Active Asana Details Card */}
-            <div className="bg-card rounded-3xl p-6 border border-border-subtle shadow-sm space-y-4">
+            <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-bold uppercase bg-sage/15 text-sage px-2 py-0.5 rounded-md">
+                  <span className="text-[10px] font-bold uppercase bg-[#5A7855]/15 text-[#2B4A30] dark:text-[#8ED14C] px-2.5 py-0.5 rounded-md">
                     {selectedAsana.difficulty}
                   </span>
-                  <h3 className="font-serif font-bold text-lg text-primary mt-1">
+                  <h3 className="font-serif font-bold text-lg text-[#1E2A43] dark:text-[#F4F6F0] mt-1">
                     {selectedAsana.name}
                   </h3>
-                  <p className="text-xs text-muted">{selectedAsana.hindiName}</p>
+                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2]">{selectedAsana.hindiName}</p>
                 </div>
 
                 <div className="text-right">
-                  <p className="text-xs font-bold text-gold-warm">{selectedAsana.targetHoldsSec} Sec</p>
-                  <p className="text-[10px] text-muted">Target Hold</p>
+                  <p className="text-xs font-bold text-[#8C5E24] dark:text-[#D4A359]">{selectedAsana.targetHoldsSec} Sec</p>
+                  <p className="text-[10px] text-[#556376] dark:text-[#A8B4C2]">Target Hold</p>
                 </div>
               </div>
 
@@ -462,30 +448,31 @@ export default function YogaTeacher() {
               <div className="flex items-center gap-2 pt-1">
                 <button
                   onClick={handleResetPose}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-mist hover:bg-black/5 text-primary text-xs font-semibold py-2 rounded-xl transition-all border border-border-subtle"
+                  className="touch-target flex-1 flex items-center justify-center gap-2 bg-[#F7F2E8]/60 dark:bg-[#182332] hover:bg-gray-100 text-[#1E2A43] dark:text-[#F4F6F0] text-xs font-semibold py-2.5 rounded-xl transition-all border border-gray-200 dark:border-gray-700"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" /> Reset Pose Timer
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Timer Reset Karein</span>
                 </button>
               </div>
 
               {/* Real-time Physiological Checklist */}
-              <div className="space-y-2 pt-2 border-t border-border-subtle">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+              <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#556376] dark:text-[#A8B4C2]">
                   Alignment Checklist ({postureChecks.length})
                 </h4>
 
                 {postureChecks.length === 0 ? (
-                  <p className="text-xs text-muted italic py-2">
-                    Open camera or practice mode to activate live joint checkpoints.
+                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2] italic py-2">
+                    Camera ya Practice Mode chalu karke live check dekhein.
                   </p>
                 ) : (
                   postureChecks.map((chk) => (
                     <div
                       key={chk.id}
-                      className={`p-2.5 rounded-xl text-xs flex items-center justify-between border transition-all ${
+                      className={`p-3 rounded-2xl text-xs flex items-center justify-between border transition-all ${
                         chk.passed
-                          ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-900'
-                          : 'bg-rose-500/5 border-rose-500/20 text-rose-900'
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-200'
+                          : 'bg-rose-500/10 border-rose-500/30 text-rose-950 dark:text-rose-200'
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -496,7 +483,7 @@ export default function YogaTeacher() {
                         )}
                         <div>
                           <p className="font-semibold">{chk.name}</p>
-                          <p className="text-[10px] text-muted">{chk.advice}</p>
+                          <p className="text-[10px] text-[#556376] dark:text-[#A8B4C2]">{chk.advice}</p>
                         </div>
                       </div>
                       <span className="font-mono text-[10px] font-bold shrink-0 ml-2">
@@ -509,27 +496,27 @@ export default function YogaTeacher() {
             </div>
 
             {/* Benefits & Precautions Card */}
-            <div className="bg-card rounded-3xl p-6 border border-border-subtle shadow-sm space-y-3">
-              <h4 className="font-serif font-bold text-sm text-primary flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-sage" />
-                Ayurvedic & Clinical Guidance
+            <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-3">
+              <h4 className="font-serif font-bold text-sm text-[#1E2A43] dark:text-[#F4F6F0] flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#5A7855]" />
+                Ayurvedic & Clinical Salah
               </h4>
 
-              <div className="text-xs space-y-2 text-muted leading-relaxed">
+              <div className="text-xs space-y-2 text-[#556376] dark:text-[#A8B4C2] leading-relaxed">
                 <p>
-                  <strong className="text-primary">Key Focus:</strong> {selectedAsana.keyFocus}
+                  <strong className="text-[#1E2A43] dark:text-[#F4F6F0]">Mukhya Dhyan:</strong> {selectedAsana.keyFocus}
                 </p>
                 <p>
-                  <strong className="text-primary">Therapeutic Benefit:</strong> {selectedAsana.benefits}
+                  <strong className="text-[#1E2A43] dark:text-[#F4F6F0]">Sharir Ko Laabh:</strong> {selectedAsana.benefits}
                 </p>
-                <p className="text-rose-soft/90">
-                  <strong className="text-rose-soft">Precaution:</strong> {selectedAsana.precautions}
+                <p className="text-[#A23B33] dark:text-[#FF7878]">
+                  <strong>Savdhani:</strong> {selectedAsana.precautions}
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-border-subtle">
-                <h5 className="text-[11px] font-bold text-primary mb-1.5">How to Practice:</h5>
-                <ol className="list-decimal list-inside text-xs text-muted space-y-1">
+              <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+                <h5 className="text-[11px] font-bold text-[#1E2A43] dark:text-[#F4F6F0] mb-1.5">Abhyas Kaise Karein:</h5>
+                <ol className="list-decimal list-inside text-xs text-[#556376] dark:text-[#A8B4C2] space-y-1">
                   {selectedAsana.steps.map((s, i) => (
                     <li key={i}>{s}</li>
                   ))}

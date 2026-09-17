@@ -61,13 +61,8 @@ async def synthesize_speech(req: TTSRequest):
             language=result["language"],
             provider="ai4bharat",
         )
-    except TTSNotReadyError as e:
-        if ai4bharat_tts_engine.status["status"] == "failed":
-            return await _synthesize_fallback(clean, req)
-        raise HTTPException(
-            status_code=503,
-            detail=f"AI4Bharat TTS model is still loading, try again shortly: {e}",
-        )
+    except TTSNotReadyError:
+        return await _synthesize_fallback(clean, req)
     except Exception:
         return await _synthesize_fallback(clean, req)
 

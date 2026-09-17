@@ -4,6 +4,8 @@
  * 100% client-side, zero external MP3 dependencies, works completely offline.
  */
 
+import { speakText } from '../api/voiceClient';
+
 let audioCtx = null;
 
 function getAudioContext() {
@@ -219,27 +221,26 @@ class AmbientSoundscapeEngine {
 
 export const ambientSoundscape = new AmbientSoundscapeEngine();
 
+let currentCueStop = null;
+
 /**
- * Speech synthesis helper in Hindi or English
+ * Speech synthesis helper in Hindi or English using authentic Indian Neural voice
  */
 export function speakCue(text, lang = 'hi-IN') {
-  if (!('speechSynthesis' in window)) return;
-  try {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
-    utterance.rate = 0.9; // Calm, gentle, unhurried pace
-    utterance.pitch = 1.0;
-
-    // Look for Indian voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(
-      (v) => v.lang.startsWith('hi') || v.lang.includes('IN')
-    );
-    if (preferredVoice) utterance.voice = preferredVoice;
-
-    window.speechSynthesis.speak(utterance);
-  } catch (e) {
-    console.warn('Speech synthesis warning:', e);
+  if (!text) return;
+  if (currentCueStop) {
+    try { currentCueStop(); } catch {}
+    currentCueStop = null;
   }
+  const clean = text.replace(/[*_#`~>\[\]]/g, '').trim();
+  if (!clean) return;
+
+  const isHindi = lang.startsWith('hi') || lang.includes('hi') || lang === 'garhwali';
+  currentCueStop = speakText(clean, {
+    language: isHindi ? 'hi' : 'en',
+    gender: 'female',
+    onEnd: () => {
+      currentCueStop = null;
+    },
+  });
 }

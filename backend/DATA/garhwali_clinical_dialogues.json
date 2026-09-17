@@ -1,0 +1,119 @@
+{
+  "grammar_rules": {
+    "locative": {
+      "garhwali": "मा (ma)",
+      "avoid_hindi": "में (mein)",
+      "example_devanagari": "मुंड मा पीर (सिर में दर्द), पैट मा जलन (पेट में जलन)",
+      "example_roman": "mund ma peer, pet ma jalan"
+    },
+    "associative": {
+      "garhwali": "दगड़ / दगड़ी (dagad / dagadi)",
+      "avoid_hindi": "के साथ (ke saath)",
+      "example_devanagari": "उलटी दगड़ (उलटी के साथ), बुखार दगड़ (बुखार के साथ)",
+      "example_roman": "ulti dagad, bukhar dagad"
+    },
+    "ablative": {
+      "garhwali": "बटि / से (bati / se)",
+      "avoid_hindi": "से (se alone without bati)",
+      "example_devanagari": "ब्याळि बटि (कल से), रात बटि (रात से)",
+      "example_roman": "byali bati / kal bati, raat bati"
+    },
+    "negation": {
+      "garhwali": "नी (ni)",
+      "avoid_hindi": "नहीं (nahi)",
+      "example_devanagari": "नी छ (नहीं है), नी औणी (नहीं आ रही)",
+      "example_roman": "ni chha, ni aani"
+    },
+    "interrogative": {
+      "what": "क्या / कि (kya / ki)",
+      "when": "कब / कबा (kab / kaba)",
+      "where": "कख (kakh)",
+      "why": "किले (kile)",
+      "how": "कन्नि / कनि (kanni / kani)",
+      "how_much": "कतगा / कति (katga / kati)"
+    },
+    "pronouns": {
+      "i_me": "मैं (main), मिकु (miku)",
+      "you_respectful": "तुम (tum), त्वकु (twaku), त्वरि (twari)",
+      "we_us": "हम (ham), हमुकु (hamuku), हमरु (hamru)"
+    },
+    "auxiliaries": {
+      "is": "छ (chha), छौ (chhou)",
+      "are": "छन (chhan)",
+      "was": "छी (chhi), छ्या (chhya)",
+      "happening": "हो रयु छ (ho rahyu chha), हूँदू छ (hoondu chha)"
+    }
+  },
+  "clinical_dialogues": [
+    {
+      "condition": "headache",
+      "keywords": ["mund", "peed", "peer", "bhyo", "मुंड", "पीड", "पीर"],
+      "roman": {
+        "turn1_intake": "Twari takleef suni li. Mund pid kaba bati ho rahyu chha? Dhoor ek taraf chha ya poora mund ma?",
+        "turn2_probing": "Kya mund pid dagad ulti, bhaunr (chakkar) ya aankhiyo ma dhundhlapan bhi chha?",
+        "turn3_diagnosis": "Kal bati poora mund ma halki peed chha, ulti ya chakkar ni chhan. Isse thakawat ya thand se hone wala sadharan mund pid (tension headache) samajh ma aaundu chha."
+      },
+      "devanagari": {
+        "turn1_intake": "त्वरि तकलीफ सुणी ली। मुंड पीड़ कब बटि हो रयु छ? एक तरफ छ या पूरा मुंड मा?",
+        "turn2_probing": "क्या मुंड पीड़ दगड़ उलटी, चक्कर या आँखियों मा धुंधलापन भी छ?",
+        "turn3_diagnosis": "रात बटि पूरा मुंड मा पीड़ छ, उलटी या चक्कर नी छन। यै से थकान या स्याल से होण वाळू साधारण मुंड पीड़ लगणु छ।"
+      }
+    },
+    {
+      "condition": "stomach_pain",
+      "keywords": ["pet", "pait", "krodh", "marod", "पैट", "पेट", "मरोड़", "पीर"],
+      "roman": {
+        "turn1_intake": "Pet ma peed kakh ho rahyu chha — upar ya neeche? Jalan chha ya marod uthni chha?",
+        "turn2_probing": "Kya pet peed dagad ulti, dast ya bukhar bhi lagyu chha?",
+        "turn3_diagnosis": "Pet ma jalan aur marod chha, ulti ya dast ni chha. Khan-paan ma gadbadi ya gas se aam pet dard lagnu chha."
+      },
+      "devanagari": {
+        "turn1_intake": "पैट मा पीर कख हो रयु छ — ऊपर या नीचें? जलन छ या मरोड़ उठणी छ?",
+        "turn2_probing": "क्या पैट पीर दगड़ उलटी, दस्त या बुखार भी लग्यूँ छ?",
+        "turn3_diagnosis": "पैट मा जलन और मरोड़ छ, उलटी या दस्त नी छन। खान-पान मा असंतुलन या अपच से साधारण पैट पीर लगणु छ।"
+      }
+    },
+    {
+      "condition": "fever",
+      "keywords": ["bukhar", "taap", "thand", "syal", "बुखार", "ताप", "स्याल", "कपकपी"],
+      "roman": {
+        "turn1_intake": "Bukhar katga din bati chha? Kya sardi aur kapkapi bhi lagni chha?",
+        "turn2_probing": "Kya bukhar dagad khang (khansi), gala ma peed ya saans phulnu bhi chha?",
+        "turn3_diagnosis": "Do din bati halka bukhar aur thand lagni chha, saans phulnu ni chha. Mausami badlav se aam bukhar (viral pyrexia) lagnu chha."
+      },
+      "devanagari": {
+        "turn1_intake": "बुखार कतगा दिन बटि छ? क्या स्याल और कपकपी भी लगणी छ?",
+        "turn2_probing": "क्या बुखार दगड़ खंग (खाँसी), गाळ मा पीर या सांस फुलणी भी छ?",
+        "turn3_diagnosis": "दो दिन बटि हल्का बुखार और स्याल लगणी छ, सांस फुलणी नी छ। मौसमी बदलाव से साधारण बुखार लगणु छ।"
+      }
+    },
+    {
+      "condition": "cough_cold",
+      "keywords": ["khang", "khansi", "gala", "kanth", "घाँट", "खंग", "खाँसी", "गाळ"],
+      "roman": {
+        "turn1_intake": "Khang (khansi) kaba bati lagi chha? Sukhi khang chha ya balgham aaundu chha?",
+        "turn2_probing": "Kya gala ma kharash dagad chhati ma bhari dabav ya saans phulnu bhi chha?",
+        "turn3_diagnosis": "Sukhi khang aur gale ma halki kharash chha, chhati ma dabav ni chha. Sardi aur sushk hawa se gala kharab lagnu chha."
+      },
+      "devanagari": {
+        "turn1_intake": "खंग (खाँसी) कब बटि लगी छ? सूखी खंग छ या बलगम औंदू छ?",
+        "turn2_probing": "क्या गाळ मा खराश दगड़ छाती मा भारी दबाव या सांस फुलणी भी छ?",
+        "turn3_diagnosis": "सूखी खंग और गाळ मा खराश छ, छाती मा दबाव नी छ। स्याल और सर्दी से साधारण गाळ खराश लगणु छ।"
+      }
+    },
+    {
+      "condition": "body_ache_fatigue",
+      "keywords": ["khutta", "goda", "dhaad", "thakawat", "कमजोरी", "खुट्टा", "गोडा", "धाड़"],
+      "roman": {
+        "turn1_intake": "Dhaad (kamar) aur khutta ma peed kaba bati ho rahyu chha? Kya bohot thakawat lagni chha?",
+        "turn2_probing": "Kya goda (ghutno) ma sujan chha ya chalne firne ma takleef badhni chha?",
+        "turn3_diagnosis": "Khaas kar chalne aur bhaari kaam karne se khutta aur dhaad ma peed chha. Sharirik thakawat aur vata dosh se aam peed lagnu chha."
+      },
+      "devanagari": {
+        "turn1_intake": "धाड़ (कमर) और खुट्टा मा पीर कब बटि हो रयु छ? क्या बहुत थकावट लगणी छ?",
+        "turn2_probing": "क्या गोडा (घुटनों) मा सूजन छ या चलने-फिरने मा तकलीफ बढ़णी छ?",
+        "turn3_diagnosis": "भारी काम और हिंडण से खुट्टा और धाड़ मा पीर छ। शारीरिक थकावट से सामान्य वात पीर लगणु छ।"
+      }
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'Manrope', 'Noto Sans Devanagari', system-ui, sans-serif;
   --font-serif: 'Fraunces', Georgia, serif;
@@ -16,91 +18,79 @@
   --color-muted: var(--text-muted);
   --color-card: var(--bg-card);
   --color-border-subtle: var(--border-subtle);
+  --color-booti-glow: var(--herb-glow);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   DESIGN REFRESH — "Himalayan Alpenglow"
+   SANJEEVANI 2.0 DESIGN SYSTEM — "Himalayan Alpenglow & Sacred Booti"
 
-   The old palette (sage green / beige-gold / dusty rose) read as generic
-   wellness-SaaS. This one is pulled from the actual subject: the
-   Sanjeevani booti myth — a life-restoring herb glowing on a Himalayan
-   slope — set against the specific light of that place: deodar pine
-   forest, dawn/dusk alpenglow on snow, turmeric and ember from the
-   kitchen remedies this app actually recommends.
-
-     --dusk        #1E2A43  deep mountain-night slate — headings, dark UI
-     --pine        #2B4A30  deodar forest green — primary actions (was sage)
-     --pine-light  #E3EBDD  pale pine mist — soft green surfaces
-     --parchment   #F1E7D2  warm high-altitude parchment (was sand)
-     --ember       #C5762B  turmeric/ember — secondary accent (was gold)
-     --brick       #A23B33  brick-red — Red-tier alerts only (was rose)
-     --booti-glow  #8ED14C  the one deliberately vivid color — reserved for
-                            the SanjeevaniOrb "life-restoring herb" glow,
-                            nowhere else, so it stays meaningful.
-
-   Variable NAMES are unchanged from the previous palette on purpose —
-   every component already consumes bg-sage / bg-gold-warm / bg-rose-soft
-   etc. as semantic tokens, so retinting here reskins the whole app
-   without touching a single component file.
+   Colors:
+     --sage         #5A7855  Herb Sage — primary actions, nature, healing
+     --gold-warm    #D4A359  Himalayan Gold — warmth, secondary accents
+     --mist         #F4F6F0  Mountain Mist — serene parchment canvas
+     --warm-indigo  #2E4057  Himalayan Indigo — mountain slate, authority
+     --rose-soft    #B85042  Emergency Berry — critical alerts, 108 SOS
+     --booti-glow   #8ED14C  Living Sanjeevani Booti glow reserved for the Orb
    ───────────────────────────────────────────────────────────────────── */
 
 :root {
-  --mist: #F7F2E8;
-  --sage: #2B4A30;
-  --sage-light: #E3EBDD;
-  --warm-indigo: #1E2A43;
-  --sand: #F1E7D2;
-  --gold-warm: #C5762B;
-  --rose-soft: #A23B33;
+  --mist: #F4F6F0;
+  --sage: #5A7855;
+  --sage-light: #EBF2E9;
+  --warm-indigo: #2E4057;
+  --sand: #EDE7DA;
+  --gold-warm: #D4A359;
+  --rose-soft: #B85042;
 
   --text-primary: #1E2A43;
-  --text-muted: #6E6656;
-  --bg-card: rgba(255, 253, 248, 0.86);
-  --border-subtle: rgba(30, 42, 67, 0.08);
+  --text-muted: #5A697A;
+  --bg-card: rgba(255, 255, 255, 0.92);
+  --border-subtle: rgba(46, 64, 87, 0.12);
 
-  /* The Sanjeevani Booti glow — the single bold, recurring signature
-     (see SanjeevaniOrb). Everything else stays quiet by design. */
   --herb-glow: #8ED14C;
   --herb-glow-light: #E4F5D1;
 }
 
 .dark {
-  --mist: #12181A;
-  --sage: #578C56;
-  --sage-light: #1C2A1E;
-  --warm-indigo: #12181A;
-  --sand: #22201A;
-  --gold-warm: #DE9245;
-  --rose-soft: #DD5A46;
+  --mist: #151D28;
+  --sage: #6C9366;
+  --sage-light: #1C2B21;
+  --warm-indigo: #1A2433;
+  --sand: #232C3A;
+  --gold-warm: #E2B065;
+  --rose-soft: #C95D4F;
 
-  --text-primary: #F2EEE3;
-  --text-muted: #A39B87;
-  --bg-card: rgba(26, 32, 27, 0.82);
-  --border-subtle: rgba(242, 238, 227, 0.10);
+  --text-primary: #F4F6F0;
+  --text-muted: #9AA8B8;
+  --bg-card: rgba(27, 37, 52, 0.88);
+  --border-subtle: rgba(244, 246, 240, 0.10);
 
   --herb-glow: #7BC750;
-  --herb-glow-light: #223420;
+  --herb-glow-light: #1F331D;
 }
 
-/* ── Typography refinement ────────────────────────────────────────────
-   Fraunces and Manrope were already good, deliberate choices — kept
-   as-is. What was missing was a disciplined scale: display serif text
-   needs tighter tracking and taller line-height than the default browser
-   rendering gives it, or big headings look loose and generic. */
+html, body {
+  background-color: var(--mist);
+  color: var(--text-primary);
+  min-height: 100%;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Typography refinement */
 h1, h2, h3, .font-serif {
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   font-feature-settings: "kern" 1, "liga" 1;
 }
 
 h1, h2 {
-  line-height: 1.15;
+  line-height: 1.18;
 }
 
 p, li {
-  line-height: 1.6;
+  line-height: 1.62;
 }
 
-/* ── Sanjeevani Orb — shared breathing identity ───────────────────────── */
+/* Sanjeevani Orb — Shared Breathing Identity */
 .sj-orb { display: inline-block; }
 .sj-orb-halo { transform-origin: center; }
 
@@ -108,84 +98,140 @@ p, li {
   animation: sj-breathe 4.5s ease-in-out infinite;
 }
 .sj-orb-listening .sj-orb-halo {
-  animation: sj-breathe 2.2s ease-in-out infinite;
+  animation: sj-breathe 2.0s ease-in-out infinite;
 }
 .sj-orb-thinking .sj-orb-halo {
   animation: sj-swirl 3s linear infinite;
 }
 .sj-orb-speaking .sj-orb-halo {
-  animation: sj-breathe 1.4s ease-in-out infinite;
+  animation: sj-breathe 1.3s ease-in-out infinite;
+}
+.sj-orb-emergency .sj-orb-halo {
+  animation: sj-breathe 0.85s ease-in-out infinite;
 }
 
 @keyframes sj-breathe {
-  0%, 100% { transform: scale(1); opacity: 0.16; }
-  50% { transform: scale(1.35); opacity: 0.32; }
+  0%, 100% { transform: scale(1); opacity: 0.18; }
+  50% { transform: scale(1.38); opacity: 0.36; }
 }
 
 @keyframes sj-swirl {
-  0% { transform: scale(1) rotate(0deg); opacity: 0.16; }
-  50% { transform: scale(1.15) rotate(180deg); opacity: 0.3; }
-  100% { transform: scale(1) rotate(360deg); opacity: 0.16; }
+  0% { transform: scale(1) rotate(0deg); opacity: 0.18; }
+  50% { transform: scale(1.18) rotate(180deg); opacity: 0.34; }
+  100% { transform: scale(1) rotate(360deg); opacity: 0.18; }
 }
 
-/* Soothing breathing aura animation for Live Voice */
+/* Orb 2.0 — spinning mid ring */
+.sj-ring-spin {
+  animation: sj-ring-rotate 2.5s linear infinite;
+}
+.sj-ring-spin-slow {
+  animation: sj-ring-rotate 6s linear infinite reverse;
+}
+@keyframes sj-ring-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Emergency pulsing outer ring */
+.sj-orb-emergency-ring {
+  animation: sj-emergency-ring 0.8s ease-in-out infinite;
+  transform-origin: 40px 40px;
+}
+@keyframes sj-emergency-ring {
+  0%, 100% { opacity: 0.2; transform: scale(0.96); }
+  50%       { opacity: 0.7; transform: scale(1.06); }
+}
+
+/* Staggered particle orbit pulses */
+.sj-particle-0 { animation: sj-particle-pulse 2.8s ease-in-out infinite 0s; }
+.sj-particle-1 { animation: sj-particle-pulse 2.8s ease-in-out infinite 0.93s; }
+.sj-particle-2 { animation: sj-particle-pulse 2.8s ease-in-out infinite 1.86s; }
+@keyframes sj-particle-pulse {
+  0%, 100% { opacity: 0.25; r: 1.5; }
+  50%       { opacity: 0.9;  r: 2.5; }
+}
+
+/* Touch targets for accessibility across devices (elderly friendly) */
+.touch-target {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+.touch-target-lg {
+  min-height: 64px;
+  min-width: 64px;
+}
+
+/* Himalayan Alpenglow Breathing Aura */
 @keyframes calm-pulse {
   0%, 100% {
     transform: scale(1);
-    opacity: 0.7;
-    box-shadow: 0 0 40px rgba(43, 74, 48, 0.35);
+    opacity: 0.75;
+    box-shadow: 0 0 35px rgba(90, 120, 85, 0.35);
   }
   50% {
-    transform: scale(1.12);
+    transform: scale(1.1);
     opacity: 1;
-    box-shadow: 0 0 80px rgba(197, 118, 43, 0.5);
+    box-shadow: 0 0 70px rgba(212, 163, 89, 0.45);
   }
 }
 
 .animate-calm-pulse {
-  animation: calm-pulse 4s ease-in-out infinite;
+  animation: calm-pulse 3.8s ease-in-out infinite;
 }
 
 @keyframes slow-float {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+  50% { transform: translateY(-6px); }
 }
 
 .animate-slow-float {
-  animation: slow-float 6s ease-in-out infinite;
+  animation: slow-float 5s ease-in-out infinite;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.5s ease-out forwards;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Respect reduced-motion preferences across all custom animations */
+/* Tactile Elevation Card Utilities */
+.tactile-card {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tactile-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -10px rgba(46, 64, 87, 0.12);
+}
+
+/* Respect reduced-motion preferences */
 @media (prefers-reduced-motion: reduce) {
   .sj-orb-halo,
   .animate-calm-pulse,
   .animate-slow-float,
-  .animate-fadeIn {
+  .animate-fadeIn,
+  .tactile-card {
     animation: none !important;
+    transition: none !important;
   }
 }
 
-/* Custom Scrollbar, retinted to match */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #F7F2E8;
+  background: var(--mist);
 }
 ::-webkit-scrollbar-thumb {
-  background: #C5762B;
+  background: var(--gold-warm);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2B4A30;
+  background: var(--sage);
 }

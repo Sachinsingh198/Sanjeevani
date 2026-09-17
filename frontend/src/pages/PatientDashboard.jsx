@@ -5,11 +5,15 @@ import {
   Mic, MessageSquare, Eye, Heart, Leaf, MapPin, Clock, ShieldCheck,
   PhoneCall, AlertCircle, Plus, CheckCircle2, ChevronRight,
   ShieldAlert, BookOpen, ChevronDown, ChevronUp, Sparkles, Navigation,
-  Wind, Activity, HeartHandshake
+  Wind, Activity, HeartHandshake, ArrowRight, Stethoscope, Hospital,
+  Volume2, Home, FileText, Bandage, ArrowLeft
 } from 'lucide-react';
 import LiveVoiceRoom from '../components/LiveVoiceRoom';
 import NearbyFacilityFinder from '../components/NearbyFacilityFinder';
+import SanjeevaniOrb from '../components/SanjeevaniOrb';
+import MountainRidge from '../components/MountainRidge';
 import { listSessions } from '../lib/sessionStore';
+import { speakCue } from '../lib/audioSynthesizer';
 import toast from 'react-hot-toast';
 
 const REMEDIES_STORAGE_KEY = 'sanjeevani_patient_remedies_v1';
@@ -23,8 +27,8 @@ const DEFAULT_REMEDIES = [
 
 export default function PatientDashboard() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('hub'); // 'hub' | 'remedies' | 'history' | 'facilities' | 'firstaid'
   const [showLiveRoom, setShowLiveRoom] = useState(false);
-  const [showFacilityFinder, setShowFacilityFinder] = useState(false);
   const [openFirstAidIndex, setOpenFirstAidIndex] = useState(null);
 
   // Dynamic Consultation History
@@ -48,19 +52,16 @@ export default function PatientDashboard() {
   const [showAddRemedy, setShowAddRemedy] = useState(false);
 
   useEffect(() => {
-    // Load recorded consultation history from local session store
     const stored = listSessions();
     if (stored.length > 0) {
       setConsultations(stored);
     } else {
-      // Fallback baseline for clean demonstration
       setConsultations([
         { conversationId: 'demo-1', updatedAt: '2026-09-15T09:30:00.000Z', summary: 'Gale me kharash aur sookhi khasi (Dry Cough)', tier: 'Green' },
         { conversationId: 'demo-2', updatedAt: '2026-09-12T14:15:00.000Z', summary: 'Do din se bukhar aur thakan (Mild Fever)', tier: 'Yellow' },
       ]);
     }
 
-    // Load active district health advisory
     const storedAdvisory = localStorage.getItem(ADVISORY_STORAGE_KEY);
     if (storedAdvisory) {
       setAdvisory(storedAdvisory);
@@ -91,416 +92,582 @@ export default function PatientDashboard() {
     localStorage.setItem(REMEDIES_STORAGE_KEY, JSON.stringify(updated));
     setNewRemedyName('');
     setShowAddRemedy(false);
-    toast.success('New remedy schedule added');
+    toast.success('Naya gharelu nuskha schedule mein jud gaya');
+  };
+
+  const handleAudioGuide = (text) => {
+    speakCue(text, 'hi-IN');
   };
 
   const firstAidGuides = [
     {
       title: 'High-Altitude Sickness & Hypothermia (उंचाई पर चक्कर / ठंड लगना)',
       content: 'Immediately halt ascent. Keep the patient warm and dry with woolen blankets. Sip warm liquids with ginger or jaggery. If breathing is labored or lips turn pale/blue (SpO2 < 90%), dial 108 for descent support immediately.',
+      audio: 'Uunchai par chhatpatana ya thand lagne par chadhai turant rokein, garam kambal odhein aur 108 ko call karein.',
     },
     {
       title: 'ORS Rehydration for Diarrhea & Vomiting (दस्त और पानी की कमी)',
       content: 'Mix 1 liter of clean/boiled water with 6 level teaspoons of sugar and 1/2 level teaspoon of salt. Give small frequent sips throughout the day. Continue breast milk for infants.',
+      audio: 'Dast ya ulti hone par ek liter uble paani me chhah chammach cheeni aur aadha chammach namak milakar piyen.',
     },
     {
       title: 'Bleeding & Cuts on Mountain Terrain (चोट और घाव)',
       content: 'Apply firm direct pressure with clean cloth for 5 full minutes without lifting. Elevate limb above heart level. Wash gently with boiled water once bleeding slows.',
+      audio: 'Chot lagne par saaf kapde se paanch minute tak dabaav banaye rakhein.',
     },
   ];
 
+  const completedRemediesCount = remedies.filter(r => r.completed).length;
+
+  const tabs = [
+    { id: 'hub', label: 'मुख्य सेवा', sub: 'Main Hub', icon: Home },
+    { id: 'remedies', label: 'दवा व काढ़ा', sub: 'Remedies', icon: Leaf, badge: `${completedRemediesCount}/${remedies.length}` },
+    { id: 'history', label: 'पुराना पर्चा', sub: 'Records', icon: FileText, badge: `${consultations.length}` },
+    { id: 'facilities', label: 'अस्पताल', sub: 'Hospitals', icon: Hospital },
+    { id: 'firstaid', label: 'प्राथमिक उपचार', sub: 'First-Aid', icon: Bandage },
+  ];
+
   return (
-    <div className="min-h-screen bg-mist text-primary">
+    <div className="min-h-screen bg-[#F4F6F0] dark:bg-[#151D28] text-[#2E4057] dark:text-[#F4F6F0] transition-colors duration-300 relative overflow-hidden pb-20">
+      
+      {/* Live Voice Room Modal */}
       {showLiveRoom && <LiveVoiceRoom onClose={() => setShowLiveRoom(false)} />}
 
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-7">
+      {/* Mountain Contour Background */}
+      <div className="absolute top-6 left-0 right-0 pointer-events-none opacity-20 dark:opacity-10 z-0">
+        <MountainRidge tone="pine" className="w-full h-44 object-cover" />
+      </div>
 
-        {/* ── Welcome Banner ────────────────────────────────────────── */}
-        <div className="bg-gradient-to-br from-[#5A7855]/10 via-white to-[#D4A359]/10 rounded-3xl p-6 md:p-8 border border-sage/15 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-sage flex items-center justify-center text-white shadow-md shrink-0 animate-slow-float">
-                <Heart className="w-7 h-7" />
-              </div>
-              <div>
-                <div className="inline-flex items-center gap-1.5 bg-sage/15 text-sage px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-1">
-                  Sanjeevani Mitra Portal • संजीवनी मित्र
-                </div>
-                <h1 className="font-serif text-2xl md:text-3xl font-bold text-primary">
-                  Namaste, {user?.name || 'Aadarniya Mitra'} 🙏
-                </h1>
-                <p className="text-sm text-muted mt-1 flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-gold-warm" />
-                  {user?.village || 'Chamoli, Uttarakhand'} • Holistic Himalayan health, yoga, dhyan & companionship portal
-                </p>
-              </div>
-            </div>
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 relative z-10">
 
-            <button
-              onClick={() => setShowFacilityFinder(!showFacilityFinder)}
-              className="flex items-center gap-2 bg-sage hover:bg-[#4a6346] text-white px-4 py-2.5 rounded-2xl font-bold text-xs shadow transition-all"
-            >
-              <Navigation className="w-4 h-4" />
-              {showFacilityFinder ? 'Hide Health Centers' : 'Find Health Centers'}
-            </button>
-          </div>
-        </div>
-
-        {/* ── District Health Advisory Notice ──────────────────────── */}
-        {advisory && (
-          <div className="bg-gold-warm/10 border border-gold-warm/30 rounded-2xl p-4 flex items-start gap-3 shadow-xs animate-fadeIn">
-            <AlertCircle className="w-5 h-5 text-gold-warm shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <span className="text-[10px] uppercase font-bold text-gold-warm tracking-wider block">
-                District CMO Health Advisory
-              </span>
-              <p className="text-xs text-primary mt-0.5 leading-relaxed">{advisory}</p>
-            </div>
-          </div>
-        )}
-
-        {/* ── Emergency SOS Quick Dial Bar ─────────────────────────── */}
-        <div className="bg-rose-soft/10 border border-rose-soft/20 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-rose-soft text-white flex items-center justify-center">
-              <PhoneCall className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-primary">Need Immediate Emergency Medical Help?</p>
-              <p className="text-[11px] text-muted">Direct toll-free helplines in Uttarakhand</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <a
-              href="tel:108"
-              className="bg-rose-soft hover:bg-[#a34437] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-xs"
-            >
-              🚑 108 Ambulance
-            </a>
-            <a
-              href="tel:104"
-              className="bg-warm-indigo text-white text-xs font-bold px-3.5 py-2 rounded-xl hover:bg-[#253655] transition-all"
-            >
-              🩺 104 Health Advice
-            </a>
-            <a
-              href="tel:112"
-              className="bg-card border border-border-subtle text-primary text-xs font-bold px-3 py-2 rounded-xl hover:bg-mist transition-all"
-            >
-              112 Police/Rescue
-            </a>
-          </div>
-        </div>
-
-        {/* ── INTEGRATED NearbyFacilityFinder Component ────────────── */}
-        {showFacilityFinder ? (
-          <div className="animate-fadeIn">
-            <NearbyFacilityFinder onClose={() => setShowFacilityFinder(false)} />
-          </div>
-        ) : (
-          <div className="bg-card rounded-3xl p-5 border border-border-subtle shadow-sm flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-sage/10 text-sage flex items-center justify-center shrink-0">
-                <MapPin className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-serif font-bold text-base text-primary">Need Medical Facilities Nearby?</h3>
-                <p className="text-xs text-muted">
-                  Instantly locate the nearest Primary Health Centre (PHC), CHC, or District Hospital using GPS.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowFacilityFinder(true)}
-              className="flex items-center gap-1.5 text-xs font-bold text-sage bg-sage-light hover:bg-sage hover:text-white px-4 py-2.5 rounded-xl transition-all"
-            >
-              <Navigation className="w-3.5 h-3.5" /> Locate Now
-            </button>
-          </div>
-        )}
-
-        {/* ── Featured Wellness & Companionship Pillars ───────────── */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-serif font-bold text-lg text-primary flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-gold-warm" />
-              Swasthya, Dhyan, Yoga & Saath (आरोग्य, योग, ध्यान व संग)
-            </h2>
-            <span className="text-[11px] text-muted">Holistic Himalayan Care</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* 1. Meditation Teacher */}
-            <Link
-              to="/mitra/meditation"
-              className="group bg-gradient-to-br from-sage/10 via-card to-card rounded-3xl p-6 border border-sage/25 shadow-sm hover:shadow-md transition-all hover:border-sage/50"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-sage/15 flex items-center justify-center text-sage mb-4 group-hover:bg-sage group-hover:text-white transition-colors">
-                <Wind className="w-6 h-6" />
-              </div>
-              <h3 className="font-serif font-bold text-lg text-primary">Dhyan Guru (ध्यान व प्राणायाम)</h3>
-              <p className="text-xs text-muted mt-1 leading-relaxed">
-                Animated breathing mandala, Anulom-Vilom, Tibetan singing bowls, and guided mindfulness.
-              </p>
-              <span className="inline-block mt-3 text-[10px] bg-sage/15 text-sage px-2.5 py-0.5 rounded-full font-bold uppercase">
-                Pranayama Studio
-              </span>
-            </Link>
-
-            {/* 2. Yoga Teacher & Posture Checker */}
-            <Link
-              to="/mitra/yoga"
-              className="group bg-gradient-to-br from-warm-indigo/10 via-card to-card rounded-3xl p-6 border border-warm-indigo/25 shadow-sm hover:shadow-md transition-all hover:border-warm-indigo/50"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-warm-indigo/15 flex items-center justify-center text-warm-indigo mb-4 group-hover:bg-warm-indigo group-hover:text-white transition-colors">
-                <Activity className="w-6 h-6" />
-              </div>
-              <h3 className="font-serif font-bold text-lg text-primary">Yogashala (योग व मुद्रा जांच)</h3>
-              <p className="text-xs text-muted mt-1 leading-relaxed">
-                Real-time webcam AI posture check, joint angle scoring, and live spoken guidance.
-              </p>
-              <span className="inline-block mt-3 text-[10px] bg-warm-indigo/15 text-warm-indigo px-2.5 py-0.5 rounded-full font-bold uppercase">
-                AI Posture Camera
-              </span>
-            </Link>
-
-            {/* 3. Village Companion (Saathi) */}
-            <Link
-              to="/mitra/saathi"
-              className="group bg-gradient-to-br from-gold-warm/15 via-card to-card rounded-3xl p-6 border border-gold-warm/30 shadow-sm hover:shadow-md transition-all hover:border-gold-warm/50"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-gold-warm/20 flex items-center justify-center text-gold-warm mb-4 group-hover:bg-gold-warm group-hover:text-white transition-colors">
-                <HeartHandshake className="w-6 h-6" />
-              </div>
-              <h3 className="font-serif font-bold text-lg text-primary">Sanjeevani Saathi (अपनों सा साथी)</h3>
-              <p className="text-xs text-muted mt-1 leading-relaxed">
-                Caring companion for lonely villagers & elders living alone. Talk, share feelings & folk stories.
-              </p>
-              <span className="inline-block mt-3 text-[10px] bg-gold-warm/20 text-gold-warm px-2.5 py-0.5 rounded-full font-bold uppercase">
-                Emotional Company
-              </span>
-            </Link>
-          </div>
-        </div>
-
-        {/* ── Clinical Consultation & Triage Actions ────────────────── */}
-        <div>
-          <h3 className="font-serif font-bold text-sm uppercase tracking-wider text-muted mb-3">
-            Clinical Tele-Triage & Diagnostic Screening
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <button
-              onClick={() => setShowLiveRoom(true)}
-              className="group bg-card rounded-3xl p-5 border border-border-subtle shadow-sm hover:shadow-md transition-all text-left hover:border-sage/30"
-            >
-              <div className="w-10 h-10 rounded-2xl bg-sage/10 flex items-center justify-center text-sage mb-3 group-hover:bg-sage group-hover:text-white transition-colors">
-                <Mic className="w-5 h-5" />
-              </div>
-              <h4 className="font-serif font-bold text-base text-primary">Talk Live (आवाज से परामर्श)</h4>
-              <p className="text-xs text-muted mt-1">Speak your symptoms naturally in Hindi or Garhwali</p>
-              <span className="inline-block mt-2 text-[10px] bg-sage/10 text-sage px-2 py-0.5 rounded-full font-bold uppercase">Hands-Free</span>
-            </button>
-
-            <Link
-              to="/patient/chat"
-              className="group bg-card rounded-3xl p-5 border border-border-subtle shadow-sm hover:shadow-md transition-all hover:border-gold-warm/40"
-            >
-              <div className="w-10 h-10 rounded-2xl bg-gold-warm/15 flex items-center justify-center text-gold-warm mb-3 group-hover:bg-gold-warm group-hover:text-white transition-colors">
-                <MessageSquare className="w-5 h-5" />
-              </div>
-              <h4 className="font-serif font-bold text-base text-primary">Chat Room (चैट परामर्श)</h4>
-              <p className="text-xs text-muted mt-1">Type your symptoms for detailed safe home remedies</p>
-            </Link>
-
-            <Link
-              to="/patient/screen"
-              className="group bg-card rounded-3xl p-5 border border-border-subtle shadow-sm hover:shadow-md transition-all hover:border-warm-indigo/30"
-            >
-              <div className="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center text-muted mb-3 group-hover:bg-warm-indigo group-hover:text-white transition-colors">
-                <Eye className="w-5 h-5" />
-              </div>
-              <h4 className="font-serif font-bold text-base text-primary">Eye Screening (आँखों की जांच)</h4>
-              <p className="text-xs text-muted mt-1">Non-invasive Anemia & Jaundice conjunctiva check</p>
-            </Link>
-          </div>
-        </div>
-
-        {/* ── Daily Herbal Remedy & Medicine Tracker ─────────────────── */}
-        <div className="bg-card rounded-3xl p-6 border border-border-subtle shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-serif font-bold text-lg text-primary flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-gold-warm" />
-                Ghar Ka Upchar & Remedy Routine (दवा व काढ़ा समय)
-              </h3>
-              <p className="text-xs text-muted mt-0.5">
-                Track your active natural remedies and dosage schedule for faster recovery.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowAddRemedy(!showAddRemedy)}
-              className="flex items-center gap-1 text-xs font-semibold text-sage hover:bg-sage-light px-3 py-1.5 rounded-xl transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" /> Add Remedy
-            </button>
-          </div>
-
-          {showAddRemedy && (
-            <form onSubmit={handleAddRemedy} className="p-4 bg-mist rounded-2xl border border-border-subtle space-y-3 animate-fadeIn">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  value={newRemedyName}
-                  onChange={(e) => setNewRemedyName(e.target.value)}
-                  placeholder="Remedy name (e.g. Mulethi decoction)"
-                  className="bg-card border border-border-subtle rounded-xl px-3 py-2 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-sage/40"
-                  required
-                />
-                <select
-                  value={newRemedyTiming}
-                  onChange={(e) => setNewRemedyTiming(e.target.value)}
-                  className="bg-card border border-border-subtle rounded-xl px-3 py-2 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-sage/40"
-                >
-                  <option value="Subah (Morning)">Subah (Morning)</option>
-                  <option value="Dophar (Afternoon)">Dophar (Afternoon)</option>
-                  <option value="Raat (Night)">Raat (Night)</option>
-                  <option value="As Needed (Jarurat padne par)">As Needed (Jarurat padne par)</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="submit"
-                  className="bg-sage hover:bg-[#4a6346] text-white text-xs font-bold px-4 py-2 rounded-xl transition-all"
-                >
-                  Save to Schedule
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddRemedy(false)}
-                  className="text-xs text-muted px-3 py-2"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
-
-          <div className="space-y-2.5">
-            {remedies.map((rem) => (
-              <div
-                key={rem.id}
-                onClick={() => handleToggleRemedy(rem.id)}
-                className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
-                  rem.completed
-                    ? 'bg-sage/5 border-sage/30 text-muted'
-                    : 'bg-mist border-border-subtle text-primary hover:border-gold-warm/40'
+        {/* ── TOP ICONIC NAVIGATION BAR (PAGE-INSIDE-PAGE TABS) ─────── */}
+        <div className="bg-white/95 dark:bg-[#1E2A43]/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-1.5 sm:p-2.5 border border-[#5A7855]/20 dark:border-gray-800 shadow-xs flex items-center justify-between gap-1 overflow-x-auto">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  handleAudioGuide(`${tab.label} khula`);
+                }}
+                className={`touch-target flex-1 min-w-[62px] sm:min-w-[90px] py-1.5 sm:py-2.5 px-1 sm:px-2 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-[#5A7855] text-white shadow-sm scale-102'
+                    : 'text-[#556376] dark:text-[#A8B4C2] hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center border transition-all ${
-                    rem.completed ? 'bg-sage border-sage text-white' : 'border-gray-300 bg-card'
-                  }`}>
-                    {rem.completed && <CheckCircle2 className="w-4 h-4" />}
-                  </div>
-                  <div>
-                    <p className={`text-sm font-semibold ${rem.completed ? 'line-through text-muted' : 'text-primary'}`}>
-                      {rem.name}
-                    </p>
-                    <p className="text-[11px] text-muted">{rem.timing} • {rem.note}</p>
-                  </div>
+                <div className="relative">
+                  <Icon className="w-4 h-4 sm:w-5 sm:h-5 mb-0.5 sm:mb-1" />
+                  {tab.badge && (
+                    <span className={`absolute -top-1.5 -right-2 text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0.2 rounded-full ${
+                      isActive ? 'bg-white text-[#5A7855]' : 'bg-[#5A7855]/20 text-[#5A7855] dark:text-[#8ED14C]'
+                    }`}>
+                      {tab.badge}
+                    </span>
+                  )}
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  rem.completed ? 'bg-sage/15 text-sage' : 'bg-gold-warm/15 text-gold-warm'
-                }`}>
-                  {rem.completed ? 'Taken' : 'Pending'}
+                <span className="text-[11px] sm:text-xs font-bold leading-tight truncate">{tab.label}</span>
+                <span className={`text-[9px] sm:text-[10px] hidden sm:block leading-none mt-0.5 ${isActive ? 'text-white/80' : 'opacity-70'}`}>
+                  {tab.sub}
                 </span>
-              </div>
-            ))}
-          </div>
+              </button>
+            );
+          })}
         </div>
 
-        {/* ── Recent Consultations (Dynamic from sessionStore) ──────── */}
-        <div className="bg-card rounded-3xl p-6 border border-border-subtle shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-serif font-bold text-lg text-primary flex items-center gap-2">
-              <Clock className="w-5 h-5 text-gold-warm" />
-              Recent Consultations ({consultations.length})
-            </h3>
-            <Link to="/patient/chat" className="text-xs font-semibold text-sage hover:underline flex items-center gap-1">
-              New Session <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+        {/* ── TAB 1: MAIN HUB (ICONIC & AUDIO-FIRST CENTERPIECE) ───── */}
+        {activeTab === 'hub' && (
+          <div className="space-y-4 sm:space-y-6 animate-fadeIn">
+            
+            {/* Welcoming Centerpiece Banner */}
+            <div className="relative overflow-hidden bg-white/95 dark:bg-[#1E2A43]/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#5A7855]/20 dark:border-gray-800 shadow-sm text-center">
+              <div className="flex flex-col items-center justify-center">
+                
+                {/* Living Orb */}
+                <div className="inline-block mb-2 sm:mb-3 animate-slow-float">
+                  <div className="hidden sm:block"><SanjeevaniOrb state="idle" size={62} /></div>
+                  <div className="sm:hidden"><SanjeevaniOrb state="idle" size={42} /></div>
+                </div>
 
-          {consultations.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-6">No consultations yet. Start your first session above.</p>
-          ) : (
-            <div className="space-y-3">
-              {consultations.slice(0, 4).map((c, i) => (
-                <div key={c.conversationId || i} className="flex items-center justify-between p-3.5 rounded-2xl bg-mist text-primary border border-border-subtle">
-                  <div>
-                    <p className="text-sm font-medium text-primary">{c.summary}</p>
-                    <p className="text-xs text-muted mt-0.5">
-                      {new Date(c.updatedAt || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </p>
+                <div className="inline-flex items-center gap-1.5 sm:gap-2 bg-[#5A7855]/10 dark:bg-[#5A7855]/25 text-[#5A7855] dark:text-[#8ED14C] px-3 sm:px-4 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold mb-1.5 sm:mb-2">
+                  <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#D4A359]" />
+                  <span>Sanjeevani Mitra • संजीवनी मित्र</span>
+                </div>
+
+                <h1 className="font-serif text-xl sm:text-4xl font-bold text-[#2E4057] dark:text-[#F4F6F0]">
+                  Namaste, {user?.name || 'Aadarniya Mitra'} 🙏
+                </h1>
+
+                <p className="text-[11px] sm:text-sm text-[#556376] dark:text-[#A8B4C2] mt-1 flex items-center justify-center gap-1 sm:gap-1.5">
+                  <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#D4A359]" />
+                  <span>{user?.village || 'Chamoli, Uttarakhand'} • Digital Swasthya Kendra</span>
+                </p>
+
+                {/* Primary Voice Consultation Trigger */}
+                <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={() => setShowLiveRoom(true)}
+                    className="touch-target group w-full sm:w-auto inline-flex items-center justify-center gap-2.5 sm:gap-3 px-5 sm:px-8 py-3 sm:py-4.5 rounded-full bg-gradient-to-r from-[#5A7855] to-[#4a6346] hover:from-[#4a6346] hover:to-[#3b5038] text-white font-extrabold text-sm sm:text-lg shadow-md sm:shadow-lg shadow-[#5A7855]/30 hover:scale-102 active:scale-98 transition-all cursor-pointer"
+                  >
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
+                      <Mic className="w-4 h-4 sm:w-5 sm:h-5 animate-bounce" />
+                    </div>
+                    <span>🎙 बोलकर बताएं (Speak Now)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAudioGuide('Namaste! Bolkar batayein button dabakar aap aawaz mein doctor se salah le sakte hain.')}
+                    className="touch-target inline-flex items-center justify-center gap-1.5 bg-[#F4F6F0] dark:bg-[#182332] text-[#5A7855] dark:text-[#8ED14C] border border-[#5A7855]/30 px-3.5 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-bold hover:bg-[#5A7855]/10 transition-all cursor-pointer"
+                  >
+                    <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span>निर्देश सुनें</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* District CMO Advisory Notice */}
+              {advisory && (
+                <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-[#5A7855]/15 dark:border-gray-800 flex items-start gap-2.5 sm:gap-3 text-xs bg-[#D4A359]/10 dark:bg-[#D4A359]/15 border border-[#D4A359]/25 rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 text-left">
+                  <AlertCircle className="w-4 h-4 text-[#8C5E24] dark:text-[#D4A359] shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <strong className="block font-bold text-[#8C5E24] dark:text-[#D4A359] uppercase tracking-wider text-[9px] sm:text-[10px]">
+                      District CMO Health Advisory:
+                    </strong>
+                    <span className="text-[11px] sm:text-xs text-[#2E4057] dark:text-[#F4F6F0] leading-relaxed">
+                      {advisory}
+                    </span>
                   </div>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                    c.tier === 'Red' ? 'bg-rose-soft text-white' :
-                    c.tier === 'Yellow' ? 'bg-gold-warm text-white' :
-                    'bg-sage text-white'
+                  <button
+                    onClick={() => handleAudioGuide(advisory)}
+                    className="touch-target p-1 text-[#8C5E24] dark:text-[#D4A359] hover:scale-110"
+                    title="Advisory suniye"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 4 Core Pillar Tiles — 2x2 Icon-Dominant Grid on Mobile, 4-col on Desktop */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+              
+              {/* 1. Sehat (AI Doctor) */}
+              <Link
+                to="/mitra/chat"
+                className="touch-target group flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1E2A43] border border-[#5A7855]/25 hover:border-[#5A7855] transition-all shadow-xs tactile-card"
+              >
+                <div>
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#5A7855]/15 dark:bg-[#5A7855]/25 text-[#5A7855] dark:text-[#8ED14C] flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-108 transition-transform">
+                    <Stethoscope className="w-5 h-5 sm:w-7 sm:h-7" />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-[#5A7855] dark:text-[#8ED14C] block truncate">
+                    Doctor Sahyog
+                  </span>
+                  <h3 className="font-serif font-bold text-sm sm:text-lg text-[#2E4057] dark:text-[#F4F6F0] mt-0.5 leading-snug">
+                    Sehat (स्वास्थ्य)
+                  </h3>
+                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-1 hidden sm:block">
+                    Dr. Sanjeevani se lakshan jaanch aur clinical triage advice.
+                  </p>
+                </div>
+                <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-[11px] sm:text-xs font-bold text-[#5A7855] dark:text-[#8ED14C] pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <span>Paramarsh</span>
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+
+              {/* 2. Dhyan (Pranayama) */}
+              <Link
+                to="/mitra/meditation"
+                className="touch-target group flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1E2A43] border border-[#D4A359]/30 hover:border-[#D4A359] transition-all shadow-xs tactile-card"
+              >
+                <div>
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#D4A359]/15 dark:bg-[#D4A359]/25 text-[#8C5E24] dark:text-[#D4A359] flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-108 transition-transform">
+                    <Wind className="w-5 h-5 sm:w-7 sm:h-7" />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-[#8C5E24] dark:text-[#D4A359] block truncate">
+                    Shanti v Saans
+                  </span>
+                  <h3 className="font-serif font-bold text-sm sm:text-lg text-[#2E4057] dark:text-[#F4F6F0] mt-0.5 leading-snug">
+                    Dhyan (ध्यान)
+                  </h3>
+                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-1 hidden sm:block">
+                    5 Vedic saans vidhi, Alaknanda soundscape aur dhyan katha.
+                  </p>
+                </div>
+                <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-[11px] sm:text-xs font-bold text-[#8C5E24] dark:text-[#D4A359] pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <span>Dhyan</span>
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+
+              {/* 3. Yogashala (Posture AI) */}
+              <Link
+                to="/mitra/yoga"
+                className="touch-target group flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1E2A43] border border-[#2E4057]/25 hover:border-[#2E4057] transition-all shadow-xs tactile-card"
+              >
+                <div>
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#2E4057]/15 dark:bg-[#2E4057]/25 text-[#2E4057] dark:text-[#A8B4C2] flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-108 transition-transform">
+                    <Activity className="w-5 h-5 sm:w-7 sm:h-7" />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-[#2E4057] dark:text-[#A8B4C2] block truncate">
+                    Mudra Sudhar
+                  </span>
+                  <h3 className="font-serif font-bold text-sm sm:text-lg text-[#2E4057] dark:text-[#F4F6F0] mt-0.5 leading-snug">
+                    Yogashala (योगा)
+                  </h3>
+                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-1 hidden sm:block">
+                    Camera se reerh aur jod ke kon (joint angles) ki sudhaar jaanch.
+                  </p>
+                </div>
+                <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-[11px] sm:text-xs font-bold text-[#2E4057] dark:text-[#A8B4C2] pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <span>Abhyas</span>
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+
+              {/* 4. Saathi (Companion) */}
+              <Link
+                to="/mitra/saathi"
+                className="touch-target group flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1E2A43] border border-[#B85042]/25 hover:border-[#B85042] transition-all shadow-xs tactile-card"
+              >
+                <div>
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#B85042]/15 dark:bg-[#B85042]/25 text-[#B85042] dark:text-[#FF7878] flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-108 transition-transform">
+                    <HeartHandshake className="w-5 h-5 sm:w-7 sm:h-7" />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-[#B85042] dark:text-[#FF7878] block truncate">
+                    Apno Jaisa Sathi
+                  </span>
+                  <h3 className="font-serif font-bold text-sm sm:text-lg text-[#2E4057] dark:text-[#F4F6F0] mt-0.5 leading-snug">
+                    Saathi (साथी)
+                  </h3>
+                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-1 hidden sm:block">
+                    Akelepan me dukh-sukh ki baatein, purane kisse aur snehi saath.
+                  </p>
+                </div>
+                <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-[11px] sm:text-xs font-bold text-[#B85042] dark:text-[#FF7878] pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <span>Baat Karein</span>
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+
+            </div>
+
+            {/* Ocular Screening Callout */}
+            <div className="bg-white dark:bg-[#1E2A43] rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 border border-[#5A7855]/20 dark:border-gray-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 tactile-card">
+              <div className="flex items-start gap-2.5 sm:gap-3.5">
+                <div className="w-10 h-10 sm:w-13 sm:h-13 rounded-xl sm:rounded-2xl bg-amber-500/10 text-[#D4A359] flex items-center justify-center shrink-0">
+                  <Eye className="w-5 h-5 sm:w-7 sm:h-7" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-sm sm:text-lg text-[#2E4057] dark:text-[#F4F6F0]">
+                    Aankhon Ki Jaanch (Eye Screening)
+                  </h3>
+                  <p className="text-[11px] sm:text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+                    Camera se palak ki tasveer lekar Anemia v Peeliya sanket dekhein.
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/mitra/screen"
+                className="touch-target w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-[#2E4057] dark:text-[#F4F6F0] bg-[#F4F6F0] dark:bg-[#253247] hover:bg-[#5A7855] hover:text-white dark:hover:bg-[#5A7855] px-4 py-2.5 sm:px-5 sm:py-3.5 rounded-xl sm:rounded-2xl transition-all shadow-xs"
+              >
+                <span>Screening Karein</span>
+                <ArrowRight className="w-3.5 h-3.5 ml-1" />
+              </Link>
+            </div>
+
+            {/* 24/7 Emergency 108 Call Strip */}
+            <div className="bg-[#B85042]/10 dark:bg-[#B85042]/20 border border-[#B85042]/30 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-2.5 sm:gap-3 text-center sm:text-left">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-[#B85042] text-white flex items-center justify-center shadow-xs shrink-0">
+                  <PhoneCall className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="font-serif font-bold text-xs sm:text-base text-[#2E4057] dark:text-[#F4F6F0]">
+                    Aapaatkaal (Emergency Hotline)
+                  </h4>
+                  <p className="text-[10px] sm:text-xs text-[#556376] dark:text-[#A8B4C2]">
+                    Gambhir sthiti mein turant 108 par call karein
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
+                <a
+                  href="tel:108"
+                  className="touch-target flex-1 sm:flex-initial justify-center bg-[#B85042] hover:bg-[#a14336] text-white text-xs sm:text-sm font-bold px-3.5 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-xs flex items-center gap-1.5"
+                >
+                  <PhoneCall className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span>108 Ambulance</span>
+                </a>
+                <a
+                  href="tel:104"
+                  className="touch-target bg-[#2E4057] hover:bg-[#1E2A43] text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-xs"
+                >
+                  <span>104 Salah</span>
+                </a>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ── TAB 2: REMEDIES SCHEDULE (दवा व काढ़ा) ──────────────── */}
+        {activeTab === 'remedies' && (
+          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 sm:p-8 border border-[#5A7855]/20 dark:border-gray-800 shadow-sm space-y-5 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 bg-[#5A7855]/10 text-[#5A7855] dark:text-[#8ED14C] text-[10px] font-bold px-3 py-0.5 rounded-full mb-1">
+                  <Leaf className="w-3.5 h-3.5" /> AYUSH Routine Tracker
+                </div>
+                <h2 className="font-serif font-bold text-xl text-[#2E4057] dark:text-[#F4F6F0] flex items-center gap-2">
+                  <span>Ghar Ka Upchar & Remedy Routine (दवा व काढ़ा समय)</span>
+                  <button
+                    onClick={() => handleAudioGuide('Yeh aapki rojana ki gharelu aushadhi aur dawaiyon ka time table hai.')}
+                    className="touch-target p-1 text-[#5A7855]"
+                    title="Audio sunein"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                  </button>
+                </h2>
+                <p className="text-xs text-[#556376] dark:text-[#A8B4C2]">
+                  Subah, dophar aur raat ke samay gharelu nuskhe aur dawaiyan lena na bhoolein
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowAddRemedy(!showAddRemedy)}
+                className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#5A7855] hover:bg-[#4a6346] px-4 py-2.5 rounded-2xl transition-all shadow-xs cursor-pointer self-start sm:self-center"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nuskha Jodein (Add Remedy)</span>
+              </button>
+            </div>
+
+            {/* Add Remedy Form Drawer */}
+            {showAddRemedy && (
+              <form onSubmit={handleAddRemedy} className="p-4 sm:p-5 bg-[#F4F6F0]/80 dark:bg-[#182332] rounded-2xl border border-[#5A7855]/20 dark:border-gray-700 space-y-3.5 animate-fadeIn">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold uppercase text-[#2E4057] dark:text-[#F4F6F0] mb-1 block">Aushadhi Ka Naam *</label>
+                    <input
+                      type="text"
+                      value={newRemedyName}
+                      onChange={(e) => setNewRemedyName(e.target.value)}
+                      placeholder="e.g. Tulsi Adrak kadha ya Giloy"
+                      className="w-full bg-white dark:bg-[#1E2A43] border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-[#2E4057] dark:text-[#F4F6F0] focus:outline-none focus:ring-2 focus:ring-[#5A7855]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold uppercase text-[#2E4057] dark:text-[#F4F6F0] mb-1 block">Lene Ka Samay *</label>
+                    <select
+                      value={newRemedyTiming}
+                      onChange={(e) => setNewRemedyTiming(e.target.value)}
+                      className="w-full bg-white dark:bg-[#1E2A43] border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-[#2E4057] dark:text-[#F4F6F0] focus:outline-none focus:ring-2 focus:ring-[#5A7855]"
+                    >
+                      <option value="Subah (Morning)">Subah (Morning)</option>
+                      <option value="Dophar (Afternoon)">Dophar (Afternoon)</option>
+                      <option value="Raat (Night)">Raat (Night)</option>
+                      <option value="As Needed">Jarurat padne par (As Needed)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="submit"
+                    className="touch-target bg-[#5A7855] hover:bg-[#4a6346] text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer"
+                  >
+                    Schedule Mein Jodein
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddRemedy(false)}
+                    className="touch-target text-xs text-[#556376] dark:text-[#A8B4C2] hover:text-[#2E4057] px-3 py-2"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Remedies Checklist */}
+            <div className="space-y-3">
+              {remedies.map((remedy) => (
+                <div
+                  key={remedy.id}
+                  onClick={() => handleToggleRemedy(remedy.id)}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                    remedy.completed
+                      ? 'bg-[#5A7855]/10 dark:bg-[#5A7855]/15 border-[#5A7855]/30'
+                      : 'bg-[#F4F6F0]/60 dark:bg-[#182332] border-gray-200 dark:border-gray-700 hover:border-[#5A7855]/40'
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                      remedy.completed ? 'bg-[#5A7855] text-white' : 'border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-[#1E2A43]'
+                    }`}>
+                      {remedy.completed && <CheckCircle2 className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <p className={`text-sm font-bold ${remedy.completed ? 'line-through text-[#556376] dark:text-[#A8B4C2]' : 'text-[#2E4057] dark:text-[#F4F6F0]'}`}>
+                        {remedy.name}
+                      </p>
+                      <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">{remedy.timing} • {remedy.note}</p>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${
+                    remedy.completed ? 'bg-[#5A7855] text-white' : 'bg-gray-200 dark:bg-gray-700 text-[#556376] dark:text-gray-300'
                   }`}>
-                    {c.tier}
+                    {remedy.completed ? 'Poora Hua ✓' : 'Lena Baqi Hai'}
                   </span>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-
-        {/* ── Offline Mountain First-Aid Guide ─────────────────────── */}
-        <div className="bg-card rounded-3xl p-6 border border-border-subtle shadow-sm space-y-3">
-          <h3 className="font-serif font-bold text-lg text-primary flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-sage" />
-            Offline Mountain Health & First-Aid Guide (पहाड़ी प्राथमिक उपचार)
-          </h3>
-          <p className="text-xs text-muted">
-            Emergency guidance for high-altitude illness and accidents that works without internet.
-          </p>
-
-          <div className="space-y-2 pt-1">
-            {firstAidGuides.map((guide, idx) => (
-              <div key={idx} className="border border-border-subtle rounded-2xl overflow-hidden">
-                <button
-                  onClick={() => setOpenFirstAidIndex(openFirstAidIndex === idx ? null : idx)}
-                  className="w-full flex items-center justify-between p-3.5 bg-mist text-left text-xs font-bold text-primary hover:bg-gray-100 transition-colors"
-                >
-                  <span>{guide.title}</span>
-                  {openFirstAidIndex === idx ? (
-                    <ChevronUp className="w-4 h-4 text-muted" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-muted" />
-                  )}
-                </button>
-                {openFirstAidIndex === idx && (
-                  <div className="p-4 bg-card text-xs text-muted leading-relaxed border-t border-border-subtle animate-fadeIn">
-                    {guide.content}
-                  </div>
-                )}
-              </div>
-            ))}
           </div>
-        </div>
+        )}
 
-        {/* ── Calming Footer ───────────────────────────────────────── */}
-        <div className="text-center py-4">
-          <p className="text-xs text-gray-400 flex items-center justify-center gap-1.5">
-            <Leaf className="w-3.5 h-3.5 text-gold-warm" />
-            Sanjeevani is always here for you. Take care of your health with peace of mind.
-          </p>
-        </div>
+        {/* ── TAB 3: CONSULTATION HISTORY (पुराना पर्चा) ──────────── */}
+        {activeTab === 'history' && (
+          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 sm:p-8 border border-[#5A7855]/20 dark:border-gray-800 shadow-sm space-y-5 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 bg-[#5A7855]/10 text-[#5A7855] dark:text-[#8ED14C] text-[10px] font-bold px-3 py-0.5 rounded-full mb-1">
+                  <FileText className="w-3.5 h-3.5" /> Parcha History
+                </div>
+                <h2 className="font-serif font-bold text-xl text-[#2E4057] dark:text-[#F4F6F0] flex items-center gap-2">
+                  <span>Purana Parcha & Consultation Records (पुरानी जांच)</span>
+                  <button
+                    onClick={() => handleAudioGuide('Aapki pichhli saari doctor baatcheet aur parcha yahan darz hai.')}
+                    className="touch-target p-1 text-[#5A7855]"
+                    title="Audio sunein"
+                  >
+                    <Volume2 className="w-4 h-4" />
+                  </button>
+                </h2>
+                <p className="text-xs text-[#556376] dark:text-[#A8B4C2]">
+                  Dr. Sanjeevani AI ke sath ki gayi paramarsh baatcheet ki suchi
+                </p>
+              </div>
+
+              <Link
+                to="/mitra/chat"
+                className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#5A7855] hover:bg-[#4a6346] px-4 py-2.5 rounded-2xl transition-all shadow-xs"
+              >
+                <span>Nayi Jaanch Shuru Karein</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {consultations.map((item, idx) => (
+                <Link
+                  key={idx}
+                  to="/mitra/chat"
+                  className="p-4 rounded-2xl bg-[#F4F6F0]/60 dark:bg-[#182332] border border-gray-200/80 dark:border-gray-800 hover:border-[#5A7855]/40 transition-all flex items-center justify-between gap-3 block"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white text-xs font-bold shadow-xs ${
+                      item.tier === 'Red' ? 'bg-[#B85042]' :
+                      item.tier === 'Yellow' ? 'bg-[#D4A359] text-[#2E4057]' :
+                      'bg-[#5A7855]'
+                    }`}>
+                      {item.tier ? item.tier[0] : 'G'}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#2E4057] dark:text-[#F4F6F0] line-clamp-1">
+                        {item.summary || 'Doctor Paramarsh'}
+                      </p>
+                      <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+                        {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'Haal hi mein'} • Session ID: {item.conversationId?.slice(0, 10)}...
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full shrink-0 ${
+                    item.tier === 'Red' ? 'bg-[#B85042] text-white' :
+                    item.tier === 'Yellow' ? 'bg-[#D4A359] text-[#2E4057]' :
+                    'bg-[#5A7855] text-white'
+                  }`}>
+                    Tier {item.tier || 'Green'}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 4: NEARBY FACILITIES (अस्पताल खोजें) ────────────── */}
+        {activeTab === 'facilities' && (
+          <div className="space-y-4 animate-fadeIn">
+            <NearbyFacilityFinder onClose={() => setActiveTab('hub')} />
+          </div>
+        )}
+
+        {/* ── TAB 5: MOUNTAIN FIRST AID (प्राथमिक उपचार) ──────────── */}
+        {activeTab === 'firstaid' && (
+          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 sm:p-8 border border-[#5A7855]/20 dark:border-gray-800 shadow-sm space-y-4 animate-fadeIn">
+            <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
+              <div className="inline-flex items-center gap-1.5 bg-[#5A7855]/10 text-[#5A7855] dark:text-[#8ED14C] text-[10px] font-bold px-3 py-0.5 rounded-full mb-1">
+                <ShieldCheck className="w-3.5 h-3.5" /> Jeevan-Rakshak Niyam
+              </div>
+              <h2 className="font-serif font-bold text-xl text-[#2E4057] dark:text-[#F4F6F0] flex items-center gap-2">
+                <span>Pahadi Prathmik Upchar (Emergency First-Aid)</span>
+                <button
+                  onClick={() => handleAudioGuide('Pahad me aapaat sthiti hone par in prathmik upchar niyam ko sunein aur apnayein.')}
+                  className="touch-target p-1 text-[#5A7855]"
+                  title="Audio sunein"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+              </h2>
+              <p className="text-xs text-[#556376] dark:text-[#A8B4C2]">
+                Hospital pahunchne tak zaroori gharelu prathmik sahayata
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {firstAidGuides.map((guide, idx) => {
+                const isOpen = openFirstAidIndex === idx;
+                return (
+                  <div
+                    key={idx}
+                    className="border border-gray-200/80 dark:border-gray-700/80 rounded-2xl overflow-hidden transition-all"
+                  >
+                    <button
+                      onClick={() => setOpenFirstAidIndex(isOpen ? null : idx)}
+                      className="touch-target w-full text-left p-4 flex items-center justify-between gap-3 bg-[#F4F6F0]/40 dark:bg-[#182332]/50 hover:bg-[#5A7855]/10 text-xs sm:text-sm font-bold text-[#2E4057] dark:text-[#F4F6F0]"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Bandage className="w-4 h-4 text-[#5A7855] shrink-0" />
+                        <span>{guide.title}</span>
+                      </span>
+                      {isOpen ? <ChevronUp className="w-4 h-4 shrink-0 text-[#5A7855]" /> : <ChevronDown className="w-4 h-4 shrink-0 text-gray-400" />}
+                    </button>
+                    {isOpen && (
+                      <div className="p-4 bg-white dark:bg-[#1E2A43] text-xs sm:text-sm text-[#556376] dark:text-[#A8B4C2] leading-relaxed border-t border-gray-100 dark:border-gray-800 animate-fadeIn space-y-3">
+                        <p>{guide.content}</p>
+                        <button
+                          onClick={() => handleAudioGuide(guide.audio || guide.content)}
+                          className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-[#5A7855] dark:text-[#8ED14C] bg-[#5A7855]/10 px-3 py-1.5 rounded-xl hover:bg-[#5A7855]/20"
+                        >
+                          <Volume2 className="w-4 h-4" />
+                          <span>Yeh Niyam Suniye (Audio)</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
   );
 }
-

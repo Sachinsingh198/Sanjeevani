@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -22,12 +22,17 @@ import AshaDashboard from './pages/AshaDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 
 export default function App() {
+  const location = useLocation();
+  const isChatPage = location.pathname.includes('/chat');
+
   return (
     <ThemeProvider>
       <AuthProvider>
-        <div className="min-h-screen flex flex-col bg-mist text-primary transition-colors duration-300">
+        <div className={`flex flex-col bg-mist text-primary transition-colors duration-300 ${
+          isChatPage ? 'h-screen overflow-hidden' : 'min-h-screen'
+        }`}>
           <Navbar />
-          <main className="flex-1 animate-fadeIn">
+          <main className={isChatPage ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 animate-fadeIn'}>
             <Routes>
               {/* ── Public Routes ──────────────────────────────────── */}
               <Route path="/" element={<Home />} />
@@ -83,6 +88,16 @@ export default function App() {
                   <Companion />
                 </ProtectedRoute>
               } />
+              <Route path="/mitra/companion" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <Companion />
+                </ProtectedRoute>
+              } />
+              <Route path="/patient/companion" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <Companion />
+                </ProtectedRoute>
+              } />
 
               {/* Clinical Triage Chat & Eye Screening */}
               <Route path="/patient/chat" element={
@@ -125,9 +140,11 @@ export default function App() {
             </Routes>
           </main>
 
-          <footer className="bg-warm-indigo text-white/70 text-xs py-6 px-4 text-center border-t border-white/10 mt-auto">
-            <p>© 2026 Project Sanjeevani • Institute of Technology, Gopeshwar (Chamoli) • VMSB UTU</p>
-          </footer>
+          {!isChatPage && (
+            <footer className="bg-warm-indigo text-white/70 text-xs py-6 px-4 text-center border-t border-white/10 mt-auto">
+              <p>© 2026 Project Sanjeevani • Institute of Technology, Gopeshwar (Chamoli) • VMSB UTU</p>
+            </footer>
+          )}
         </div>
       </AuthProvider>
     </ThemeProvider>

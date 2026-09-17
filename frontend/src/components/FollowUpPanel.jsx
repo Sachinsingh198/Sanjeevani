@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { AlertTriangle, Clock, CheckCircle2, PhoneCall } from 'lucide-react';
+import { AlertTriangle, Clock, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 /**
  * FollowUpPanel — surfaces Red/Yellow tier patients that still need a
- * check-in call or visit, sorted by urgency. Sits above the full log so
+ * check-in call or visit, sorted by urgency. Sits alongside the log so
  * an ASHA worker's most time-sensitive cases are never buried in a list.
  */
 export default function FollowUpPanel({ patients, onMarkFollowedUp }) {
@@ -17,39 +17,47 @@ export default function FollowUpPanel({ patients, onMarkFollowedUp }) {
 
   if (needsFollowUp.length === 0) {
     return (
-      <div className="bg-sage-light rounded-2xl p-4 flex items-center gap-2 text-sm text-sage font-medium">
-        <CheckCircle2 className="w-4 h-4" /> All Red/Yellow tier patients are followed up.
+      <div className="bg-[#5A7855]/10 dark:bg-[#5A7855]/20 border border-[#5A7855]/30 rounded-3xl p-5 flex items-center gap-3 text-xs sm:text-sm text-[#5A7855] dark:text-[#8ED14C] font-semibold shadow-xs">
+        <CheckCircle2 className="w-5 h-5 shrink-0" />
+        <span>Sabhi Red aur Yellow tier marijon ka follow-up check-in pura ho chuka hai. ✨</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-card rounded-3xl border border-rose-soft/20 shadow-sm overflow-hidden">
-      <div className="p-4 bg-rose-soft/5 border-b border-rose-soft/15 flex items-center gap-2">
-        <AlertTriangle className="w-4 h-4 text-rose-soft" />
-        <h3 className="font-serif font-bold text-base text-primary">
-          Needs Follow-Up ({needsFollowUp.length})
-        </h3>
+    <div className="bg-white dark:bg-[#1E2A43] rounded-3xl border border-[#B85042]/30 shadow-xs overflow-hidden">
+      <div className="p-4 sm:p-5 bg-[#B85042]/10 dark:bg-[#B85042]/15 border-b border-[#B85042]/20 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 text-[#B85042] dark:text-[#FF7878]">
+          <ShieldAlert className="w-5 h-5 shrink-0" />
+          <h3 className="font-serif font-bold text-base text-[#2E4057] dark:text-[#F4F6F0]">
+            Jaroori Follow-Up ({needsFollowUp.length})
+          </h3>
+        </div>
+        <span className="text-[10px] font-bold bg-[#B85042] text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+          Prathmikta
+        </span>
       </div>
-      <div className="divide-y divide-black/5">
+
+      <div className="divide-y divide-gray-100 dark:divide-gray-800">
         {needsFollowUp.map((p) => (
-          <div key={p.id} className="p-3.5 flex items-center justify-between gap-3">
+          <div key={p.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-primary truncate">{p.name}</p>
-              <p className="text-xs text-muted truncate">{p.village} • {p.symptom}</p>
+              <p className="text-sm font-bold text-[#2E4057] dark:text-[#F4F6F0] truncate">{p.name}</p>
+              <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5 truncate">{p.village} • {p.symptom}</p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full text-white ${
-                p.tier === 'Red' ? 'bg-rose-soft' : 'bg-gold-warm'
+            <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full text-white ${
+                p.tier === 'Red' ? 'bg-[#B85042]' : 'bg-[#D4A359] text-[#2E4057]'
               }`}>
-                {p.tier}
+                Tier {p.tier}
               </span>
               <button
                 onClick={() => onMarkFollowedUp(p.id)}
-                className="flex items-center gap-1 text-xs font-semibold text-sage hover:bg-sage-light px-2.5 py-1.5 rounded-lg transition-colors"
+                className="touch-target flex items-center gap-1.5 text-xs font-bold text-[#5A7855] dark:text-[#8ED14C] bg-[#5A7855]/10 hover:bg-[#5A7855] hover:text-white px-3.5 py-2 rounded-xl transition-all"
                 title="Mark as followed up"
               >
-                <Clock className="w-3.5 h-3.5" /> Mark Done
+                <Clock className="w-3.5 h-3.5" />
+                <span>Mark Done</span>
               </button>
             </div>
           </div>
