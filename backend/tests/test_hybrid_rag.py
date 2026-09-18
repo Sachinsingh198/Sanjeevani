@@ -36,3 +36,12 @@ def test_indigestion_remedy_retrieval(remedy_store):
     assert len(results) > 0
     matched_names = [r["remedy_name"] for r in results]
     assert any("Jeera" in name or "Ajwain" in name for name in matched_names)
+
+def test_docx_classical_remedy_retrieval(remedy_store):
+    """Querying high thirst / burning sensation fever should retrieve classical docx formulations."""
+    query = "Tez bukhar jalan pyas lag rahi hai"
+    results = remedy_store.search_remedies(query, limit=3)
+
+    assert len(results) > 0
+    sources = [r.get("source", "") for r in results]
+    assert any("ayurveda_1.docx" in s for s in sources)

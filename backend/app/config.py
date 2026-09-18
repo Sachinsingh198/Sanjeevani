@@ -60,6 +60,19 @@ class Settings(BaseSettings):
     AI4BHARAT_HINDI_FEMALE_SPEAKER: str = "Divya"
     AI4BHARAT_HINDI_MALE_SPEAKER: str = "Rohit"
 
+    # SMTP / Gmail Notification Service (for OTP verification and password reset)
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None  # e.g., yourname@gmail.com
+    SMTP_PASSWORD: Optional[str] = None  # 16-character Google App Password
+    EMAIL_FROM: Optional[str] = "Sanjeevani Health <noreply@sanjeevani.gov.in>"
+
+    # SMS Gateway Configuration
+    TWILIO_ACCOUNT_SID: Optional[str] = None
+    TWILIO_AUTH_TOKEN: Optional[str] = None
+    TWILIO_FROM_NUMBER: Optional[str] = None
+    FAST2SMS_API_KEY: Optional[str] = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

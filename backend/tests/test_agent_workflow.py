@@ -44,4 +44,4 @@ def test_workflow_green_tier_routine():
     assert result["detected_tier"] == "Green"
     assert result["escalation_triggered"] is False
     assert len(result["retrieved_remedies"]) > 0
-    assert "Tulsi" in result["final_reply_text"] or "Vasa" in result["final_reply_text"] or "gharelu upchaar" in result["final_reply_text"]
+    assert any(term in result["final_reply_text"] for term in ["Tulsi", "Vasa", "Kashaya", "Kwath", "gharelu upchaar", "Nuskha", "nuskha"])

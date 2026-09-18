@@ -12,10 +12,21 @@ class HybridRemedyStore:
     Supports Qdrant Cloud clusters with automatic local on-disk fallback using FastEmbed.
     """
     def __init__(self, data_path: str = "DATA/remedies_dataset.json"):
-        self.data_path = data_path
+        # Resolve data path safely across different working directories
+        if not os.path.exists(data_path) and os.path.exists(os.path.join("backend", data_path)):
+            self.data_path = os.path.join("backend", data_path)
+        else:
+            self.data_path = data_path
+
+        docx_cand = "DATA/ayurveda_docx_remedies.json"
+        if not os.path.exists(docx_cand) and os.path.exists(os.path.join("backend", docx_cand)):
+            self.docx_remedies_path = os.path.join("backend", docx_cand)
+        else:
+            self.docx_remedies_path = docx_cand
+
         self.collection_name = settings.QDRANT_COLLECTION_NAME
         self.garhwali_collection_name = "sanjeevani_garhwali"
-        self.garhwali_data_dir = "DATA/Garhwali"
+        self.garhwali_data_dir = "DATA/Garhwali" if os.path.exists("DATA/Garhwali") else os.path.join("backend", "DATA", "Garhwali")
         self.vector_dim = 384  # Standard dimension for sentence-transformers/all-MiniLM-L6-v2
 
         # 1. Initialize FastEmbed with project-local cache directory (prevents Windows Temp corruptions)
@@ -55,8 +66,54 @@ class HybridRemedyStore:
             self._initialize_and_seed()
             self._initialize_and_seed_garhwali()
 
+    def load_all_remedies(self) -> List[Dict[str, Any]]:
+        """
+        Loads and combines remedies from both sources:
+        1. CCRAS & AYUSH base remedies (DATA/remedies_dataset.json)
+        2. Classical Ayurveda Treatise formulations (DATA/Ayush/ayurveda_1.docx)
+        """
+        all_remedies: List[Dict[str, Any]] = []
+        seen_names = set()
+
+        # 1. Base remedies
+        if os.path.exists(self.data_path):
+            try:
+                with open(self.data_path, "r", encoding="utf-8") as f:
+                    base_items = json.load(f)
+                    for item in base_items:
+                        name_key = item.get("remedy_name", "").strip().lower()
+                        if name_key and name_key not in seen_names:
+                            seen_names.add(name_key)
+                            all_remedies.append(item)
+            except Exception as e:
+                print(f"[Qdrant Error] Failed reading base remedies {self.data_path}: {e}")
+
+        # 2. Docx remedies (from cache JSON or directly extracted)
+        docx_items: List[Dict[str, Any]] = []
+        if os.path.exists(self.docx_remedies_path):
+            try:
+                with open(self.docx_remedies_path, "r", encoding="utf-8") as f:
+                    docx_items = json.load(f)
+            except Exception as e:
+                print(f"[Qdrant Error] Failed reading docx remedies JSON {self.docx_remedies_path}: {e}")
+
+        if not docx_items:
+            try:
+                from app.core.ayush_docx_extractor import save_docx_remedies_json
+                docx_items = save_docx_remedies_json(self.docx_remedies_path)
+            except Exception as e:
+                print(f"[Qdrant Error] Failed extracting docx remedies: {e}")
+
+        for item in docx_items:
+            name_key = item.get("remedy_name", "").strip().lower()
+            if name_key and name_key not in seen_names:
+                seen_names.add(name_key)
+                all_remedies.append(item)
+
+        return all_remedies
+
     def _initialize_and_seed(self):
-        """Creates collection if missing, and seeds points if empty."""
+        """Creates collection if missing, and seeds points if empty or outdated."""
         # Create collection if it does not exist
         if not self.client.collection_exists(self.collection_name):
             self.client.create_collection(
@@ -71,21 +128,20 @@ class HybridRemedyStore:
         # Check point count
         collection_info = self.client.get_collection(self.collection_name)
         points_count = collection_info.points_count or 0
+        all_remedies = self.load_all_remedies()
 
-        if points_count == 0:
-            print(f"[Qdrant] Collection '{self.collection_name}' is empty. Seeding AYUSH dataset...")
-            self.seed_dataset()
+        if points_count < len(all_remedies):
+            print(f"[Qdrant] Collection '{self.collection_name}' has {points_count} points, but {len(all_remedies)} remedies available. Seeding/syncing remedies...")
+            self.seed_dataset(force=True)
         else:
-            print(f"[Qdrant] Collection '{self.collection_name}' is active with {points_count} indexed points.")
+            print(f"[Qdrant] Collection '{self.collection_name}' is fully up to date with {points_count} indexed points.")
 
-    def seed_dataset(self):
-        """Loads seed remedies, generates embeddings, and upserts them into Qdrant."""
-        if not os.path.exists(self.data_path):
-            print(f"[Qdrant Error] Dataset file not found: {self.data_path}")
+    def seed_dataset(self, force: bool = False):
+        """Loads all remedies (base + docx), generates embeddings, and upserts them into Qdrant."""
+        remedies = self.load_all_remedies()
+        if not remedies:
+            print("[Qdrant Error] No remedies found to seed.")
             return
-
-        with open(self.data_path, "r", encoding="utf-8") as f:
-            remedies = json.load(f)
 
         search_texts: List[str] = []
         payloads: List[Dict[str, Any]] = []
@@ -97,22 +153,28 @@ class HybridRemedyStore:
                 f"Condition: {item.get('condition_name', '')} | "
                 f"Keywords: {keywords_str} | "
                 f"Remedy: {item.get('remedy_name', '')} | "
-                f"Instructions: {item.get('remedy_text', '')}"
+                f"Instructions: {item.get('remedy_text', '')} | "
+                f"Source: {item.get('source', '')}"
             )
             search_texts.append(search_text)
             payloads.append(item)
             ids.append(idx + 1)
 
-        if search_texts:
-            embeddings = list(self.embedding_model.embed(search_texts))
-            
+        batch_size = 50
+        total_upserted = 0
+        for i in range(0, len(search_texts), batch_size):
+            b_texts = search_texts[i:i+batch_size]
+            b_payloads = payloads[i:i+batch_size]
+            b_ids = ids[i:i+batch_size]
+
+            embeddings = list(self.embedding_model.embed(b_texts))
             points = [
                 models.PointStruct(
-                    id=ids[i],
-                    vector=embeddings[i].tolist(),
-                    payload=payloads[i]
+                    id=b_ids[j],
+                    vector=embeddings[j].tolist(),
+                    payload=b_payloads[j]
                 )
-                for i in range(len(ids))
+                for j in range(len(b_ids))
             ]
 
             self.client.upsert(
@@ -120,7 +182,9 @@ class HybridRemedyStore:
                 points=points,
                 wait=True
             )
-            print(f"[Qdrant] Successfully uploaded and indexed {len(points)} vector points in '{self.collection_name}'.")
+            total_upserted += len(points)
+
+        print(f"[Qdrant] Successfully uploaded and indexed {total_upserted} vector points in '{self.collection_name}'.")
 
     def search_remedies(self, query_text: str, limit: int = 2) -> List[Dict[str, Any]]:
         """

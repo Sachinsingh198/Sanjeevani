@@ -126,26 +126,36 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             system_prompt = (
                 "You are Dr. Sanjeevani, a caring community doctor. "
                 "Provide the clinical diagnosis/assessment followed by verified safe Ayurvedic home supportive care in clear English.\n\n"
-                "Strictly follow this format:\n"
+                "CRITICAL FORMATTING RULES:\n"
+                "1. Keep each section clearly separated with an empty line.\n"
+                "2. Under '**How to Prepare:**', write each step on its OWN line numbered 1., 2.\n"
+                "3. Under '**When to Take:**', write dosage on separate lines with '- '.\n"
+                "4. Under '**Precautions:**', write each safety caution on its OWN separate new line starting with '- '. Never combine bullets into one line.\n\n"
+                "Strictly follow this format:\n\n"
                 "**Your Condition:** [one line summary]\n\n"
                 "**Clinical Assessment:** [probable diagnosis/cause based on symptoms discussed]\n\n"
                 "**Remedy:** [remedy name]\n\n"
-                "**How to Prepare:**\n[simple steps]\n\n"
-                "**When to Take:** [dosage and frequency]\n\n"
-                "**Precautions:** [safety caution]\n\n"
+                "**How to Prepare:**\n1. [Step 1]\n2. [Step 2]\n\n"
+                "**When to Take:**\n- [dosage and frequency]\n\n"
+                "**Precautions:**\n- [caution 1]\n- [caution 2]\n\n"
                 "If symptoms do not improve within 2 days, please call **104** or visit your nearest **PHC**."
             )
         else:
             system_prompt = (
                 "Tu Dr. Sanjeevani hai. Patient ki poori jaanch aur clinical diagnosis ke baad ek "
                 "safe Ayurvedic nuskha batana hai. Sirf HINDI ya HINGLISH mein likh.\n\n"
-                "Bilkul is format mein likho:\n"
+                "CRITICAL FORMATTING RULES:\n"
+                "1. Har section se pehle aur baad mein ek blank line chhodhein.\n"
+                "2. '**Kaise Banayein:**' ke andar har step ko ALAG nayi line par numbered list (1. ..., 2. ...) mein likhein.\n"
+                "3. '**Kab Tak Lein:**' ke andar khuraak aur timing likhein (har point nayi line par '- ' se shuru karein).\n"
+                "4. '**Dhyan Rakhein:**' ke andar har savdhani ko ALAG nayi line par '- ' se likhein. Kabhi bhi multiple bullets ko ek hi line mein mat milana!\n\n"
+                "Bilkul is format mein likho:\n\n"
                 "**Aapki Takleef:** [ek line mein mukhya lakshan]\n\n"
                 "**Sambhavit Jaanch (Diagnosis):** [clinical assessment: kya samasya lagti hai aur kyu, e.g. thakan ya sardi se hone wala sadharan sar dard]\n\n"
                 "**Nuskha:** [nuskhe ka naam]\n\n"
-                "**Kaise Banayein:**\n[simple steps]\n\n"
-                "**Kab Tak Lein:** [khuraak]\n\n"
-                "**Dhyan Rakhein:** [safety note]\n\n"
+                "**Kaise Banayein:**\n1. [Step 1]\n2. [Step 2]\n\n"
+                "**Kab Tak Lein:**\n- [khuraak aur samay]\n\n"
+                "**Dhyan Rakhein:**\n- [savdhani 1]\n- [savdhani 2]\n\n"
                 "2 din mein aaram na aaye toh **104** par call karein ya **PHC** jaayein."
             )
 
@@ -246,26 +256,48 @@ def doctor_consultation_node(state: AgentState) -> AgentState:
     # 1. GREETING
     if phase == "GREETING":
         state["retrieved_remedies"] = []
+        name_match = re.search(r"(?:mera\s+naam|mera\s+name|my\s+name\s+is|main\s+hoon)\s+([A-Za-z\u0900-\u097F]+)", raw_msg, re.IGNORECASE)
+        patient_name = name_match.group(1).capitalize() if name_match else ""
+
+        if llm:
+            sys_prompt = (
+                "You are Dr. Sanjeevani, a compassionate, caring rural physician in Uttarakhand. "
+                "The patient has greeted you or introduced themselves. "
+                "Respond with a warm, welcoming greeting in the user's language (use their name if provided). "
+                "Ask how they are feeling today and what physical symptoms or health concerns they have. "
+                "CRITICAL: Do NOT give any diagnosis, disease assessment, or remedies yet, because the patient has not reported any symptoms."
+            )
+            hum_prompt = f"Patient message: \"{raw_msg}\"\nLanguage: {lang}"
+            llm_reply = _try_llm(llm, [SystemMessage(content=sys_prompt), HumanMessage(content=hum_prompt)])
+            if llm_reply:
+                state["final_reply_text"] = llm_reply
+                return state
+
+        # Deterministic fallback
         if lang == "garhwali":
+            name_txt = f"{patient_name} जी! " if patient_name else "भूला! "
             if is_devanagari:
                 state["final_reply_text"] = (
-                    "दैणु भूला! मैं संजीवनी छौं — त्वरि गांव कि डॉक्टर।\n\n"
-                    "त्वकु क्या तकलीफ हो रयु छ? आराम से बतावा।"
+                    f"दैणु {name_txt}मैं संजीवनी छौं — त्वरि गांव कि डॉक्टर।\n\n"
+                    "त्वकु क्या तकलीफ या बीमारी हो रयु छ? आराम से बतावा।"
                 )
             else:
+                name_rom = f"{patient_name} ji! " if patient_name else "bhula! "
                 state["final_reply_text"] = (
-                    "Dainu bhula! Main Sanjeevani chhon — twari swasthya sahayak gaon ki doctor.\n\n"
-                    "Twaku kya takleef ho rahyu chha? Aaram se batava."
+                    f"Dainu {name_rom}Main Sanjeevani chhon — twari swasthya sahayak gaon ki doctor.\n\n"
+                    "Twaku kya takleef ya bimaari ho rahyu chha? Aaram se batava."
                 )
         elif lang == "english":
+            name_txt = f", {patient_name}" if patient_name else ""
             state["final_reply_text"] = (
-                "Hello! I am Dr. Sanjeevani, your healthcare companion.\n\n"
-                "What health concern or symptoms are you experiencing today?"
+                f"Hello{name_txt}! I am Dr. Sanjeevani, your healthcare companion.\n\n"
+                "What health concern or symptoms are you experiencing today? Please tell me freely."
             )
         else:
+            name_txt = f" {patient_name} ji" if patient_name else ""
             state["final_reply_text"] = (
-                "Namaste! Main Sanjeevani hoon — aapki gaon ki doctor.\n\n"
-                "Aapko kya takleef ho rahi hai? Aaram se batayein."
+                f"Namaste{name_txt}! Main Dr. Sanjeevani hoon — aapki gaon ki doctor.\n\n"
+                "Aapko kya takleef ya lakshan mehsoos ho rahe hain? Aaram se batayein (jaise bukhar, sardi, pet dard, ya sar dard)."
             )
         return state
 
@@ -332,11 +364,14 @@ def doctor_consultation_node(state: AgentState) -> AgentState:
             state["garhwali_context"] = [curated_ctx] if curated_ctx else []
 
         # Clinical intake controls:
+        from app.core.dialogue_manager import has_symptom_mention
+        has_actual_symptoms = has_symptom_mention(updated_notes) or has_symptom_mention(patient_text)
+
         # - Turn 1: NEVER conclude. Must investigate the patient's specific symptom with clinical curiosity.
         # - Turn 2: Follow-up on severity, duration, or symptom-relevant warning signs.
-        # - Turn 3+: Conclude with clinical diagnosis assessment and supportive home care.
-        can_conclude = (turn_count >= 2)
-        force_conclude = (turn_count >= 3)
+        # - Turn 3+: Conclude with clinical diagnosis assessment and supportive home care ONLY IF symptoms exist.
+        can_conclude = (turn_count >= 2) and has_actual_symptoms
+        force_conclude = (turn_count >= 3) and has_actual_symptoms
 
         if llm:
             if lang == "garhwali":
@@ -427,6 +462,17 @@ def doctor_consultation_node(state: AgentState) -> AgentState:
         # Intelligent deterministic fallback when no LLM
         notes_lower = updated_notes.lower()
         if not can_conclude:
+            if not has_actual_symptoms:
+                if lang == "garhwali":
+                    reply = "त्वकु क्या तकलीफ या बीमारी हो रयु छ? कल्याणी से अपणा लक्षण बतावा।" if is_devanagari else "Twaku kya takleef ya bimaari ho rahyu chha? Kripya apna lakshan batava."
+                elif lang == "english":
+                    reply = "Could you please describe what specific symptoms or health concerns you are experiencing (such as fever, headache, cough, or stomach pain)?"
+                else:
+                    reply = "Aapko kya takleef ya lakshan mehsoos ho rahe hain? Kripya batayein (jaise bukhar, sardi, sar dard, ya pet dard) taaki main sahi jaanch kar sakoon."
+                state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"
+                state["final_reply_text"] = reply
+                return state
+
             # Turn 1: Symptom-tailored follow-up
             if any(w in notes_lower for w in ("mund", "sar dard", "headache", "peed", "peer")):
                 if lang == "garhwali":

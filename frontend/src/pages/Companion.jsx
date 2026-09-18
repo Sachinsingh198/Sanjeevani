@@ -9,6 +9,7 @@ import {
 import axios from 'axios';
 import { speakCue } from '../lib/audioSynthesizer';
 import toast from 'react-hot-toast';
+import StructuredBotMessage from '../components/StructuredBotMessage';
 
 /* ── Mood options ───────────────────────────────────────────────────────── */
 const MOOD_OPTIONS = [
@@ -59,11 +60,22 @@ export default function Companion() {
   const [autoSpeak, setAutoSpeak]     = useState(true);
 
   const messagesEndRef = useRef(null);
+  const chatInputRef   = useRef(null);
   const recognitionRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  /* Auto-resize textarea */
+  useEffect(() => {
+    const textarea = chatInputRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const scrollHeight = textarea.scrollHeight;
+    const newHeight = Math.min(Math.max(scrollHeight, 44), 140);
+    textarea.style.height = `${newHeight}px`;
+  }, [inputText]);
 
   useEffect(() => {
     axios.get('/api/companion/stories')
@@ -446,7 +458,11 @@ export default function Companion() {
                             </button>
                           </div>
                         )}
-                        <p className="text-xs md:text-sm whitespace-pre-line leading-relaxed">{m.text}</p>
+                        {isUser ? (
+                          <p className="text-xs md:text-sm whitespace-pre-wrap leading-relaxed">{m.text}</p>
+                        ) : (
+                          <StructuredBotMessage text={m.text} />
+                        )}
                         <div className={`text-[9px] mt-1.5 text-right ${isUser ? 'text-white/70' : 'text-[#556376] dark:text-[#A8B4C2]'}`}>
                           {m.timestamp}
                         </div>
@@ -488,19 +504,26 @@ export default function Companion() {
                 </div>
                 <form
                   onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-                  className="flex items-center gap-2"
+                  className="flex items-end gap-2"
                 >
-                  <input
-                    type="text"
+                  <textarea
+                    ref={chatInputRef}
+                    rows={1}
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
-                    placeholder={isListening ? 'Sun raha hoon...' : 'Ya yahan likhein...'}
-                    className="flex-1 bg-gray-50 dark:bg-[#151D28] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-[#1E2A43] dark:text-[#F4F6F0] focus:outline-none focus:ring-2 focus:ring-[#D4A359]"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder={isListening ? 'Sun raha hoon...' : 'Ya yahan likhein... (Shift+Enter for new line)'}
+                    className="flex-1 bg-gray-50 dark:bg-[#151D28] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-[#1E2A43] dark:text-[#F4F6F0] focus:outline-none focus:ring-2 focus:ring-[#D4A359] resize-none overflow-y-auto leading-relaxed transition-[height] duration-75"
                   />
                   <button
                     type="submit"
                     disabled={!inputText.trim() || isReplying}
-                    className="bg-[#D4A359] hover:bg-[#c29148] disabled:opacity-40 text-[#1E2A43] p-3 rounded-2xl font-bold transition-all shadow-sm"
+                    className="mb-0.5 bg-[#D4A359] hover:bg-[#c29148] disabled:opacity-40 text-[#1E2A43] p-3 rounded-2xl font-bold transition-all shadow-sm shrink-0"
                     title="Send"
                     aria-label="Send Message"
                   >

@@ -64,27 +64,30 @@ def triage_node(state: AgentState) -> AgentState:
     elif tier.value == "Red":
         state["dialogue_phase"] = "EMERGENCY"
 
+    elif intent == "GREETING":
+        state["dialogue_phase"] = "GREETING"
+        state["consultation_notes"] = ""
+        state["retrieved_remedies"] = []
+        state["turn_count"] = 0
+        state["detected_tier"] = "Green"
+        state["clinical_flags"] = []
+
     elif current_phase in ("CONCLUDED", "EMERGENCY"):
         msg_lower = normalized.lower().strip()
         remedy_words = ["nuskha", "nushkha", "remedy", "dhanyawad", "thanks", "shukriya", "batao", "bataein", "upchar"]
         if any(w in msg_lower for w in remedy_words):
             # Retain CONCLUDED phase so it re-renders or maintains concluded remedy
             state["dialogue_phase"] = "CONCLUDED"
-        elif intent == "GREETING":
-            state["dialogue_phase"] = "GREETING"
-            state["consultation_notes"] = ""
-            state["retrieved_remedies"] = []
         else:
-            # Patient describes a new symptom directly → start new consultation
+            # Patient describes a new symptom directly → start new consultation from turn 1
             state["dialogue_phase"] = "CONSULTATION"
             state["consultation_notes"] = ""
             state["retrieved_remedies"] = []
-
-    elif intent == "GREETING" and turn_count <= 1:
-        state["dialogue_phase"] = "GREETING"
+            state["turn_count"] = 1
 
     elif current_phase in ("GREETING", "GUARDRAIL_BLOCKED", None, ""):
         state["dialogue_phase"] = "CONSULTATION"
+        state["turn_count"] = 1
 
     elif current_phase == "CONSULTATION":
         pass  # Stay in CONSULTATION until responder_node concludes

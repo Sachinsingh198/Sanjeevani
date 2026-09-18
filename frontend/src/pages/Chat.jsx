@@ -14,33 +14,13 @@ import CalmLoader from '../components/CalmLoader';
 import SanjeevaniOrb from '../components/SanjeevaniOrb';
 import SymptomChips from '../components/SymptomChips';
 import AccessibilityBar from '../components/AccessibilityBar';
+import StructuredBotMessage from '../components/StructuredBotMessage';
 import {
   sendChatMessage, getOrCreateConversationId, resetConversationId, checkBackendHealth,
 } from '../api/client';
 import { speakText } from '../api/voiceClient';
 import { downloadConsultationReport } from '../api/reportsClient';
 import { listSessions, clearSessionHistory, recordSessionTurn } from '../lib/sessionStore';
-
-/* ── Markdown renderer ────────────────────────────────────────────────── */
-function renderMarkdown(text) {
-  if (!text) return null;
-  return text.split('\n').map((line, li) => {
-    if (!line.trim()) return <br key={li} />;
-    const tokens = [];
-    const regex = /\*\*(.+?)\*\*|\*(.+?)\*/g;
-    let lastIdx = 0, match;
-    while ((match = regex.exec(line)) !== null) {
-      if (match.index > lastIdx) tokens.push(line.slice(lastIdx, match.index));
-      if (match[1] !== undefined)
-        tokens.push(<strong key={`b-${li}-${match.index}`} className="font-semibold">{match[1]}</strong>);
-      else if (match[2] !== undefined)
-        tokens.push(<em key={`i-${li}-${match.index}`} className="italic">{match[2]}</em>);
-      lastIdx = regex.lastIndex;
-    }
-    if (lastIdx < line.length) tokens.push(line.slice(lastIdx));
-    return <p key={li} className="leading-relaxed mb-0.5">{tokens}</p>;
-  });
-}
 
 const COMORBIDITY_OPTIONS = [
   { label: 'BP', value: 'hypertension', icon: '❤️' },
@@ -96,6 +76,16 @@ export default function Chat() {
   /* Auto-scroll */
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
   useEffect(() => { inputRef.current?.focus(); }, []);
+
+  /* Auto-resize textarea height to accommodate multiline text */
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const scrollHeight = textarea.scrollHeight;
+    const newHeight = Math.min(Math.max(scrollHeight, 40), 140);
+    textarea.style.height = `${newHeight}px`;
+  }, [inputText]);
 
   /* Backend health */
   useEffect(() => {
@@ -491,10 +481,10 @@ export default function Chat() {
               <span className="text-[9px] sm:text-[10px] text-gray-400 truncate">Sthitiyan: {knownConditions.join(', ')}</span>
             </div>
           )}
-          <form onSubmit={handleSend} className="max-w-2xl mx-auto flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3">
+          <form onSubmit={handleSend} className="max-w-2xl mx-auto flex items-end gap-1.5 sm:gap-2 p-2 sm:p-3">
             {/* Mic */}
             <button type="button" onClick={toggleListening}
-              className={`shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center transition-all ${
+              className={`shrink-0 w-9 h-9 sm:w-10 sm:h-10 mb-0.5 rounded-lg sm:rounded-xl flex items-center justify-center transition-all ${
                 isListening
                   ? 'bg-[#B85042] text-white animate-pulse ring-4 ring-[#B85042]/20 shadow-md'
                   : 'bg-[#5A7855]/10 border border-[#5A7855]/25 text-[#5A7855] dark:text-[#8ED14C] hover:bg-[#5A7855]/15'
@@ -504,21 +494,21 @@ export default function Chat() {
               {isListening ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </button>
 
-            {/* Text */}
-            <input
+            {/* Expandable Textarea */}
+            <textarea
               ref={inputRef}
-              type="text"
+              rows={1}
               value={inputText}
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isListening ? 'Sun raha hoon… 🎙️' : 'Apne lakshan batayein ya likhein…'}
+              placeholder={isListening ? 'Sun raha hoon… 🎙️' : 'Apne lakshan batayein ya likhein… (Shift+Enter for new line)'}
               disabled={loading}
-              className="flex-1 min-w-0 bg-[#F4F6F0] dark:bg-[#0F1521] border border-gray-200 dark:border-gray-700 rounded-lg sm:rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-[#2E4057] dark:text-[#F4F6F0] focus:outline-none focus:ring-2 focus:ring-[#5A7855]/50 disabled:opacity-60 placeholder-gray-400 dark:placeholder-gray-600"
+              className="flex-1 min-w-0 bg-[#F4F6F0] dark:bg-[#0F1521] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-[#2E4057] dark:text-[#F4F6F0] focus:outline-none focus:ring-2 focus:ring-[#5A7855]/50 disabled:opacity-60 placeholder-gray-400 dark:placeholder-gray-600 resize-none overflow-y-auto leading-relaxed transition-[height] duration-75 ease-out"
             />
 
             {/* Send */}
             <button type="submit" disabled={!inputText.trim() || loading}
-              className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 bg-[#5A7855] hover:bg-[#4a6346] text-white rounded-lg sm:rounded-xl flex items-center justify-center transition-all disabled:opacity-40 shadow-sm"
+              className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 mb-0.5 bg-[#5A7855] hover:bg-[#4a6346] text-white rounded-lg sm:rounded-xl flex items-center justify-center transition-all disabled:opacity-40 shadow-sm"
               aria-label="Send"
             >
               {loading ? <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
@@ -563,14 +553,21 @@ function MessageBubble({ msg, onReadAloud, isSpeaking, onDownloadReport, isDownl
             </button>
           </div>
         )}
-        <div className="whitespace-pre-line leading-relaxed text-xs sm:text-sm">
-          {isUser ? msg.text : renderMarkdown(msg.text)}
+        <div className="leading-relaxed text-xs sm:text-sm">
+          {isUser ? (
+            <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+          ) : (
+            <StructuredBotMessage text={msg.text} tier={msg.tier} />
+          )}
         </div>
         {!isUser && (msg.tier === 'Red' || msg.tier === 'Yellow') && (
           <div className="mt-2 sm:mt-2.5"><EscalationCard tier={msg.tier} flags={msg.flags ?? []} /></div>
         )}
-        {!isUser && msg.remedies?.length > 0 && (
-          <div className="mt-2.5 sm:mt-3 space-y-2">
+        {!isUser && msg.phase === 'CONCLUDED' && msg.remedies?.length > 0 && (
+          <div className="mt-2.5 sm:mt-3 space-y-2 pt-2 border-t border-[#5A7855]/10 dark:border-gray-700/40">
+            <div className="text-[10px] sm:text-[11px] font-bold text-[#5A7855] dark:text-[#8ED14C] uppercase tracking-wider">
+              Sarkari AYUSH Pramanit Parcha (Verified Clinical Records):
+            </div>
             {msg.remedies.map((r, i) => <RemedyCard key={i} remedy={r} index={i} />)}
             <button onClick={onDownloadReport} disabled={isDownloading}
               className="w-full mt-1 flex items-center justify-center gap-1.5 sm:gap-2 bg-[#D4A359]/15 hover:bg-[#D4A359]/25 text-[#2E4057] dark:text-[#D4A359] text-[11px] sm:text-xs font-bold py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl border border-[#D4A359]/30 transition-all disabled:opacity-60">

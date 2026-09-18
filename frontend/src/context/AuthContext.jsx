@@ -35,16 +35,26 @@ export function AuthProvider({ children }) {
     }
   }, [token, user]);
 
-  const login = useCallback(async (phone, password) => {
-    const data = await loginUser(phone, password);
+  const login = useCallback(async (identifier, password) => {
+    const data = await loginUser(identifier, password);
     localStorage.setItem('sanjeevani_token', data.access_token);
     setUser(data.user);
     setToken(data.access_token);
     return data.user;
   }, []);
 
-  const register = useCallback(async (name, phone, password, village) => {
-    const data = await registerUser(name, phone, password, village);
+  const register = useCallback(async (registrationData, maybePhone, maybePassword, maybeVillage) => {
+    // Support either single object { name, phone, password, username, email, village } or legacy args
+    let payload = registrationData;
+    if (typeof registrationData === 'string') {
+      payload = {
+        name: registrationData,
+        phone: maybePhone,
+        password: maybePassword,
+        village: maybeVillage || '',
+      };
+    }
+    const data = await registerUser(payload);
     localStorage.setItem('sanjeevani_token', data.access_token);
     setUser(data.user);
     setToken(data.access_token);

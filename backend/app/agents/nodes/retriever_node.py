@@ -54,8 +54,8 @@ def retriever_node(state: AgentState) -> AgentState:
     query = extract_active_symptoms(notes, norm_msg, llm)
     patient_conditions = state.get("patient_conditions", [])
 
-    # 1. Vector RAG Search with targeted active symptoms
-    candidates = remedy_store.search_remedies(query, limit=2)
+    # 1. Vector RAG Search with targeted active symptoms (retrieve top 4 candidates for safety evaluation)
+    candidates = remedy_store.search_remedies(query, limit=4)
     verified_remedies = []
 
     # 1.5 Garhwali Context Retrieval
@@ -71,12 +71,12 @@ def retriever_node(state: AgentState) -> AgentState:
             item.get("remedy_text", ""),
             patient_conditions
         )
-        verified_item = dict(item)
-        verified_item["safety_check"] = reason
-
-        # Only retain if verified safe against patient comorbidities
         if is_safe:
+            verified_item = dict(item)
+            verified_item["safety_check"] = reason
             verified_remedies.append(verified_item)
+            if len(verified_remedies) >= 2:
+                break
 
     state["retrieved_remedies"] = verified_remedies
     return state

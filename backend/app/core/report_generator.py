@@ -14,10 +14,21 @@ import io
 from datetime import datetime
 from typing import List, Dict, Any
 
-from docx import Document
-from docx.shared import Pt, RGBColor, Inches
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT
+try:
+    from docx import Document
+    from docx.shared import Pt, RGBColor, Inches
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    DOCX_AVAILABLE = True
+except ImportError:
+    DOCX_AVAILABLE = False
+    Document = None
+    Pt = lambda x: x
+    RGBColor = lambda *a: None
+    Inches = lambda x: x
+    WD_ALIGN_PARAGRAPH = type("MockAlign", (), {"CENTER": 1, "LEFT": 0, "RIGHT": 2})()
+    WD_TABLE_ALIGNMENT = type("MockTableAlign", (), {"CENTER": 1, "LEFT": 0, "RIGHT": 2})()
+
 
 # Matches the app's "Himalayan Alpenglow" palette so a downloaded report
 # feels like it came from the same product, not a generic template.
