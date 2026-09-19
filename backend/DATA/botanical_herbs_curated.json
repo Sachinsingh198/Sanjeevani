@@ -1,0 +1,1668 @@
+[
+  {
+    "herb_id": "herb_001",
+    "vernacular_name": "Aadu",
+    "common_name": "Ginger",
+    "full_title": "Aadu (Ginger)",
+    "dravyaguna_properties": "Hot, increases digestive fire, destroys Vata and Kapha.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Aadu (Ginger): Hot, increases digestive fire, destroys Vata and Kapha."
+  },
+  {
+    "herb_id": "herb_002",
+    "vernacular_name": "Aambo",
+    "common_name": "Mango",
+    "full_title": "Aambo (Mango)",
+    "dravyaguna_properties": "Destroys Kapha, Vata, Ama, and diarrhea; increases digestive fire, strength, and semen; hot potency.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Aambo (Mango): Destroys Kapha, Vata, Ama, and diarrhea; increases digestive fire, strength, and semen; hot potency."
+  },
+  {
+    "herb_id": "herb_003",
+    "vernacular_name": "Aamli",
+    "common_name": "Tamarind",
+    "full_title": "Aamli (Tamarind)",
+    "dravyaguna_properties": "Laxative, improves taste, pacifies Pitta; cures fever heat, thirst, constipation, Vata, anorexia, and urinary heat.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Aamli (Tamarind): Laxative, improves taste, pacifies Pitta; cures fever heat, thirst, constipation, Vata, anorexia, and urinary heat."
+  },
+  {
+    "herb_id": "herb_004",
+    "vernacular_name": "Aambahaladar",
+    "common_name": "Mango-ginger",
+    "full_title": "Aambahaladar (Mango-ginger)",
+    "dravyaguna_properties": "Destroys severe wounds, cough, asthma, convulsions, fever, colic, Vata, Sannipat fever, and mouth diseases; healing, cooling, and purifying.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Aambahaladar (Mango-ginger): Destroys severe wounds, cough, asthma, convulsions, fever, colic, Vata, Sannipat fever, and mouth diseases; healing, cooling, and purifying."
+  },
+  {
+    "herb_id": "herb_005",
+    "vernacular_name": "Aaval",
+    "common_name": "Cassia auriculata",
+    "full_title": "Aaval (Cassia auriculata)",
+    "dravyaguna_properties": "Destroys mouth diseases, germs, wounds, swelling, and burning; astringent, purifying, and beneficial for eyes.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Aaval (Cassia auriculata): Destroys mouth diseases, germs, wounds, swelling, and burning; astringent, purifying, and beneficial for eyes."
+  },
+  {
+    "herb_id": "herb_006",
+    "vernacular_name": "Agar",
+    "common_name": "Agarwood",
+    "full_title": "Agar (Agarwood)",
+    "dravyaguna_properties": "Light, increases Pitta; destroys Kapha and Vata; cures eye/skin/ear diseases; specific medicine for asthma.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": true,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Agar (Agarwood): Light, increases Pitta; destroys Kapha and Vata; cures eye/skin/ear diseases; specific medicine for asthma."
+  },
+  {
+    "herb_id": "herb_007",
+    "vernacular_name": "Aghedo",
+    "common_name": "Apamarga",
+    "full_title": "Aghedo (Apamarga)",
+    "dravyaguna_properties": "Laxative, sharp, digestive, diuretic, kindles digestive fire, aphrodisiac; destroys Kapha and skin diseases.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Aghedo (Apamarga): Laxative, sharp, digestive, diuretic, kindles digestive fire, aphrodisiac; destroys Kapha and skin diseases."
+  },
+  {
+    "herb_id": "herb_008",
+    "vernacular_name": "Ajmo",
+    "common_name": "Carom Seeds",
+    "full_title": "Ajmo (Carom Seeds)",
+    "dravyaguna_properties": "Pungent, bitter, improves taste, hot, digestive, laxative, aphrodisiac; cures colic, flatulence, Vata, worms, and tumors.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Ajmo (Carom Seeds): Pungent, bitter, improves taste, hot, digestive, laxative, aphrodisiac; cures colic, flatulence, Vata, worms, and tumors."
+  },
+  {
+    "herb_id": "herb_009",
+    "vernacular_name": "Ajmod",
+    "common_name": "Celery Seeds",
+    "full_title": "Ajmod (Celery Seeds)",
+    "dravyaguna_properties": "Improves taste, kindles digestion, sharp, dry, hot, aphrodisiac, strengthening, binds stool; cures flatulence, colic, and Vata.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Ajmod (Celery Seeds): Improves taste, kindles digestion, sharp, dry, hot, aphrodisiac, strengthening, binds stool; cures flatulence, colic, and Vata."
+  },
+  {
+    "herb_id": "herb_010",
+    "vernacular_name": "Akalkaro",
+    "common_name": "Pellitory",
+    "full_title": "Akalkaro (Pellitory)",
+    "dravyaguna_properties": "Hot, stimulating, induces salivation, sharp; destroys cold, swelling, Vata, and Kapha.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Akalkaro (Pellitory): Hot, stimulating, induces salivation, sharp; destroys cold, swelling, Vata, and Kapha."
+  },
+  {
+    "herb_id": "herb_011",
+    "vernacular_name": "Alasi",
+    "common_name": "Linseed/Flaxseed",
+    "full_title": "Alasi (Linseed/Flaxseed)",
+    "dravyaguna_properties": "Hot, increases Kapha and Pitta; ripens wounds/boils, cures glandular swellings, urinary disorders with burning, and urinary heat.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Alasi (Linseed/Flaxseed): Hot, increases Kapha and Pitta; ripens wounds/boils, cures glandular swellings, urinary disorders with burning, and urinary heat."
+  },
+  {
+    "herb_id": "herb_012",
+    "vernacular_name": "Aamla",
+    "common_name": "Indian Gooseberry",
+    "full_title": "Aamla (Indian Gooseberry)",
+    "dravyaguna_properties": "Wholesome, promotes health, beneficial for eyes/hair/blood/skin; supreme rejuvenator that destroys all three Doshas; beneficial for bleeding disorders and diabetes.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Aamla (Indian Gooseberry): Wholesome, promotes health, beneficial for eyes/hair/blood/skin; supreme rejuvenator that destroys all three Doshas; beneficial for bleeding disorders and diabetes."
+  },
+  {
+    "herb_id": "herb_013",
+    "vernacular_name": "Anantmool",
+    "common_name": "Indian Sarsaparilla",
+    "full_title": "Anantmool (Indian Sarsaparilla)",
+    "dravyaguna_properties": "Aphrodisiac, rejuvenating, strengthens the body, purifies semen/blood; cures fever, diarrhea, syphilis, and urinary disorders.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Anantmool (Indian Sarsaparilla): Aphrodisiac, rejuvenating, strengthens the body, purifies semen/blood; cures fever, diarrhea, syphilis, and urinary disorders."
+  },
+  {
+    "herb_id": "herb_014",
+    "vernacular_name": "Aakdo",
+    "common_name": "Calotropis Root Bark",
+    "full_title": "Aakdo (Calotropis Root Bark)",
+    "dravyaguna_properties": "Hot, purifying, diaphoretic, induces vomiting, destroys Kapha, pacifies Vata; useful for syphilis, leprosy, cough, and dysentery.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Aakdo (Calotropis Root Bark): Hot, purifying, diaphoretic, induces vomiting, destroys Kapha, pacifies Vata; useful for syphilis, leprosy, cough, and dysentery."
+  },
+  {
+    "herb_id": "herb_015",
+    "vernacular_name": "Babul",
+    "common_name": "Borsali",
+    "full_title": "Babul (Borsali)",
+    "dravyaguna_properties": "Bark strengthens teeth; fruit is astringent; middle part is mildly purgative.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Babul (Borsali): Bark strengthens teeth; fruit is astringent; middle part is mildly purgative."
+  },
+  {
+    "herb_id": "herb_016",
+    "vernacular_name": "Badam",
+    "common_name": "Almond",
+    "full_title": "Badam (Almond)",
+    "dravyaguna_properties": "Destroys semen-related diseases; strengthening, cooling, nourishes the brain, increases vision.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Badam (Almond): Destroys semen-related diseases; strengthening, cooling, nourishes the brain, increases vision."
+  },
+  {
+    "herb_id": "herb_017",
+    "vernacular_name": "Baval",
+    "common_name": "Acacia arabica",
+    "full_title": "Baval (Acacia arabica)",
+    "dravyaguna_properties": "Destroys Kapha, leprosy, and germs; astringent. Gum destroys Vata/Pitta, bloody diarrhea, bleeding disorders, and diabetes.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": true,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Baval (Acacia arabica): Destroys Kapha, leprosy, and germs; astringent. Gum destroys Vata/Pitta, bloody diarrhea, bleeding disorders, and diabetes."
+  },
+  {
+    "herb_id": "herb_018",
+    "vernacular_name": "Bhangro",
+    "common_name": "Eclipta alba",
+    "full_title": "Bhangro (Eclipta alba)",
+    "dravyaguna_properties": "Destroys Kapha, anemia, skin diseases, fever, and fat; beneficial for eye diseases and hair; strengthening, rejuvenating, pacifies Pitta.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Bhangro (Eclipta alba): Destroys Kapha, anemia, skin diseases, fever, and fat; beneficial for eye diseases and hair; strengthening, rejuvenating, pacifies Pitta."
+  },
+  {
+    "herb_id": "herb_019",
+    "vernacular_name": "Bhoringani",
+    "common_name": "Solanum surattense",
+    "full_title": "Bhoringani (Solanum surattense)",
+    "dravyaguna_properties": "Destroys fever, Vata, Kapha, vomiting, cough, and asthma; hot.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Bhoringani (Solanum surattense): Destroys fever, Vata, Kapha, vomiting, cough, and asthma; hot."
+  },
+  {
+    "herb_id": "herb_020",
+    "vernacular_name": "Bijoru",
+    "common_name": "Citron",
+    "full_title": "Bijoru (Citron)",
+    "dravyaguna_properties": "Destroys anorexia, stomach diseases, vomiting, colic, burning, and thirst; sour, digestive, pacifies Pitta.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Bijoru (Citron): Destroys anorexia, stomach diseases, vomiting, colic, burning, and thirst; sour, digestive, pacifies Pitta."
+  },
+  {
+    "herb_id": "herb_021",
+    "vernacular_name": "Bili",
+    "common_name": "Bael",
+    "full_title": "Bili (Bael)",
+    "dravyaguna_properties": "Destroys all types of diarrhea and dysentery; digests Ama, astringent, digestive, destroys Pitta.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Bili (Bael): Destroys all types of diarrhea and dysentery; digests Ama, astringent, digestive, destroys Pitta."
+  },
+  {
+    "herb_id": "herb_022",
+    "vernacular_name": "Chandan",
+    "common_name": "Sandalwood",
+    "full_title": "Chandan (Sandalwood)",
+    "dravyaguna_properties": "White is beneficial for skin diseases, thirst, burning, Pitta diabetes, vomiting, and bleeding disorders; cooling. Red is cooling, excellent for pastes, cures erysipelas.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Chandan (Sandalwood): White is beneficial for skin diseases, thirst, burning, Pitta diabetes, vomiting, and bleeding disorders; cooling. Red is cooling, excellent for pastes, cures erysipelas."
+  },
+  {
+    "herb_id": "herb_023",
+    "vernacular_name": "Chanothi",
+    "common_name": "Rosary pea",
+    "full_title": "Chanothi (Rosary pea)",
+    "dravyaguna_properties": "Root is strengthening, cooling, destroys Vata, used for cough. Leaves destroy mouth heat, voice hoarseness, and urinary heat.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Chanothi (Rosary pea): Root is strengthening, cooling, destroys Vata, used for cough. Leaves destroy mouth heat, voice hoarseness, and urinary heat."
+  },
+  {
+    "herb_id": "herb_024",
+    "vernacular_name": "Chavak",
+    "common_name": "Piper chaba",
+    "full_title": "Chavak (Piper chaba)",
+    "dravyaguna_properties": "Increases digestion, digestive; destroys liver diseases, Kapha, spleen diseases, weak digestion, and abdominal tumors.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Chavak (Piper chaba): Increases digestion, digestive; destroys liver diseases, Kapha, spleen diseases, weak digestion, and abdominal tumors."
+  },
+  {
+    "herb_id": "herb_025",
+    "vernacular_name": "Chopchini",
+    "common_name": "China root",
+    "full_title": "Chopchini (China root)",
+    "dravyaguna_properties": "Specific medicine for skin diseases related to syphilis; purifying, strengthening; useful for Vata diseases.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Chopchini (China root): Specific medicine for skin diseases related to syphilis; purifying, strengthening; useful for Vata diseases."
+  },
+  {
+    "herb_id": "herb_026",
+    "vernacular_name": "Dadam",
+    "common_name": "Pomegranate",
+    "full_title": "Dadam (Pomegranate)",
+    "dravyaguna_properties": "Destroys vomiting, burning, thirst, Pitta; astringent, destroys germs; useful for cough, diarrhea, dysentery, and bleeding.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Dadam (Pomegranate): Destroys vomiting, burning, thirst, Pitta; astringent, destroys germs; useful for cough, diarrhea, dysentery, and bleeding."
+  },
+  {
+    "herb_id": "herb_027",
+    "vernacular_name": "Dhana",
+    "common_name": "Coriander",
+    "full_title": "Dhana (Coriander)",
+    "dravyaguna_properties": "Destroys fever, thirst, burning, vomiting, asthma, cough, piles, Ama, Pitta, germs; digestive, astringent, unctuous.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Dhana (Coriander): Destroys fever, thirst, burning, vomiting, asthma, cough, piles, Ama, Pitta, germs; digestive, astringent, unctuous."
+  },
+  {
+    "herb_id": "herb_028",
+    "vernacular_name": "Dhro",
+    "common_name": "Durva grass",
+    "full_title": "Dhro (Durva grass)",
+    "dravyaguna_properties": "Destroys swelling, thirst, burning, skin diseases, bleeding disorders, tuberculosis; beneficial for bleeding and leucorrhea.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Dhro (Durva grass): Destroys swelling, thirst, burning, skin diseases, bleeding disorders, tuberculosis; beneficial for bleeding and leucorrhea."
+  },
+  {
+    "herb_id": "herb_029",
+    "vernacular_name": "Draksh",
+    "common_name": "Grapes",
+    "full_title": "Draksh (Grapes)",
+    "dravyaguna_properties": "Wholesome for tuberculosis, thirst, gout, Pitta diseases; sweet, cooling, strengthening, purgative.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Draksh (Grapes): Wholesome for tuberculosis, thirst, gout, Pitta diseases; sweet, cooling, strengthening, purgative."
+  },
+  {
+    "herb_id": "herb_030",
+    "vernacular_name": "Elachi",
+    "common_name": "Cardamom",
+    "full_title": "Elachi (Cardamom)",
+    "dravyaguna_properties": "Big destroys bleeding disorders, vomiting, headaches, urine blockage, thirst, and Kapha. Small destroys dysuria, asthma, piles, flatulence, cough, Kapha, and Vata.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Elachi (Cardamom): Big destroys bleeding disorders, vomiting, headaches, urine blockage, thirst, and Kapha. Small destroys dysuria, asthma, piles, flatulence, cough, Kapha, and Vata."
+  },
+  {
+    "herb_id": "herb_031",
+    "vernacular_name": "Elio",
+    "common_name": "Aloe extract",
+    "full_title": "Elio (Aloe extract)",
+    "dravyaguna_properties": "Beneficial for constipation, mania, hysteria, Pitta diseases, fever, abdominal diseases; purgative and induces menses.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Elio (Aloe extract): Beneficial for constipation, mania, hysteria, Pitta diseases, fever, abdominal diseases; purgative and induces menses."
+  },
+  {
+    "herb_id": "herb_032",
+    "vernacular_name": "Erand",
+    "common_name": "Castor",
+    "full_title": "Erand (Castor)",
+    "dravyaguna_properties": "Root destroys Kapha, Vata, fever, swelling, rheumatism. Leaves destroy Vata, Kapha, dysuria, hernias. Fruit destroys colic, Vata, liver/spleen diseases. Oil is purgative, Vata-destroying, strengthening.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Erand (Castor): Root destroys Kapha, Vata, fever, swelling, rheumatism. Leaves destroy Vata, Kapha, dysuria, hernias. Fruit destroys colic, Vata, liver/spleen diseases. Oil is purgative, Vata-destroying, strengthening."
+  },
+  {
+    "herb_id": "herb_033",
+    "vernacular_name": "Galo",
+    "common_name": "Giloy",
+    "full_title": "Galo (Giloy)",
+    "dravyaguna_properties": "Destroys Tridosha, Ama, fat, leprosy, Vata, cough, anemia, jaundice, blood disorders, vomiting; rejuvenating, cooling, strengthening.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Galo (Giloy): Destroys Tridosha, Ama, fat, leprosy, Vata, cough, anemia, jaundice, blood disorders, vomiting; rejuvenating, cooling, strengthening."
+  },
+  {
+    "herb_id": "herb_034",
+    "vernacular_name": "Ganjo",
+    "common_name": "Cannabis indica",
+    "full_title": "Ganjo (Cannabis indica)",
+    "dravyaguna_properties": "Induces sleep, diuretic, calms the brain, destroys hysteria; excessive use induces sleep.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Ganjo (Cannabis indica): Induces sleep, diuretic, calms the brain, destroys hysteria; excessive use induces sleep."
+  },
+  {
+    "herb_id": "herb_035",
+    "vernacular_name": "Garmalo",
+    "common_name": "Cassia fistula",
+    "full_title": "Garmalo (Cassia fistula)",
+    "dravyaguna_properties": "Destroys indigestion, constipation, heaviness, Sannipat, fever, abdominal diseases, gout; strong purgative.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Garmalo (Cassia fistula): Destroys indigestion, constipation, heaviness, Sannipat, fever, abdominal diseases, gout; strong purgative."
+  },
+  {
+    "herb_id": "herb_036",
+    "vernacular_name": "Gokhru",
+    "common_name": "Tribulus",
+    "full_title": "Gokhru (Tribulus)",
+    "dravyaguna_properties": "Destroys impotence, Pitta diarrhea, semen discharge, weakness, urinary diseases; strengthening, cooling, diuretic.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Gokhru (Tribulus): Destroys impotence, Pitta diarrhea, semen discharge, weakness, urinary diseases; strengthening, cooling, diuretic."
+  },
+  {
+    "herb_id": "herb_037",
+    "vernacular_name": "Gomutra",
+    "common_name": "Cow urine",
+    "full_title": "Gomutra (Cow urine)",
+    "dravyaguna_properties": "Destroys germs, spleen diseases, anemia, abdominal diseases, constipation, piles, poisons, leprosy; sharp, hot, salty.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Gomutra (Cow urine): Destroys germs, spleen diseases, anemia, abdominal diseases, constipation, piles, poisons, leprosy; sharp, hot, salty."
+  },
+  {
+    "herb_id": "herb_038",
+    "vernacular_name": "Gund",
+    "common_name": "Gum",
+    "full_title": "Gund (Gum)",
+    "dravyaguna_properties": "Strengthening, increases semen; beneficial for Vata diseases; astringent, thickens semen.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Gund (Gum): Strengthening, increases semen; beneficial for Vata diseases; astringent, thickens semen."
+  },
+  {
+    "herb_id": "herb_039",
+    "vernacular_name": "Haladar",
+    "common_name": "Turmeric",
+    "full_title": "Haladar (Turmeric)",
+    "dravyaguna_properties": "Destroys Kapha, Pitta, blood pain, swelling, leprosy, fat, and wounds.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Haladar (Turmeric): Destroys Kapha, Pitta, blood pain, swelling, leprosy, fat, and wounds."
+  },
+  {
+    "herb_id": "herb_040",
+    "vernacular_name": "Himaj",
+    "common_name": "Small Harad",
+    "full_title": "Himaj (Small Harad)",
+    "dravyaguna_properties": "Primarily purgative and blood purifier; cures dysentery.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Himaj (Small Harad): Primarily purgative and blood purifier; cures dysentery."
+  },
+  {
+    "herb_id": "herb_041",
+    "vernacular_name": "Hing",
+    "common_name": "Asafoetida",
+    "full_title": "Hing (Asafoetida)",
+    "dravyaguna_properties": "Destroys colic, convulsions, flatulence, hiccups, Vata, indigestion, germs, diarrhea, sprue; hot, induces menses.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Hing (Asafoetida): Destroys colic, convulsions, flatulence, hiccups, Vata, indigestion, germs, diarrhea, sprue; hot, induces menses."
+  },
+  {
+    "herb_id": "herb_042",
+    "vernacular_name": "Hirabol",
+    "common_name": "Myrrh",
+    "full_title": "Hirabol (Myrrh)",
+    "dravyaguna_properties": "Hot, destroys Kapha, induces menses; used for chronic cough, painful menses, absent menses, toothache, fistula, bleeding.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Hirabol (Myrrh): Hot, destroys Kapha, induces menses; used for chronic cough, painful menses, absent menses, toothache, fistula, bleeding."
+  },
+  {
+    "herb_id": "herb_043",
+    "vernacular_name": "Hiradakhan",
+    "common_name": "Dragon's blood",
+    "full_title": "Hiradakhan (Dragon's blood)",
+    "dravyaguna_properties": "Beneficial for diarrhea, sprue, skin diseases, wounds; astringent, cooling.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Hiradakhan (Dragon's blood): Beneficial for diarrhea, sprue, skin diseases, wounds; astringent, cooling."
+  },
+  {
+    "herb_id": "herb_044",
+    "vernacular_name": "Indrajav",
+    "common_name": "Holarrhena seeds",
+    "full_title": "Indrajav (Holarrhena seeds)",
+    "dravyaguna_properties": "Destroys Tridosha, Ama, bloody diarrhea, dysentery, fever, germs, erysipelas, leprosy; astringent and digestive.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Indrajav (Holarrhena seeds): Destroys Tridosha, Ama, bloody diarrhea, dysentery, fever, germs, erysipelas, leprosy; astringent and digestive."
+  },
+  {
+    "herb_id": "herb_045",
+    "vernacular_name": "Indravaruni",
+    "common_name": "Colocynth",
+    "full_title": "Indravaruni (Colocynth)",
+    "dravyaguna_properties": "Root destroys Pitta, piles, colic; purgative, abortifacient. Fruit destroys abdominal diseases, jaundice, Pitta.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Indravaruni (Colocynth): Root destroys Pitta, piles, colic; purgative, abortifacient. Fruit destroys abdominal diseases, jaundice, Pitta."
+  },
+  {
+    "herb_id": "herb_046",
+    "vernacular_name": "Jambu",
+    "common_name": "Jamun",
+    "full_title": "Jambu (Jamun)",
+    "dravyaguna_properties": "Bark is astringent, purifying. Seed reduces urine flow, stops bleeding. Fruit is a blood purifier, destroys dysentery, digestive.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Jambu (Jamun): Bark is astringent, purifying. Seed reduces urine flow, stops bleeding. Fruit is a blood purifier, destroys dysentery, digestive."
+  },
+  {
+    "herb_id": "herb_047",
+    "vernacular_name": "Javantri",
+    "common_name": "Mace",
+    "full_title": "Javantri (Mace)",
+    "dravyaguna_properties": "Similar to nutmeg in all properties except the intoxicating effect.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Javantri (Mace): Similar to nutmeg in all properties except the intoxicating effect."
+  },
+  {
+    "herb_id": "herb_048",
+    "vernacular_name": "Jayphal",
+    "common_name": "Nutmeg",
+    "full_title": "Jayphal (Nutmeg)",
+    "dravyaguna_properties": "Destroys Kapha, Vata, vomiting, cold, germs, cough, indigestion; digestive, binds stool, astringent, intoxicating, hot; stops semen discharge.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Jayphal (Nutmeg): Destroys Kapha, Vata, vomiting, cold, germs, cough, indigestion; digestive, binds stool, astringent, intoxicating, hot; stops semen discharge."
+  },
+  {
+    "herb_id": "herb_049",
+    "vernacular_name": "Jethimadh",
+    "common_name": "Licorice",
+    "full_title": "Jethimadh (Licorice)",
+    "dravyaguna_properties": "Destroys cough, mouth ulcers, voice hoarseness, urinary heat, Pitta-thirst, vomiting; beneficial for diabetes, skin diseases; cooling, strengthening, purgative.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Jethimadh (Licorice): Destroys cough, mouth ulcers, voice hoarseness, urinary heat, Pitta-thirst, vomiting; beneficial for diabetes, skin diseases; cooling, strengthening, purgative."
+  },
+  {
+    "herb_id": "herb_050",
+    "vernacular_name": "Jiru",
+    "common_name": "Cumin",
+    "full_title": "Jiru (Cumin)",
+    "dravyaguna_properties": "Destroys indigestion, colic, anorexia, hiccups; destroys Vata, digestive; cures chronic fever and Pitta disorders.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Jiru (Cumin): Destroys indigestion, colic, anorexia, hiccups; destroys Vata, digestive; cures chronic fever and Pitta disorders."
+  },
+  {
+    "herb_id": "herb_051",
+    "vernacular_name": "Kababchini",
+    "common_name": "Cubeb",
+    "full_title": "Kababchini (Cubeb)",
+    "dravyaguna_properties": "Destroys Pitta, leucorrhea, dysuria; expels phlegm, kindles digestion, increases urine.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Kababchini (Cubeb): Destroys Pitta, leucorrhea, dysuria; expels phlegm, kindles digestion, increases urine."
+  },
+  {
+    "herb_id": "herb_052",
+    "vernacular_name": "Kachuro",
+    "common_name": "Zedoary",
+    "full_title": "Kachuro (Zedoary)",
+    "dravyaguna_properties": "Destroys fever, skin diseases, Kapha, hives, goiter; purifying.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Kachuro (Zedoary): Destroys fever, skin diseases, Kapha, hives, goiter; purifying."
+  },
+  {
+    "herb_id": "herb_053",
+    "vernacular_name": "Kadachhal",
+    "common_name": "Holarrhena bark",
+    "full_title": "Kadachhal (Holarrhena bark)",
+    "dravyaguna_properties": "Destroys blood disorders, piles, bloody diarrhea, fever; astringent, cooling, pacifies Pitta.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Kadachhal (Holarrhena bark): Destroys blood disorders, piles, bloody diarrhea, fever; astringent, cooling, pacifies Pitta."
+  },
+  {
+    "herb_id": "herb_054",
+    "vernacular_name": "Kadu",
+    "common_name": "Picrorhiza",
+    "full_title": "Kadu (Picrorhiza)",
+    "dravyaguna_properties": "Destroys constipation, Kapha, Pitta, fever, diabetes, cough, liver diseases, burning, leprosy; mild purgative, digestive.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Kadu (Picrorhiza): Destroys constipation, Kapha, Pitta, fever, diabetes, cough, liver diseases, burning, leprosy; mild purgative, digestive."
+  },
+  {
+    "herb_id": "herb_055",
+    "vernacular_name": "Kalimusali",
+    "common_name": "Black Musli",
+    "full_title": "Kalimusali (Black Musli)",
+    "dravyaguna_properties": "Strengthening, increases semen, rejuvenating, hot; used in strength-promoting medicines.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Kalimusali (Black Musli): Strengthening, increases semen, rejuvenating, hot; used in strength-promoting medicines."
+  },
+  {
+    "herb_id": "herb_056",
+    "vernacular_name": "Kalthi",
+    "common_name": "Horse gram",
+    "full_title": "Kalthi (Horse gram)",
+    "dravyaguna_properties": "Destroys Kapha, Vata, tumors, stones, fat, cough, asthma, diabetes, dysuria; astringent, induces sweat.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Kalthi (Horse gram): Destroys Kapha, Vata, tumors, stones, fat, cough, asthma, diabetes, dysuria; astringent, induces sweat."
+  },
+  {
+    "herb_id": "herb_057",
+    "vernacular_name": "Kamal Kakdi",
+    "common_name": "Lotus seed",
+    "full_title": "Kamal Kakdi (Lotus seed)",
+    "dravyaguna_properties": "Cooling, astringent; destroys abdominal wind, thirst, vomiting, diarrhea, bleeding, weakness.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Kamal Kakdi (Lotus seed): Cooling, astringent; destroys abdominal wind, thirst, vomiting, diarrhea, bleeding, weakness."
+  },
+  {
+    "herb_id": "herb_058",
+    "vernacular_name": "Kamal Pushpa",
+    "common_name": "Lotus flower",
+    "full_title": "Kamal Pushpa (Lotus flower)",
+    "dravyaguna_properties": "Astringent, cooling; destroys Pitta, Vata, burning, fever; induces sleep.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Kamal Pushpa (Lotus flower): Astringent, cooling; destroys Pitta, Vata, burning, fever; induces sleep."
+  },
+  {
+    "herb_id": "herb_059",
+    "vernacular_name": "Kankach",
+    "common_name": "Caesalpinia bonducella",
+    "full_title": "Kankach (Caesalpinia bonducella)",
+    "dravyaguna_properties": "Destroys irregular fever, abdominal diseases, hernia, hysteria, germs; bitter tonic, digestive.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Kankach (Caesalpinia bonducella): Destroys irregular fever, abdominal diseases, hernia, hysteria, germs; bitter tonic, digestive."
+  },
+  {
+    "herb_id": "herb_060",
+    "vernacular_name": "Kapas",
+    "common_name": "Cotton",
+    "full_title": "Kapas (Cotton)",
+    "dravyaguna_properties": "Root bark is blood-stanching, induces labor, stops postpartum bleeding. Seed kernel is strengthening, beneficial for diabetes.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Kapas (Cotton): Root bark is blood-stanching, induces labor, stops postpartum bleeding. Seed kernel is strengthening, beneficial for diabetes."
+  },
+  {
+    "herb_id": "herb_061",
+    "vernacular_name": "Kapur",
+    "common_name": "Camphor",
+    "full_title": "Kapur (Camphor)",
+    "dravyaguna_properties": "Destroys Kapha, Pitta, burning, thirst, poisons, fat, foul odor, convulsions, flatulence; diaphoretic, sweet, light, astringent.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Kapur (Camphor): Destroys Kapha, Pitta, burning, thirst, poisons, fat, foul odor, convulsions, flatulence; diaphoretic, sweet, light, astringent."
+  },
+  {
+    "herb_id": "herb_062",
+    "vernacular_name": "Kariyatu",
+    "common_name": "Swertia chirata",
+    "full_title": "Kariyatu (Swertia chirata)",
+    "dravyaguna_properties": "Destroys all fevers, Tridosha, liver diseases, germs, leprosy, Kapha; bitter tonic.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Kariyatu (Swertia chirata): Destroys all fevers, Tridosha, liver diseases, germs, leprosy, Kapha; bitter tonic."
+  },
+  {
+    "herb_id": "herb_063",
+    "vernacular_name": "Katho",
+    "common_name": "Catechu",
+    "full_title": "Katho (Catechu)",
+    "dravyaguna_properties": "Destroys diarrhea, mouth ulcers, voice hoarseness, syphilis; astringent, cooling, healing.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Katho (Catechu): Destroys diarrhea, mouth ulcers, voice hoarseness, syphilis; astringent, cooling, healing."
+  },
+  {
+    "herb_id": "herb_064",
+    "vernacular_name": "Keshar",
+    "common_name": "Saffron",
+    "full_title": "Keshar (Saffron)",
+    "dravyaguna_properties": "Astringent, aphrodisiac, strengthening, beneficial for eyes and brain; cures women's diseases and cold.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Keshar (Saffron): Astringent, aphrodisiac, strengthening, beneficial for eyes and brain; cures women's diseases and cold."
+  },
+  {
+    "herb_id": "herb_065",
+    "vernacular_name": "Khadsaliyo",
+    "common_name": "Pitpapdo",
+    "full_title": "Khadsaliyo (Pitpapdo)",
+    "dravyaguna_properties": "Destroys chronic skin diseases, Pitta thirst, dryness, vomiting, diarrhea, migraines, urinary heat; pacifies Pitta, diuretic.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Khadsaliyo (Pitpapdo): Destroys chronic skin diseases, Pitta thirst, dryness, vomiting, diarrhea, migraines, urinary heat; pacifies Pitta, diuretic."
+  },
+  {
+    "herb_id": "herb_066",
+    "vernacular_name": "Khair",
+    "common_name": "Gadhilo",
+    "full_title": "Khair (Gadhilo)",
+    "dravyaguna_properties": "Destroys mouth diseases and blood disorders.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Khair (Gadhilo): Destroys mouth diseases and blood disorders."
+  },
+  {
+    "herb_id": "herb_067",
+    "vernacular_name": "Khajur",
+    "common_name": "Dates",
+    "full_title": "Khajur (Dates)",
+    "dravyaguna_properties": "Destroys tuberculosis, Vata, Pitta; increases semen and flesh.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Khajur (Dates): Destroys tuberculosis, Vata, Pitta; increases semen and flesh."
+  },
+  {
+    "herb_id": "herb_068",
+    "vernacular_name": "Khakhro",
+    "common_name": "Butea monosperma",
+    "full_title": "Khakhro (Butea monosperma)",
+    "dravyaguna_properties": "Destroys tumors, dysentery, piles, voice hoarseness; digestive. Flowers are diuretic, destroy bleeding disorders, thirst, burning, gout.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Khakhro (Butea monosperma): Destroys tumors, dysentery, piles, voice hoarseness; digestive. Flowers are diuretic, destroy bleeding disorders, thirst, burning, gout."
+  },
+  {
+    "herb_id": "herb_069",
+    "vernacular_name": "Khaskhas",
+    "common_name": "Poppy seeds",
+    "full_title": "Khaskhas (Poppy seeds)",
+    "dravyaguna_properties": "Astringent, induces sleep, strengthening, increases Kapha, relieves pain, aphrodisiac.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Khaskhas (Poppy seeds): Astringent, induces sleep, strengthening, increases Kapha, relieves pain, aphrodisiac."
+  },
+  {
+    "herb_id": "herb_070",
+    "vernacular_name": "Kher",
+    "common_name": "Acacia catechu",
+    "full_title": "Kher (Acacia catechu)",
+    "dravyaguna_properties": "Destroys leprosy, erysipelas, diabetes, fat, mouth diseases, Kapha diseases, tooth diseases, blood diseases; cooling, astringent.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Kher (Acacia catechu): Destroys leprosy, erysipelas, diabetes, fat, mouth diseases, Kapha diseases, tooth diseases, blood diseases; cooling, astringent."
+  },
+  {
+    "herb_id": "herb_071",
+    "vernacular_name": "Khurasani Ajmo",
+    "common_name": "Henbane",
+    "full_title": "Khurasani Ajmo (Henbane)",
+    "dravyaguna_properties": "Induces sleep, relieves pain, diuretic; cures colic, Vata, Kapha, brain diseases.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Khurasani Ajmo (Henbane): Induces sleep, relieves pain, diuretic; cures colic, Vata, Kapha, brain diseases."
+  },
+  {
+    "herb_id": "herb_072",
+    "vernacular_name": "Kunvar",
+    "common_name": "Aloe vera",
+    "full_title": "Kunvar (Aloe vera)",
+    "dravyaguna_properties": "Destroys abdominal diseases, spleen diseases, fever, bleeding disorders, piles, skin diseases, tumors, Pitta diseases; purgative, purifying.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Kunvar (Aloe vera): Destroys abdominal diseases, spleen diseases, fever, bleeding disorders, piles, skin diseases, tumors, Pitta diseases; purgative, purifying."
+  },
+  {
+    "herb_id": "herb_073",
+    "vernacular_name": "Kushmand",
+    "common_name": "Ash gourd",
+    "full_title": "Kushmand (Ash gourd)",
+    "dravyaguna_properties": "Raw destroys Pitta. Ripe destroys Tridosha and mania, purifies stool/urine, increases semen, wholesome.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Kushmand (Ash gourd): Raw destroys Pitta. Ripe destroys Tridosha and mania, purifies stool/urine, increases semen, wholesome."
+  },
+  {
+    "herb_id": "herb_074",
+    "vernacular_name": "Kuvadio",
+    "common_name": "Cassia tora",
+    "full_title": "Kuvadio (Cassia tora)",
+    "dravyaguna_properties": "Destroys skin diseases, fever, nodes, gout; seed paste cures teething fever in children; excellent for ringworm and leprosy.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Kuvadio (Cassia tora): Destroys skin diseases, fever, nodes, gout; seed paste cures teething fever in children; excellent for ringworm and leprosy."
+  },
+  {
+    "herb_id": "herb_075",
+    "vernacular_name": "Lakh",
+    "common_name": "Lac",
+    "full_title": "Lakh (Lac)",
+    "dravyaguna_properties": "Destroys blood disorders, cough, hiccups, fever, wounds, chest wounds, tuberculosis, erysipelas, skin diseases; strengthening.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Lakh (Lac): Destroys blood disorders, cough, hiccups, fever, wounds, chest wounds, tuberculosis, erysipelas, skin diseases; strengthening."
+  },
+  {
+    "herb_id": "herb_076",
+    "vernacular_name": "Lasan",
+    "common_name": "Garlic",
+    "full_title": "Lasan (Garlic)",
+    "dravyaguna_properties": "Destroys all types of Vata; strengthening, hot.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Lasan (Garlic): Destroys all types of Vata; strengthening, hot."
+  },
+  {
+    "herb_id": "herb_077",
+    "vernacular_name": "Lavang",
+    "common_name": "Clove",
+    "full_title": "Lavang (Clove)",
+    "dravyaguna_properties": "Destroys vomiting, flatulence, colic, cough; kindles digestion, destroys Vata; specific medicine for vomiting during pregnancy.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Lavang (Clove): Destroys vomiting, flatulence, colic, cough; kindles digestion, destroys Vata; specific medicine for vomiting during pregnancy."
+  },
+  {
+    "herb_id": "herb_078",
+    "vernacular_name": "Limbdo",
+    "common_name": "Neem",
+    "full_title": "Limbdo (Neem)",
+    "dravyaguna_properties": "Bark destroys Pitta, Kapha, cold, wounds, leprosy, anorexia, fever. Fruit is purgative, hot. Whole plant is a blood purifier, destroys syphilis.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Limbdo (Neem): Bark destroys Pitta, Kapha, cold, wounds, leprosy, anorexia, fever. Fruit is purgative, hot. Whole plant is a blood purifier, destroys syphilis."
+  },
+  {
+    "herb_id": "herb_079",
+    "vernacular_name": "Limbu",
+    "common_name": "Lemon",
+    "full_title": "Limbu (Lemon)",
+    "dravyaguna_properties": "Destroys vomiting, nausea, indigestion, bad heat; kindles digestion, pacifies Pitta, cooling.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Limbu (Lemon): Destroys vomiting, nausea, indigestion, bad heat; kindles digestion, pacifies Pitta, cooling."
+  },
+  {
+    "herb_id": "herb_080",
+    "vernacular_name": "Loban",
+    "common_name": "Benzoin",
+    "full_title": "Loban (Benzoin)",
+    "dravyaguna_properties": "Destroys urinary heat, Kapha, cough, tuberculosis, asthma, bad wounds; healing, stops bleeding.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Loban (Benzoin): Destroys urinary heat, Kapha, cough, tuberculosis, asthma, bad wounds; healing, stops bleeding."
+  },
+  {
+    "herb_id": "herb_081",
+    "vernacular_name": "Majith",
+    "common_name": "Rubia cordifolia",
+    "full_title": "Majith (Rubia cordifolia)",
+    "dravyaguna_properties": "Destroys cold, swelling, blood disorders, bloody diarrhea, leprosy, wounds, fat; enhances complexion, cooling, pacifies Pitta.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Majith (Rubia cordifolia): Destroys cold, swelling, blood disorders, bloody diarrhea, leprosy, wounds, fat; enhances complexion, cooling, pacifies Pitta."
+  },
+  {
+    "herb_id": "herb_082",
+    "vernacular_name": "Mari",
+    "common_name": "Black pepper",
+    "full_title": "Mari (Black pepper)",
+    "dravyaguna_properties": "Improves taste, kindles digestion, hot, increases Pitta; destroys asthma, colic, germs, Kapha, and Vata.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": true,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Mari (Black pepper): Improves taste, kindles digestion, hot, increases Pitta; destroys asthma, colic, germs, Kapha, and Vata."
+  },
+  {
+    "herb_id": "herb_083",
+    "vernacular_name": "Mushali",
+    "common_name": "Safed Musli",
+    "full_title": "Mushali (Safed Musli)",
+    "dravyaguna_properties": "Primary aphrodisiac and strengthening agent; beneficial for all types of weakness, diabetes, painful menses; nourishes body and tissues.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Mushali (Safed Musli): Primary aphrodisiac and strengthening agent; beneficial for all types of weakness, diabetes, painful menses; nourishes body and tissues."
+  },
+  {
+    "herb_id": "herb_084",
+    "vernacular_name": "Nagarvel",
+    "common_name": "Betel leaf",
+    "full_title": "Nagarvel (Betel leaf)",
+    "dravyaguna_properties": "Destroys Vata, hot, digestive; cures nausea, anorexia, bad breath, lethargy; used to cure colds and bring heat to the body.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Nagarvel (Betel leaf): Destroys Vata, hot, digestive; cures nausea, anorexia, bad breath, lethargy; used to cure colds and bring heat to the body."
+  },
+  {
+    "herb_id": "herb_085",
+    "vernacular_name": "Nagod",
+    "common_name": "Nirgundi",
+    "full_title": "Nagod (Nirgundi)",
+    "dravyaguna_properties": "Destroys goiter, glandular swellings, Vata diseases. Leaves ripen boils, destroy germs. Oil from leaves is beneficial for bad wounds, fistulas.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Nagod (Nirgundi): Destroys goiter, glandular swellings, Vata diseases. Leaves ripen boils, destroy germs. Oil from leaves is beneficial for bad wounds, fistulas."
+  },
+  {
+    "herb_id": "herb_086",
+    "vernacular_name": "Narangi",
+    "common_name": "Orange",
+    "full_title": "Narangi (Orange)",
+    "dravyaguna_properties": "Beneficial for indigestion, bad heat, skin diseases, thirst, nausea, bleeding gums, burning hands/feet; cooling, destroys Pitta; regular use cures blood disorders.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Narangi (Orange): Beneficial for indigestion, bad heat, skin diseases, thirst, nausea, bleeding gums, burning hands/feet; cooling, destroys Pitta; regular use cures blood disorders."
+  },
+  {
+    "herb_id": "herb_087",
+    "vernacular_name": "Nasetar",
+    "common_name": "Trivrit",
+    "full_title": "Nasetar (Trivrit)",
+    "dravyaguna_properties": "Purgative; useful for purifying in liver ascites, germs, swelling, headaches, increased appetite, dry skin, Vata diseases.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Nasetar (Trivrit): Purgative; useful for purifying in liver ascites, germs, swelling, headaches, increased appetite, dry skin, Vata diseases."
+  },
+  {
+    "herb_id": "herb_088",
+    "vernacular_name": "Patol",
+    "common_name": "Pointed gourd",
+    "full_title": "Patol (Pointed gourd)",
+    "dravyaguna_properties": "Beneficial for Vata diseases, fever, abdominal diseases, jaundice, semen discharge, skin diseases; purgative, purifying.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Patol (Pointed gourd): Beneficial for Vata diseases, fever, abdominal diseases, jaundice, semen discharge, skin diseases; purgative, purifying."
+  },
+  {
+    "herb_id": "herb_089",
+    "vernacular_name": "Pipar",
+    "common_name": "Long pepper",
+    "full_title": "Pipar (Long pepper)",
+    "dravyaguna_properties": "Destroys Vata, cold, cough, asthma; kindles digestion, purgative, hot.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Pipar (Long pepper): Destroys Vata, cold, cough, asthma; kindles digestion, purgative, hot."
+  },
+  {
+    "herb_id": "herb_090",
+    "vernacular_name": "Ral",
+    "common_name": "Pine resin",
+    "full_title": "Ral (Pine resin)",
+    "dravyaguna_properties": "Destroys corrupted blood, erysipelas, fever, wounds, burns, flank pain; specific medicine for diarrhea.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Ral (Pine resin): Destroys corrupted blood, erysipelas, fever, wounds, burns, flank pain; specific medicine for diarrhea."
+  },
+  {
+    "herb_id": "herb_091",
+    "vernacular_name": "Rasvanti",
+    "common_name": "Daruhaladar extract",
+    "full_title": "Rasvanti (Daruhaladar extract)",
+    "dravyaguna_properties": "Properties similar to Daruhaladar; useful for piles, bleeding, leucorrhea.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Rasvanti (Daruhaladar extract): Properties similar to Daruhaladar; useful for piles, bleeding, leucorrhea."
+  },
+  {
+    "herb_id": "herb_092",
+    "vernacular_name": "Salam",
+    "common_name": "Salep orchid",
+    "full_title": "Salam (Salep orchid)",
+    "dravyaguna_properties": "Destroys impotence, weakness, all Vata diseases; nourishes tissues.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Salam (Salep orchid): Destroys impotence, weakness, all Vata diseases; nourishes tissues."
+  },
+  {
+    "herb_id": "herb_093",
+    "vernacular_name": "Saragvo",
+    "common_name": "Drumstick",
+    "full_title": "Saragvo (Drumstick)",
+    "dravyaguna_properties": "Destroys weak digestion, liver disorders, swelling, spleen diseases, abscesses, Vata; beneficial for eyes.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Saragvo (Drumstick): Destroys weak digestion, liver disorders, swelling, spleen diseases, abscesses, Vata; beneficial for eyes."
+  },
+  {
+    "herb_id": "herb_094",
+    "vernacular_name": "Satvin",
+    "common_name": "Alstonia scholaris",
+    "full_title": "Satvin (Alstonia scholaris)",
+    "dravyaguna_properties": "Destroys fever, Vata, Pitta, cough, postpartum fever; astringent.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Satvin (Alstonia scholaris): Destroys fever, Vata, Pitta, cough, postpartum fever; astringent."
+  },
+  {
+    "herb_id": "herb_095",
+    "vernacular_name": "Sherdi",
+    "common_name": "Sugarcane",
+    "full_title": "Sherdi (Sugarcane)",
+    "dravyaguna_properties": "Destroys liver ascites, spleen ascites, swelling, anemia, jaundice, all Pitta diseases, bladder diseases.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Sherdi (Sugarcane): Destroys liver ascites, spleen ascites, swelling, anemia, jaundice, all Pitta diseases, bladder diseases."
+  },
+  {
+    "herb_id": "herb_096",
+    "vernacular_name": "Sonamukhi",
+    "common_name": "Senna",
+    "full_title": "Sonamukhi (Senna)",
+    "dravyaguna_properties": "Destroys liver/spleen diseases, polyuria, irregular fever, jaundice; blood purifier, purgative.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Sonamukhi (Senna): Destroys liver/spleen diseases, polyuria, irregular fever, jaundice; blood purifier, purgative."
+  },
+  {
+    "herb_id": "herb_097",
+    "vernacular_name": "Sua",
+    "common_name": "Dill",
+    "full_title": "Sua (Dill)",
+    "dravyaguna_properties": "Destroys Vata, digestive; cures indigestion, colic, stomach ache, children's stomach pain, vomiting, hiccups; induces menses.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Sua (Dill): Destroys Vata, digestive; cures indigestion, colic, stomach ache, children's stomach pain, vomiting, hiccups; induces menses."
+  },
+  {
+    "herb_id": "herb_098",
+    "vernacular_name": "Sunth",
+    "common_name": "Dry ginger",
+    "full_title": "Sunth (Dry ginger)",
+    "dravyaguna_properties": "Destroys colic, Ama, Kapha, Vata; kindles digestion, astringent, beneficial for postpartum women.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Sunth (Dry ginger): Destroys colic, Ama, Kapha, Vata; kindles digestion, astringent, beneficial for postpartum women."
+  },
+  {
+    "herb_id": "herb_099",
+    "vernacular_name": "Suran",
+    "common_name": "Elephant foot yam",
+    "full_title": "Suran (Elephant foot yam)",
+    "dravyaguna_properties": "Beneficial for indigestion, fistula, spleen diseases; purifying; specific medicine for piles.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Suran (Elephant foot yam): Beneficial for indigestion, fistula, spleen diseases; purifying; specific medicine for piles."
+  },
+  {
+    "herb_id": "herb_100",
+    "vernacular_name": "Taj",
+    "common_name": "Cinnamon",
+    "full_title": "Taj (Cinnamon)",
+    "dravyaguna_properties": "Destroys fever-related pains, nausea, vomiting, cold; beneficial for all Vata aggravations; hot, digestive.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Taj (Cinnamon): Destroys fever-related pains, nausea, vomiting, cold; beneficial for all Vata aggravations; hot, digestive."
+  },
+  {
+    "herb_id": "herb_101",
+    "vernacular_name": "Tal",
+    "common_name": "Sesame",
+    "full_title": "Tal (Sesame)",
+    "dravyaguna_properties": "Strengthening, increases milk, diuretic, induces menses; beneficial for piles. Oil is beneficial for skin, body, hair, ears.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Tal (Sesame): Strengthening, increases milk, diuretic, induces menses; beneficial for piles. Oil is beneficial for skin, body, hair, ears."
+  },
+  {
+    "herb_id": "herb_102",
+    "vernacular_name": "Tulsi",
+    "common_name": "Holy basil",
+    "full_title": "Tulsi (Holy basil)",
+    "dravyaguna_properties": "Destroys Kapha, leprosy, side/flank pain, germs, fever, Vata aggravation. Black Tulsi destroys vomiting and hyperacidity; hot.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Tulsi (Holy basil): Destroys Kapha, leprosy, side/flank pain, germs, fever, Vata aggravation. Black Tulsi destroys vomiting and hyperacidity; hot."
+  },
+  {
+    "herb_id": "herb_103",
+    "vernacular_name": "Uplet",
+    "common_name": "Kuth",
+    "full_title": "Uplet (Kuth)",
+    "dravyaguna_properties": "Destroys germs, indigestion, skin diseases, cold, asthma, cough; strengthening, diuretic, induces menses.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Uplet (Kuth): Destroys germs, indigestion, skin diseases, cold, asthma, cough; strengthening, diuretic, induces menses."
+  },
+  {
+    "herb_id": "herb_104",
+    "vernacular_name": "Vad",
+    "common_name": "Banyan",
+    "full_title": "Vad (Banyan)",
+    "dravyaguna_properties": "Bark is astringent. Fruit is cold and strengthening. Washing wounds with its decoction purifies and heals them.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Vad (Banyan): Bark is astringent. Fruit is cold and strengthening. Washing wounds with its decoction purifies and heals them."
+  },
+  {
+    "herb_id": "herb_105",
+    "vernacular_name": "Vaj",
+    "common_name": "Acorus calamus",
+    "full_title": "Vaj (Acorus calamus)",
+    "dravyaguna_properties": "Destroys indigestion, epilepsy, absent menses, swelling; induces vomiting, specific medicine for children's diseases; destroys Vata, increases intelligence.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Vaj (Acorus calamus): Destroys indigestion, epilepsy, absent menses, swelling; induces vomiting, specific medicine for children's diseases; destroys Vata, increases intelligence."
+  },
+  {
+    "herb_id": "herb_106",
+    "vernacular_name": "Valo",
+    "common_name": "Vetiver",
+    "full_title": "Valo (Vetiver)",
+    "dravyaguna_properties": "Beneficial for fever heat, thirst, urinary heat, diabetes, erysipelas; purifying, cooling, pacifies Pitta.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Valo (Vetiver): Beneficial for fever heat, thirst, urinary heat, diabetes, erysipelas; purifying, cooling, pacifies Pitta."
+  },
+  {
+    "herb_id": "herb_107",
+    "vernacular_name": "Vanshlochan",
+    "common_name": "Bamboo manna",
+    "full_title": "Vanshlochan (Bamboo manna)",
+    "dravyaguna_properties": "Highly beneficial for Pitta-dominant diseases, cough, asthma, tuberculosis; cooling, strengthening, gives virility; destroys fever, anemia, Vata, thirst, bleeding disorders.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": true,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Vanshlochan (Bamboo manna): Highly beneficial for Pitta-dominant diseases, cough, asthma, tuberculosis; cooling, strengthening, gives virility; destroys fever, anemia, Vata, thirst, bleeding disorders."
+  },
+  {
+    "herb_id": "herb_108",
+    "vernacular_name": "Variyali",
+    "common_name": "Fennel",
+    "full_title": "Variyali (Fennel)",
+    "dravyaguna_properties": "Destroys colic, flatulence, vomiting, Vata; digestive.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Variyali (Fennel): Destroys colic, flatulence, vomiting, Vata; digestive."
+  },
+  {
+    "herb_id": "herb_109",
+    "vernacular_name": "Varuno",
+    "common_name": "Crataeva nurvala",
+    "full_title": "Varuno (Crataeva nurvala)",
+    "dravyaguna_properties": "Destroys Vata, Kapha, dysuria, stones; purifies the bladder.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Varuno (Crataeva nurvala): Destroys Vata, Kapha, dysuria, stones; purifies the bladder."
+  },
+  {
+    "herb_id": "herb_110",
+    "vernacular_name": "Abhrak",
+    "common_name": "Mica",
+    "full_title": "Abhrak (Mica)",
+    "dravyaguna_properties": "Rejuvenating, increases complexion/semen, strengthens the body; destroys diabetes, leprosy, spleen/abdominal diseases, wounds, poisons, swelling, and germs.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Abhrak (Mica): Rejuvenating, increases complexion/semen, strengthens the body; destroys diabetes, leprosy, spleen/abdominal diseases, wounds, poisons, swelling, and germs."
+  },
+  {
+    "herb_id": "herb_111",
+    "vernacular_name": "Afiin",
+    "common_name": "Opium",
+    "full_title": "Afiin (Opium)",
+    "dravyaguna_properties": "Astringent, destroys Kapha, increases Vata/Pitta; cures convulsions, induces sleep, intoxicating, pain reliever; cures cough, vomiting, bleeding, asthma, and polyuria.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": true,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Afiin (Opium): Astringent, destroys Kapha, increases Vata/Pitta; cures convulsions, induces sleep, intoxicating, pain reliever; cures cough, vomiting, bleeding, asthma, and polyuria."
+  },
+  {
+    "herb_id": "herb_112",
+    "vernacular_name": "Bhilama",
+    "common_name": "Marking nut",
+    "full_title": "Bhilama (Marking nut)",
+    "dravyaguna_properties": "Highly rejuvenating, destroys germs and Vata, increases strength; cures tumors, piles, sprue, leprosy, trauma, colic, cholera, and flatulence.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Bhilama (Marking nut): Highly rejuvenating, destroys germs and Vata, increases strength; cures tumors, piles, sprue, leprosy, trauma, colic, cholera, and flatulence."
+  },
+  {
+    "herb_id": "herb_113",
+    "vernacular_name": "Gandhak",
+    "common_name": "Sulphur",
+    "full_title": "Gandhak (Sulphur)",
+    "dravyaguna_properties": "Extreme rejuvenator; cures scabies, erysipelas, germs, leprosy, tuberculosis, spleen issues, Kapha, and Vata; digests toxins, destroys poisons; enhances Mercury's properties.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Gandhak (Sulphur): Extreme rejuvenator; cures scabies, erysipelas, germs, leprosy, tuberculosis, spleen issues, Kapha, and Vata; digests toxins, destroys poisons; enhances Mercury's properties."
+  },
+  {
+    "herb_id": "herb_114",
+    "vernacular_name": "Loh",
+    "common_name": "Iron",
+    "full_title": "Loh (Iron)",
+    "dravyaguna_properties": "Increases strength/nourishment; destroys tumors, abdominal diseases, colic, anemia, jaundice, and all Vata diseases.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Loh (Iron): Increases strength/nourishment; destroys tumors, abdominal diseases, colic, anemia, jaundice, and all Vata diseases."
+  },
+  {
+    "herb_id": "herb_115",
+    "vernacular_name": "Parad",
+    "common_name": "Mercury",
+    "full_title": "Parad (Mercury)",
+    "dravyaguna_properties": "Supreme rejuvenator (Rasayan); destroys all three Doshas; increases vitality, strength, intelligence, and vision; cures all diseases.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Parad (Mercury): Supreme rejuvenator (Rasayan); destroys all three Doshas; increases vitality, strength, intelligence, and vision; cures all diseases."
+  },
+  {
+    "herb_id": "herb_116",
+    "vernacular_name": "Somal",
+    "common_name": "Arsenic",
+    "full_title": "Somal (Arsenic)",
+    "dravyaguna_properties": "Purifying, cures fever; destroys gout, leprosy, anemia, tuberculosis, asthma, Vata diseases, and blood disorders; extremely potent poison.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": true,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Somal (Arsenic): Purifying, cures fever; destroys gout, leprosy, anemia, tuberculosis, asthma, Vata diseases, and blood disorders; extremely potent poison."
+  },
+  {
+    "herb_id": "herb_117",
+    "vernacular_name": "Suvarna",
+    "common_name": "Gold",
+    "full_title": "Suvarna (Gold)",
+    "dravyaguna_properties": "Cooling, strengthening, rejuvenating; destroys tuberculosis, mania, and Tridosha.",
+    "thermal_energy": "Cold (Sheetal)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Suvarna (Gold): Cooling, strengthening, rejuvenating; destroys tuberculosis, mania, and Tridosha."
+  },
+  {
+    "herb_id": "herb_118",
+    "vernacular_name": "Tamra",
+    "common_name": "Copper",
+    "full_title": "Tamra (Copper)",
+    "dravyaguna_properties": "Purgative, destroys Pitta/Kapha, healing; cures anemia, piles, colic, asthma, liver/spleen diseases.",
+    "thermal_energy": "Neutral",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": true,
+      "pacifies_kapha": true
+    },
+    "searchable_summary": "Tamra (Copper): Purgative, destroys Pitta/Kapha, healing; cures anemia, piles, colic, asthma, liver/spleen diseases."
+  },
+  {
+    "herb_id": "herb_119",
+    "vernacular_name": "Vachhnag",
+    "common_name": "Aconite",
+    "full_title": "Vachhnag (Aconite)",
+    "dravyaguna_properties": "Pungent, hot, penetrating; destroys Tridosha, abdominal diseases, asthma, cough, poisons, rheumatism, colic, piles, tumors, leprosy, and fever.",
+    "thermal_energy": "Hot (Ushna)",
+    "dosha_balance": {
+      "pacifies_vata": false,
+      "pacifies_pitta": false,
+      "pacifies_kapha": false
+    },
+    "searchable_summary": "Vachhnag (Aconite): Pungent, hot, penetrating; destroys Tridosha, abdominal diseases, asthma, cough, poisons, rheumatism, colic, piles, tumors, leprosy, and fever."
+  }
+]

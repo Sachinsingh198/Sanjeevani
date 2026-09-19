@@ -24,6 +24,22 @@ class HybridRemedyStore:
         else:
             self.docx_remedies_path = docx_cand
 
+        vc_cand = "DATA/vaidya_chikitsa_curated.json"
+        if not os.path.exists(vc_cand) and os.path.exists(os.path.join("backend", vc_cand)):
+            self.vaidya_chikitsa_path = os.path.join("backend", vc_cand)
+        else:
+            self.vaidya_chikitsa_path = vc_cand
+
+        herbs_cand = "DATA/botanical_herbs_curated.json"
+        if not os.path.exists(herbs_cand) and os.path.exists(os.path.join("backend", herbs_cand)):
+            self.botanical_herbs_path = os.path.join("backend", herbs_cand)
+        else:
+            self.botanical_herbs_path = herbs_cand
+
+        # Load Botanical Herbs Dravyaguna lookup map
+        self.herbs_lookup: Dict[str, Dict[str, Any]] = {}
+        self._load_botanical_herbs()
+
         self.collection_name = settings.QDRANT_COLLECTION_NAME
         self.garhwali_collection_name = "sanjeevani_garhwali"
         self.garhwali_data_dir = "DATA/Garhwali" if os.path.exists("DATA/Garhwali") else os.path.join("backend", "DATA", "Garhwali")
@@ -66,11 +82,36 @@ class HybridRemedyStore:
             self._initialize_and_seed()
             self._initialize_and_seed_garhwali()
 
+    def _load_botanical_herbs(self):
+        """Loads curated medicinal herbs with their Dravyaguna energetic profiles."""
+        if not os.path.exists(self.botanical_herbs_path):
+            try:
+                from app.core.ayush_knowledge_curator import build_and_save_curated_knowledge
+                build_and_save_curated_knowledge()
+            except Exception as e:
+                print(f"[Qdrant Curator] Notice: could not auto-build curated knowledge: {e}")
+
+        if os.path.exists(self.botanical_herbs_path):
+            try:
+                with open(self.botanical_herbs_path, "r", encoding="utf-8") as f:
+                    herbs = json.load(f)
+                    for h in herbs:
+                        v_name = h.get("vernacular_name", "").strip().lower()
+                        c_name = h.get("common_name", "").strip().lower()
+                        if v_name:
+                            self.herbs_lookup[v_name] = h
+                        if c_name:
+                            self.herbs_lookup[c_name] = h
+                print(f"[Qdrant] Loaded {len(herbs)} botanical Dravyaguna herbs into memory.")
+            except Exception as e:
+                print(f"[Qdrant Error] Failed loading botanical herbs: {e}")
+
     def load_all_remedies(self) -> List[Dict[str, Any]]:
         """
-        Loads and combines remedies from both sources:
+        Loads and combines remedies from verified sources:
         1. CCRAS & AYUSH base remedies (DATA/remedies_dataset.json)
         2. Classical Ayurveda Treatise formulations (DATA/Ayush/ayurveda_1.docx)
+        3. Curated Vaidya Chikitsa clinical ailments (DATA/vaidya_chikitsa_curated.json)
         """
         all_remedies: List[Dict[str, Any]] = []
         seen_names = set()
@@ -84,6 +125,7 @@ class HybridRemedyStore:
                         name_key = item.get("remedy_name", "").strip().lower()
                         if name_key and name_key not in seen_names:
                             seen_names.add(name_key)
+                            item["safety_tier"] = "household_safe"
                             all_remedies.append(item)
             except Exception as e:
                 print(f"[Qdrant Error] Failed reading base remedies {self.data_path}: {e}")
@@ -105,6 +147,33 @@ class HybridRemedyStore:
                 print(f"[Qdrant Error] Failed extracting docx remedies: {e}")
 
         for item in docx_items:
+            name_key = item.get("remedy_name", "").strip().lower()
+            if name_key and name_key not in seen_names:
+                seen_names.add(name_key)
+                item["safety_tier"] = "household_safe"
+                all_remedies.append(item)
+
+        # 3. Curated Vaidya Chikitsa Ailments
+        vc_items: List[Dict[str, Any]] = []
+        if not os.path.exists(self.vaidya_chikitsa_path):
+            try:
+                from app.core.ayush_knowledge_curator import build_and_save_curated_knowledge
+                build_and_save_curated_knowledge()
+            except Exception as e:
+                print(f"[Qdrant Curator] Notice: could not auto-build Vaidya Chikitsa: {e}")
+
+        if os.path.exists(self.vaidya_chikitsa_path):
+            try:
+                with open(self.vaidya_chikitsa_path, "r", encoding="utf-8") as f:
+                    vc_items = json.load(f)
+            except Exception as e:
+                print(f"[Qdrant Error] Failed reading Vaidya Chikitsa JSON: {e}")
+
+        for item in vc_items:
+            # SAFETY RULE: Never index clinical emergencies as home remedies!
+            if item.get("safety_tier") == "clinical_emergency":
+                continue
+
             name_key = item.get("remedy_name", "").strip().lower()
             if name_key and name_key not in seen_names:
                 seen_names.add(name_key)
@@ -137,7 +206,7 @@ class HybridRemedyStore:
             print(f"[Qdrant] Collection '{self.collection_name}' is fully up to date with {points_count} indexed points.")
 
     def seed_dataset(self, force: bool = False):
-        """Loads all remedies (base + docx), generates embeddings, and upserts them into Qdrant."""
+        """Loads all remedies, generates embeddings on clinical indications, and upserts them into Qdrant."""
         remedies = self.load_all_remedies()
         if not remedies:
             print("[Qdrant Error] No remedies found to seed.")
@@ -148,14 +217,16 @@ class HybridRemedyStore:
         ids: List[int] = []
 
         for idx, item in enumerate(remedies):
-            keywords_str = " ".join(item.get("keywords", []))
-            search_text = (
-                f"Condition: {item.get('condition_name', '')} | "
-                f"Keywords: {keywords_str} | "
-                f"Remedy: {item.get('remedy_name', '')} | "
-                f"Instructions: {item.get('remedy_text', '')} | "
-                f"Source: {item.get('source', '')}"
-            )
+            # Sharp search embedding focused on clinical indications & symptoms
+            search_text = item.get("searchable_text")
+            if not search_text:
+                keywords_str = " ".join(item.get("keywords", []))
+                search_text = (
+                    f"Condition: {item.get('condition_name', item.get('remedy_name', ''))} | "
+                    f"Keywords: {keywords_str} | "
+                    f"Remedy: {item.get('remedy_name', '')} | "
+                    f"Symptoms: {', '.join(item.get('symptoms', []))}"
+                )
             search_texts.append(search_text)
             payloads.append(item)
             ids.append(idx + 1)
@@ -186,9 +257,33 @@ class HybridRemedyStore:
 
         print(f"[Qdrant] Successfully uploaded and indexed {total_upserted} vector points in '{self.collection_name}'.")
 
-    def search_remedies(self, query_text: str, limit: int = 2) -> List[Dict[str, Any]]:
+    def _enrich_with_botanicals(self, remedy: Dict[str, Any]) -> Dict[str, Any]:
+        """Matches ingredients or text against Dravyaguna herbs and attaches energetic profiles."""
+        if not self.herbs_lookup:
+            return remedy
+
+        text_to_search = f"{remedy.get('remedy_name', '')} {remedy.get('preparation', '')} {remedy.get('ingredients', '')}".lower()
+        matched_herbs = []
+
+        for herb_key, herb_data in self.herbs_lookup.items():
+            if len(herb_key) > 3 and re.search(r'\b' + re.escape(herb_key) + r'\b', text_to_search):
+                matched_herbs.append({
+                    "name": herb_data.get("full_title"),
+                    "thermal_energy": herb_data.get("thermal_energy"),
+                    "properties": herb_data.get("dravyaguna_properties")
+                })
+                if len(matched_herbs) >= 2:
+                    break
+
+        enriched = dict(remedy)
+        if matched_herbs:
+            enriched["matched_botanicals"] = matched_herbs
+        return enriched
+
+    def search_remedies(self, query_text: str, limit: int = 2, min_score: float = 0.30) -> List[Dict[str, Any]]:
         """
-        Embeds the query text and retrieves top matching remedies from Qdrant.
+        Embeds the query text and retrieves top matching remedies from Qdrant,
+        filtering by minimum similarity score and enriching with Dravyaguna properties.
         """
         try:
             query_embedding = list(self.embedding_model.embed([query_text]))[0].tolist()
@@ -196,10 +291,24 @@ class HybridRemedyStore:
             search_result = self.client.query_points(
                 collection_name=self.collection_name,
                 query=query_embedding,
-                limit=limit
+                limit=limit * 2  # fetch slightly more to filter
             )
 
-            return [point.payload for point in search_result.points if point.payload]
+            matched = []
+            for point in search_result.points:
+                if not point.payload:
+                    continue
+                # Score threshold filter
+                if hasattr(point, "score") and point.score is not None and point.score < min_score:
+                    continue
+                
+                enriched = self._enrich_with_botanicals(point.payload)
+                enriched["similarity_score"] = getattr(point, "score", None)
+                matched.append(enriched)
+                if len(matched) >= limit:
+                    break
+
+            return matched
         except Exception as e:
             print(f"[Qdrant Search Error]: {e}")
             return []

@@ -26,7 +26,20 @@ Sanjeevani implements a **Hybrid Retrieval-Augmented Generation (RAG)** store in
 │  - Formulations: Classical polyherbal preparations (Kashayam, Churna,  │
 │    Vati, Asava) extracted into structured JSON.                        │
 ├────────────────────────────────────────────────────────────────────────┤
-│  Source 3: Garhwali Regional Dialect Lexicon                           │
+│  Source 3: Vaidya Chikitsa Clinical Ailments (114 Chapters)            │
+│  - Document: DATA/Ayush/vaidya_chikitsha.docx                          │
+│  - Curator: app/core/ayush_knowledge_curator.py                        │
+│  - Dataset: DATA/vaidya_chikitsa_curated.json (72 Household-Safe,      │
+│    19 Require Consultation, 23 Clinical Emergencies segregated).       │
+│  - Attributes: Causes, Symptoms, General Treatment, Diet (Pathya).     │
+├────────────────────────────────────────────────────────────────────────┤
+│  Source 4: Dravyaguna Botanical Herbs (119 Medicinal Plants)           │
+│  - Document: DATA/Ayush/BotanicalHerb.docx                             │
+│  - Dataset: DATA/botanical_herbs_curated.json                          │
+│  - Attributes: Vernacular names, Hot/Cold thermal energy, Dosha balance│
+│    (Vata, Pitta, Kapha), and therapeutic organ benefits.               │
+├────────────────────────────────────────────────────────────────────────┤
+│  Source 5: Garhwali Regional Dialect Lexicon                           │
 │  - Directory: DATA/Garhwali/                                           │
 │  - Content: Mapping of mountain colloquial health complaints to       │
 │    clinical terms (e.g. mund dard ➔ headache, pet chhutna ➔ diarrhea).│
