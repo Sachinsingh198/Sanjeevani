@@ -38,7 +38,16 @@ async def process_chat_message(req: ChatRequest):
 
         # Checkpointed execution — the same thread_id (conversation_id) is used
         # on every subsequent turn so LangGraph restores and advances the phase.
-        config = {"configurable": {"thread_id": req.conversation_id}}
+        config = {
+            "configurable": {"thread_id": req.conversation_id},
+            "run_name": f"Sanjeevani Consultation ({req.conversation_id[:8]})",
+            "tags": ["sanjeevani", "clinical-triage", req.language_hint or "auto"],
+            "metadata": {
+                "conversation_id": req.conversation_id,
+                "voice_mode": req.include_audio,
+                "language_hint": req.language_hint,
+            },
+        }
         result = sanjeevani_workflow.invoke(initial_state, config=config)
 
         # Format remedies matching the API contract

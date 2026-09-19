@@ -4,7 +4,7 @@ import re
 import hashlib
 import asyncio
 import httpx
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, AsyncGenerator
 from app.config import settings
 from app.core.bhashini_engine import BhashiniVoiceEngine
 
@@ -48,8 +48,9 @@ class IndicTTSEngine:
     """
     High-fidelity backend Text-to-Speech engine.
     Supports:
-    1. Official Bhashini / AI4Bharat ULCA Inference Pipeline API (when credentials are provided).
-    2. Neural Indian Accent Voice Engine (edge-tts) for 100% natural, authentic Indian accent
+    1. Sarvam AI (bulbul:v3) full and chunked streaming speech synthesis.
+    2. Official Bhashini / AI4Bharat ULCA Inference Pipeline API (when credentials are provided).
+    3. Neural Indian Accent Voice Engine (edge-tts) for 100% natural, authentic Indian accent
        without robotic artifacts or latency.
     """
     def __init__(self):
@@ -59,11 +60,12 @@ class IndicTTSEngine:
         self.bhashini_inference_key = os.getenv("BHASHINI_INFERENCE_KEY", "")
         self.bhashini_endpoint = "https://dhruva-api.bhashini.gov.in/services/inference/pipeline"
         self._client: Optional[httpx.AsyncClient] = None
+        self.last_provider: str = "sarvam" if settings.TTS_PROVIDER == "sarvam" else "neural_indic"
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
             self._client = httpx.AsyncClient(
-                timeout=12.0,
+                timeout=18.0,
                 limits=httpx.Limits(max_keepalive_connections=10, max_connections=20, keepalive_expiry=120.0),
             )
         return self._client
@@ -209,7 +211,6 @@ class IndicTTSEngine:
             print(f"[Neural Indic TTS Error]: {e}")
             return None
 
-
     def _chunk_text_for_sarvam(self, text: str, max_chunk_len: int = 450) -> List[str]:
         """
         Splits text into chunks of <= max_chunk_len characters on sentence or word
@@ -301,6 +302,81 @@ class IndicTTSEngine:
             print(f"[Sarvam AI TTS Error]: {e}")
 
         return None
+
+    async def _synthesize_sarvam_stream(
+        self, text: str, language: str = "hi", gender: str = "female"
+    ) -> AsyncGenerator[bytes, None]:
+        """
+        Synthesizes speech via Sarvam AI's streaming text-to-speech endpoint,
+        yielding audio chunks as they arrive for low-latency playback.
+        """
+        api_key = settings.SARVAM_API_KEY or os.getenv("SARVAM_API_KEY", "")
+        if not api_key or not api_key.strip():
+            return
+
+        lang_lower = language.lower()
+        if lang_lower in ("en", "english"):
+            target_lang = "en-IN"
+            speaker = "shreya" if gender == "female" else "rahul"
+        else:
+            target_lang = "hi-IN"
+            speaker = settings.SARVAM_FEMALE_SPEAKER if gender == "female" else settings.SARVAM_MALE_SPEAKER
+
+        url = "https://api.sarvam.ai/text-to-speech/stream"
+        headers = {
+            "api-subscription-key": api_key.strip(),
+            "Content-Type": "application/json",
+        }
+
+        chunks = self._chunk_text_for_sarvam(text, max_chunk_len=450)
+        client = self._get_client()
+
+        for chunk_text in chunks:
+            payload = {
+                "text": chunk_text,
+                "target_language_code": target_lang,
+                "speaker": speaker,
+                "pace": 1.0,
+                "speech_sample_rate": 22050,
+                "model": settings.SARVAM_TTS_MODEL or "bulbul:v3",
+            }
+            try:
+                async with client.stream("POST", url, json=payload, headers=headers) as response:
+                    if response.status_code == 200:
+                        async for chunk_bytes in response.aiter_bytes():
+                            if chunk_bytes:
+                                yield chunk_bytes
+                    else:
+                        err_text = await response.aread()
+                        print(f"[Sarvam Streaming TTS] Chunk error {response.status_code}: {err_text.decode('utf-8', errors='ignore')}")
+            except Exception as e:
+                print(f"[Sarvam Streaming TTS Exception]: {e}")
+
+    async def synthesize_stream(
+        self, text: str, language: str = "hi", gender: str = "female"
+    ) -> AsyncGenerator[bytes, None]:
+        """
+        Main streaming entry point:
+        Streams audio chunks using Sarvam AI streaming endpoint if available,
+        or falls back to complete synthesis chunk yield.
+        """
+        clean_text = self._clean_for_speech(text)
+        if not clean_text:
+            clean_text = "Namaste."
+
+        streamed = False
+        if settings.TTS_PROVIDER == "sarvam" or os.getenv("SARVAM_API_KEY"):
+            try:
+                async for chunk in self._synthesize_sarvam_stream(clean_text, language=language, gender=gender):
+                    streamed = True
+                    self.last_provider = "sarvam_stream"
+                    yield chunk
+            except Exception as stream_err:
+                print(f"[Synthesize Stream Fallback]: {stream_err}")
+
+        if not streamed:
+            audio_bytes, _ = await self.synthesize(clean_text, language=language, gender=gender)
+            yield audio_bytes
 
     async def synthesize(self, text: str, language: str = "hi", gender: str = "female") -> Tuple[bytes, str]:
         """

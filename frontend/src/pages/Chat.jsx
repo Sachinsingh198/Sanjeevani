@@ -18,7 +18,7 @@ import StructuredBotMessage from '../components/StructuredBotMessage';
 import {
   sendChatMessage, getOrCreateConversationId, resetConversationId, checkBackendHealth,
 } from '../api/client';
-import { speakText } from '../api/voiceClient';
+import { speakText, transcribeAudio } from '../api/voiceClient';
 import { downloadConsultationReport } from '../api/reportsClient';
 import { listSessions, clearSessionHistory, recordSessionTurn } from '../lib/sessionStore';
 
@@ -68,10 +68,13 @@ export default function Chat() {
   const [sessions, setSessions]             = useState([]);
 
   /* Refs */
-  const chatEndRef      = useRef(null);
-  const inputRef        = useRef(null);
-  const recognitionRef  = useRef(null);
-  const stopSpeakingRef = useRef(null);
+  const chatEndRef        = useRef(null);
+  const inputRef          = useRef(null);
+  const recognitionRef    = useRef(null);
+  const mediaRecorderRef  = useRef(null);
+  const audioChunksRef    = useRef([]);
+  const mediaStreamRef    = useRef(null);
+  const stopSpeakingRef   = useRef(null);
 
   /* Auto-scroll */
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
@@ -94,8 +97,17 @@ export default function Chat() {
     return () => { ok = false; };
   }, []);
 
-  /* Cleanup TTS on unmount */
-  useEffect(() => () => { stopSpeakingRef.current?.(); }, []);
+  /* Cleanup TTS and MediaRecorder on unmount */
+  useEffect(() => () => {
+    stopSpeakingRef.current?.();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
+    }
+    if (mediaStreamRef.current) {
+      try { mediaStreamRef.current.getTracks().forEach(t => t.stop()); } catch { /* ignore */ }
+    }
+    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+  }, []);
 
   /* Load session history */
   const refreshSessions = useCallback(() => setSessions(listSessions()), []);
@@ -118,22 +130,105 @@ export default function Chat() {
     toast.success('Naya paramarsh session shuru hua');
   }, [refreshSessions]);
 
-  const toggleListening = useCallback(() => {
+  /* Fallback to browser SpeechRecognition if MediaRecorder or Sarvam STT is unavailable */
+  const fallbackToWebSpeech = useCallback(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       toast.error('Aapke browser mein aawaz pehchan upalabdh nahi hai.');
+      setIsListening(false);
       return;
     }
-    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const r = new SR();
-    r.lang = 'hi-IN'; r.interimResults = false; r.maxAlternatives = 1;
-    r.onresult = e => { setInputText(e.results[0][0].transcript); setIsListening(false); toast.success('Aawaz pehchani gayi'); };
-    r.onerror  = () => { setIsListening(false); };
-    r.onend    = () => setIsListening(false);
+    r.lang = 'hi-IN';
+    r.interimResults = false;
+    r.maxAlternatives = 1;
+    r.onresult = e => {
+      setInputText(e.results[0][0].transcript);
+      setIsListening(false);
+      toast.success('Aawaz pehchani gayi');
+    };
+    r.onerror = () => { setIsListening(false); };
+    r.onend = () => setIsListening(false);
     recognitionRef.current = r;
-    r.start(); setIsListening(true);
-    toast('Sun raha hoon... Kahiye', { icon: '🎙️' });
-  }, [isListening]);
+    r.start();
+    setIsListening(true);
+    toast('Sun raha hoon... Kahiye (Offline mode)', { icon: '🎙️' });
+  }, []);
+
+  const toggleListening = useCallback(async () => {
+    if (isListening) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      fallbackToWebSpeech();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      audioChunksRef.current = [];
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+        ? 'audio/mp4'
+        : '';
+
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        setIsListening(false);
+        try {
+          stream.getTracks().forEach(track => track.stop());
+        } catch { /* ignore */ }
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        if (audioBlob.size > 500) {
+          const loadingToast = toast.loading('Sarvam Saaras STT se pehchan rahe hain...');
+          try {
+            const data = await transcribeAudio(audioBlob);
+            toast.dismiss(loadingToast);
+            if (data.transcript && data.transcript.trim()) {
+              setInputText(data.transcript.trim());
+              toast.success('Aawaz pehchani gayi (Sarvam AI)');
+            } else {
+              toast('Kripya thoda saaf ya zor se boliye.', { icon: 'ℹ️' });
+            }
+          } catch (err) {
+            toast.dismiss(loadingToast);
+            console.warn('[Sarvam STT failed, falling back to Web Speech]:', err);
+            toast.error('Sarvam STT asuvidha. Offline pehchan chalu...');
+            fallbackToWebSpeech();
+          }
+        }
+      };
+
+      recorder.start(200);
+      setIsListening(true);
+      toast('Sun raha hoon... Kahiye (Sarvam Saaras v3)', { icon: '🎙️' });
+    } catch (err) {
+      console.warn('[Microphone getUserMedia error]:', err);
+      fallbackToWebSpeech();
+    }
+  }, [isListening, fallbackToWebSpeech]);
 
   const readAloud = useCallback((text, idx) => {
     stopSpeakingRef.current?.();

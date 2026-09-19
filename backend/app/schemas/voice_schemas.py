@@ -20,3 +20,16 @@ class TTSResponse(BaseModel):
 class TTSErrorResponse(BaseModel):
     error: str
     detail: Optional[str] = None
+
+
+class STTRequest(BaseModel):
+    language_code: Optional[str] = "hi-IN"
+    model: str = "saaras:v3"
+    mode: str = "codemix"
+
+
+class STTResponse(BaseModel):
+    transcript: str
+    language_code: str = "hi-IN"
+    confidence: Optional[float] = None
+    provider: str = "sarvam"

@@ -96,10 +96,44 @@ class BhashiniVoiceEngine:
 
         return normalized.strip()
 
+    def _check_sarvam_lid(self, text: str) -> Optional[str]:
+        """
+        Lightweight fallback call to Sarvam Text Language Identification API (/text-lid)
+        invoked ONLY when the local heuristic is borderline (garhwali_score == 1).
+        """
+        api_key = settings.SARVAM_API_KEY or os.getenv("SARVAM_API_KEY", "")
+        if not api_key or not api_key.strip():
+            return None
+
+        try:
+            import httpx
+            headers = {
+                "api-subscription-key": api_key.strip(),
+                "Content-Type": "application/json",
+            }
+            with httpx.Client(timeout=1.5) as client:
+                res = client.post(
+                    "https://api.sarvam.ai/text-lid",
+                    headers=headers,
+                    json={"input": text[:250]},
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    code = data.get("language_code", "")
+                    if code.startswith("en"):
+                        return "english"
+                    elif code.startswith("hi"):
+                        return "hindi"
+        except Exception:
+            # Graceful degrade if offline or network failure
+            pass
+        return None
+
     def detect_language(self, text: str) -> str:
         """
         High-accuracy auto-detection of user language:
         Returns 'garhwali', 'english', or 'hindi'.
+        First uses fast local heuristics; falls back to Sarvam LID when borderline.
         """
         if not text or not text.strip():
             return "hindi"
@@ -126,6 +160,12 @@ class BhashiniVoiceEngine:
 
         if garhwali_score >= 2:
             return "garhwali"
+
+        # Fallback check for borderline garhwali score using Sarvam LID
+        if garhwali_score == 1:
+            lid_lang = self._check_sarvam_lid(lower_text)
+            if lid_lang:
+                return lid_lang
 
         # 2. Check for English (Latin alphabet dominated with common English words)
         has_devanagari = any(re.search(r"[\u0900-\u097F]", w) for w in words)

@@ -26,6 +26,36 @@ export function base64ToAudioUrl(base64, format = 'mp3') {
 }
 
 /**
+ * Calls Sarvam AI Speech-to-Text (/voice/stt) to transcribe recorded audio.
+ * Accepts any audio Blob recorded from MediaRecorder.
+ */
+export const transcribeAudio = async (blob) => {
+  if (!blob || blob.size < 100) {
+    return { transcript: '', language_code: 'hi-IN' };
+  }
+
+  const formData = new FormData();
+  const mimeType = blob.type || 'audio/webm';
+  const ext = mimeType.includes('webm')
+    ? 'webm'
+    : mimeType.includes('mp4') || mimeType.includes('m4a')
+    ? 'm4a'
+    : mimeType.includes('ogg')
+    ? 'ogg'
+    : 'wav';
+
+  formData.append('file', blob, `voice_input.${ext}`);
+
+  const res = await voiceApi.post('/voice/stt', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    timeout: 30000,
+  });
+  return res.data; // { transcript: string, language_code: string, confidence: number, provider: string }
+};
+
+/**
  * Calls the backend Neural Indic (/voice/tts) endpoint and returns a
  * playable object URL. Uses in-memory caching for zero-latency repeats.
  */
@@ -52,6 +82,132 @@ export const synthesizeSpeech = async (text, language = 'hi', gender = 'female')
   audioBlobCache.set(cacheKey, audioUrl);
 
   return audioUrl;
+};
+
+/**
+ * Streams synthesized speech audio progressive chunks from /voice/tts/stream
+ * for minimal latency in live consultations.
+ * Returns a cancel function.
+ */
+export const streamSpeech = (text, { language = 'hi', gender = 'female', onStart, onEnd, onError } = {}) => {
+  let cancelled = false;
+  let audioEl = null;
+  const abortController = new AbortController();
+
+  (async () => {
+    try {
+      const response = await fetch(`${API_BASE}/voice/tts/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, language, gender }),
+        signal: abortController.signal,
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error(`TTS Stream returned status ${response.status}`);
+      }
+
+      // Check if MediaSource is supported for streaming audio/mpeg
+      const canMediaSource = typeof MediaSource !== 'undefined' && MediaSource.isTypeSupported('audio/mpeg');
+
+      if (canMediaSource) {
+        const mediaSource = new MediaSource();
+        const objectUrl = URL.createObjectURL(mediaSource);
+        audioEl = new Audio(objectUrl);
+
+        audioEl.onplay = () => { if (!cancelled) onStart?.(); };
+        audioEl.onended = () => {
+          URL.revokeObjectURL(objectUrl);
+          onEnd?.();
+        };
+        audioEl.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          onError?.(new Error('Audio playback error'));
+        };
+
+        mediaSource.addEventListener('sourceopen', async () => {
+          try {
+            const sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+            const reader = response.body.getReader();
+            let startedPlaying = false;
+
+            while (!cancelled) {
+              const { done, value } = await reader.read();
+              if (done) {
+                if (mediaSource.readyState === 'open') {
+                  mediaSource.endOfStream();
+                }
+                break;
+              }
+
+              // Append chunk when buffer is not updating
+              await new Promise((resolve) => {
+                if (!sourceBuffer.updating) {
+                  sourceBuffer.appendBuffer(value);
+                  resolve();
+                } else {
+                  sourceBuffer.addEventListener('updateend', () => {
+                    sourceBuffer.appendBuffer(value);
+                    resolve();
+                  }, { once: true });
+                }
+              });
+
+              // Start playback as soon as the first chunk is buffered
+              if (!startedPlaying && !cancelled) {
+                startedPlaying = true;
+                audioEl.play().catch((playErr) => {
+                  console.warn('[Sanjeevani Stream] Autoplay prevented:', playErr);
+                });
+              }
+            }
+          } catch (streamErr) {
+            if (!cancelled) {
+              console.warn('[Sanjeevani Stream MediaSource Error]:', streamErr);
+              onError?.(streamErr);
+            }
+          }
+        });
+      } else {
+        // Progressive buffer fallback for browsers lacking audio/mpeg MediaSource
+        const reader = response.body.getReader();
+        const chunks = [];
+        while (!cancelled) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) chunks.push(value);
+        }
+        if (cancelled) return;
+
+        const blob = new Blob(chunks, { type: 'audio/mpeg' });
+        const blobUrl = URL.createObjectURL(blob);
+        audioEl = new Audio(blobUrl);
+        audioEl.onplay = () => { if (!cancelled) onStart?.(); };
+        audioEl.onended = () => {
+          URL.revokeObjectURL(blobUrl);
+          onEnd?.();
+        };
+        audioEl.onerror = () => {
+          URL.revokeObjectURL(blobUrl);
+          onError?.(new Error('Audio playback error'));
+        };
+        audioEl.play().catch((err) => onError?.(err));
+      }
+    } catch (err) {
+      if (!cancelled) {
+        onError?.(err);
+      }
+    }
+  })();
+
+  return () => {
+    cancelled = true;
+    abortController.abort();
+    if (audioEl) {
+      audioEl.pause();
+      audioEl.src = '';
+    }
+  };
 };
 
 /**

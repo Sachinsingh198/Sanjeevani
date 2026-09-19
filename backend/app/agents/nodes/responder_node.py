@@ -8,8 +8,27 @@ from langchain_core.messages import SystemMessage, HumanMessage
 bhashini_engine = BhashiniVoiceEngine()
 
 
+def get_sarvam_llm():
+    """Initializes Sarvam Indic LLM client via OpenAI compatible endpoint."""
+    if not settings.SARVAM_API_KEY:
+        return None
+    try:
+        from langchain_openai import ChatOpenAI
+        # Note: if sarvam-30b is configured but deprecated, sarvam-105b will be used
+        model_name = settings.SARVAM_CHAT_MODEL or "sarvam-30b"
+        return ChatOpenAI(
+            model=model_name,
+            api_key=settings.SARVAM_API_KEY,
+            base_url="https://api.sarvam.ai/v1",
+            temperature=0.3,
+        )
+    except Exception as e:
+        print(f"[LLM] Sarvam init failed: {e}")
+        return None
+
+
 def get_llm():
-    """Initializes LLM client with automatic failover between Groq and Gemini."""
+    """Initializes LLM client with automatic failover between Groq, Gemini, and Sarvam."""
     if settings.PRIMARY_LLM_PROVIDER == "groq" and settings.GROQ_API_KEY:
         try:
             from langchain_groq import ChatGroq
@@ -33,6 +52,12 @@ def get_llm():
         except Exception as e:
             print(f"[LLM] Gemini init failed: {e}")
 
+    # Fallback Tier 3: Sarvam Indic LLM
+    if settings.SARVAM_API_KEY:
+        sarvam_llm = get_sarvam_llm()
+        if sarvam_llm is not None:
+            return sarvam_llm
+
     print("[LLM] WARNING: No LLM configured. Running in deterministic fallback mode.")
     return None
 
@@ -44,6 +69,20 @@ def _try_llm(llm, messages) -> str | None:
         return str(res.content).strip()
     except Exception as e:
         print(f"[LLM] Inference error: {type(e).__name__}: {e}")
+        # If model deprecation error occurs for sarvam-30b, retry with sarvam-105b
+        if "sarvam" in str(e).lower() and ("deprecated" in str(e).lower() or "not found" in str(e).lower()):
+            try:
+                from langchain_openai import ChatOpenAI
+                retry_sarvam = ChatOpenAI(
+                    model="sarvam-105b",
+                    api_key=settings.SARVAM_API_KEY,
+                    base_url="https://api.sarvam.ai/v1",
+                    temperature=0.3,
+                )
+                res = retry_sarvam.invoke(messages)
+                return str(res.content).strip()
+            except Exception as retry_err:
+                print(f"[LLM] Sarvam retry error: {retry_err}")
         return None
 
 

@@ -1,5 +1,11 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 from typing import Optional
+from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Load .env file into environment immediately
+load_dotenv()
+
 
 class Settings(BaseSettings):
     """
@@ -26,6 +32,7 @@ class Settings(BaseSettings):
     SARVAM_TTS_MODEL: str = "bulbul:v3"
     SARVAM_FEMALE_SPEAKER: str = "shreya"
     SARVAM_MALE_SPEAKER: str = "rahul"
+    SARVAM_CHAT_MODEL: str = "sarvam-30b"
 
     # Portkey Gateway Settings
     PORTKEY_API_KEY: Optional[str] = None
@@ -33,9 +40,14 @@ class Settings(BaseSettings):
     PORTKEY_CONFIG_ID: Optional[str] = None
     LLM_MODEL: str = "@groq-prod/openai/gpt-oss-120b"
 
-    # Observability (LangSmith)
+    # Observability & Tracing (LangSmith / LangChain)
+    LANGCHAIN_TRACING_V2: bool = True
+    LANGCHAIN_ENDPOINT: str = "https://api.smith.langchain.com"
+    LANGCHAIN_API_KEY: Optional[str] = None
+    LANGCHAIN_PROJECT: str = "sanjeevani"
+
     LANGSMITH_TRACING: bool = True
-    LANGSMITH_PROJECT: str = "sanjeevani-2.0"
+    LANGSMITH_PROJECT: str = "sanjeevani"
     LANGSMITH_API_KEY: Optional[str] = None
 
     # Vector Storage (Qdrant)
@@ -53,12 +65,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./sanjeevani.db"
     CHECKPOINT_DB_PATH: str = "sqlite:///./sessions.db"
 
-    # # Bhashini (Digital India / MeitY) TTS — pure Indian-accent voice
-    # BHASHINI_USER_ID: str = ""
-    # BHASHINI_ULCA_API_KEY: str = ""
-    # BHASHINI_PIPELINE_ID: str = "64392f96daac500b55c543cd"
-    # BHASHINI_AUTH_URL: str = "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline"
-
+    # AI4Bharat Local TTS (indic-parler-tts)
     AI4BHARAT_TTS_MODEL: str = "ai4bharat/indic-parler-tts"
     AI4BHARAT_TTS_DEVICE: str = "cpu"   # set to "cuda" if you have a GPU — much faster
     AI4BHARAT_HINDI_FEMALE_SPEAKER: str = "Divya"
@@ -83,5 +90,44 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+
 # Instantiate a single global instance for import across all modules
 settings = Settings()
+
+# Synchronize LangSmith / LangChain tracing environment variables into os.environ
+# so that LangChain, LangGraph, and LangSmith global tracers automatically trace all runs
+_langsmith_key = (
+    settings.LANGCHAIN_API_KEY
+    or settings.LANGSMITH_API_KEY
+    or os.getenv("LANGCHAIN_API_KEY")
+    or os.getenv("LANGSMITH_API_KEY")
+)
+if _langsmith_key:
+    os.environ["LANGCHAIN_API_KEY"] = _langsmith_key
+    os.environ["LANGSMITH_API_KEY"] = _langsmith_key
+
+_langsmith_project = (
+    settings.LANGCHAIN_PROJECT
+    or settings.LANGSMITH_PROJECT
+    or os.getenv("LANGCHAIN_PROJECT")
+    or os.getenv("LANGSMITH_PROJECT")
+    or "sanjeevani"
+)
+os.environ["LANGCHAIN_PROJECT"] = _langsmith_project
+os.environ["LANGSMITH_PROJECT"] = _langsmith_project
+
+_endpoint = (
+    settings.LANGCHAIN_ENDPOINT
+    or os.getenv("LANGCHAIN_ENDPOINT")
+    or "https://api.smith.langchain.com"
+)
+os.environ["LANGCHAIN_ENDPOINT"] = _endpoint
+os.environ["LANGSMITH_ENDPOINT"] = _endpoint
+
+if (
+    settings.LANGCHAIN_TRACING_V2
+    or settings.LANGSMITH_TRACING
+    or os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
+):
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGSMITH_TRACING"] = "true"
