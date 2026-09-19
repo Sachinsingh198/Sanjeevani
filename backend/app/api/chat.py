@@ -28,10 +28,12 @@ async def process_chat_message(req: ChatRequest):
             "clinical_flags": [],
             "retrieved_remedies": [],
             "final_reply_text": "",
+            "spoken_reply_text": "",
             "escalation_triggered": False,
             # --- Per-turn input: always comes from the request ---
             "normalized_message": "",
             "patient_conditions": req.patient_context.known_conditions,
+            "voice_mode": req.include_audio,
         }
 
         # Checkpointed execution — the same thread_id (conversation_id) is used
@@ -53,9 +55,27 @@ async def process_chat_message(req: ChatRequest):
 
         tier = result.get("detected_tier", "Green")
 
+        spoken = result.get("spoken_reply_text") or result.get("final_reply_text", "")
+        audio_b64 = None
+        audio_fmt = None
+        if req.include_audio and spoken:
+            try:
+                import base64
+                lang = result.get("detected_language", "hindi")
+                audio_bytes, media_type = await tts_engine.synthesize(
+                    text=spoken,
+                    language=lang,
+                    gender=req.voice_gender
+                )
+                audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
+                audio_fmt = "wav" if "wav" in media_type else "mp3"
+            except Exception as tts_err:
+                print(f"[ProcessChatMessage Voice Error]: {tts_err}")
+
         return ChatResponse(
             conversation_id=result.get("conversation_id", req.conversation_id),
             reply_text=result.get("final_reply_text", ""),
+            spoken_reply_text=spoken,
             tier=tier,
             flags=result.get("clinical_flags", []),
             remedies=formatted_remedies,
@@ -63,6 +83,8 @@ async def process_chat_message(req: ChatRequest):
             requires_immediate_doctor=(tier == "Red"),
             phase=result.get("dialogue_phase", "GREETING"),
             detected_language=result.get("detected_language", "hindi"),
+            audio_base64=audio_b64,
+            audio_format=audio_fmt,
         )
 
     except Exception as e:

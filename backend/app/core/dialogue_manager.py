@@ -71,8 +71,4 @@ def classify_intent(message: str) -> str:
     if is_greeting and not has_symptoms:
         return "GREETING"
 
-    # Brief conversational phrase without any symptoms (e.g. "haan ji", "theek hai")
-    if not has_symptoms and len(normalized.split()) <= 6:
-        return "GREETING"
-
     return "CLINICAL"

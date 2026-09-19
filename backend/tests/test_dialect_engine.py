@@ -58,8 +58,8 @@ async def test_indic_tts_synthesis():
     """Synthesizes speech using the Indic TTS engine and verifies MP3 stream."""
     tts = IndicTTSEngine()
     audio_bytes, media_type = await tts.synthesize("Namaste! Main Sanjeevani hoon.", language="hi")
-    assert media_type == "audio/mpeg"
-    assert len(audio_bytes) > 500  # Valid MP3 audio data
+    assert media_type in ("audio/mpeg", "audio/wav")
+    assert len(audio_bytes) > 500  # Valid audio data
 
 def test_expanded_garhwali_detection(engine):
     """Verifies that various spoken Garhwali phrases in both scripts are correctly identified."""

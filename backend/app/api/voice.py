@@ -16,16 +16,18 @@ _indic_tts_engine = IndicTTSEngine()
 
 async def _synthesize_fallback(clean_text: str, req: TTSRequest) -> TTSResponse:
     try:
-        audio_bytes, _ = await _indic_tts_engine.synthesize(
+        audio_bytes, content_type = await _indic_tts_engine.synthesize(
             text=clean_text,
             language=req.language,
             gender=req.gender,
         )
+        fmt = "wav" if "wav" in content_type else "mp3"
+        provider = getattr(_indic_tts_engine, "last_provider", "sarvam" if settings.TTS_PROVIDER == "sarvam" else "neural_indic")
         return TTSResponse(
             audio_base64=base64.b64encode(audio_bytes).decode("utf-8"),
-            format="mp3",
+            format=fmt,
             language=req.language,
-            provider="neural_indic",
+            provider=provider,
         )
     except Exception as fallback_err:
         raise HTTPException(
@@ -37,13 +39,13 @@ async def _synthesize_fallback(clean_text: str, req: TTSRequest) -> TTSResponse:
 @router.post("/tts", response_model=TTSResponse)
 async def synthesize_speech(req: TTSRequest):
     """
-    Converts text to natural speech using Neural Indic (instant 1-2s authentic Indian accent)
-    or self-hosted AI4Bharat when configured for GPU.
+    Converts text to natural speech using Sarvam AI (bulbul:v3),
+    Neural Indic (Edge TTS), or self-hosted AI4Bharat.
     """
     clean = _voice_engine.format_tts_payload(req.text)["clean_text"]
 
-    # When TTS_PROVIDER is "neural", return instant authentic Indian accent speech without CPU lag
-    if settings.TTS_PROVIDER == "neural":
+    # When TTS_PROVIDER is "sarvam" or "neural", return fluent Indian speech with instant playback
+    if settings.TTS_PROVIDER in ("sarvam", "neural"):
         return await _synthesize_fallback(clean, req)
 
     if ai4bharat_tts_engine.status["status"] == "not_loaded":
@@ -71,4 +73,4 @@ async def synthesize_speech(req: TTSRequest):
 async def tts_health():
     """Lets the frontend (or you, while debugging) check model load status."""
     status = ai4bharat_tts_engine.status
-    return {**status, "provider": "ai4bharat"}
+    return {**status, "provider": settings.TTS_PROVIDER}

@@ -1,9 +1,8 @@
+import re
 from app.agents.state import AgentState
 from app.core.triage_engine import ClinicalTriageEngine
 from app.core.bhashini_engine import BhashiniVoiceEngine
-from app.core.dialogue_manager import classify_intent
-from app.agents.nodes.responder_node import get_llm, _try_llm
-from langchain_core.messages import SystemMessage, HumanMessage
+from app.core.dialogue_manager import classify_intent, GREETING_PATTERNS
 
 triage_engine = ClinicalTriageEngine()
 bhashini_engine = BhashiniVoiceEngine()
@@ -16,33 +15,8 @@ def triage_node(state: AgentState) -> AgentState:
     tier, flags = triage_engine.evaluate(normalized)
     intent = classify_intent(normalized)
 
-    # 1.5 Auto-Detect Language (Garhwali vs Hindi vs English)
-    heuristic_lang = bhashini_engine.detect_language(raw_text)
-    if heuristic_lang in ("garhwali", "english"):
-        detected_language = heuristic_lang
-    else:
-        # Check if LLM can detect regional nuances for longer queries
-        llm = get_llm()
-        if llm and len(raw_text.split()) >= 3:
-            sys_msg = SystemMessage(
-                content="Analyze the language of the user's message. Output exactly one word: 'garhwali', 'english', or 'hindi'. "
-                        "If it contains words from the Garhwali dialect (e.g. 'mund', 'peed', 'peer', 'bhyo', 'chha', 'chhi', 'dainu', 'bhula', 'miku', 'twaku', 'syal'), output 'garhwali'. "
-                        "If in English, output 'english'. Otherwise output 'hindi'."
-            )
-            hum_msg = HumanMessage(content=raw_text)
-            detected = _try_llm(llm, [sys_msg, hum_msg])
-            if detected:
-                det_clean = detected.lower().strip()
-                if "garhwali" in det_clean:
-                    detected_language = "garhwali"
-                elif "english" in det_clean:
-                    detected_language = "english"
-                else:
-                    detected_language = "hindi"
-            else:
-                detected_language = "hindi"
-        else:
-            detected_language = "hindi"
+    # 1.5 Instant, zero-latency Language Auto-Detection (Garhwali vs Hindi vs English)
+    detected_language = bhashini_engine.detect_language(raw_text)
 
     # 2. Update state tracking
     current_phase = state.get("dialogue_phase", "GREETING")
@@ -65,12 +39,17 @@ def triage_node(state: AgentState) -> AgentState:
         state["dialogue_phase"] = "EMERGENCY"
 
     elif intent == "GREETING":
-        state["dialogue_phase"] = "GREETING"
-        state["consultation_notes"] = ""
-        state["retrieved_remedies"] = []
-        state["turn_count"] = 0
-        state["detected_tier"] = "Green"
-        state["clinical_flags"] = []
+        # If user is in an active CONSULTATION and just answering, do not reset!
+        is_explicit_greeting = any(re.search(pat, normalized) for pat in GREETING_PATTERNS)
+        if current_phase == "CONSULTATION" and not is_explicit_greeting:
+            pass  # Retain ongoing CONSULTATION phase
+        else:
+            state["dialogue_phase"] = "GREETING"
+            state["consultation_notes"] = ""
+            state["retrieved_remedies"] = []
+            state["turn_count"] = 0
+            state["detected_tier"] = "Green"
+            state["clinical_flags"] = []
 
     elif current_phase in ("CONCLUDED", "EMERGENCY"):
         msg_lower = normalized.lower().strip()

@@ -18,6 +18,7 @@ class _AgentStateRequired(TypedDict):
     clinical_flags: List[str]
     retrieved_remedies: List[Dict[str, Any]]
     final_reply_text: str
+    spoken_reply_text: str
     escalation_triggered: bool
 
 
@@ -47,3 +48,6 @@ class AgentState(_AgentStateRequired, total=False):
     # Accumulated patient information across turns — passed to LLM as context each turn.
     # The responder_node appends to this as new symptoms/answers are shared.
     consultation_notes: str
+
+    # Voice session mode flag (e.g. Sanjeevani Live active)
+    voice_mode: bool

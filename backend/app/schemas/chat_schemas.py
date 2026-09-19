@@ -11,6 +11,8 @@ class ChatRequest(BaseModel):
     message: str
     language_hint: str = "auto"
     patient_context: PatientContext = Field(default_factory=PatientContext)
+    include_audio: bool = False
+    voice_gender: str = "female"
 
 class RemedyItem(BaseModel):
     remedy_name: str
@@ -22,6 +24,7 @@ class RemedyItem(BaseModel):
 class ChatResponse(BaseModel):
     conversation_id: str
     reply_text: str
+    spoken_reply_text: Optional[str] = None
     tier: str
     flags: List[str]
     remedies: List[RemedyItem] = Field(default_factory=list)
@@ -30,6 +33,8 @@ class ChatResponse(BaseModel):
     # Dialogue phase exposed so the frontend PhaseProgress stepper is accurate
     phase: str = "GREETING"
     detected_language: str = "hindi"
+    audio_base64: Optional[str] = None
+    audio_format: Optional[str] = None
 
 class TTSRequest(BaseModel):
     text: str

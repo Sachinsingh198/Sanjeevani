@@ -52,13 +52,22 @@ export const checkBackendHealth = async () => {
   }
 };
 
-export const sendChatMessage = async (conversationId, message, patientConditions = [], languageHint = 'auto') => {
+export const sendChatMessage = async (
+  conversationId,
+  message,
+  patientConditions = [],
+  languageHint = 'auto',
+  includeAudio = false,
+  voiceGender = 'female'
+) => {
   try {
     const res = await api.post('/chat/message', {
       conversation_id: conversationId,
       message: message,
       language_hint: languageHint,
       patient_context: { known_conditions: patientConditions },
+      include_audio: includeAudio,
+      voice_gender: voiceGender,
     });
     return res.data;
   } catch (err) {

@@ -20,8 +20,12 @@ class Settings(BaseSettings):
     # Hugging Face Token (for gated models like ai4bharat/indic-parler-tts)
     HF_TOKEN: Optional[str] = None
 
-    # Voice / TTS Settings: "neural" (instant authentic Indian accent) or "ai4bharat" (local 2.2B model, GPU recommended)
-    TTS_PROVIDER: str = "neural"
+    # Voice / TTS Settings: "sarvam" (Sarvam AI bulbul:v3), "neural" (Edge TTS), or "ai4bharat" (local 2.2B model)
+    TTS_PROVIDER: str = "sarvam"
+    SARVAM_API_KEY: Optional[str] = None
+    SARVAM_TTS_MODEL: str = "bulbul:v3"
+    SARVAM_FEMALE_SPEAKER: str = "shreya"
+    SARVAM_MALE_SPEAKER: str = "rahul"
 
     # Portkey Gateway Settings
     PORTKEY_API_KEY: Optional[str] = None
