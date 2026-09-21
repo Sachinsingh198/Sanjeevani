@@ -1,0 +1,11 @@
+# =============================================================================
+# Sanjeevani Optional Heavy ML Dependencies
+# Only needed if offline AI4Bharat Indic-Parler-TTS is reintroduced in the future.
+# The standard stack uses Sarvam AI (cloud) with Edge-TTS (local neural) fallback.
+# =============================================================================
+
+torch
+soundfile
+accelerate
+indic-transliteration
+parler-tts @ git+https://github.com/huggingface/parler-tts.git

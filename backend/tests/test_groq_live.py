@@ -11,62 +11,65 @@ with open(".env") as f:
         if line.startswith("GROQ_API_KEY="):
             key = line.split("=", 1)[1].strip()
 
-model = "qwen/qwen3.6-27b"
+def run_groq_test():
+    model = "qwen/qwen3.6-27b"
+    try:
+        from groq import Groq
+        client = Groq(api_key=key)
 
-try:
-    from groq import Groq
-    client = Groq(api_key=key)
+        # --- INTAKE test ---
+        res = client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are Dr. Sanjeevani, a warm village doctor in Uttarakhand. "
+                        "Respond ONLY in simple Hindi or Hinglish. "
+                        "In exactly 2 sentences: (1) acknowledge their symptom, "
+                        "(2) ask how many days they have had it and if there is fever or weakness. "
+                        "Do NOT prescribe anything yet."
+                    ),
+                },
+                {"role": "user", "content": "Patient said: gale me kharash hai aur halki khansi hai"},
+            ],
+            max_tokens=150,
+            temperature=0.3,
+        )
+        reply = res.choices[0].message.content
+        print("INTAKE reply (raw len=%d):" % len(reply))
+        print(reply.encode("ascii", errors="replace").decode())
+        print()
 
-    # --- INTAKE test ---
-    res = client.chat.completions.create(
-        model=model,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are Dr. Sanjeevani, a warm village doctor in Uttarakhand. "
-                    "Respond ONLY in simple Hindi or Hinglish. "
-                    "In exactly 2 sentences: (1) acknowledge their symptom, "
-                    "(2) ask how many days they have had it and if there is fever or weakness. "
-                    "Do NOT prescribe anything."
-                ),
-            },
-            {"role": "user", "content": "Patient said: mujhe sar me bahut dard ho raha hai"},
-        ],
-        max_tokens=150,
-        temperature=0.3,
-    )
-    reply = res.choices[0].message.content
-    print("INTAKE reply (raw len=%d):" % len(reply))
-    # ASCII-safe print for Windows cp1252 terminal
-    print(reply.encode("ascii", errors="replace").decode())
-    print()
+        # --- PROBING test ---
+        res2 = client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are Dr. Sanjeevani, a village doctor. "
+                        "Respond ONLY in simple Hindi or Hinglish. "
+                        "In exactly 2 sentences: (1) briefly thank them, "
+                        "(2) ask if they have High BP, acidity/gastric ulcer, or pregnancy. "
+                        "Do NOT prescribe anything."
+                    ),
+                },
+                {"role": "user", "content": "Patient said: 3 din se hai, bukhar nahi hai"},
+            ],
+            max_tokens=150,
+            temperature=0.3,
+        )
+        reply2 = res2.choices[0].message.content
+        print("PROBING reply (raw len=%d):" % len(reply2))
+        print(reply2.encode("ascii", errors="replace").decode())
+        print()
+        print("SUCCESS: Both calls work correctly with SystemMessage+HumanMessage format.")
 
-    # --- PROBING test ---
-    res2 = client.chat.completions.create(
-        model=model,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are Dr. Sanjeevani, a village doctor. "
-                    "Respond ONLY in simple Hindi or Hinglish. "
-                    "In exactly 2 sentences: (1) briefly thank them, "
-                    "(2) ask if they have High BP, acidity/gastric ulcer, or pregnancy. "
-                    "Do NOT prescribe anything."
-                ),
-            },
-            {"role": "user", "content": "Patient said: 3 din se hai, bukhar nahi hai"},
-        ],
-        max_tokens=150,
-        temperature=0.3,
-    )
-    reply2 = res2.choices[0].message.content
-    print("PROBING reply (raw len=%d):" % len(reply2))
-    print(reply2.encode("ascii", errors="replace").decode())
-    print()
-    print("SUCCESS: Both calls work correctly with SystemMessage+HumanMessage format.")
+    except Exception as e:
+        print("FAILED:", type(e).__name__, str(e))
+        sys.exit(1)
 
-except Exception as e:
-    print("FAILED:", type(e).__name__, str(e))
-    sys.exit(1)
+
+if __name__ == "__main__":
+    run_groq_test()

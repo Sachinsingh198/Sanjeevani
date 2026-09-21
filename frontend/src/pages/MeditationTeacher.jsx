@@ -304,14 +304,14 @@ export default function MeditationTeacher() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F4F6F0] dark:bg-[#151D28] text-[#2E4057] dark:text-[#F4F6F0] pb-20 transition-colors duration-300">
+    <div className="min-h-screen bg-mist dark:bg-mist text-primary dark:text-mist pb-20 transition-colors duration-300">
       
       {/* ── Top Header ────────────────────────────────────────── */}
-      <div className="bg-gradient-to-b from-[#5A7855]/15 via-white/80 dark:via-[#1E2A43]/80 to-[#F4F6F0] dark:to-[#151D28] border-b border-gray-200/80 dark:border-gray-800 pt-6 pb-8 px-4 sm:px-6">
+      <div className="bg-gradient-to-b from-sage/15 via-white/80 dark:via-card to-mist dark:to-mist border-b border-gray-200/80 dark:border-gray-800 pt-6 pb-8 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <Link
             to="/patient"
-            className="touch-target inline-flex items-center gap-2 text-xs font-semibold text-[#556376] dark:text-[#A8B4C2] hover:text-[#2E4057] dark:hover:text-[#F4F6F0] mb-3 transition-colors"
+            className="touch-target inline-flex items-center gap-2 text-xs font-semibold text-muted dark:text-muted hover:text-primary dark:hover:text-mist mb-3 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Mitra Hub Par Wapas</span>
@@ -319,24 +319,24 @@ export default function MeditationTeacher() {
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-2 bg-[#5A7855]/10 dark:bg-[#5A7855]/25 text-[#5A7855] dark:text-[#8ED14C] px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
-                <Wind className="w-3.5 h-3.5 text-[#D4A359]" />
+              <div className="inline-flex items-center gap-2 bg-sage/10 dark:bg-sage/25 text-sage dark:text-booti-glow px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                <Wind className="w-3.5 h-3.5 text-gold-warm" />
                 <span>Himalayan Dhyana Guru • ध्यान व प्राणायाम</span>
               </div>
-              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2E4057] dark:text-[#F4F6F0]">
+              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-primary dark:text-mist">
                 Dhyan & Pranayama Studio
               </h1>
             </div>
 
             {/* Quick Cycles Badge */}
-            <div className="bg-white dark:bg-[#1E2A43] border border-[#5A7855]/20 dark:border-gray-800 rounded-2xl px-4 py-2.5 shadow-xs flex items-center gap-4 self-start sm:self-center">
+            <div className="bg-white dark:bg-warm-indigo border border-sage/20 dark:border-gray-800 rounded-2xl px-4 py-2.5 shadow-xs flex items-center gap-4 self-start sm:self-center">
               <div>
-                <p className="text-lg font-bold text-[#5A7855] dark:text-[#8ED14C] leading-none">{cyclesCompleted}</p>
-                <p className="text-[10px] text-[#556376] dark:text-[#A8B4C2] uppercase font-bold mt-0.5">Aavartan Aaj</p>
+                <p className="text-lg font-bold text-sage dark:text-booti-glow leading-none">{cyclesCompleted}</p>
+                <p className="text-[10px] text-muted dark:text-muted uppercase font-bold mt-0.5">Aavartan Aaj</p>
               </div>
               <button
                 onClick={() => playSingingBowl(216, 4.5)}
-                className="touch-target px-3 py-1.5 rounded-xl bg-[#D4A359]/15 text-[#8C5E24] dark:text-[#D4A359] text-xs font-bold hover:bg-[#D4A359]/25 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="touch-target px-3 py-1.5 rounded-xl bg-gold-warm/15 text-gold-warm dark:text-gold-warm text-xs font-bold hover:bg-gold-warm/25 transition-all flex items-center gap-1.5 cursor-pointer"
                 title="Ring Tibetan Bowl"
               >
                 <span>🔔 Bowl</span>
@@ -349,7 +349,7 @@ export default function MeditationTeacher() {
       <div className="max-w-5xl mx-auto px-3 sm:px-6 mt-6 space-y-6">
 
         {/* ── FOCUSED 4-TAB NAVIGATION (PAGE-INSIDE-PAGE) ───────────── */}
-        <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-2 border border-[#5A7855]/20 dark:border-gray-800 shadow-xs flex items-center justify-between gap-1 overflow-x-auto">
+        <div className="bg-white dark:bg-warm-indigo rounded-3xl p-2 border border-sage/20 dark:border-gray-800 shadow-xs flex items-center justify-between gap-1 overflow-x-auto">
           {meditationTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -362,8 +362,8 @@ export default function MeditationTeacher() {
                 }}
                 className={`touch-target flex-1 min-w-[70px] sm:min-w-[90px] py-2.5 px-2 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-[#5A7855] text-white shadow-sm scale-102 font-bold'
-                    : 'text-[#556376] dark:text-[#A8B4C2] hover:bg-black/5 dark:hover:bg-white/5'
+                    ? 'bg-sage text-white shadow-sm scale-102 font-bold'
+                    : 'text-muted dark:text-muted hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
               >
                 <Icon className="w-5 h-5 mb-1" />
@@ -378,17 +378,17 @@ export default function MeditationTeacher() {
 
         {/* ── TAB 1: PRANAYAMA STUDIO (BREATHING MANDALA) ───────────── */}
         {activeTab === 'pranayama' && (
-          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-6 animate-fadeIn">
+          <div className="bg-white dark:bg-warm-indigo rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-6 animate-fadeIn">
             
             {/* Pattern Selection Pills */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#556376] dark:text-[#A8B4C2]">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted dark:text-muted">
                   Pranayama Vidhi Chuniye:
                 </span>
                 <button
                   onClick={() => speakCue(selectedPattern.audioIntro || selectedPattern.name, 'hi-IN')}
-                  className="touch-target inline-flex items-center gap-1 text-xs font-bold text-[#5A7855] dark:text-[#8ED14C] hover:underline"
+                  className="touch-target inline-flex items-center gap-1 text-xs font-bold text-sage dark:text-booti-glow hover:underline"
                 >
                   <Volume2 className="w-3.5 h-3.5" />
                   <span>Vidhi Sunein</span>
@@ -408,12 +408,12 @@ export default function MeditationTeacher() {
                       }}
                       className={`touch-target p-3 rounded-2xl text-xs font-bold transition-all text-center flex flex-col items-center justify-center cursor-pointer ${
                         isSelected
-                          ? 'bg-[#5A7855] text-white shadow-xs scale-102'
-                          : 'bg-[#F4F6F0]/80 dark:bg-[#182332] text-[#2E4057] dark:text-[#F4F6F0] border border-gray-200 dark:border-gray-700 hover:border-[#5A7855]/40'
+                          ? 'bg-sage text-white shadow-xs scale-102'
+                          : 'bg-mist/80 dark:bg-card text-primary dark:text-mist border border-gray-200 dark:border-gray-700 hover:border-sage/40'
                       }`}
                     >
                       <span className="truncate w-full">{p.hindiName.split(' ')[0]}</span>
-                      <span className={`text-[10px] font-normal truncate w-full ${isSelected ? 'text-white/80' : 'text-[#556376] dark:text-[#A8B4C2]'}`}>
+                      <span className={`text-[10px] font-normal truncate w-full ${isSelected ? 'text-white/80' : 'text-muted dark:text-muted'}`}>
                         {p.name.split(' ')[0]}
                       </span>
                     </button>
@@ -427,16 +427,16 @@ export default function MeditationTeacher() {
               <div
                 className={`absolute w-64 h-64 rounded-full transition-all duration-1000 ease-in-out pointer-events-none blur-2xl ${
                   breathPhase === 'inhale'
-                    ? 'bg-[#5A7855]/25 scale-125'
+                    ? 'bg-sage/25 scale-125'
                     : breathPhase === 'exhale'
-                    ? 'bg-[#D4A359]/20 scale-75'
-                    : 'bg-[#2E4057]/15 scale-100'
+                    ? 'bg-gold-warm/20 scale-75'
+                    : 'bg-warm-indigo/15 scale-100'
                 }`}
               />
 
               <div className="relative flex items-center justify-center w-60 h-60">
                 <div
-                  className={`absolute inset-0 rounded-full border-2 border-dashed border-[#5A7855]/40 transition-transform duration-1000 ease-in-out ${
+                  className={`absolute inset-0 rounded-full border-2 border-dashed border-sage/40 transition-transform duration-1000 ease-in-out ${
                     isExpanding ? 'scale-110 rotate-45' : isContracting ? 'scale-90 rotate-0' : 'scale-100'
                   }`}
                 />
@@ -444,10 +444,10 @@ export default function MeditationTeacher() {
                 <div
                   className={`w-44 h-44 rounded-full shadow-xl flex flex-col items-center justify-center text-center p-4 transition-all duration-1000 ease-in-out transform ${
                     breathPhase === 'inhale'
-                      ? 'scale-110 bg-gradient-to-tr from-[#5A7855] to-[#8ED14C] text-white shadow-[#5A7855]/40'
+                      ? 'scale-110 bg-gradient-to-tr from-sage to-booti-glow text-white shadow-sage/40'
                       : breathPhase === 'exhale'
-                      ? 'scale-85 bg-gradient-to-tr from-[#D4A359] to-[#F4F6F0] text-[#2E4057] shadow-[#D4A359]/30'
-                      : 'scale-100 bg-gradient-to-tr from-[#2E4057] to-[#5A7855] text-white shadow-[#2E4057]/30'
+                      ? 'scale-85 bg-gradient-to-tr from-gold-warm to-mist text-primary shadow-gold-warm/30'
+                      : 'scale-100 bg-gradient-to-tr from-warm-indigo to-sage text-white shadow-warm-indigo/30'
                   }`}
                 >
                   <span className="text-3xl font-extrabold tracking-tight mb-1 font-mono">
@@ -464,8 +464,8 @@ export default function MeditationTeacher() {
 
               {/* Explanatory subtext */}
               <div className="text-center mt-4">
-                <p className="text-xs sm:text-sm font-bold text-[#2E4057] dark:text-[#F4F6F0]">{phaseInfo.sub}</p>
-                <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5 max-w-sm mx-auto">
+                <p className="text-xs sm:text-sm font-bold text-primary dark:text-mist">{phaseInfo.sub}</p>
+                <p className="text-xs text-muted dark:text-muted mt-0.5 max-w-sm mx-auto">
                   {selectedPattern.benefits}
                 </p>
               </div>
@@ -475,7 +475,7 @@ export default function MeditationTeacher() {
                 {!isBreathingActive ? (
                   <button
                     onClick={handleStartBreathing}
-                    className="touch-target-lg flex items-center gap-2.5 bg-[#5A7855] hover:bg-[#4a6346] text-white font-bold px-8 py-4 rounded-2xl shadow-md shadow-[#5A7855]/25 transition-all text-sm sm:text-base cursor-pointer"
+                    className="touch-target-lg flex items-center gap-2.5 bg-sage hover:bg-sage/90 text-white font-bold px-8 py-4 rounded-2xl shadow-md shadow-sage/25 transition-all text-sm sm:text-base cursor-pointer"
                   >
                     <Play className="w-5 h-5 fill-white" />
                     <span>Dhyan Shuru Karein (Start)</span>
@@ -483,16 +483,16 @@ export default function MeditationTeacher() {
                 ) : (
                   <button
                     onClick={handlePauseBreathing}
-                    className="touch-target-lg flex items-center gap-2.5 bg-[#D4A359] hover:bg-[#c29148] text-[#2E4057] font-bold px-8 py-4 rounded-2xl shadow-md transition-all text-sm sm:text-base cursor-pointer"
+                    className="touch-target-lg flex items-center gap-2.5 bg-gold-warm hover:bg-gold-warm/90 text-primary font-bold px-8 py-4 rounded-2xl shadow-md transition-all text-sm sm:text-base cursor-pointer"
                   >
-                    <Pause className="w-5 h-5 fill-[#2E4057]" />
+                    <Pause className="w-5 h-5 fill-warm-indigo" />
                     <span>Viraam (Pause)</span>
                   </button>
                 )}
 
                 <button
                   onClick={handleResetBreathing}
-                  className="touch-target p-3.5 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-[#556376] dark:text-[#A8B4C2] transition-all cursor-pointer"
+                  className="touch-target p-3.5 rounded-2xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-muted dark:text-muted transition-all cursor-pointer"
                   title="Reset Pattern"
                   aria-label="Reset Pattern"
                 >
@@ -505,13 +505,13 @@ export default function MeditationTeacher() {
 
         {/* ── TAB 2: AMBIENT SOUNDSCAPES (ध्वनियां) ────────────────── */}
         {activeTab === 'soundscapes' && (
-          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-5 animate-fadeIn">
+          <div className="bg-white dark:bg-warm-indigo rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-5 animate-fadeIn">
             <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
-              <h3 className="font-serif font-bold text-lg sm:text-xl text-[#2E4057] dark:text-[#F4F6F0] flex items-center gap-2">
-                <Music className="w-5 h-5 text-[#5A7855]" />
+              <h3 className="font-serif font-bold text-lg sm:text-xl text-primary dark:text-mist flex items-center gap-2">
+                <Music className="w-5 h-5 text-sage" />
                 Himalayan Pure Soundscapes (शांत प्राकृतिक ध्वनियां)
               </h3>
-              <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+              <p className="text-xs text-muted dark:text-muted mt-0.5">
                 Bina internet ke Web Audio dwara sthir dhyan dhwaniyan
               </p>
             </div>
@@ -521,60 +521,60 @@ export default function MeditationTeacher() {
                 onClick={() => handleToggleSoundscape('river')}
                 className={`touch-target p-5 rounded-3xl border text-left transition-all cursor-pointer ${
                   activeSoundscape === 'river'
-                    ? 'bg-[#5A7855]/15 border-[#5A7855] shadow-xs'
-                    : 'bg-[#F4F6F0]/60 dark:bg-[#182332] border-gray-200 dark:border-gray-700 hover:border-[#5A7855]/40'
+                    ? 'bg-sage/15 border-sage shadow-xs'
+                    : 'bg-mist/60 dark:bg-card border-gray-200 dark:border-gray-700 hover:border-sage/40'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-3xl">🌊</span>
                   <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
-                    activeSoundscape === 'river' ? 'bg-[#5A7855] text-white' : 'bg-gray-200 dark:bg-gray-700 text-[#556376]'
+                    activeSoundscape === 'river' ? 'bg-sage text-white' : 'bg-gray-200 dark:bg-gray-700 text-muted'
                   }`}>
                     {activeSoundscape === 'river' ? 'Baj Raha Hai' : 'Bajayein'}
                   </span>
                 </div>
-                <h4 className="font-bold text-base text-[#2E4057] dark:text-[#F4F6F0] mt-3">Alaknanda Nadi</h4>
-                <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">Pahadi nadi ka shaant bahav.</p>
+                <h4 className="font-bold text-base text-primary dark:text-mist mt-3">Alaknanda Nadi</h4>
+                <p className="text-xs text-muted dark:text-muted mt-0.5">Pahadi nadi ka shaant bahav.</p>
               </button>
 
               <button
                 onClick={() => handleToggleSoundscape('om')}
                 className={`touch-target p-5 rounded-3xl border text-left transition-all cursor-pointer ${
                   activeSoundscape === 'om'
-                    ? 'bg-[#D4A359]/20 border-[#D4A359] shadow-xs'
-                    : 'bg-[#F4F6F0]/60 dark:bg-[#182332] border-gray-200 dark:border-gray-700 hover:border-[#D4A359]/40'
+                    ? 'bg-gold-warm/20 border-gold-warm shadow-xs'
+                    : 'bg-mist/60 dark:bg-card border-gray-200 dark:border-gray-700 hover:border-gold-warm/40'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-3xl">🕉️</span>
                   <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
-                    activeSoundscape === 'om' ? 'bg-[#D4A359] text-[#2E4057]' : 'bg-gray-200 dark:bg-gray-700 text-[#556376]'
+                    activeSoundscape === 'om' ? 'bg-gold-warm text-primary' : 'bg-gray-200 dark:bg-gray-700 text-muted'
                   }`}>
                     {activeSoundscape === 'om' ? 'Baj Raha Hai' : 'Bajayein'}
                   </span>
                 </div>
-                <h4 className="font-bold text-base text-[#2E4057] dark:text-[#F4F6F0] mt-3">136.1Hz Om Drone</h4>
-                <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">Aatmik shanti aur naad dhyan.</p>
+                <h4 className="font-bold text-base text-primary dark:text-mist mt-3">136.1Hz Om Drone</h4>
+                <p className="text-xs text-muted dark:text-muted mt-0.5">Aatmik shanti aur naad dhyan.</p>
               </button>
 
               <button
                 onClick={() => handleToggleSoundscape('bowls')}
                 className={`touch-target p-5 rounded-3xl border text-left transition-all cursor-pointer ${
                   activeSoundscape === 'bowls'
-                    ? 'bg-[#2E4057]/20 border-[#2E4057] shadow-xs'
-                    : 'bg-[#F4F6F0]/60 dark:bg-[#182332] border-gray-200 dark:border-gray-700 hover:border-[#2E4057]/40'
+                    ? 'bg-warm-indigo/20 border-warm-indigo shadow-xs'
+                    : 'bg-mist/60 dark:bg-card border-gray-200 dark:border-gray-700 hover:border-warm-indigo/40'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-3xl">🔔</span>
                   <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
-                    activeSoundscape === 'bowls' ? 'bg-[#2E4057] text-white' : 'bg-gray-200 dark:bg-gray-700 text-[#556376]'
+                    activeSoundscape === 'bowls' ? 'bg-warm-indigo text-white' : 'bg-gray-200 dark:bg-gray-700 text-muted'
                   }`}>
                     {activeSoundscape === 'bowls' ? 'Baj Raha Hai' : 'Bajayein'}
                   </span>
                 </div>
-                <h4 className="font-bold text-base text-[#2E4057] dark:text-[#F4F6F0] mt-3">Tibetan Bowls</h4>
-                <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">Vichaaron ko sthir karne wali jhankaar.</p>
+                <h4 className="font-bold text-base text-primary dark:text-mist mt-3">Tibetan Bowls</h4>
+                <p className="text-xs text-muted dark:text-muted mt-0.5">Vichaaron ko sthir karne wali jhankaar.</p>
               </button>
             </div>
           </div>
@@ -582,13 +582,13 @@ export default function MeditationTeacher() {
 
         {/* ── TAB 3: GUIDED DHYAN (कथा ध्यान) ────────────────────── */}
         {activeTab === 'guided' && (
-          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4 animate-fadeIn">
+          <div className="bg-white dark:bg-warm-indigo rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4 animate-fadeIn">
             <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
-              <h3 className="font-serif font-bold text-lg sm:text-xl text-[#2E4057] dark:text-[#F4F6F0] flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#D4A359]" />
+              <h3 className="font-serif font-bold text-lg sm:text-xl text-primary dark:text-mist flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-gold-warm" />
                 Guided Himalayan Dhyana Tracks (निर्देशित ध्यान)
               </h3>
-              <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+              <p className="text-xs text-muted dark:text-muted mt-0.5">
                 Aawaz dwara margdarshit dhyan katha jo dil ki chintaon ko door kare
               </p>
             </div>
@@ -600,22 +600,22 @@ export default function MeditationTeacher() {
                   <div
                     key={med.id}
                     className={`p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                      isPlayingThis ? 'bg-[#5A7855]/10 border-[#5A7855]/50' : 'bg-[#F4F6F0]/60 dark:bg-[#182332] border-gray-200 dark:border-gray-700'
+                      isPlayingThis ? 'bg-sage/10 border-sage/50' : 'bg-mist/60 dark:bg-card border-gray-200 dark:border-gray-700'
                     }`}
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase bg-[#D4A359]/20 text-[#8C5E24] dark:text-[#D4A359] px-2.5 py-0.5 rounded-md">
+                        <span className="text-[10px] font-bold uppercase bg-gold-warm/20 text-gold-warm dark:text-gold-warm px-2.5 py-0.5 rounded-md">
                           {med.category}
                         </span>
-                        <span className="text-xs text-[#556376] dark:text-[#A8B4C2] flex items-center gap-1">
+                        <span className="text-xs text-muted dark:text-muted flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" /> {med.duration}
                         </span>
                       </div>
-                      <h4 className="font-serif font-bold text-base text-[#2E4057] dark:text-[#F4F6F0] mt-1.5">{med.title}</h4>
-                      <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">{med.description}</p>
+                      <h4 className="font-serif font-bold text-base text-primary dark:text-mist mt-1.5">{med.title}</h4>
+                      <p className="text-xs text-muted dark:text-muted mt-0.5">{med.description}</p>
                       {isPlayingThis && (
-                        <p className="text-xs font-semibold text-[#5A7855] dark:text-[#8ED14C] mt-2 italic animate-fadeIn bg-white/80 dark:bg-[#1E2A43]/80 p-3 rounded-xl border border-[#5A7855]/20">
+                        <p className="text-xs font-semibold text-sage dark:text-booti-glow mt-2 italic animate-fadeIn bg-card dark:bg-card p-3 rounded-xl border border-sage/20">
                           🗣️ "{med.script[trackScriptIndex]}"
                         </p>
                       )}
@@ -634,8 +634,8 @@ export default function MeditationTeacher() {
                       }}
                       className={`touch-target flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                         isPlayingThis
-                          ? 'bg-[#D4A359] text-[#2E4057]'
-                          : 'bg-[#5A7855] hover:bg-[#4a6346] text-white shadow-xs'
+                          ? 'bg-gold-warm text-primary'
+                          : 'bg-sage hover:bg-sage/90 text-white shadow-xs'
                       }`}
                     >
                       {isPlayingThis ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
@@ -650,34 +650,34 @@ export default function MeditationTeacher() {
 
         {/* ── TAB 4: HASTA MUDRAS (हस्त मुद्राएं) ────────────────── */}
         {activeTab === 'mudras' && (
-          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4 animate-fadeIn">
+          <div className="bg-white dark:bg-warm-indigo rounded-3xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4 animate-fadeIn">
             <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
-              <h3 className="font-serif font-bold text-lg sm:text-xl text-[#2E4057] dark:text-[#F4F6F0] flex items-center gap-2">
-                <Heart className="w-5 h-5 text-[#B85042]" />
+              <h3 className="font-serif font-bold text-lg sm:text-xl text-primary dark:text-mist flex items-center gap-2">
+                <Heart className="w-5 h-5 text-rose-soft" />
                 Hasta Mudras for Seated Meditation (हस्त मुद्रा निर्देश)
               </h3>
-              <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+              <p className="text-xs text-muted dark:text-muted mt-0.5">
                 Baithte samay haathon ki ye mudraayein urja ka sanchar karti hain
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {MUDRAS.map((m, idx) => (
-                <div key={idx} className="p-5 rounded-3xl bg-[#F4F6F0]/60 dark:bg-[#182332] border border-gray-200 dark:border-gray-700 space-y-2.5">
+                <div key={idx} className="p-5 rounded-3xl bg-mist/60 dark:bg-card border border-gray-200 dark:border-gray-700 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-2xl">{m.icon}</span>
                     <button
                       onClick={() => speakCue(`${m.name}. ${m.audio || m.how}`, 'hi-IN')}
-                      className="touch-target p-1 text-[#5A7855]"
+                      className="touch-target p-1 text-sage"
                       title="Audio sunein"
                     >
                       <Volume2 className="w-4 h-4" />
                     </button>
                   </div>
-                  <h4 className="font-serif font-bold text-base text-[#2E4057] dark:text-[#F4F6F0]">{m.name}</h4>
-                  <p className="text-xs text-[#8C5E24] dark:text-[#D4A359] font-semibold">{m.element}</p>
-                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2] leading-relaxed"><strong>Vidhi:</strong> {m.how}</p>
-                  <p className="text-xs text-[#5A7855] dark:text-[#8ED14C] font-semibold"><strong>Laabh:</strong> {m.benefit}</p>
+                  <h4 className="font-serif font-bold text-base text-primary dark:text-mist">{m.name}</h4>
+                  <p className="text-xs text-gold-warm dark:text-gold-warm font-semibold">{m.element}</p>
+                  <p className="text-xs text-muted dark:text-muted leading-relaxed"><strong>Vidhi:</strong> {m.how}</p>
+                  <p className="text-xs text-sage dark:text-booti-glow font-semibold"><strong>Laabh:</strong> {m.benefit}</p>
                 </div>
               ))}
             </div>

@@ -54,27 +54,49 @@ The `/companion/daily-thought` endpoint delivers daily blessings and wellness af
 
 ---
 
-## 4. Yogashala (योगशाला — Yoga Teacher & Posture Guide)
+## 4. Unified Wellness Studio (आरोग्यशाला — Arogyashala)
 
-Located at frontend route `/mitra/yoga`.
+Located at frontend route [`/mitra/wellness`](file:///d:/Sanjeevani/frontend/src/pages/WellnessStudio.jsx) (with backward-compatible deep links at `/mitra/yoga` and `/mitra/meditation`).
 
-Designed for common chronic musculoskeletal and metabolic conditions prevalent in mountain terrain:
-- **Joint Mobility & Knee Arthritis (*Sandhivata*)**: Low-impact seated Asanas (*Tadasana*, *Bhadrasana*).
-- **Lower Back Pain (*Kati Shoola*)**: Spinal decompression and gentle stretches (*Bhujangasana*, *Marjariasana*).
-- **Hypertension & Stress Management**: Restorative postures (*Shavasana*, *Vrikshasana*).
+The **Wellness Studio** consolidates physical posturology, pranayama breath pacing, sound meditation, and daily vitality tracking into a harmonious, single-page Himalayan sanctuary:
 
-Each posture provides:
-- Visual alignment guide.
-- Interactive hold timer with audio bell chimes.
-- Medical contraindications (e.g., *"Do not practice if acute lumbar disc herniation"*).
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   SANJEEVANI UNIFIED WELLNESS STUDIO                   │
+├────────────────────────────────────────────────────────────────────────┤
+│  1. Himalayan Flows (साधना प्रवाह)                                     │
+│     Curated 10–15 min sequences combining Pranayama, Asana & Sound     │
+│     - Morning Vitality Flow (ऊर्जा व प्राण)                             │
+│     - Joint & Back Pain Relief (जोड़ों व कमर का सुख)                   │
+│     - Evening Calm & Deep Nidra (संध्या शांति व निद्रा)                │
+├────────────────────────────────────────────────────────────────────────┤
+│  2. Yogashala (योगशाला — AI Posture Coach)                             │
+│     Real-time webcam pose estimation & skeleton tracking               │
+│     - Mathematical joint angle computation (elbows, knees, spine)      │
+│     - Real-time corrective guidance (e.g. "Kohni seedhi karein")       │
+│     - Precision hold timer & posture accuracy scoring ring             │
+├────────────────────────────────────────────────────────────────────────┤
+│  3. Dhyan Guru (ध्यान गुरु — Pranayama & Meditation)                   │
+│     Dynamic pulsing breathing orb with 5 Vedic pranayama presets       │
+│     - Anulom Vilom (Nadi Shodhana) 4-4-4-2 rhythm                      │
+│     - Box Breathing (Samavritti) 4-4-4-4 rhythm                        │
+│     - Bhramari (Bee Humming) 4-2-7-1 nitric oxide rhythm               │
+│     - 4-7-8 Deep Sleep Pacing & Sahaj Dhyan                            │
+│     - 3 Guided Himalayan Audio Meditations with synchronized speech    │
+├────────────────────────────────────────────────────────────────────────┤
+│  4. Naad Shanti (नाद शांति — Synthesized Himalayan Soundscapes)       │
+│     Web Audio API procedural sound engine with zero internet lag       │
+│     - Tibetan Singing Bowl resonance with decaying harmonics           │
+│     - 136.1 Hz Cosmic Om Drone (C# Earth Frequency)                    │
+│     - Alaknanda Alpine River Pink-Noise Water Stream                   │
+├────────────────────────────────────────────────────────────────────────┤
+│  5. Daily Vitality Ring & Local Streak Engine                          │
+│     Persisted progress tracking without invasive external telemetry    │
+│     - Mindful Minutes • Asanas Completed • Daily Sadhana Streak        │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
----
-
-## 5. Dhyan Guru (ध्यान गुरु — Meditation & Pranayama Teacher)
-
-Located at frontend route `/mitra/meditation`.
-
-Provides guided breathing pacing visualizers with synchronized audio bells:
-- **Anulom Vilom (Alternate Nostril Breathing)**: 4s inhale $\rightarrow$ 4s hold $\rightarrow$ 4s exhale cycle to balance sympathetic and parasympathetic nervous systems.
-- **Bhramari (Bee Humming Pranayama)**: Gentle cranial vibration exercises proven to reduce anxiety, lower systolic blood pressure, and improve sleep latency.
-- **Deep Alpine Breathing (*Shant Shwas*)**: Soothing mountain ambient soundscapes (stream water, temple bell, pine breeze) to calm acute anxiety.
+### Technical Implementation:
+- **Pose Detection**: Client-side geometry engine using HTML5 canvas and joint landmark vectors (`lib/poseDetection.js`).
+- **Audio Synthesizer**: Web Audio API oscillator nodes and noise buffers with high-precision gain ramps (`lib/audioSynthesizer.js`), ensuring complete offline reliability in remote hills.
+- **Unified State**: Stored in `localStorage` under `sanjeevani_wellness_stats`.

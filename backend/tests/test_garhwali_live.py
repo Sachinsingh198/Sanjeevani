@@ -42,5 +42,5 @@ async def test_tts_endpoint():
             "gender": "female"
         })
         assert res.status_code == 200
-        assert res.headers["content-type"] == "audio/mpeg"
+        assert res.headers["content-type"] in ("audio/mpeg", "audio/wav")
         assert len(res.content) > 500

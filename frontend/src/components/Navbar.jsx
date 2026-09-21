@@ -189,27 +189,15 @@ export default function Navbar() {
               </Link>
 
               <Link
-                to="/mitra/meditation"
+                to="/mitra/wellness"
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  location.pathname === '/mitra/meditation' || location.pathname === '/patient/meditation'
+                  location.pathname.includes('/wellness') || location.pathname.includes('/yoga') || location.pathname.includes('/meditation')
                     ? 'bg-[#5A7855] text-white shadow-xs'
                     : 'text-[#1E2A43] dark:text-[#F4F6F0] hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
               >
-                <Wind className="w-3.5 h-3.5 text-[#D4A359]" />
-                <span>Dhyan</span>
-              </Link>
-
-              <Link
-                to="/mitra/yoga"
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  location.pathname === '/mitra/yoga' || location.pathname === '/patient/yoga'
-                    ? 'bg-[#5A7855] text-white shadow-xs'
-                    : 'text-[#1E2A43] dark:text-[#F4F6F0] hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5 text-[#2E4057] dark:text-[#A8B4C2]" />
-                <span>Yoga</span>
+                <Sparkles className="w-3.5 h-3.5 text-[#D4A359]" />
+                <span>Wellness (आरोग्य)</span>
               </Link>
 
               <Link
@@ -361,11 +349,8 @@ export default function Navbar() {
                   <Link to="/mitra/chat" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-[#1E2A43] dark:text-[#F4F6F0] hover:bg-black/5">
                     <Stethoscope className="w-4 h-4 text-[#D4A359]" /> Sehat (Clinical Triage)
                   </Link>
-                  <Link to="/mitra/meditation" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-[#1E2A43] dark:text-[#F4F6F0] hover:bg-black/5">
-                    <Wind className="w-4 h-4 text-[#D4A359]" /> Dhyan Guru (Pranayama)
-                  </Link>
-                  <Link to="/mitra/yoga" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-[#1E2A43] dark:text-[#F4F6F0] hover:bg-black/5">
-                    <Activity className="w-4 h-4 text-[#2E4057] dark:text-[#A8B4C2]" /> Yogashala (AI Posture Coach)
+                  <Link to="/mitra/wellness" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-[#1E2A43] dark:text-[#F4F6F0] hover:bg-black/5">
+                    <Sparkles className="w-4 h-4 text-[#D4A359]" /> Wellness Studio (आरोग्यशाला)
                   </Link>
                   <Link to="/mitra/saathi" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-[#1E2A43] dark:text-[#F4F6F0] hover:bg-black/5">
                     <HeartHandshake className="w-4 h-4 text-[#B85042]" /> Sanjeevani Saathi (Companionship)

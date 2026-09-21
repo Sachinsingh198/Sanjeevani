@@ -279,57 +279,32 @@ export default function PatientDashboard() {
                 </div>
               </Link>
 
-              {/* 2. Dhyan (Pranayama) */}
+              {/* 2. Arogyashala (Unified Wellness Studio) */}
               <Link
-                to="/mitra/meditation"
+                to="/mitra/wellness"
                 className="touch-target group flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1E2A43] border border-[#D4A359]/30 hover:border-[#D4A359] transition-all shadow-xs tactile-card"
               >
                 <div>
                   <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#D4A359]/15 dark:bg-[#D4A359]/25 text-[#8C5E24] dark:text-[#D4A359] flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-108 transition-transform">
-                    <Wind className="w-5 h-5 sm:w-7 sm:h-7" />
+                    <Sparkles className="w-5 h-5 sm:w-7 sm:h-7" />
                   </div>
                   <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-[#8C5E24] dark:text-[#D4A359] block truncate">
-                    Shanti v Saans
+                    Yoga • Dhyan • Naad
                   </span>
                   <h3 className="font-serif font-bold text-sm sm:text-lg text-[#2E4057] dark:text-[#F4F6F0] mt-0.5 leading-snug">
-                    Dhyan (ध्यान)
+                    Arogya (आरोग्यशाला)
                   </h3>
                   <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-1 hidden sm:block">
-                    5 Vedic saans vidhi, Alaknanda soundscape aur dhyan katha.
+                    Pose AI, 5 Vedic Pranayama, audio dhyan katha aur soundscapes.
                   </p>
                 </div>
                 <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-[11px] sm:text-xs font-bold text-[#8C5E24] dark:text-[#D4A359] pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>Dhyan</span>
+                  <span>Studio</span>
                   <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
 
-              {/* 3. Yogashala (Posture AI) */}
-              <Link
-                to="/mitra/yoga"
-                className="touch-target group flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1E2A43] border border-[#2E4057]/25 hover:border-[#2E4057] transition-all shadow-xs tactile-card"
-              >
-                <div>
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#2E4057]/15 dark:bg-[#2E4057]/25 text-[#2E4057] dark:text-[#A8B4C2] flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-108 transition-transform">
-                    <Activity className="w-5 h-5 sm:w-7 sm:h-7" />
-                  </div>
-                  <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-[#2E4057] dark:text-[#A8B4C2] block truncate">
-                    Mudra Sudhar
-                  </span>
-                  <h3 className="font-serif font-bold text-sm sm:text-lg text-[#2E4057] dark:text-[#F4F6F0] mt-0.5 leading-snug">
-                    Yogashala (योगा)
-                  </h3>
-                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-1 hidden sm:block">
-                    Camera se reerh aur jod ke kon (joint angles) ki sudhaar jaanch.
-                  </p>
-                </div>
-                <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-[11px] sm:text-xs font-bold text-[#2E4057] dark:text-[#A8B4C2] pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>Abhyas</span>
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-
-              {/* 4. Saathi (Companion) */}
+              {/* 3. Saathi (Companion) */}
               <Link
                 to="/mitra/saathi"
                 className="touch-target group flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1E2A43] border border-[#B85042]/25 hover:border-[#B85042] transition-all shadow-xs tactile-card"
@@ -354,29 +329,60 @@ export default function PatientDashboard() {
                 </div>
               </Link>
 
+              {/* 4. Aankhon Ki Jaanch (Eye Screening) */}
+              <Link
+                to="/mitra/screen"
+                className="touch-target group flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#1E2A43] border border-[#2E4057]/25 hover:border-[#2E4057] transition-all shadow-xs tactile-card"
+              >
+                <div>
+                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-[#2E4057]/15 dark:bg-[#2E4057]/25 text-[#2E4057] dark:text-[#A8B4C2] flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-108 transition-transform">
+                    <Eye className="w-5 h-5 sm:w-7 sm:h-7" />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-[#2E4057] dark:text-[#A8B4C2] block truncate">
+                    Netra Jaanch
+                  </span>
+                  <h3 className="font-serif font-bold text-sm sm:text-lg text-[#2E4057] dark:text-[#F4F6F0] mt-0.5 leading-snug">
+                    Screening (नेत्र जांच)
+                  </h3>
+                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-1 hidden sm:block">
+                    Camera se palak ki tasveer lekar Anemia v Peeliya sanket dekhein.
+                  </p>
+                </div>
+                <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-[11px] sm:text-xs font-bold text-[#2E4057] dark:text-[#A8B4C2] pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <span>Jaanch Karein</span>
+                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </Link>
+
             </div>
 
-            {/* Ocular Screening Callout */}
-            <div className="bg-white dark:bg-[#1E2A43] rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 border border-[#5A7855]/20 dark:border-gray-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 tactile-card">
-              <div className="flex items-start gap-2.5 sm:gap-3.5">
-                <div className="w-10 h-10 sm:w-13 sm:h-13 rounded-xl sm:rounded-2xl bg-amber-500/10 text-[#D4A359] flex items-center justify-center shrink-0">
-                  <Eye className="w-5 h-5 sm:w-7 sm:h-7" />
+            {/* Daily Himalayan Wellness Journey Callout */}
+            <div className="bg-gradient-to-r from-[#5A7855]/10 via-[#D4A359]/15 to-[#5A7855]/10 dark:from-[#5A7855]/20 dark:via-[#D4A359]/10 dark:to-[#1E2A43] rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[#5A7855]/30 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 tactile-card">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-[#5A7855] text-white flex items-center justify-center shrink-0 shadow-md shadow-[#5A7855]/25">
+                  <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 animate-pulse text-[#F4F6F0]" />
                 </div>
                 <div>
-                  <h3 className="font-serif font-bold text-sm sm:text-lg text-[#2E4057] dark:text-[#F4F6F0]">
-                    Aankhon Ki Jaanch (Eye Screening)
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] sm:text-xs bg-[#5A7855] text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                      Daily Sadhana
+                    </span>
+                    <span className="text-[11px] text-[#8C5E24] dark:text-[#D4A359] font-bold">15 Mins • Himalayan Vitality</span>
+                  </div>
+                  <h3 className="font-serif font-bold text-base sm:text-xl text-[#2E4057] dark:text-[#F4F6F0] mt-1">
+                    Himalayan Morning Flow (सुबह की ऊर्जा साधना)
                   </h3>
-                  <p className="text-[11px] sm:text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
-                    Camera se palak ki tasveer lekar Anemia v Peeliya sanket dekhein.
+                  <p className="text-xs sm:text-sm text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+                    Anulom Vilom breathwork + Tadasana & Vrikshasana posture check + Singing bowls.
                   </p>
                 </div>
               </div>
               <Link
-                to="/mitra/screen"
-                className="touch-target w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 text-xs font-bold text-[#2E4057] dark:text-[#F4F6F0] bg-[#F4F6F0] dark:bg-[#253247] hover:bg-[#5A7855] hover:text-white dark:hover:bg-[#5A7855] px-4 py-2.5 sm:px-5 sm:py-3.5 rounded-xl sm:rounded-2xl transition-all shadow-xs"
+                to="/mitra/wellness?tab=flow"
+                className="touch-target w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-extrabold text-white bg-[#5A7855] hover:bg-[#4a6346] px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl transition-all shadow-sm hover:scale-102 cursor-pointer"
               >
-                <span>Screening Karein</span>
-                <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                <span>आरंभ करें (Start Flow)</span>
+                <ArrowRight className="w-4 h-4 ml-0.5" />
               </Link>
             </div>
 

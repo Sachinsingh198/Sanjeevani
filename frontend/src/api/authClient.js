@@ -13,7 +13,7 @@ authApi.interceptors.request.use((config) => {
                        config.url?.includes('/auth/register') ||
                        config.url?.includes('/auth/check-username') ||
                        config.url?.includes('/auth/otp') ||
-                       config.url?.includes('/auth/reset-password');
+                       config.url?.includes('/auth/reset-password-with-otp');
   if (!isPublicAuth) {
     const token = localStorage.getItem('sanjeevani_token');
     if (token) {

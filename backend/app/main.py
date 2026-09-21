@@ -8,15 +8,25 @@ from app.config import settings
 from app.api import voice
 from app.api import reports
 from app.api import companion
-from app.core.ai4bharat_tts import ai4bharat_tts_engine
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: create database tables and seed the default admin account."""
+    """Startup: validate security configuration, create database tables and seed default admin."""
+    if settings.APP_ENV.lower() == "production" and settings.JWT_SECRET_KEY == settings.DEFAULT_JWT_SECRET_KEY:
+        raise RuntimeError(
+            "CRITICAL SECURITY CONFIGURATION ERROR: Cannot boot with default JWT_SECRET_KEY in production! "
+            "Set a strong, unique JWT_SECRET_KEY environment variable in your production configuration."
+        )
     create_tables()
     seed_default_admin()
-    if settings.TTS_PROVIDER == "ai4bharat":
-        ai4bharat_tts_engine.start_background_load()
+
+    import time
+    t0 = time.perf_counter()
+    print("[Sanjeevani] Loading remedy store and embedding model into memory...")
+    from app.core.hybrid_rag import HybridRemedyStore
+    app.state.remedy_store = HybridRemedyStore()
+    elapsed = time.perf_counter() - t0
+    print(f"[Sanjeevani] HybridRemedyStore successfully loaded in {elapsed:.2f}s.")
+
     print("[Sanjeevani] Database initialized, admin seeded.")
     yield
 

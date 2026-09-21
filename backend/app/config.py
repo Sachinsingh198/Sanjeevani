@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: Optional[str] = None
 
     # Authentication (JWT)
+    DEFAULT_JWT_SECRET_KEY: str = "sanjeevani-2026-gopeshwar-secret"
     JWT_SECRET_KEY: str = "sanjeevani-2026-gopeshwar-secret"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 1440  # 24 hours

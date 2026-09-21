@@ -13,11 +13,11 @@ import StructuredBotMessage from '../components/StructuredBotMessage';
 
 /* ── Mood options ───────────────────────────────────────────────────────── */
 const MOOD_OPTIONS = [
-  { id: 'lonely',    label: 'Akela Hoon',       sub: 'अकेला',      icon: '🕊️', color: 'bg-[#D4A359]/15 text-[#8C5E24] dark:text-[#D4A359] border-[#D4A359]/30' },
-  { id: 'sad',       label: 'Udas Hoon',         sub: 'उदास',       icon: '🌧️', color: 'bg-[#B85042]/15 text-[#B85042] dark:text-[#F08080] border-[#B85042]/30' },
-  { id: 'nostalgic', label: 'Yaadein Aa Rahi',   sub: 'यादें',     icon: '💭', color: 'bg-[#2E4057]/15 text-[#2E4057] dark:text-[#A8B4C2] border-[#2E4057]/30' },
+  { id: 'lonely',    label: 'Akela Hoon',       sub: 'अकेला',      icon: '🕊️', color: 'bg-gold-warm/15 text-gold-warm dark:text-gold-warm border-gold-warm/30' },
+  { id: 'sad',       label: 'Udas Hoon',         sub: 'उदास',       icon: '🌧️', color: 'bg-rose-soft/15 text-rose-soft dark:text-rose-soft border-rose-soft/30' },
+  { id: 'nostalgic', label: 'Yaadein Aa Rahi',   sub: 'यादें',     icon: '💭', color: 'bg-warm-indigo/15 text-primary dark:text-muted border-warm-indigo/30' },
   { id: 'anxious',   label: 'Chinta Hai',        sub: 'चिंता',     icon: '🍃', color: 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border-amber-300' },
-  { id: 'peaceful',  label: 'Mann Shant Hai',    sub: 'शांत',      icon: '🌸', color: 'bg-[#5A7855]/15 text-[#2B4A30] dark:text-[#8ED14C] border-[#5A7855]/30' },
+  { id: 'peaceful',  label: 'Mann Shant Hai',    sub: 'शांत',      icon: '🌸', color: 'bg-sage/15 text-sage dark:text-booti-glow border-sage/30' },
 ];
 
 /* ── Quick-prompt tiles shown on the "ghar" home tab ───────────────────── */
@@ -191,14 +191,14 @@ export default function Companion() {
 
   /* ── RENDER ─────────────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-[#F4F6F0] dark:bg-[#151D28] text-[#1E2A43] dark:text-[#EAEFEA] pb-20 transition-colors duration-300">
+    <div className="min-h-screen bg-mist dark:bg-mist text-primary dark:text-mist pb-20 transition-colors duration-300">
 
       {/* ── Page Header ──────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-b from-[#D4A359]/20 via-white/80 dark:via-[#1E2A43]/80 to-transparent border-b border-gray-200/60 dark:border-gray-800 pt-8 pb-6 px-4 sm:px-6">
+      <div className="bg-gradient-to-b from-gold-warm/20 via-white/80 dark:via-card to-transparent border-b border-gray-200/60 dark:border-gray-800 pt-8 pb-6 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto">
           <Link
             to="/patient"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-[#556376] dark:text-[#A8B4C2] hover:text-[#1E2A43] dark:hover:text-[#F4F6F0] mb-4 transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-muted dark:text-muted hover:text-primary dark:hover:text-mist mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Mitra Dashboard Par Wapas</span>
@@ -206,21 +206,21 @@ export default function Companion() {
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="inline-flex items-center gap-2 bg-[#D4A359]/20 text-[#8C5E24] dark:text-[#D4A359] px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+              <div className="inline-flex items-center gap-2 bg-gold-warm/20 text-gold-warm dark:text-gold-warm px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
                 <HeartHandshake className="w-3.5 h-3.5" />
                 <span>Apno Sa Saathi</span>
               </div>
-              <h1 className="font-serif text-2xl md:text-3xl font-bold text-[#1E2A43] dark:text-[#F4F6F0]">
+              <h1 className="font-serif text-2xl md:text-3xl font-bold text-primary dark:text-mist">
                 संजीवनी साथी 🤝
               </h1>
-              <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-1">
+              <p className="text-xs text-muted dark:text-muted mt-1">
                 Sunnae wala, baat karnae wala, apna dost
               </p>
             </div>
             <div className="flex items-center gap-2">
               <a
                 href="tel:14416"
-                className="flex items-center gap-2 bg-[#B85042] hover:bg-[#9a4035] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm"
+                className="flex items-center gap-2 bg-rose-soft hover:bg-rose-soft/90 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm"
               >
                 <PhoneCall className="w-4 h-4" />
                 <span>14416 Madad</span>
@@ -229,8 +229,8 @@ export default function Companion() {
                 onClick={() => setAutoSpeak(!autoSpeak)}
                 className={`p-2.5 rounded-xl border text-xs font-semibold transition-all ${
                   autoSpeak
-                    ? 'bg-[#5A7855]/15 text-[#2B4A30] dark:text-[#8ED14C] border-[#5A7855]/30'
-                    : 'bg-white dark:bg-[#1E2A43] text-[#556376] border-gray-300 dark:border-gray-700'
+                    ? 'bg-sage/15 text-sage dark:text-booti-glow border-sage/30'
+                    : 'bg-white dark:bg-warm-indigo text-muted border-gray-300 dark:border-gray-700'
                 }`}
                 title="Toggle Voice"
                 aria-label="Toggle Voice"
@@ -243,7 +243,7 @@ export default function Companion() {
       </div>
 
       {/* ── Tab Navigation (icon-first, large touch targets) ─────────── */}
-      <div className="sticky top-0 z-20 bg-white/90 dark:bg-[#1A2538]/90 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-800">
+      <div className="sticky top-0 z-20 bg-card dark:bg-card backdrop-blur-md border-b border-gray-200/60 dark:border-gray-800">
         <div className="max-w-3xl mx-auto flex">
           {TABS.map((tab) => {
             const active = activeTab === tab.id;
@@ -253,15 +253,15 @@ export default function Companion() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-1 flex flex-col items-center gap-1 py-3.5 transition-all relative ${
                   active
-                    ? 'text-[#D4A359] dark:text-[#D4A359]'
-                    : 'text-[#556376] dark:text-[#A8B4C2] hover:text-[#1E2A43] dark:hover:text-[#F4F6F0]'
+                    ? 'text-gold-warm dark:text-gold-warm'
+                    : 'text-muted dark:text-muted hover:text-primary dark:hover:text-mist'
                 }`}
               >
                 <span className="text-2xl leading-none">{tab.icon}</span>
                 <span className="text-[10px] font-bold tracking-wide">{tab.label}</span>
                 <span className="text-[9px] text-gray-400 dark:text-gray-600">{tab.sub}</span>
                 {active && (
-                  <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-[#D4A359] rounded-full" />
+                  <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-gold-warm rounded-full" />
                 )}
               </button>
             );
@@ -280,25 +280,25 @@ export default function Companion() {
 
             {/* Daily Blessing Banner */}
             {dailyThought && (
-              <div className="bg-gradient-to-r from-[#D4A359]/15 via-white dark:via-[#1E2A43] to-[#5A7855]/15 rounded-3xl p-5 border border-[#D4A359]/30 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="bg-gradient-to-r from-gold-warm/15 via-white dark:via-card to-sage/15 rounded-3xl p-5 border border-gold-warm/30 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-[#D4A359] text-[#1E2A43] flex items-center justify-center shrink-0 shadow-sm text-xl">
+                  <div className="w-12 h-12 rounded-2xl bg-gold-warm text-primary flex items-center justify-center shrink-0 shadow-sm text-xl">
                     ✨
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase text-[#8C5E24] dark:text-[#D4A359] mb-1">Aaj Ka Sandesh</p>
-                    <p className="font-serif italic text-sm text-[#1E2A43] dark:text-[#F4F6F0] leading-relaxed">
+                    <p className="text-[10px] font-bold uppercase text-gold-warm dark:text-gold-warm mb-1">Aaj Ka Sandesh</p>
+                    <p className="font-serif italic text-sm text-primary dark:text-mist leading-relaxed">
                       "{dailyThought.quote}"
                     </p>
-                    <p className="text-[11px] text-[#556376] dark:text-[#A8B4C2] mt-1">
-                      <strong className="text-[#5A7855] dark:text-[#8ED14C]">Sujhaav:</strong>{' '}
+                    <p className="text-[11px] text-muted dark:text-muted mt-1">
+                      <strong className="text-sage dark:text-booti-glow">Sujhaav:</strong>{' '}
                       {dailyThought.action}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => speakCue(`${dailyThought.quote}. ${dailyThought.action}`, 'hi-IN')}
-                  className="flex items-center gap-1.5 text-xs font-bold text-[#8C5E24] dark:text-[#D4A359] bg-[#D4A359]/10 hover:bg-[#D4A359]/20 px-3 py-2 rounded-xl transition-all shrink-0"
+                  className="flex items-center gap-1.5 text-xs font-bold text-gold-warm dark:text-gold-warm bg-gold-warm/10 hover:bg-gold-warm/20 px-3 py-2 rounded-xl transition-all shrink-0"
                 >
                   <Volume2 className="w-4 h-4" />
                   <span>🔊 Suniye</span>
@@ -310,17 +310,17 @@ export default function Companion() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="font-serif text-lg font-bold text-[#1E2A43] dark:text-[#F4F6F0] flex items-center gap-2">
-                    <Heart className="w-5 h-5 text-[#B85042]" />
+                  <h2 className="font-serif text-lg font-bold text-primary dark:text-mist flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-rose-soft" />
                     Aaj Mann Kaisa Hai?
                   </h2>
-                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+                  <p className="text-xs text-muted dark:text-muted mt-0.5">
                     Apna haal chunein — Saathi sune ga
                   </p>
                 </div>
                 <button
                   onClick={() => speakCue('Aaj aapka mann kaisa hai? Apni bhaavna chunein aur hum baat karenge.', 'hi-IN')}
-                  className="flex items-center gap-1 text-xs text-[#D4A359] font-bold"
+                  className="flex items-center gap-1 text-xs text-gold-warm font-bold"
                 >
                   <Volume2 className="w-4 h-4" /> सुनें
                 </button>
@@ -334,12 +334,12 @@ export default function Companion() {
                       onClick={() => handleSelectMood(mood)}
                       className={`flex flex-col items-center gap-2 p-3 sm:p-4 rounded-2xl border-2 transition-all active:scale-95 ${
                         isSel
-                          ? `${mood.color} ring-2 ring-[#D4A359]/60 shadow-md scale-105`
-                          : 'bg-white dark:bg-[#1E2A43] border-gray-200 dark:border-gray-700 hover:border-[#D4A359]/40'
+                          ? `${mood.color} ring-2 ring-gold-warm/60 shadow-md scale-105`
+                          : 'bg-white dark:bg-warm-indigo border-gray-200 dark:border-gray-700 hover:border-gold-warm/40'
                       }`}
                     >
                       <span className="text-3xl sm:text-4xl">{mood.icon}</span>
-                      <span className="text-[10px] sm:text-xs font-bold text-center text-[#1E2A43] dark:text-[#F4F6F0] leading-tight">{mood.sub}</span>
+                      <span className="text-[10px] sm:text-xs font-bold text-center text-primary dark:text-mist leading-tight">{mood.sub}</span>
                     </button>
                   );
                 })}
@@ -349,12 +349,12 @@ export default function Companion() {
             {/* Quick Prompt Tiles — Big 4-tile grid */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-serif text-lg font-bold text-[#1E2A43] dark:text-[#F4F6F0]">
+                <h2 className="font-serif text-lg font-bold text-primary dark:text-mist">
                   💬 Jaldi Baat Karein
                 </h2>
                 <button
                   onClick={() => speakCue('Kisi ek tile ko dabaakar turant baat shuru karein.', 'hi-IN')}
-                  className="flex items-center gap-1 text-xs text-[#D4A359] font-bold"
+                  className="flex items-center gap-1 text-xs text-gold-warm font-bold"
                 >
                   <Volume2 className="w-4 h-4" /> सुनें
                 </button>
@@ -364,12 +364,12 @@ export default function Companion() {
                   <button
                     key={qp.prompt}
                     onClick={() => { handleSendMessage(qp.prompt); setActiveTab('baat'); }}
-                    className="flex flex-col items-center justify-center gap-3 p-5 rounded-2xl bg-white dark:bg-[#1E2A43] border border-gray-200 dark:border-gray-700 hover:border-[#D4A359]/50 hover:shadow-md transition-all active:scale-95 text-center"
+                    className="flex flex-col items-center justify-center gap-3 p-5 rounded-2xl bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 hover:border-gold-warm/50 hover:shadow-md transition-all active:scale-95 text-center"
                   >
                     <span className="text-4xl">{qp.icon}</span>
                     <div>
-                      <p className="font-bold text-sm text-[#1E2A43] dark:text-[#F4F6F0]">{qp.label}</p>
-                      <p className="text-xs text-[#556376] dark:text-[#A8B4C2]">{qp.sub}</p>
+                      <p className="font-bold text-sm text-primary dark:text-mist">{qp.label}</p>
+                      <p className="text-xs text-muted dark:text-muted">{qp.sub}</p>
                     </div>
                   </button>
                 ))}
@@ -379,7 +379,7 @@ export default function Companion() {
             {/* Big CTA to chat */}
             <button
               onClick={() => setActiveTab('baat')}
-              className="w-full flex items-center justify-center gap-3 p-5 rounded-2xl bg-[#D4A359] hover:bg-[#c29148] text-[#1E2A43] font-bold text-base transition-all shadow-md active:scale-95"
+              className="w-full flex items-center justify-center gap-3 p-5 rounded-2xl bg-gold-warm hover:bg-gold-warm/90 text-primary font-bold text-base transition-all shadow-md active:scale-95"
             >
               <MessageSquare className="w-6 h-6" />
               <span>Saathi Se Seedha Baat Karein →</span>
@@ -392,20 +392,20 @@ export default function Companion() {
             ════════════════════════════════════════════════════════ */}
         {activeTab === 'baat' && (
           <div className="animate-fadeIn">
-            <div className="bg-white dark:bg-[#1E2A43] rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[72vh]">
+            <div className="bg-white dark:bg-warm-indigo rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col h-[72vh]">
 
               {/* Chat Header */}
-              <div className="p-4 bg-[#F7F2E8]/50 dark:bg-[#182332] border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
+              <div className="p-4 bg-sand/50 dark:bg-card border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#D4A359] text-[#1E2A43] flex items-center justify-center shadow-sm text-lg">
+                  <div className="w-10 h-10 rounded-xl bg-gold-warm text-primary flex items-center justify-center shadow-sm text-lg">
                     🤝
                   </div>
                   <div>
-                    <h4 className="font-serif font-bold text-sm text-[#1E2A43] dark:text-[#F4F6F0]">
+                    <h4 className="font-serif font-bold text-sm text-primary dark:text-mist">
                       Sanjeevani Saathi
                     </h4>
-                    <p className="text-[10px] text-[#556376] dark:text-[#A8B4C2] flex items-center gap-1.5 mt-0.5">
-                      <span className="w-2 h-2 rounded-full bg-[#5A7855] inline-block animate-pulse" />
+                    <p className="text-[10px] text-muted dark:text-muted flex items-center gap-1.5 mt-0.5">
+                      <span className="w-2 h-2 rounded-full bg-sage inline-block animate-pulse" />
                       Hamesha aapke sath
                     </p>
                   </div>
@@ -414,13 +414,13 @@ export default function Companion() {
                 <div className="hidden sm:flex items-center gap-2 text-xs">
                   <button
                     onClick={() => handleSendMessage('Mujhe ek purani sundar kahani sunao.')}
-                    className="bg-white dark:bg-[#253247] hover:bg-gray-100 dark:hover:bg-gray-700 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] transition-all"
+                    className="bg-white dark:bg-sand hover:bg-gray-100 dark:hover:bg-gray-700 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] transition-all"
                   >
                     📖 Kahani
                   </button>
                   <button
                     onClick={() => handleSendMessage('Koi achhi baat ya dua sunao.')}
-                    className="bg-white dark:bg-[#253247] hover:bg-gray-100 dark:hover:bg-gray-700 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] transition-all"
+                    className="bg-white dark:bg-sand hover:bg-gray-100 dark:hover:bg-gray-700 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] transition-all"
                   >
                     💌 Dua
                   </button>
@@ -434,23 +434,23 @@ export default function Companion() {
                   return (
                     <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
                       {!isUser && (
-                        <div className="w-8 h-8 rounded-xl bg-[#D4A359] text-[#1E2A43] flex items-center justify-center shrink-0 mr-2 mt-1 text-base">🤝</div>
+                        <div className="w-8 h-8 rounded-xl bg-gold-warm text-primary flex items-center justify-center shrink-0 mr-2 mt-1 text-base">🤝</div>
                       )}
                       <div
                         className={`max-w-[80%] sm:max-w-[72%] rounded-3xl p-4 shadow-xs relative ${
                           isUser
-                            ? 'bg-[#2B4A30] text-white rounded-br-none'
-                            : 'bg-[#F7F2E8] dark:bg-[#253247] text-[#1E2A43] dark:text-[#EAEFEA] border border-gray-200/80 dark:border-gray-700/80 rounded-bl-none'
+                            ? 'bg-sage text-white rounded-br-none'
+                            : 'bg-sand dark:bg-sand text-primary dark:text-mist border border-gray-200/80 dark:border-gray-700/80 rounded-bl-none'
                         }`}
                       >
                         {!isUser && (
                           <div className="flex items-center justify-between gap-2 mb-1.5">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C5E24] dark:text-[#D4A359]">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gold-warm dark:text-gold-warm">
                               Saathi
                             </span>
                             <button
                               onClick={() => speakCue(m.text, 'hi-IN')}
-                              className="text-[#556376] dark:text-[#A8B4C2] hover:text-[#1E2A43] transition-colors p-1"
+                              className="text-muted dark:text-muted hover:text-primary transition-colors p-1"
                               title="Speak aloud"
                               aria-label="Speak aloud"
                             >
@@ -463,12 +463,12 @@ export default function Companion() {
                         ) : (
                           <StructuredBotMessage text={m.text} />
                         )}
-                        <div className={`text-[9px] mt-1.5 text-right ${isUser ? 'text-white/70' : 'text-[#556376] dark:text-[#A8B4C2]'}`}>
+                        <div className={`text-[9px] mt-1.5 text-right ${isUser ? 'text-white/70' : 'text-muted dark:text-muted'}`}>
                           {m.timestamp}
                         </div>
                       </div>
                       {isUser && (
-                        <div className="w-8 h-8 rounded-xl bg-[#5A7855] text-white flex items-center justify-center shrink-0 ml-2 mt-1 text-base">🙂</div>
+                        <div className="w-8 h-8 rounded-xl bg-sage text-white flex items-center justify-center shrink-0 ml-2 mt-1 text-base">🙂</div>
                       )}
                     </div>
                   );
@@ -476,9 +476,9 @@ export default function Companion() {
 
                 {isReplying && (
                   <div className="flex justify-start">
-                    <div className="w-8 h-8 rounded-xl bg-[#D4A359] text-[#1E2A43] flex items-center justify-center shrink-0 mr-2 text-base">🤝</div>
-                    <div className="bg-[#F7F2E8] dark:bg-[#253247] p-3.5 rounded-3xl rounded-bl-none border border-gray-200 dark:border-gray-700 text-xs text-[#556376] dark:text-[#A8B4C2] flex items-center gap-2 animate-pulse">
-                      <HeartHandshake className="w-4 h-4 text-[#D4A359]" />
+                    <div className="w-8 h-8 rounded-xl bg-gold-warm text-primary flex items-center justify-center shrink-0 mr-2 text-base">🤝</div>
+                    <div className="bg-sand dark:bg-sand p-3.5 rounded-3xl rounded-bl-none border border-gray-200 dark:border-gray-700 text-xs text-muted dark:text-muted flex items-center gap-2 animate-pulse">
+                      <HeartHandshake className="w-4 h-4 text-gold-warm" />
                       <span>Sneh se soch raha hoon...</span>
                     </div>
                   </div>
@@ -487,15 +487,15 @@ export default function Companion() {
               </div>
 
               {/* Input Bar */}
-              <div className="p-3.5 bg-white dark:bg-[#1E2A43] border-t border-gray-200 dark:border-gray-800 shrink-0">
+              <div className="p-3.5 bg-white dark:bg-warm-indigo border-t border-gray-200 dark:border-gray-800 shrink-0">
                 {/* Voice button — BIG, prominent */}
                 <div className="flex justify-center mb-3">
                   <button
                     onClick={handleToggleMic}
                     className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm ${
                       isListening
-                        ? 'bg-[#A23B33] text-white animate-pulse scale-105'
-                        : 'bg-[#5A7855]/15 text-[#2B4A30] dark:text-[#8ED14C] border-2 border-[#5A7855]/30 hover:border-[#5A7855]/60'
+                        ? 'bg-rose-soft text-white animate-pulse scale-105'
+                        : 'bg-sage/15 text-sage dark:text-booti-glow border-2 border-sage/30 hover:border-sage/60'
                     }`}
                   >
                     {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
@@ -518,12 +518,12 @@ export default function Companion() {
                       }
                     }}
                     placeholder={isListening ? 'Sun raha hoon...' : 'Ya yahan likhein... (Shift+Enter for new line)'}
-                    className="flex-1 bg-gray-50 dark:bg-[#151D28] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-[#1E2A43] dark:text-[#F4F6F0] focus:outline-none focus:ring-2 focus:ring-[#D4A359] resize-none overflow-y-auto leading-relaxed transition-[height] duration-75"
+                    className="flex-1 bg-gray-50 dark:bg-mist border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-primary dark:text-mist focus:outline-none focus:ring-2 focus:ring-gold-warm resize-none overflow-y-auto leading-relaxed transition-[height] duration-75"
                   />
                   <button
                     type="submit"
                     disabled={!inputText.trim() || isReplying}
-                    className="mb-0.5 bg-[#D4A359] hover:bg-[#c29148] disabled:opacity-40 text-[#1E2A43] p-3 rounded-2xl font-bold transition-all shadow-sm shrink-0"
+                    className="mb-0.5 bg-gold-warm hover:bg-gold-warm/90 disabled:opacity-40 text-primary p-3 rounded-2xl font-bold transition-all shadow-sm shrink-0"
                     title="Send"
                     aria-label="Send Message"
                   >
@@ -542,17 +542,17 @@ export default function Companion() {
           <div className="space-y-5 animate-fadeIn">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="font-serif text-xl font-bold text-[#1E2A43] dark:text-[#F4F6F0] flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-[#5A7855]" />
+                <h2 className="font-serif text-xl font-bold text-primary dark:text-mist flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-sage" />
                   Pahadi Kisse 📖
                 </h2>
-                <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+                <p className="text-xs text-muted dark:text-muted mt-0.5">
                   Uttarakhand ki meethi lok-kathayein — suniye ya padhiye
                 </p>
               </div>
               <button
                 onClick={() => speakCue('Yahaan pahaadi kisse hain. Koi bhi tile dabaakar kahani suniye.', 'hi-IN')}
-                className="flex items-center gap-1 text-xs text-[#D4A359] font-bold bg-[#D4A359]/10 px-3 py-2 rounded-xl"
+                className="flex items-center gap-1 text-xs text-gold-warm font-bold bg-gold-warm/10 px-3 py-2 rounded-xl"
               >
                 <Volume2 className="w-4 h-4" /> 🔊 सुनें
               </button>
@@ -561,25 +561,25 @@ export default function Companion() {
             {stories.map((story) => (
               <div
                 key={story.id}
-                className="bg-white dark:bg-[#1E2A43] rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden"
+                className="bg-white dark:bg-warm-indigo rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden"
               >
                 {/* Story cover */}
-                <div className="bg-gradient-to-r from-[#5A7855]/15 to-[#D4A359]/10 p-5 border-b border-gray-100 dark:border-gray-800">
+                <div className="bg-gradient-to-r from-sage/15 to-gold-warm/10 p-5 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-2xl bg-[#5A7855]/20 dark:bg-[#5A7855]/30 flex items-center justify-center text-3xl shrink-0">
+                    <div className="w-14 h-14 rounded-2xl bg-sage/20 dark:bg-sage/30 flex items-center justify-center text-3xl shrink-0">
                       📖
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] bg-[#5A7855]/15 text-[#2B4A30] dark:text-[#8ED14C] px-2 py-0.5 rounded-full font-bold uppercase">
+                        <span className="text-[10px] bg-sage/15 text-sage dark:text-booti-glow px-2 py-0.5 rounded-full font-bold uppercase">
                           {story.category || 'Lok Katha'}
                         </span>
-                        <span className="text-[10px] text-[#556376] dark:text-[#A8B4C2]">⏱ {story.duration}</span>
+                        <span className="text-[10px] text-muted dark:text-muted">⏱ {story.duration}</span>
                       </div>
-                      <h3 className="font-serif font-bold text-base text-[#1E2A43] dark:text-[#F4F6F0] leading-tight">
+                      <h3 className="font-serif font-bold text-base text-primary dark:text-mist leading-tight">
                         {story.title}
                       </h3>
-                      <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-1 leading-relaxed line-clamp-2">
+                      <p className="text-xs text-muted dark:text-muted mt-1 leading-relaxed line-clamp-2">
                         {story.summary}
                       </p>
                     </div>
@@ -588,7 +588,7 @@ export default function Companion() {
 
                 {/* Story text preview */}
                 <div className="p-5 space-y-4">
-                  <p className="text-xs sm:text-sm text-[#1E2A43] dark:text-[#EAEFEA] leading-relaxed font-serif italic border-l-4 border-[#D4A359]/40 pl-4">
+                  <p className="text-xs sm:text-sm text-primary dark:text-mist leading-relaxed font-serif italic border-l-4 border-gold-warm/40 pl-4">
                     {story.text}
                   </p>
 
@@ -596,14 +596,14 @@ export default function Companion() {
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => { speakCue(story.text, 'hi-IN'); toast.success(`🔊 ${story.title} chal raha hai`); }}
-                      className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-[#5A7855] hover:bg-[#4a6847] text-white font-bold text-sm transition-all active:scale-95 shadow-sm"
+                      className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-sage hover:bg-sage/90 text-white font-bold text-sm transition-all active:scale-95 shadow-sm"
                     >
                       <Volume2 className="w-5 h-5" />
                       <span>🔊 Suniye</span>
                     </button>
                     <button
                       onClick={() => { handleSendMessage(`Mujhe kahani sunao: ${story.title}`); setActiveTab('baat'); }}
-                      className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-[#D4A359]/15 hover:bg-[#D4A359]/25 text-[#8C5E24] dark:text-[#D4A359] border border-[#D4A359]/30 font-bold text-sm transition-all active:scale-95"
+                      className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-gold-warm/15 hover:bg-gold-warm/25 text-gold-warm dark:text-gold-warm border border-gold-warm/30 font-bold text-sm transition-all active:scale-95"
                     >
                       <MessageSquare className="w-5 h-5" />
                       <span>💬 Baat Karein</span>
@@ -622,17 +622,17 @@ export default function Companion() {
           <div className="space-y-5 animate-fadeIn">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="font-serif text-xl font-bold text-[#1E2A43] dark:text-[#F4F6F0] flex items-center gap-2">
-                  <ShieldAlert className="w-5 h-5 text-[#B85042]" />
+                <h2 className="font-serif text-xl font-bold text-primary dark:text-mist flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-rose-soft" />
                   Madad & Sahara 🆘
                 </h2>
-                <p className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-0.5">
+                <p className="text-xs text-muted dark:text-muted mt-0.5">
                   Zaroorat ke waqt yahan daben — 24 ghante madad milegi
                 </p>
               </div>
               <button
                 onClick={() => speakCue('Zaroorat ke waqt in helpline numbers ko call karein. Yeh toll-free hain aur 24 ghante uplabdh hain.', 'hi-IN')}
-                className="flex items-center gap-1 text-xs text-[#D4A359] font-bold bg-[#D4A359]/10 px-3 py-2 rounded-xl"
+                className="flex items-center gap-1 text-xs text-gold-warm font-bold bg-gold-warm/10 px-3 py-2 rounded-xl"
               >
                 <Volume2 className="w-4 h-4" /> 🔊 सुनें
               </button>
@@ -641,10 +641,10 @@ export default function Companion() {
             {/* SOS Helpline Cards — very large, easy to tap */}
             <div className="space-y-4">
               {[
-                { icon: '🧠', color: 'bg-[#2E4057] hover:bg-[#243347]', number: '14416', name: 'Tele-MANAS', sub: 'Mann ki madad • Toll-Free • 24/7', speak: 'Tele MANAS helpline. Mann ki takleef ke liye call karein.' },
-                { icon: '🌸', color: 'bg-[#B85042] hover:bg-[#9a4035]', number: '1800-599-0019', name: 'Vandrevala Foundation', sub: 'Aatma-hatya rokne wali helpline', speak: 'Vandrevala Foundation. Aatmhatya rokne ke liye call karein.' },
-                { icon: '👵', color: 'bg-[#5A7855] hover:bg-[#4a6847]', number: '14567', name: 'iCall Helpline', sub: 'Buzurgon ke liye vishesh sahara', speak: 'Buzurgon ke liye helpline. Akelepe ya mansik pareshani mein madad milegi.' },
-                { icon: '🚑', color: 'bg-[#D4A359] hover:bg-[#c29148]', number: '108', name: 'Ambulance / Emergency', sub: 'Tatkal chikitsa sahayata', speak: 'Emergency Ambulance. Tatkal madad ke liye call karein.' },
+                { icon: '🧠', color: 'bg-warm-indigo hover:bg-warm-indigo/90', number: '14416', name: 'Tele-MANAS', sub: 'Mann ki madad • Toll-Free • 24/7', speak: 'Tele MANAS helpline. Mann ki takleef ke liye call karein.' },
+                { icon: '🌸', color: 'bg-rose-soft hover:bg-rose-soft/90', number: '1800-599-0019', name: 'Vandrevala Foundation', sub: 'Aatma-hatya rokne wali helpline', speak: 'Vandrevala Foundation. Aatmhatya rokne ke liye call karein.' },
+                { icon: '👵', color: 'bg-sage hover:bg-sage/90', number: '14567', name: 'iCall Helpline', sub: 'Buzurgon ke liye vishesh sahara', speak: 'Buzurgon ke liye helpline. Akelepe ya mansik pareshani mein madad milegi.' },
+                { icon: '🚑', color: 'bg-gold-warm hover:bg-gold-warm/90', number: '108', name: 'Ambulance / Emergency', sub: 'Tatkal chikitsa sahayata', speak: 'Emergency Ambulance. Tatkal madad ke liye call karein.' },
               ].map((h) => (
                 <a
                   key={h.number}
@@ -666,9 +666,9 @@ export default function Companion() {
             </div>
 
             {/* Self-Care Reminder */}
-            <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-5 border border-gray-200 dark:border-gray-800 space-y-4">
-              <h3 className="font-serif font-bold text-base text-[#1E2A43] dark:text-[#F4F6F0] flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#D4A359]" />
+            <div className="bg-white dark:bg-warm-indigo rounded-3xl p-5 border border-gray-200 dark:border-gray-800 space-y-4">
+              <h3 className="font-serif font-bold text-base text-primary dark:text-mist flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-gold-warm" />
                 Apna Khyaal Rakhein 💛
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -683,12 +683,12 @@ export default function Companion() {
                   <button
                     key={tip.label}
                     onClick={() => speakCue(tip.action, 'hi-IN')}
-                    className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[#F4F6F0] dark:bg-[#182332] hover:bg-[#D4A359]/10 border border-gray-200 dark:border-gray-700 transition-all active:scale-95 text-center"
+                    className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-mist dark:bg-card hover:bg-gold-warm/10 border border-gray-200 dark:border-gray-700 transition-all active:scale-95 text-center"
                   >
                     <span className="text-3xl">{tip.icon}</span>
-                    <span className="text-xs font-bold text-[#1E2A43] dark:text-[#F4F6F0]">{tip.label}</span>
-                    <span className="text-[10px] text-[#556376] dark:text-[#A8B4C2]">{tip.sub}</span>
-                    <span className="text-[9px] text-[#D4A359] font-bold">🔊 Tap karein</span>
+                    <span className="text-xs font-bold text-primary dark:text-mist">{tip.label}</span>
+                    <span className="text-[10px] text-muted dark:text-muted">{tip.sub}</span>
+                    <span className="text-[9px] text-gold-warm font-bold">🔊 Tap karein</span>
                   </button>
                 ))}
               </div>
@@ -697,7 +697,7 @@ export default function Companion() {
             {/* Saathi CTA */}
             <button
               onClick={() => setActiveTab('baat')}
-              className="w-full flex items-center justify-center gap-3 p-5 rounded-2xl bg-[#D4A359] hover:bg-[#c29148] text-[#1E2A43] font-bold text-base transition-all shadow-md active:scale-95"
+              className="w-full flex items-center justify-center gap-3 p-5 rounded-2xl bg-gold-warm hover:bg-gold-warm/90 text-primary font-bold text-base transition-all shadow-md active:scale-95"
             >
               <MessageSquare className="w-6 h-6" />
               <span>Saathi Se Baat Karein →</span>

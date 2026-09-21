@@ -48,17 +48,11 @@ class IndicTTSEngine:
     """
     High-fidelity backend Text-to-Speech engine.
     Supports:
-    1. Sarvam AI (bulbul:v3) full and chunked streaming speech synthesis.
-    2. Official Bhashini / AI4Bharat ULCA Inference Pipeline API (when credentials are provided).
-    3. Neural Indian Accent Voice Engine (edge-tts) for 100% natural, authentic Indian accent
-       without robotic artifacts or latency.
+    1. Sarvam AI (bulbul:v3) full and chunked streaming speech synthesis (primary).
+    2. Neural Indian Accent Voice Engine (edge-tts) for 100% natural, authentic Indian accent
+       without robotic artifacts or latency (sole fallback).
     """
     def __init__(self):
-        # Bhashini / AI4Bharat Credentials from settings or environment
-        self.bhashini_user_id = os.getenv("BHASHINI_USER_ID", "")
-        self.bhashini_api_key = os.getenv("BHASHINI_API_KEY", "")
-        self.bhashini_inference_key = os.getenv("BHASHINI_INFERENCE_KEY", "")
-        self.bhashini_endpoint = "https://dhruva-api.bhashini.gov.in/services/inference/pipeline"
         self._client: Optional[httpx.AsyncClient] = None
         self.last_provider: str = "sarvam" if settings.TTS_PROVIDER == "sarvam" else "neural_indic"
 
@@ -118,55 +112,6 @@ class IndicTTSEngine:
         t = re.sub(r"\s*\.\s*\.", ".", t)
         return t
 
-    async def _synthesize_bhashini(self, text: str, language: str = "hi") -> Optional[bytes]:
-        """Synthesizes speech via Bhashini / AI4Bharat ULCA API if credentials are configured."""
-        if not (self.bhashini_user_id and self.bhashini_api_key):
-            return None
-
-        # Skip if placeholder values
-        combined = (self.bhashini_user_id + self.bhashini_api_key).lower()
-        if "your-" in combined or "placeholder" in combined or "xxx" in combined:
-            return None
-
-        try:
-            lang_code = "hi" if language in ("hi", "garhwali", "hindi") else "en"
-            headers = {
-                "User-Id": self.bhashini_user_id,
-                "Authorization": self.bhashini_api_key,
-                "Content-Type": "application/json"
-            }
-            if self.bhashini_inference_key:
-                headers["ulcaApiKey"] = self.bhashini_inference_key
-
-            payload = {
-                "pipelineTasks": [
-                    {
-                        "taskType": "tts",
-                        "config": {
-                            "language": {"sourceLanguage": lang_code},
-                            "gender": "female",
-                            "samplingRate": 16000
-                        }
-                    }
-                ],
-                "inputData": {
-                    "input": [{"source": text}]
-                }
-            }
-
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                res = await client.post(self.bhashini_endpoint, json=payload, headers=headers)
-                if res.status_code == 200:
-                    data = res.json()
-                    import base64
-                    audio_b64 = data["pipelineResponse"][0]["audio"][0]["audioContent"]
-                    return base64.b64decode(audio_b64)
-                else:
-                    print(f"[Bhashini TTS] API responded with status {res.status_code}: {res.text}")
-        except Exception as e:
-            print(f"[Bhashini TTS] Pipeline call failed: {e}")
-
-        return None
 
     async def _synthesize_neural_indic(self, text: str, language: str = "hi", gender: str = "female") -> Optional[bytes]:
         """
@@ -382,9 +327,8 @@ class IndicTTSEngine:
         """
         Main TTS entry point:
         1. Checks disk cache for instant playback.
-        2. Tries Sarvam AI (bulbul:v3) for ultra-fluent native Indian speech.
-        3. Tries Bhashini / AI4Bharat ULCA pipeline if configured.
-        4. Seamlessly falls back to high-fidelity Neural Indian Accent engine (edge-tts).
+        2. Tries Sarvam AI (bulbul:v3) for ultra-fluent native Indian speech (primary).
+        3. Seamlessly falls back to high-fidelity Neural Indian Accent engine (edge-tts, sole fallback).
         Returns: (audio_bytes, content_type)
         """
         clean_text = self._clean_for_speech(text)
@@ -418,14 +362,7 @@ class IndicTTSEngine:
                 audio_data, content_type = sarvam_res
                 self.last_provider = "sarvam"
 
-        # 2. Try Bhashini / AI4Bharat ULCA if configured
-        if not audio_data:
-            audio_data = await self._synthesize_bhashini(clean_text, language=language)
-            if audio_data:
-                content_type = "audio/mpeg"
-                self.last_provider = "bhashini"
-
-        # 3. Fallback to Neural Indian Accent engine (edge-tts)
+        # 2. Fallback to Neural Indian Accent engine (edge-tts) as sole fallback
         if not audio_data:
             audio_data = await self._synthesize_neural_indic(clean_text, language=language, gender=gender)
             if audio_data:

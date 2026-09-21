@@ -19,7 +19,7 @@ from app.schemas.auth_schemas import (
     ResetPasswordWithOtpRequest,
     OtpResponse,
 )
-from app.core.auth import hash_password, verify_password, create_access_token, get_current_user
+from app.core.auth import hash_password, verify_password, create_access_token, get_current_user, require_role
 from app.core.notification_service import send_email_otp, send_sms_otp
 from app.models import get_db, normalize_phone
 
@@ -300,8 +300,11 @@ async def login_user(req: LoginRequest):
 
 
 @router.post("/reset-password")
-async def reset_password(req: ResetPasswordRequest):
-    """Allows users to reset their password using their Phone Number, Username, or Email."""
+async def reset_password(
+    req: ResetPasswordRequest,
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """Allows administrators to reset a user's password using their Phone Number, Username, or Email."""
     if not req.new_password or len(req.new_password.strip()) < 4:
         raise HTTPException(status_code=400, detail="Naya password kam se kam 4 aksharon ka hona chahiye.")
 

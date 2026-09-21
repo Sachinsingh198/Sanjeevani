@@ -4,22 +4,33 @@ import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
+import SanjeevaniOrb from './components/SanjeevaniOrb';
 
-// Public pages
-import Home from './pages/Home';
-import About from './pages/About';
-import Login from './pages/Login';
-import Register from './pages/Register';
+// Public pages (lazy loaded)
+const Home = React.lazy(() => import('./pages/Home'));
+const About = React.lazy(() => import('./pages/About'));
+const Login = React.lazy(() => import('./pages/Login'));
+const Register = React.lazy(() => import('./pages/Register'));
 
-// Protected pages
-import PatientDashboard from './pages/PatientDashboard';
-import Chat from './pages/Chat';
-import Screening from './pages/Screening';
-import MeditationTeacher from './pages/MeditationTeacher';
-import YogaTeacher from './pages/YogaTeacher';
-import Companion from './pages/Companion';
-import AshaDashboard from './pages/AshaDashboard';
-import AdminDashboard from './pages/AdminDashboard';
+// Protected pages (lazy loaded)
+const PatientDashboard = React.lazy(() => import('./pages/PatientDashboard'));
+const Chat = React.lazy(() => import('./pages/Chat'));
+const Screening = React.lazy(() => import('./pages/Screening'));
+const WellnessStudio = React.lazy(() => import('./pages/WellnessStudio'));
+const MeditationTeacher = React.lazy(() => import('./pages/MeditationTeacher'));
+const YogaTeacher = React.lazy(() => import('./pages/YogaTeacher'));
+const Companion = React.lazy(() => import('./pages/Companion'));
+const AshaDashboard = React.lazy(() => import('./pages/AshaDashboard'));
+const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
+
+function RouteLoadingFallback() {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] gap-4 p-8">
+      <SanjeevaniOrb state="thinking" size={60} />
+      <p className="text-xs text-muted font-medium tracking-wide animate-pulse">Sanjeevani loading…</p>
+    </div>
+  );
+}
 
 export default function App() {
   const location = useLocation();
@@ -33,7 +44,8 @@ export default function App() {
         }`}>
           <Navbar />
           <main className={isChatPage ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 animate-fadeIn'}>
-            <Routes>
+            <React.Suspense fallback={<RouteLoadingFallback />}>
+              <Routes>
               {/* ── Public Routes ──────────────────────────────────── */}
               <Route path="/" element={<Home />} />
               <Route path="/about" element={<About />} />
@@ -53,27 +65,37 @@ export default function App() {
                 </ProtectedRoute>
               } />
 
-              {/* Meditation Teacher (Dhyan Guru) */}
+              {/* Unified Wellness Studio (आरोग्यशाला) */}
+              <Route path="/mitra/wellness" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <WellnessStudio />
+                </ProtectedRoute>
+              } />
+              <Route path="/patient/wellness" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <WellnessStudio />
+                </ProtectedRoute>
+              } />
+
+              {/* Backward-Compatible Dhyan Guru & Yogashala Deep Links */}
               <Route path="/mitra/meditation" element={
                 <ProtectedRoute allowedRoles={['patient']}>
-                  <MeditationTeacher />
+                  <WellnessStudio defaultTab="dhyan" />
                 </ProtectedRoute>
               } />
               <Route path="/patient/meditation" element={
                 <ProtectedRoute allowedRoles={['patient']}>
-                  <MeditationTeacher />
+                  <WellnessStudio defaultTab="dhyan" />
                 </ProtectedRoute>
               } />
-
-              {/* Yoga Teacher & Posture Checker (Yogashala) */}
               <Route path="/mitra/yoga" element={
                 <ProtectedRoute allowedRoles={['patient']}>
-                  <YogaTeacher />
+                  <WellnessStudio defaultTab="yoga" />
                 </ProtectedRoute>
               } />
               <Route path="/patient/yoga" element={
                 <ProtectedRoute allowedRoles={['patient']}>
-                  <YogaTeacher />
+                  <WellnessStudio defaultTab="yoga" />
                 </ProtectedRoute>
               } />
 
@@ -138,7 +160,8 @@ export default function App() {
               {/* ── Catch-all redirect ─────────────────────────────── */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-          </main>
+          </React.Suspense>
+        </main>
 
           {!isChatPage && (
             <footer className="bg-warm-indigo text-white/70 text-xs py-6 px-4 text-center border-t border-white/10 mt-auto">

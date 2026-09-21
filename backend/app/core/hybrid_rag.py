@@ -280,7 +280,7 @@ class HybridRemedyStore:
             enriched["matched_botanicals"] = matched_herbs
         return enriched
 
-    def search_remedies(self, query_text: str, limit: int = 2, min_score: float = 0.30) -> List[Dict[str, Any]]:
+    def search_remedies(self, query_text: str, limit: int = 2, min_score: float = 0.25) -> List[Dict[str, Any]]:
         """
         Embeds the query text and retrieves top matching remedies from Qdrant,
         filtering by minimum similarity score and enriching with Dravyaguna properties.
@@ -311,6 +311,29 @@ class HybridRemedyStore:
             return matched
         except Exception as e:
             print(f"[Qdrant Search Error]: {e}")
+            # Resilient fallback to local storage if cloud connection fails
+            if getattr(self, "is_cloud", False):
+                try:
+                    local_c = QdrantClient(path=settings.QDRANT_PATH)
+                    res = local_c.query_points(
+                        collection_name=self.collection_name,
+                        query=query_embedding,
+                        limit=limit * 2
+                    )
+                    matched = []
+                    for point in res.points:
+                        if not point.payload:
+                            continue
+                        if hasattr(point, "score") and point.score is not None and point.score < min_score:
+                            continue
+                        enriched = self._enrich_with_botanicals(point.payload)
+                        enriched["similarity_score"] = getattr(point, "score", None)
+                        matched.append(enriched)
+                        if len(matched) >= limit:
+                            break
+                    return matched
+                except Exception as local_err:
+                    print(f"[Qdrant Local Search Fallback Error]: {local_err}")
             return []
 
     def _initialize_and_seed_garhwali(self):

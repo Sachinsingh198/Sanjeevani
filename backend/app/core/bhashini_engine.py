@@ -4,38 +4,7 @@ import re
 from typing import Dict, Optional, List, Any
 from app.config import settings
 
-# Comprehensive Garhwali tokens, morphological markers, postpositions and vocabulary
-GARHWALI_TOKENS = {
-    # Pronouns & determiners
-    "miku", "twaku", "twari", "tyar", "tyeri", "hamuku", "wuku", "myaru", "meru", "meri", "hamaru", "hamru",
-    "kwahi", "kwai", "kakkh", "kakh", "kile", "kaba", "kab", "kanni", "kani", "katga", "kati",
-    # Verbs & auxiliaries
-    "chha", "chhi", "chhan", "chhe", "chhon", "chhou", "chhonh", "chhya", "huna", "hooni", "auna", "auni",
-    "karu", "kariya", "karnu", "leenu", "batava", "batawa", "hwe", "hwayu", "hwai", "ge", "gye", "ro", "rahyu",
-    "ho ro chha", "ho rahyu chha", "hooni chha", "huni chhe", "hwa chha", "lagyun", "lagyu", "lagni", "lagani",
-    "dukhnu", "dukhna", "dukhni", "aaundu", "aaundi", "peewa", "khawa", "rakha",
-    # Particles, postpositions & adverbs
-    "dagad", "dagadi", "bati", "ma", "ni", "bal", "ghani", "ghano", "bhalu", "bhal", "theek ni",
-    "byali", "byakhani", "rati", "dhoor", "khali", "ekdam",
-    # Symptoms & anatomy
-    "mund", "peed", "peer", "bhyo", "dhaad", "khutta", "khutti", "goda", "haat", "aankhi", "aankhiyo",
-    "syal", "krodh", "marod", "khang", "chhwaat", "bhaunr", "ghat", "ghaant", "kanth", "jyu",
-    # Greetings & cultural markers
-    "dainu", "bhula", "bhuli", "daju", "dajyu", "bouji", "pailagon", "badri vishal",
-
-    # Devanagari tokens
-    "छ", "छा", "छो", "छन", "छौं", "छौ", "छी", "छ्या", "भ्यो", "मुंड", "पीर", "पीड", "पीड़", "दैणु", "दैन्यू",
-    "पहिलागण", "भूला", "कनि", "भालु", "त्वकु", "मिकु", "त्वरि", "त्यर", "त्येरो", "मेरो", "म्यारु", "मेरि",
-    "हमुकु", "हमरु", "कख", "किले", "कब", "कबा", "कन्नि", "कतगा", "कति", "खुट्टा", "गोडा", "धड़", "धाड़",
-    "घाँट", "गाळ", "कंठ", "लग्यूँ", "लगणी", "औणा", "औणी", "औंदू", "हूण", "हूँदू", "हूँदी", "बतावा", "दगड़",
-    "दगड़ी", "बटि", "नी", "घणी", "घणो", "खंग", "छ्वाट", "भौंर", "दाज्यू", "बौजी", "ज्यू", "स्याल", "पैट", "मरोड़"
-}
-
-ENGLISH_COMMON_WORDS = {
-    "i", "my", "me", "am", "have", "has", "had", "pain", "throat", "headache", "fever", "cough",
-    "cold", "stomach", "chest", "doctor", "please", "suggest", "remedy", "what", "how", "can",
-    "take", "days", "since", "yesterday", "feeling", "weakness", "vomiting", "dizzy", "hello", "hi"
-}
+from app.core.clinical_lexicon import GARHWALI_TOKENS, ENGLISH_COMMON_WORDS
 
 
 class BhashiniVoiceEngine:

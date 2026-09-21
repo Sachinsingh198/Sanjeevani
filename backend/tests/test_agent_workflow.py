@@ -45,3 +45,12 @@ def test_workflow_green_tier_routine():
     assert result["escalation_triggered"] is False
     assert len(result["retrieved_remedies"]) > 0
     assert any(term in result["final_reply_text"] for term in ["Tulsi", "Vasa", "Kashaya", "Kwath", "gharelu upchaar", "Nuskha", "nuskha"])
+
+
+def test_sqlite_saver_wal_mode():
+    """Verify that the sessions.db SQLite connection operates in WAL journal mode."""
+    from app.agents.graph import conn
+    cursor = conn.execute("PRAGMA journal_mode")
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0].lower() == "wal"

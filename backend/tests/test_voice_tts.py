@@ -10,35 +10,30 @@ def test_tts_health_reports_status():
     res = client.get("/voice/tts/health")
     assert res.status_code == 200
     body = res.json()
-    assert body["provider"] in ("ai4bharat", "sarvam", "neural")
-    assert body["status"] in ("not_loaded", "loading", "ready", "failed")
+    assert body["provider"] in ("sarvam", "neural")
+    assert body["status"] == "ready"
 
 
-def test_tts_returns_503_when_model_not_ready():
-    with patch("app.api.voice.settings.TTS_PROVIDER", "ai4bharat"):
-        with patch("app.api.voice.ai4bharat_tts_engine.status", {"status": "loading", "device": "cpu", "error": None}):
-            with patch(
-                "app.api.voice.ai4bharat_tts_engine.synthesize",
-                new=AsyncMock(side_effect=__import__("app.core.ai4bharat_tts", fromlist=["TTSNotReadyError"]).TTSNotReadyError("loading")),
-            ):
-                with patch("app.api.voice._indic_tts_engine.synthesize", new=AsyncMock(side_effect=Exception("Fallback failed"))):
-                    res = client.post("/voice/tts", json={"text": "Namaste", "language": "hi"})
-                    assert res.status_code == 503
+def test_tts_sarvam_success_mocked():
+    fake_audio = b"FAKE_SARVAM_AUDIO_BYTES"
+    with patch.object(
+        app.state if hasattr(app, "state") else app,
+        "dummy",
+        create=True
+    ):
+        with patch("app.api.voice._indic_tts_engine.synthesize", new=AsyncMock(return_value=(fake_audio, "audio/wav"))):
+            res = client.post(
+                "/voice/tts",
+                json={"text": "Namaste, aapko kya takleef hai?", "language": "hi"}
+            )
+            assert res.status_code == 200
+            body = res.json()
+            assert body["format"] == "wav"
+            assert len(body["audio_base64"]) > 0
 
 
-def test_tts_success_path_mocked():
-    fake_result = {"audio_base64": "ZmFrZWF1ZGlv", "format": "wav", "language": "hi"}
-    with patch("app.api.voice.settings.TTS_PROVIDER", "ai4bharat"):
-        with patch("app.api.voice.ai4bharat_tts_engine.status", {"status": "ready", "device": "cpu", "error": None}):
-            with patch(
-                "app.api.voice.ai4bharat_tts_engine.synthesize",
-                new=AsyncMock(return_value=fake_result),
-            ):
-                res = client.post(
-                    "/voice/tts",
-                    json={"text": "Aapko kya takleef ho rahi hai?", "language": "hi"},
-                )
-                assert res.status_code == 200
-                body = res.json()
-                assert body["audio_base64"] == "ZmFrZWF1ZGlv"
-                assert body["provider"] == "ai4bharat"
+def test_tts_returns_503_when_all_fail():
+    with patch("app.api.voice._indic_tts_engine.synthesize", new=AsyncMock(side_effect=Exception("TTS Failure"))):
+        res = client.post("/voice/tts", json={"text": "Namaste", "language": "hi"})
+        assert res.status_code == 503
+        assert "both failed" in res.json()["detail"].lower()

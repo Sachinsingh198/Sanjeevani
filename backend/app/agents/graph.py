@@ -3,12 +3,13 @@ from langgraph.graph import StateGraph, END
 from app.agents.state import AgentState
 from app.agents.nodes.triage_node import triage_node
 from app.agents.nodes.emergency_node import emergency_node
-from app.agents.nodes.retriever_node import retriever_node
+from app.agents.nodes.retriever_node import retriever_runnable
 from app.agents.nodes.responder_node import doctor_consultation_node
 
 try:
     from langgraph.checkpoint.sqlite import SqliteSaver
     conn = sqlite3.connect("sessions.db", check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
     checkpointer = SqliteSaver(conn)
 except (ImportError, ModuleNotFoundError):
     from langgraph.checkpoint.memory import MemorySaver
@@ -29,23 +30,31 @@ def route_clinical_flow(state: AgentState) -> str:
     if tier == "Red":
         return "emergency_node"
 
-    # dialogue_phase is set to CONCLUDED either by:
-    #   (a) triage_node (CONCLUDED on restart), or
-    #   (b) responder_node (LLM signalled ##CONCLUDE## in previous turn)
-    # In case (b) it was already set BEFORE triage_node ran this turn,
-    # so triage_node left it as CONCLUDED (via the pass branch).
-    # We check the resulting new_phase to decide routing.
     if new_phase == "CONCLUDED":
         return "retriever_node"
 
     return "doctor_consultation_node"
 
 
+def route_after_consultation(state: AgentState) -> str:
+    """
+    Routes after doctor_consultation_node runs:
+    If the consultation concluded during this node and remedies have not been fetched yet,
+    route to retriever_node via graph edge (which feeds into doctor_consultation_node for delivery).
+    Otherwise, complete the turn.
+    """
+    phase = state.get("dialogue_phase")
+    remedies = state.get("retrieved_remedies")
+    if phase == "CONCLUDED" and not remedies:
+        return "retriever_node"
+    return END
+
+
 builder = StateGraph(AgentState)
 
 builder.add_node("triage_node", triage_node)
 builder.add_node("emergency_node", emergency_node)
-builder.add_node("retriever_node", retriever_node)
+builder.add_node("retriever_node", retriever_runnable)
 builder.add_node("doctor_consultation_node", doctor_consultation_node)
 
 builder.set_entry_point("triage_node")
@@ -62,6 +71,14 @@ builder.add_conditional_edges(
 
 builder.add_edge("retriever_node", "doctor_consultation_node")
 builder.add_edge("emergency_node", END)
-builder.add_edge("doctor_consultation_node", END)
 
-sanjeevani_workflow = builder.compile(checkpointer=checkpointer)
+builder.add_conditional_edges(
+    "doctor_consultation_node",
+    route_after_consultation,
+    {
+        "retriever_node": "retriever_node",
+        END: END
+    }
+)
+
+sanjeevani_workflow = builder.compile(checkpointer=checkpointer)

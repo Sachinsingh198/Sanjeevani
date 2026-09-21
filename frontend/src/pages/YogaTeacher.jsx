@@ -292,14 +292,14 @@ export default function YogaTeacher() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6F0] dark:bg-[#151D28] text-[#1E2A43] dark:text-[#EAEFEA] pb-16 transition-colors duration-300">
+    <div className="min-h-screen bg-mist dark:bg-mist text-primary dark:text-mist pb-16 transition-colors duration-300">
       
       {/* ── Top Header ──────────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-b from-[#5A7855]/15 via-white/80 dark:via-[#1E2A43]/80 to-[#F4F6F0] dark:to-[#151D28] border-b border-gray-200/80 dark:border-gray-800 pt-8 pb-10 px-4 sm:px-6">
+      <div className="bg-gradient-to-b from-sage/15 via-white/80 dark:via-card to-mist dark:to-mist border-b border-gray-200/80 dark:border-gray-800 pt-8 pb-10 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
           <Link
             to="/patient"
-            className="touch-target inline-flex items-center gap-2 text-xs font-semibold text-[#556376] dark:text-[#A8B4C2] hover:text-[#1E2A43] dark:hover:text-[#F4F6F0] mb-4 transition-colors"
+            className="touch-target inline-flex items-center gap-2 text-xs font-semibold text-muted dark:text-muted hover:text-primary dark:hover:text-mist mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Mitra Dashboard Par Wapas</span>
@@ -307,14 +307,14 @@ export default function YogaTeacher() {
 
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-2 bg-[#5A7855]/10 dark:bg-[#5A7855]/25 text-[#2B4A30] dark:text-[#8ED14C] px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
-                <Activity className="w-3.5 h-3.5 text-[#D4A359]" />
+              <div className="inline-flex items-center gap-2 bg-sage/10 dark:bg-sage/25 text-sage dark:text-booti-glow px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                <Activity className="w-3.5 h-3.5 text-gold-warm" />
                 <span>AI Yogashala & Posture Coach • योग व मुद्रा सुधारक</span>
               </div>
-              <h1 className="font-serif text-3xl md:text-4xl font-bold text-[#1E2A43] dark:text-[#F4F6F0]">
+              <h1 className="font-serif text-3xl md:text-4xl font-bold text-primary dark:text-mist">
                 Himalayan Yoga Guru
               </h1>
-              <p className="text-xs md:text-sm text-[#556376] dark:text-[#A8B4C2] mt-1 max-w-xl leading-relaxed">
+              <p className="text-xs md:text-sm text-muted dark:text-muted mt-1 max-w-xl leading-relaxed">
                 Computer-vision aadharit mudra jaanch. Reerh ki haddi ka santulan, jod ke kon (joint angles) aur aawaz dwara sudhar.
               </p>
             </div>
@@ -324,7 +324,7 @@ export default function YogaTeacher() {
               <button
                 onClick={() => setSoundEnabled(!soundEnabled)}
                 className={`touch-target flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-                  soundEnabled ? 'bg-[#5A7855]/20 text-[#2B4A30] dark:text-[#8ED14C]' : 'bg-gray-100 dark:bg-gray-800 text-[#556376]'
+                  soundEnabled ? 'bg-sage/20 text-sage dark:text-booti-glow' : 'bg-gray-100 dark:bg-gray-800 text-muted'
                 }`}
                 title="Tibetan Bowl Chimes"
               >
@@ -335,10 +335,10 @@ export default function YogaTeacher() {
               <button
                 onClick={() => setVoiceCuesEnabled(!voiceCuesEnabled)}
                 className={`touch-target flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-                  voiceCuesEnabled ? 'bg-[#D4A359]/20 text-[#8C5E24] dark:text-[#D4A359]' : 'bg-gray-100 dark:bg-gray-800 text-[#556376]'
+                  voiceCuesEnabled ? 'bg-gold-warm/20 text-gold-warm dark:text-gold-warm' : 'bg-gray-100 dark:bg-gray-800 text-muted'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5 text-[#D4A359]" />
+                <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
                 <span>Aawaz Nirdesh (Voice Guide)</span>
               </button>
             </div>
@@ -349,34 +349,34 @@ export default function YogaTeacher() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-6 space-y-6">
         
         {/* ── DAILY YOGA MASTERY & STREAK RIBBON ───────────────────── */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 bg-white/90 dark:bg-[#1E2A43]/90 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-[#5A7855]/20 dark:border-gray-800 shadow-xs">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 bg-card dark:bg-card backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-sage/20 dark:border-gray-800 shadow-xs">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#5A7855]/15 text-[#5A7855] dark:text-[#8ED14C] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-sage/15 text-sage dark:text-booti-glow flex items-center justify-center shrink-0">
               <Trophy className="w-4 h-4" />
             </div>
             <div className="min-w-0">
               <p className="text-[9px] sm:text-[10px] font-bold uppercase text-gray-400 truncate">Aaj Ka Abhyas</p>
-              <p className="text-[11px] sm:text-xs font-bold text-[#1E2A43] dark:text-[#F4F6F0] truncate">{yogaStats.completedToday} Asanas</p>
+              <p className="text-[11px] sm:text-xs font-bold text-primary dark:text-mist truncate">{yogaStats.completedToday} Asanas</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 border-x border-gray-100 dark:border-gray-800 px-2 sm:px-4">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#D4A359]/15 text-[#8C5E24] dark:text-[#D4A359] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gold-warm/15 text-gold-warm dark:text-gold-warm flex items-center justify-center shrink-0">
               <Clock className="w-4 h-4" />
             </div>
             <div className="min-w-0">
               <p className="text-[9px] sm:text-[10px] font-bold uppercase text-gray-400 truncate">Kul Sthirta (Hold)</p>
-              <p className="text-[11px] sm:text-xs font-bold text-[#1E2A43] dark:text-[#F4F6F0] truncate">{yogaStats.totalHoldSec} Seconds</p>
+              <p className="text-[11px] sm:text-xs font-bold text-primary dark:text-mist truncate">{yogaStats.totalHoldSec} Seconds</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#B85042]/15 text-[#B85042] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-rose-soft/15 text-rose-soft flex items-center justify-center shrink-0">
               <Flame className="w-4 h-4" />
             </div>
             <div className="min-w-0">
               <p className="text-[9px] sm:text-[10px] font-bold uppercase text-gray-400 truncate">Yoga Streak</p>
-              <p className="text-[11px] sm:text-xs font-bold text-[#1E2A43] dark:text-[#F4F6F0] truncate">{yogaStats.streakDays} Days</p>
+              <p className="text-[11px] sm:text-xs font-bold text-primary dark:text-mist truncate">{yogaStats.streakDays} Days</p>
             </div>
           </div>
         </div>
@@ -391,15 +391,15 @@ export default function YogaTeacher() {
                 onClick={() => handleSelectAsana(asana)}
                 className={`touch-target p-4 rounded-2xl border text-left transition-all ${
                   isSelected
-                    ? 'bg-[#5A7855] text-white border-[#5A7855] shadow-md transform -translate-y-0.5'
-                    : 'bg-white dark:bg-[#1E2A43] text-[#1E2A43] dark:text-[#F4F6F0] border-gray-200/80 dark:border-gray-800 hover:border-[#5A7855]/40'
+                    ? 'bg-sage text-white border-sage shadow-md transform -translate-y-0.5'
+                    : 'bg-white dark:bg-warm-indigo text-primary dark:text-mist border-gray-200/80 dark:border-gray-800 hover:border-sage/40'
                 }`}
               >
-                <span className={`text-[9px] font-bold uppercase block ${isSelected ? 'text-white/80' : 'text-[#8C5E24] dark:text-[#D4A359]'}`}>
+                <span className={`text-[9px] font-bold uppercase block ${isSelected ? 'text-white/80' : 'text-gold-warm dark:text-gold-warm'}`}>
                   {asana.difficulty}
                 </span>
                 <h4 className="font-serif font-bold text-xs md:text-sm mt-1 truncate">{asana.name}</h4>
-                <p className={`text-[10px] truncate ${isSelected ? 'text-white/80' : 'text-[#556376] dark:text-[#A8B4C2]'}`}>
+                <p className={`text-[10px] truncate ${isSelected ? 'text-white/80' : 'text-muted dark:text-muted'}`}>
                   {asana.hindiName}
                 </p>
               </button>
@@ -411,20 +411,20 @@ export default function YogaTeacher() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Left Column: Live Camera & Posture Overlay (7 cols) */}
-          <div className="lg:col-span-7 bg-white dark:bg-[#1E2A43] rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4">
+          <div className="lg:col-span-7 bg-white dark:bg-warm-indigo rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="font-serif font-bold text-base text-[#1E2A43] dark:text-[#F4F6F0] flex items-center gap-2">
-                  <Camera className="w-4 h-4 text-[#5A7855]" />
+                <h3 className="font-serif font-bold text-base text-primary dark:text-mist flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-sage" />
                   Live Posture Camera (मुद्रा जांच स्क्रीन)
                 </h3>
-                <p className="text-[11px] text-[#556376] dark:text-[#A8B4C2]">Real-time skeletal joint analysis feed</p>
+                <p className="text-[11px] text-muted dark:text-muted">Real-time skeletal joint analysis feed</p>
               </div>
 
               {isCameraActive ? (
                 <button
                   onClick={stopCamera}
-                  className="touch-target flex items-center gap-1.5 bg-[#A23B33]/10 text-[#A23B33] dark:text-[#FF7878] hover:bg-[#A23B33] hover:text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all"
+                  className="touch-target flex items-center gap-1.5 bg-rose-soft/10 text-rose-soft dark:text-rose-soft hover:bg-rose-soft hover:text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all"
                 >
                   <CameraOff className="w-3.5 h-3.5" />
                   <span>Camera Band Karein</span>
@@ -433,16 +433,16 @@ export default function YogaTeacher() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={startCamera}
-                    className="touch-target flex items-center gap-1.5 bg-[#5A7855] hover:bg-[#4a6346] text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs"
+                    className="touch-target flex items-center gap-1.5 bg-sage hover:bg-sage/90 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs"
                   >
                     <Camera className="w-3.5 h-3.5" />
                     <span>Camera Kholein</span>
                   </button>
                   <button
                     onClick={startSimulationMode}
-                    className="touch-target flex items-center gap-1 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-[#1E2A43] dark:text-gray-200 hover:bg-gray-200 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all"
+                    className="touch-target flex items-center gap-1 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-primary dark:text-gray-200 hover:bg-gray-200 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all"
                   >
-                    <Eye className="w-3.5 h-3.5 text-[#D4A359]" />
+                    <Eye className="w-3.5 h-3.5 text-gold-warm" />
                     <span>Practice Mode</span>
                   </button>
                 </div>
@@ -461,7 +461,7 @@ export default function YogaTeacher() {
               />
 
               {isSimulatedMode && (
-                <div className="absolute inset-0 bg-gradient-to-b from-[#1a2319] via-[#0f1412] to-black flex items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-b from-gray-950 via-black to-black flex items-center justify-center">
                   <div className="text-center opacity-30 pointer-events-none">
                     <span className="text-6xl">🏔️</span>
                     <p className="text-xs text-white mt-2">Himalayan Yogashala Simulated Arena</p>
@@ -487,7 +487,7 @@ export default function YogaTeacher() {
                   </p>
                   <button
                     onClick={startCamera}
-                    className="touch-target mt-4 bg-[#5A7855] hover:bg-[#4a6346] text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow transition-all"
+                    className="touch-target mt-4 bg-sage hover:bg-sage/90 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow transition-all"
                   >
                     Camera Shuru Karein
                   </button>
@@ -518,7 +518,7 @@ export default function YogaTeacher() {
                   )}
 
                   {poseCompleted && (
-                    <div className="bg-[#D4A359] text-[#1E2A43] px-4 py-1.5 rounded-xl font-bold text-xs shadow-lg flex items-center gap-1.5">
+                    <div className="bg-gold-warm text-primary px-4 py-1.5 rounded-xl font-bold text-xs shadow-lg flex items-center gap-1.5">
                       <Award className="w-3.5 h-3.5" /> Sampurna!
                     </div>
                   )}
@@ -530,9 +530,9 @@ export default function YogaTeacher() {
             <div className={`p-4 rounded-2xl border flex items-start gap-3 transition-colors ${
               alignmentScore >= 80
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
-                : 'bg-[#D4A359]/10 border-[#D4A359]/30 text-[#1E2A43] dark:text-[#EAEFEA]'
+                : 'bg-gold-warm/10 border-gold-warm/30 text-primary dark:text-mist'
             }`}>
-              <Sparkles className="w-4 h-4 text-[#D4A359] shrink-0 mt-0.5" />
+              <Sparkles className="w-4 h-4 text-gold-warm shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-bold">AI Posture Guru Margdarshan:</p>
                 <p className="text-xs mt-0.5 leading-relaxed">{feedbackMessage}</p>
@@ -544,21 +544,21 @@ export default function YogaTeacher() {
           <div className="lg:col-span-5 space-y-4">
             
             {/* Active Asana Details Card */}
-            <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4">
+            <div className="bg-white dark:bg-warm-indigo rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-bold uppercase bg-[#5A7855]/15 text-[#2B4A30] dark:text-[#8ED14C] px-2.5 py-0.5 rounded-md">
+                  <span className="text-[10px] font-bold uppercase bg-sage/15 text-sage dark:text-booti-glow px-2.5 py-0.5 rounded-md">
                     {selectedAsana.difficulty}
                   </span>
-                  <h3 className="font-serif font-bold text-lg text-[#1E2A43] dark:text-[#F4F6F0] mt-1">
+                  <h3 className="font-serif font-bold text-lg text-primary dark:text-mist mt-1">
                     {selectedAsana.name}
                   </h3>
-                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2]">{selectedAsana.hindiName}</p>
+                  <p className="text-xs text-muted dark:text-muted">{selectedAsana.hindiName}</p>
                 </div>
 
                 <div className="text-right">
-                  <p className="text-xs font-bold text-[#8C5E24] dark:text-[#D4A359]">{selectedAsana.targetHoldsSec} Sec</p>
-                  <p className="text-[10px] text-[#556376] dark:text-[#A8B4C2]">Target Hold</p>
+                  <p className="text-xs font-bold text-gold-warm dark:text-gold-warm">{selectedAsana.targetHoldsSec} Sec</p>
+                  <p className="text-[10px] text-muted dark:text-muted">Target Hold</p>
                 </div>
               </div>
 
@@ -566,7 +566,7 @@ export default function YogaTeacher() {
               <div className="flex items-center gap-2 pt-1">
                 <button
                   onClick={handleResetPose}
-                  className="touch-target flex-1 flex items-center justify-center gap-2 bg-[#F7F2E8]/60 dark:bg-[#182332] hover:bg-gray-100 text-[#1E2A43] dark:text-[#F4F6F0] text-xs font-semibold py-2.5 rounded-xl transition-all border border-gray-200 dark:border-gray-700"
+                  className="touch-target flex-1 flex items-center justify-center gap-2 bg-sand/60 dark:bg-card hover:bg-gray-100 text-primary dark:text-mist text-xs font-semibold py-2.5 rounded-xl transition-all border border-gray-200 dark:border-gray-700"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Timer Reset Karein</span>
@@ -575,12 +575,12 @@ export default function YogaTeacher() {
 
               {/* Real-time Physiological Checklist */}
               <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#556376] dark:text-[#A8B4C2]">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted dark:text-muted">
                   Alignment Checklist ({postureChecks.length})
                 </h4>
 
                 {postureChecks.length === 0 ? (
-                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2] italic py-2">
+                  <p className="text-xs text-muted dark:text-muted italic py-2">
                     Camera ya Practice Mode chalu karke live check dekhein.
                   </p>
                 ) : (
@@ -601,7 +601,7 @@ export default function YogaTeacher() {
                         )}
                         <div>
                           <p className="font-semibold">{chk.name}</p>
-                          <p className="text-[10px] text-[#556376] dark:text-[#A8B4C2]">{chk.advice}</p>
+                          <p className="text-[10px] text-muted dark:text-muted">{chk.advice}</p>
                         </div>
                       </div>
                       <span className="font-mono text-[10px] font-bold shrink-0 ml-2">
@@ -614,27 +614,27 @@ export default function YogaTeacher() {
             </div>
 
             {/* Benefits & Precautions Card */}
-            <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-3">
-              <h4 className="font-serif font-bold text-sm text-[#1E2A43] dark:text-[#F4F6F0] flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-[#5A7855]" />
+            <div className="bg-white dark:bg-warm-indigo rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-3">
+              <h4 className="font-serif font-bold text-sm text-primary dark:text-mist flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-sage" />
                 Ayurvedic & Clinical Salah
               </h4>
 
-              <div className="text-xs space-y-2 text-[#556376] dark:text-[#A8B4C2] leading-relaxed">
+              <div className="text-xs space-y-2 text-muted dark:text-muted leading-relaxed">
                 <p>
-                  <strong className="text-[#1E2A43] dark:text-[#F4F6F0]">Mukhya Dhyan:</strong> {selectedAsana.keyFocus}
+                  <strong className="text-primary dark:text-mist">Mukhya Dhyan:</strong> {selectedAsana.keyFocus}
                 </p>
                 <p>
-                  <strong className="text-[#1E2A43] dark:text-[#F4F6F0]">Sharir Ko Laabh:</strong> {selectedAsana.benefits}
+                  <strong className="text-primary dark:text-mist">Sharir Ko Laabh:</strong> {selectedAsana.benefits}
                 </p>
-                <p className="text-[#A23B33] dark:text-[#FF7878]">
+                <p className="text-rose-soft dark:text-rose-soft">
                   <strong>Savdhani:</strong> {selectedAsana.precautions}
                 </p>
               </div>
 
               <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-                <h5 className="text-[11px] font-bold text-[#1E2A43] dark:text-[#F4F6F0] mb-1.5">Abhyas Kaise Karein:</h5>
-                <ol className="list-decimal list-inside text-xs text-[#556376] dark:text-[#A8B4C2] space-y-1">
+                <h5 className="text-[11px] font-bold text-primary dark:text-mist mb-1.5">Abhyas Kaise Karein:</h5>
+                <ol className="list-decimal list-inside text-xs text-muted dark:text-muted space-y-1">
                   {selectedAsana.steps.map((s, i) => (
                     <li key={i}>{s}</li>
                   ))}
@@ -649,16 +649,16 @@ export default function YogaTeacher() {
       {/* ── ASANA COMPLETION CELEBRATION MODAL ───────────────────────── */}
       {showCompletionModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl max-w-md w-full p-6 border border-[#D4A359]/40 shadow-2xl space-y-4 text-center">
-            <div className="w-16 h-16 rounded-full bg-[#D4A359]/20 text-[#D4A359] mx-auto flex items-center justify-center animate-bounce">
+          <div className="bg-white dark:bg-warm-indigo rounded-3xl max-w-md w-full p-6 border border-gold-warm/40 shadow-2xl space-y-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-gold-warm/20 text-gold-warm mx-auto flex items-center justify-center animate-bounce">
               <Award className="w-8 h-8" />
             </div>
 
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#5A7855] dark:text-[#8ED14C]">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-sage dark:text-booti-glow">
                 आसन सिद्धि • Asana Accomplished
               </span>
-              <h3 className="font-serif text-2xl font-bold text-[#1E2A43] dark:text-[#F4F6F0] mt-1">
+              <h3 className="font-serif text-2xl font-bold text-primary dark:text-mist mt-1">
                 {selectedAsana.name}
               </h3>
               <p className="text-xs font-serif italic text-gray-500 dark:text-gray-400 mt-0.5">
@@ -666,14 +666,14 @@ export default function YogaTeacher() {
               </p>
             </div>
 
-            <div className="bg-[#F4F6F0] dark:bg-[#151D28] rounded-2xl p-3.5 text-left text-xs space-y-1.5 border border-gray-200/80 dark:border-gray-800">
+            <div className="bg-mist dark:bg-mist rounded-2xl p-3.5 text-left text-xs space-y-1.5 border border-gray-200/80 dark:border-gray-800">
               <div className="flex justify-between font-semibold">
                 <span className="text-gray-500">Hold Duration:</span>
-                <span className="text-[#5A7855] dark:text-[#8ED14C]">{selectedAsana.targetHoldsSec} seconds</span>
+                <span className="text-sage dark:text-booti-glow">{selectedAsana.targetHoldsSec} seconds</span>
               </div>
               <div className="flex justify-between font-semibold">
                 <span className="text-gray-500">Alignment Accuracy:</span>
-                <span className="text-[#D4A359]">{alignmentScore}%</span>
+                <span className="text-gold-warm">{alignmentScore}%</span>
               </div>
               <div className="pt-2 border-t border-gray-200/60 dark:border-gray-800 text-[11px] text-gray-600 dark:text-gray-300">
                 <strong>Sharir Ko Labh:</strong> {selectedAsana.benefits}
@@ -683,13 +683,13 @@ export default function YogaTeacher() {
             <div className="flex items-center gap-2 pt-2">
               <button
                 onClick={handleResetPose}
-                className="flex-1 py-3 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-bold text-[#1E2A43] dark:text-[#F4F6F0] hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
+                className="flex-1 py-3 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-bold text-primary dark:text-mist hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer"
               >
                 Punah Abhyas (Repeat)
               </button>
               <button
                 onClick={handleNextAsana}
-                className="flex-1 py-3 rounded-xl bg-[#5A7855] hover:bg-[#4a6346] text-white text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 py-3 rounded-xl bg-sage hover:bg-sage/90 text-white text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>Agla Asana</span>
                 <ChevronRight className="w-3.5 h-3.5" />

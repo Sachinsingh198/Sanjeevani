@@ -43,11 +43,4 @@ pyjwt
 # Speech & Documents
 edge-tts
 python-docx
-httpx
-
-
-torch
-soundfile
-accelerate
-indic-transliteration
-parler-tts @ git+https://github.com/huggingface/parler-tts.git
+httpx

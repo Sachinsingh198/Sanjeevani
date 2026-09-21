@@ -30,7 +30,7 @@ export default function Screening() {
       title: 'Khoon Ki Kami (Anemia)',
       subtitle: 'Palpebral Conjunctiva Pallor • CIELAB Erythema Index',
       icon: Eye,
-      color: '#B85042',
+      color: 'var(--rose-soft)',
       guideText: 'Aankh ki neeche wali palak ko halke se neeche kheenchiye taaki laal/gulabi hissa saaf dikhe. Daylight mein bina flash ke photo kheinchein.',
       placeholderSample: 'anemia'
     },
@@ -38,7 +38,7 @@ export default function Screening() {
       title: 'Peeliya (Jaundice)',
       subtitle: 'Scleral Icterus • HSV Yellow-Shift & Bilirubin Estimation',
       icon: Activity,
-      color: '#D4A359',
+      color: 'var(--gold-warm)',
       guideText: 'Aankh ke safed bhaag (sclera) ki saaf tasveer lein. Suraj ki prakritik roshni mein camera ke samne seedhe dekhein.',
       placeholderSample: 'jaundice'
     },
@@ -46,7 +46,7 @@ export default function Screening() {
       title: 'Mukh Rog (Oral Lesions)',
       subtitle: 'Leukoplakia White Patches & Tobacco Mucosa Screening',
       icon: FlaskConical,
-      color: '#8C5E24',
+      color: 'var(--gold-warm)',
       guideText: 'Munh khol kar gaal ke andar ki deewar (buccal mucosa) ya jeebh par bane safed dhabbe par camera focus karein.',
       placeholderSample: 'oral'
     },
@@ -54,7 +54,7 @@ export default function Screening() {
       title: 'Twacha Rog (Skin Lesions)',
       subtitle: 'Cutaneous Erythema & Fungal Ringworm (Tinea) Screening',
       icon: Layers,
-      color: '#5A7855',
+      color: 'var(--sage)',
       guideText: 'Prabhavit twacha ke kshetra ko saaf roshni mein rakhein. Kharash ya daad ke ghere ko kendrit karein.',
       placeholderSample: 'skin'
     }
@@ -155,45 +155,45 @@ export default function Screening() {
 
     if (screeningType === 'ANEMIA') {
       // Simulate lower eyelid conjunctiva with pallor/redness
-      ctx.fillStyle = '#C89680'; // skin
+      ctx.fillStyle = 'rgb(200, 150, 128)'; // skin
       ctx.fillRect(0, 0, 320, 240);
-      ctx.fillStyle = '#E8EBEF'; // sclera
+      ctx.fillStyle = 'rgb(232, 235, 239)'; // sclera
       ctx.beginPath();
       ctx.ellipse(160, 100, 80, 40, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#3E2A1D'; // iris
+      ctx.fillStyle = 'rgb(62, 42, 29)'; // iris
       ctx.beginPath();
       ctx.arc(160, 100, 24, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#9C4E4E'; // palpebral mucosa
+      ctx.fillStyle = 'rgb(156, 78, 78)'; // palpebral mucosa
       ctx.beginPath();
       ctx.ellipse(160, 155, 60, 18, 0, 0, Math.PI);
       ctx.fill();
     } else if (screeningType === 'JAUNDICE') {
       // Simulate eye with yellow-tinted icteric sclera
-      ctx.fillStyle = '#C89680'; // skin
+      ctx.fillStyle = 'rgb(200, 150, 128)'; // skin
       ctx.fillRect(0, 0, 320, 240);
-      ctx.fillStyle = '#D6CE65'; // yellow sclera
+      ctx.fillStyle = 'rgb(214, 206, 101)'; // yellow sclera
       ctx.beginPath();
       ctx.ellipse(160, 120, 85, 45, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#2A1F18'; // iris
+      ctx.fillStyle = 'rgb(42, 31, 24)'; // iris
       ctx.beginPath();
       ctx.arc(160, 120, 26, 0, Math.PI * 2);
       ctx.fill();
     } else if (screeningType === 'ORAL') {
       // Simulate oral buccal mucosa with white leukoplakia patch
-      ctx.fillStyle = '#B34A5B'; // mucosal background
+      ctx.fillStyle = 'rgb(179, 74, 91)'; // mucosal background
       ctx.fillRect(0, 0, 320, 240);
-      ctx.fillStyle = '#EDE8EE'; // leukoplakia patch
+      ctx.fillStyle = 'rgb(237, 232, 238)'; // leukoplakia patch
       ctx.beginPath();
       ctx.ellipse(160, 120, 50, 35, 0, 0, Math.PI * 2);
       ctx.fill();
     } else {
       // Simulate erythematous cutaneous lesion
-      ctx.fillStyle = '#D4A587'; // skin
+      ctx.fillStyle = 'rgb(212, 165, 135)'; // skin
       ctx.fillRect(0, 0, 320, 240);
-      ctx.fillStyle = '#C23B38'; // inflamed lesion
+      ctx.fillStyle = 'rgb(194, 59, 56)'; // inflamed lesion
       ctx.beginPath();
       ctx.ellipse(160, 120, 55, 45, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -282,18 +282,18 @@ export default function Screening() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-[#2E4057] dark:text-[#F4F6F0]">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-primary dark:text-mist">
       
       {/* ── Header ────────────────────────────────────────────── */}
       <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
-        <div className="inline-flex items-center gap-2 bg-[#5A7855]/10 dark:bg-[#5A7855]/20 text-[#5A7855] dark:text-[#8ED14C] px-4 py-1.5 rounded-full text-xs font-bold mb-3 border border-[#5A7855]/20">
-          <Eye className="w-4 h-4 text-[#D4A359]" />
+        <div className="inline-flex items-center gap-2 bg-sage/10 dark:bg-sage/20 text-sage dark:text-booti-glow px-4 py-1.5 rounded-full text-xs font-bold mb-3 border border-sage/20">
+          <Eye className="w-4 h-4 text-gold-warm" />
           <span>Netra & Mukh Edge Jaanch • Non-Invasive Diagnostics</span>
         </div>
-        <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-[#2E4057] dark:text-[#F4F6F0] leading-tight">
+        <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-primary dark:text-mist leading-tight">
           Pahadi Kshetra Digital Swasthya Jaanch
         </h1>
-        <p className="text-xs sm:text-sm text-[#556376] dark:text-[#A8B4C2] mt-2 leading-relaxed">
+        <p className="text-xs sm:text-sm text-muted dark:text-muted mt-2 leading-relaxed">
           Bina suee chubhaaye, camera photo se Khoon Ki Kami (Anemia), Peeliya (Jaundice), Mukh Rog (Leukoplakia) aur Twacha ke lakshan pehchanein.
         </p>
       </div>
@@ -314,12 +314,12 @@ export default function Screening() {
               }}
               className={`touch-target p-3 sm:p-4 rounded-2xl border text-left transition-all flex flex-col justify-between ${
                 isSelected
-                  ? 'bg-[#5A7855] text-white border-[#5A7855] shadow-md shadow-[#5A7855]/20 ring-2 ring-[#5A7855]/30'
-                  : 'bg-white dark:bg-[#1E2A43] text-[#556376] dark:text-[#A8B4C2] border-gray-200 dark:border-gray-800 hover:border-[#5A7855]/40'
+                  ? 'bg-sage text-white border-sage shadow-md shadow-sage/20 ring-2 ring-sage/30'
+                  : 'bg-white dark:bg-warm-indigo text-muted dark:text-muted border-gray-200 dark:border-gray-800 hover:border-sage/40'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? 'bg-white/20 text-white' : 'bg-[#5A7855]/10 text-[#5A7855] dark:text-[#8ED14C]'}`}>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? 'bg-white/20 text-white' : 'bg-sage/10 text-sage dark:text-booti-glow'}`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 {isSelected && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
@@ -334,7 +334,7 @@ export default function Screening() {
       </div>
 
       {/* ── 4-Stage Pipeline Progress ────────────────────────────── */}
-      <div className="max-w-4xl mx-auto mb-6 bg-white dark:bg-[#1E2A43] rounded-2xl p-2.5 sm:p-3 border border-[#5A7855]/20 shadow-xs">
+      <div className="max-w-4xl mx-auto mb-6 bg-white dark:bg-warm-indigo rounded-2xl p-2.5 sm:p-3 border border-sage/20 shadow-xs">
         <div className="grid grid-cols-4 gap-1 sm:gap-2 text-center text-[11px] sm:text-xs font-bold">
           {[
             { num: 1, label: '1. SCAN', desc: 'Tasveer Lein' },
@@ -349,9 +349,9 @@ export default function Screening() {
                 key={stage.num}
                 className={`py-2 px-1 rounded-xl transition-all ${
                   isCurrent
-                    ? 'bg-[#5A7855] text-white shadow-xs'
+                    ? 'bg-sage text-white shadow-xs'
                     : isCompleted
-                    ? 'bg-[#5A7855]/15 text-[#5A7855] dark:text-[#8ED14C]'
+                    ? 'bg-sage/15 text-sage dark:text-booti-glow'
                     : 'text-gray-400 dark:text-gray-500'
                 }`}
               >
@@ -367,15 +367,15 @@ export default function Screening() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
         {/* Left Column: Image Capture & Controls (7 cols) */}
-        <div className="lg:col-span-7 bg-white dark:bg-[#1E2A43] p-5 sm:p-7 rounded-3xl shadow-sm border border-[#5A7855]/20 dark:border-gray-800 space-y-5">
+        <div className="lg:col-span-7 bg-white dark:bg-warm-indigo p-5 sm:p-7 rounded-3xl shadow-sm border border-sage/20 dark:border-gray-800 space-y-5">
           
           {/* Section Heading & Audio Guide */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-[#2E4057] dark:text-[#F4F6F0]">
+              <h2 className="text-sm sm:text-base font-bold text-primary dark:text-mist">
                 {modalities[screeningType].title}
               </h2>
-              <p className="text-xs text-[#556376] dark:text-[#A8B4C2]">
+              <p className="text-xs text-muted dark:text-muted">
                 {modalities[screeningType].subtitle}
               </p>
             </div>
@@ -383,14 +383,14 @@ export default function Screening() {
             <button
               type="button"
               onClick={handlePlayInstructions}
-              className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-[#5A7855] dark:text-[#8ED14C] hover:underline"
+              className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-sage dark:text-booti-glow hover:underline"
             >
               <Volume2 className="w-3.5 h-3.5" /> Sunein (Voice)
             </button>
           </div>
 
           {/* Interactive Capture Frame / Dropzone */}
-          <div className="border-2 border-dashed border-[#5A7855]/30 dark:border-gray-700 rounded-3xl p-4 text-center relative bg-[#F4F6F0]/40 dark:bg-[#151D28]/40 overflow-hidden min-h-[260px] flex flex-col items-center justify-center">
+          <div className="border-2 border-dashed border-sage/30 dark:border-gray-700 rounded-3xl p-4 text-center relative bg-mist/40 dark:bg-mist/40 overflow-hidden min-h-[260px] flex flex-col items-center justify-center">
             
             {/* Live Camera View */}
             {isCameraActive ? (
@@ -425,7 +425,7 @@ export default function Screening() {
                   <button
                     type="button"
                     onClick={capturePhotoFromCamera}
-                    className="touch-target px-5 py-2.5 rounded-xl bg-[#5A7855] text-white font-bold text-xs flex items-center gap-2 shadow-sm hover:bg-[#4a6346]"
+                    className="touch-target px-5 py-2.5 rounded-xl bg-sage text-white font-bold text-xs flex items-center gap-2 shadow-sm hover:bg-sage/90"
                   >
                     <Camera className="w-4 h-4" /> Photo Kheinchein (Snap)
                   </button>
@@ -448,7 +448,7 @@ export default function Screening() {
                     className="max-h-64 rounded-2xl object-contain mx-auto shadow-md border border-gray-200 dark:border-gray-700"
                   />
                   {loading && (
-                    <div className="absolute inset-0 bg-[#5A7855]/50 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center text-white p-4">
+                    <div className="absolute inset-0 bg-sage/50 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center text-white p-4">
                       <RefreshCw className="w-9 h-9 animate-spin mb-2" />
                       <span className="text-xs font-bold tracking-wider">OpenCV Colorimetric Model Scan Ho Raha Hai…</span>
                     </div>
@@ -463,8 +463,8 @@ export default function Screening() {
                       onClick={() => setShowAnnotated(true)}
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                         showAnnotated
-                          ? 'bg-[#5A7855] text-white shadow-xs'
-                          : 'bg-gray-100 dark:bg-gray-800 text-[#556376] dark:text-[#A8B4C2]'
+                          ? 'bg-sage text-white shadow-xs'
+                          : 'bg-gray-100 dark:bg-gray-800 text-muted dark:text-muted'
                       }`}
                     >
                       AI Biomarker Overlay
@@ -474,8 +474,8 @@ export default function Screening() {
                       onClick={() => setShowAnnotated(false)}
                       className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                         !showAnnotated
-                          ? 'bg-[#5A7855] text-white shadow-xs'
-                          : 'bg-gray-100 dark:bg-gray-800 text-[#556376] dark:text-[#A8B4C2]'
+                          ? 'bg-sage text-white shadow-xs'
+                          : 'bg-gray-100 dark:bg-gray-800 text-muted dark:text-muted'
                       }`}
                     >
                       Mool Tasveer (Original)
@@ -487,7 +487,7 @@ export default function Screening() {
                   <button
                     type="button"
                     onClick={handleReset}
-                    className="touch-target text-xs text-[#B85042] dark:text-[#FF7878] font-bold hover:underline"
+                    className="touch-target text-xs text-rose-soft dark:text-rose-soft font-bold hover:underline"
                   >
                     Tasveer Badlein (Upload Another)
                   </button>
@@ -496,20 +496,20 @@ export default function Screening() {
             ) : (
               /* Dropzone Placeholder */
               <div className="py-6 sm:py-8 space-y-4">
-                <div className="w-16 h-16 rounded-3xl bg-[#5A7855]/15 dark:bg-[#5A7855]/25 text-[#5A7855] dark:text-[#8ED14C] flex items-center justify-center mx-auto shadow-inner">
+                <div className="w-16 h-16 rounded-3xl bg-sage/15 dark:bg-sage/25 text-sage dark:text-booti-glow flex items-center justify-center mx-auto shadow-inner">
                   <Camera className="w-8 h-8" />
                 </div>
                 <div>
-                  <span className="text-sm sm:text-base font-bold text-[#2E4057] dark:text-[#F4F6F0] block">
+                  <span className="text-sm sm:text-base font-bold text-primary dark:text-mist block">
                     Tasveer Upload Karein Ya Camera Se Kheinchein
                   </span>
-                  <span className="text-xs text-[#556376] dark:text-[#A8B4C2] mt-1 block max-w-sm mx-auto">
+                  <span className="text-xs text-muted dark:text-muted mt-1 block max-w-sm mx-auto">
                     Mobile gallery se photo chunein ya live camera se seedhe lein
                   </span>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
-                  <label className="touch-target cursor-pointer px-4 py-2.5 bg-[#5A7855] hover:bg-[#4a6346] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all">
+                  <label className="touch-target cursor-pointer px-4 py-2.5 bg-sage hover:bg-sage/90 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all">
                     <Upload className="w-4 h-4" />
                     <span>Gallery Se Chunein</span>
                     <input
@@ -524,7 +524,7 @@ export default function Screening() {
                   <button
                     type="button"
                     onClick={startCamera}
-                    className="touch-target px-4 py-2.5 bg-white dark:bg-[#151D28] border border-[#5A7855]/30 text-[#5A7855] dark:text-[#8ED14C] rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-[#5A7855]/10 transition-all"
+                    className="touch-target px-4 py-2.5 bg-white dark:bg-mist border border-sage/30 text-sage dark:text-booti-glow rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-sage/10 transition-all"
                   >
                     <Camera className="w-4 h-4" />
                     <span>Live Camera Kholein</span>
@@ -533,7 +533,7 @@ export default function Screening() {
                   <button
                     type="button"
                     onClick={handleLoadDemoSample}
-                    className="touch-target px-3.5 py-2.5 bg-[#D4A359]/15 border border-[#D4A359]/30 text-[#8C5E24] dark:text-[#D4A359] rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-[#D4A359]/25 transition-all"
+                    className="touch-target px-3.5 py-2.5 bg-gold-warm/15 border border-gold-warm/30 text-gold-warm dark:text-gold-warm rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-gold-warm/25 transition-all"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Demo Photo Load Karein</span>
@@ -544,9 +544,9 @@ export default function Screening() {
           </div>
 
           {/* Clinical Photography Instructions */}
-          <div className="bg-[#F4F6F0] dark:bg-[#182332] p-4 rounded-2xl border border-[#5A7855]/15 dark:border-gray-800 text-xs space-y-1.5 text-[#556376] dark:text-[#A8B4C2]">
-            <div className="flex items-center gap-1.5 font-bold text-[#2E4057] dark:text-[#F4F6F0]">
-              <Info className="w-4 h-4 text-[#5A7855]" />
+          <div className="bg-mist dark:bg-card p-4 rounded-2xl border border-sage/15 dark:border-gray-800 text-xs space-y-1.5 text-muted dark:text-muted">
+            <div className="flex items-center gap-1.5 font-bold text-primary dark:text-mist">
+              <Info className="w-4 h-4 text-sage" />
               <span>Sahi Tasveer Lene Ke Niyam ({modalities[screeningType].title}):</span>
             </div>
             <p>• {modalities[screeningType].guideText}</p>
@@ -558,7 +558,7 @@ export default function Screening() {
             type="button"
             onClick={handleRunScreening}
             disabled={(!selectedImage && !selectedFile) || loading}
-            className="touch-target w-full bg-[#5A7855] hover:bg-[#4a6346] text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 shadow-md shadow-[#5A7855]/20 transition-all"
+            className="touch-target w-full bg-sage hover:bg-sage/90 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 shadow-md shadow-sage/20 transition-all"
           >
             {loading ? (
               <><RefreshCw className="w-5 h-5 animate-spin" /> Biomarker Scan Ho Raha Hai…</>
@@ -569,22 +569,22 @@ export default function Screening() {
         </div>
 
         {/* Right Column: Results & Clinical Actions (5 cols) */}
-        <div className="lg:col-span-5 bg-white dark:bg-[#1E2A43] p-5 sm:p-7 rounded-3xl shadow-sm border border-[#5A7855]/20 dark:border-gray-800 space-y-5">
+        <div className="lg:col-span-5 bg-white dark:bg-warm-indigo p-5 sm:p-7 rounded-3xl shadow-sm border border-sage/20 dark:border-gray-800 space-y-5">
           {result ? (
             <div className="space-y-5 animate-fadeIn">
               
               {/* Header result badge */}
               <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-[11px] uppercase tracking-wider font-bold text-[#556376] dark:text-[#A8B4C2]">
+                  <span className="text-[11px] uppercase tracking-wider font-bold text-muted dark:text-muted">
                     Nishkarsh Report
                   </span>
                   <span className={`text-xs font-bold px-3 py-1 rounded-full ${
                     result.risk?.includes('HIGH') || result.risk?.includes('SUSPECTED') || result.risk?.includes('ACTIVE')
-                      ? 'bg-[#B85042] text-white'
+                      ? 'bg-rose-soft text-white'
                       : result.risk?.includes('MILD') || result.risk?.includes('BORDERLINE')
-                      ? 'bg-[#D4A359] text-[#2E4057]'
-                      : 'bg-[#5A7855] text-white'
+                      ? 'bg-gold-warm text-primary'
+                      : 'bg-sage text-white'
                   }`}>
                     {result.risk === 'HIGH_ANEMIA_RISK'
                       ? 'Khoon Ki Kami Ka Sanket'
@@ -599,19 +599,19 @@ export default function Screening() {
                       : result.risk}
                   </span>
                 </div>
-                <h3 className="font-serif font-bold text-xl text-[#2E4057] dark:text-[#F4F6F0]">
+                <h3 className="font-serif font-bold text-xl text-primary dark:text-mist">
                   {result.type}
                 </h3>
               </div>
 
               {/* Estimated Clinical Metric Highlight Card */}
               {result.estimated_metric && (
-                <div className="p-4 rounded-2xl bg-[#5A7855]/10 dark:bg-[#5A7855]/20 border border-[#5A7855]/25 flex items-center justify-between">
+                <div className="p-4 rounded-2xl bg-sage/10 dark:bg-sage/20 border border-sage/25 flex items-center justify-between">
                   <div>
-                    <span className="text-[11px] font-bold text-[#556376] dark:text-[#A8B4C2] block uppercase tracking-wider">
+                    <span className="text-[11px] font-bold text-muted dark:text-muted block uppercase tracking-wider">
                       Anumaanit Clinical Metric:
                     </span>
-                    <span className="font-serif font-bold text-base sm:text-lg text-[#2E4057] dark:text-[#F4F6F0]">
+                    <span className="font-serif font-bold text-base sm:text-lg text-primary dark:text-mist">
                       {result.estimated_metric}
                     </span>
                   </div>
@@ -619,7 +619,7 @@ export default function Screening() {
                     type="button"
                     onClick={handlePlayResult}
                     title="Audio Suniye"
-                    className="p-2.5 rounded-xl bg-white dark:bg-[#151D28] text-[#5A7855] dark:text-[#8ED14C] hover:bg-gray-50 shadow-xs"
+                    className="p-2.5 rounded-xl bg-white dark:bg-mist text-sage dark:text-booti-glow hover:bg-gray-50 shadow-xs"
                   >
                     <Volume2 className="w-4 h-4" />
                   </button>
@@ -627,29 +627,29 @@ export default function Screening() {
               )}
 
               {/* Biomarker Index Breakdown */}
-              <div className="bg-[#F4F6F0] dark:bg-[#151D28] p-4 rounded-2xl text-xs space-y-2.5 border border-[#5A7855]/15 dark:border-gray-800">
+              <div className="bg-mist dark:bg-mist p-4 rounded-2xl text-xs space-y-2.5 border border-sage/15 dark:border-gray-800">
                 <div className="flex justify-between items-center">
-                  <span className="text-[#556376] dark:text-[#A8B4C2]">Biomarker Model:</span>
-                  <span className="font-medium text-[#2E4057] dark:text-[#F4F6F0] text-right truncate max-w-[200px]">{result.biomarker}</span>
+                  <span className="text-muted dark:text-muted">Biomarker Model:</span>
+                  <span className="font-medium text-primary dark:text-mist text-right truncate max-w-[200px]">{result.biomarker}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[#556376] dark:text-[#A8B4C2]">Calculated Index Score:</span>
-                  <span className="font-mono font-bold text-[#2E4057] dark:text-[#F4F6F0] text-sm">{result.score}</span>
+                  <span className="text-muted dark:text-muted">Calculated Index Score:</span>
+                  <span className="font-mono font-bold text-primary dark:text-mist text-sm">{result.score}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[#556376] dark:text-[#A8B4C2]">Clinical Cutoff Baseline:</span>
-                  <span className="font-mono text-[#556376] dark:text-[#A8B4C2]">{result.threshold}</span>
+                  <span className="text-muted dark:text-muted">Clinical Cutoff Baseline:</span>
+                  <span className="font-mono text-muted dark:text-muted">{result.threshold}</span>
                 </div>
                 {result.quality && (
                   <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700">
-                    <span className="text-[#556376] dark:text-[#A8B4C2]">Lighting & Quality:</span>
-                    <span className="text-[11px] text-[#5A7855] dark:text-[#8ED14C] font-medium">{result.quality}</span>
+                    <span className="text-muted dark:text-muted">Lighting & Quality:</span>
+                    <span className="text-[11px] text-sage dark:text-booti-glow font-medium">{result.quality}</span>
                   </div>
                 )}
               </div>
 
               {/* Clinical Advice */}
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs leading-relaxed text-[#2E4057] dark:text-[#F4F6F0]">
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs leading-relaxed text-primary dark:text-mist">
                 <span className="font-bold block text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1.5">
                   <Stethoscope className="w-4 h-4" /> Doctor Ki Prathmik Salah:
                 </span>
@@ -658,8 +658,8 @@ export default function Screening() {
 
               {/* CCRAS Ayurvedic Care */}
               {result.ayurveda && (
-                <div className="p-4 rounded-2xl bg-[#5A7855]/10 dark:bg-[#5A7855]/15 border border-[#5A7855]/20 text-xs leading-relaxed text-[#2E4057] dark:text-[#F4F6F0]">
-                  <span className="font-bold block text-[#5A7855] dark:text-[#8ED14C] mb-1 flex items-center gap-1.5">
+                <div className="p-4 rounded-2xl bg-sage/10 dark:bg-sage/15 border border-sage/20 text-xs leading-relaxed text-primary dark:text-mist">
+                  <span className="font-bold block text-sage dark:text-booti-glow mb-1 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4" /> CCRAS Ayurvedic Poshan & Upchar:
                   </span>
                   {result.ayurveda}
@@ -671,7 +671,7 @@ export default function Screening() {
                 <button
                   type="button"
                   onClick={() => setShowReferralModal(true)}
-                  className="touch-target w-full bg-[#D4A359] hover:bg-[#c49247] text-[#2E4057] font-bold py-3.5 px-4 rounded-2xl text-xs shadow-xs transition-all flex items-center justify-center gap-2"
+                  className="touch-target w-full bg-gold-warm hover:bg-gold-warm/90 text-primary font-bold py-3.5 px-4 rounded-2xl text-xs shadow-xs transition-all flex items-center justify-center gap-2"
                 >
                   <FileText className="w-4 h-4" />
                   <span>PHC Doctor Ke Liye Referral Parcha Kholein</span>
@@ -680,7 +680,7 @@ export default function Screening() {
 
                 <Link
                   to="/chat"
-                  className="touch-target w-full bg-white dark:bg-[#151D28] border border-[#5A7855]/30 hover:bg-[#5A7855]/10 text-[#5A7855] dark:text-[#8ED14C] font-bold py-3.5 px-4 rounded-2xl text-xs transition-all flex items-center justify-center gap-2"
+                  className="touch-target w-full bg-white dark:bg-mist border border-sage/30 hover:bg-sage/10 text-sage dark:text-booti-glow font-bold py-3.5 px-4 rounded-2xl text-xs transition-all flex items-center justify-center gap-2"
                 >
                   <Stethoscope className="w-4 h-4" />
                   <span>Dr. Sanjeevani Se Paramarsh Karein</span>
@@ -689,14 +689,14 @@ export default function Screening() {
 
             </div>
           ) : (
-            <div className="text-center text-[#556376] dark:text-[#A8B4C2] py-16 space-y-3">
-              <div className="w-16 h-16 rounded-3xl bg-[#5A7855]/10 dark:bg-gray-800 flex items-center justify-center mx-auto text-[#5A7855] mb-2">
+            <div className="text-center text-muted dark:text-muted py-16 space-y-3">
+              <div className="w-16 h-16 rounded-3xl bg-sage/10 dark:bg-gray-800 flex items-center justify-center mx-auto text-sage mb-2">
                 <Eye className="w-8 h-8 opacity-70" />
               </div>
-              <p className="text-sm font-bold text-[#2E4057] dark:text-[#F4F6F0]">
+              <p className="text-sm font-bold text-primary dark:text-mist">
                 Tasveer chuniye aur jaanch shuru kijiye
               </p>
-              <p className="text-xs text-[#556376] dark:text-[#A8B4C2] max-w-xs mx-auto leading-relaxed">
+              <p className="text-xs text-muted dark:text-muted max-w-xs mx-auto leading-relaxed">
                 OpenCV colorimetric index, anumaanit clinical metric aur doctor recommendation yahan nishkarsh ke roop mein dikhega.
               </p>
             </div>
@@ -708,19 +708,19 @@ export default function Screening() {
       {/* ── ABDM FHIR Referral Modal ────────────────────────────── */}
       {showReferralModal && result && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1E2A43] rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-700 space-y-5 animate-scaleUp max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-warm-indigo rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-700 space-y-5 animate-scaleUp max-h-[90vh] overflow-y-auto">
             
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#5A7855]/15 text-[#5A7855] dark:text-[#8ED14C] flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-xl bg-sage/15 text-sage dark:text-booti-glow flex items-center justify-center font-bold">
                   सं
                 </div>
                 <div>
-                  <h3 className="font-serif font-bold text-base text-[#2E4057] dark:text-[#F4F6F0]">
+                  <h3 className="font-serif font-bold text-base text-primary dark:text-mist">
                     ABDM Diagnostic Referral Parcha
                   </h3>
-                  <p className="text-[10px] text-[#556376] dark:text-[#A8B4C2]">
+                  <p className="text-[10px] text-muted dark:text-muted">
                     Ayushman Bharat Digital Mission • FHIR R4 DiagnosticReport
                   </p>
                 </div>
@@ -735,29 +735,29 @@ export default function Screening() {
             </div>
 
             {/* Parcha Body */}
-            <div className="bg-[#F4F6F0] dark:bg-[#151D28] p-4 rounded-2xl text-xs space-y-2.5 border border-[#5A7855]/15 font-mono">
+            <div className="bg-mist dark:bg-mist p-4 rounded-2xl text-xs space-y-2.5 border border-sage/15 font-mono">
               <div className="flex justify-between">
-                <span className="text-[#556376] dark:text-[#A8B4C2]">Report ID:</span>
-                <span className="font-bold text-[#2E4057] dark:text-[#F4F6F0]">{result.fhir_report?.id || 'SANJ-REF-001'}</span>
+                <span className="text-muted dark:text-muted">Report ID:</span>
+                <span className="font-bold text-primary dark:text-mist">{result.fhir_report?.id || 'SANJ-REF-001'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#556376] dark:text-[#A8B4C2]">Date / Time:</span>
+                <span className="text-muted dark:text-muted">Date / Time:</span>
                 <span>{new Date().toLocaleDateString('hi-IN')} {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#556376] dark:text-[#A8B4C2]">Screening Test:</span>
+                <span className="text-muted dark:text-muted">Screening Test:</span>
                 <span className="font-bold">{result.type}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#556376] dark:text-[#A8B4C2]">Calculated Score:</span>
+                <span className="text-muted dark:text-muted">Calculated Score:</span>
                 <span className="font-bold">{result.score} (Cutoff: {result.threshold})</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#556376] dark:text-[#A8B4C2]">Estimated Metric:</span>
-                <span className="font-bold text-[#B85042] dark:text-[#FF7878]">{result.estimated_metric || 'N/A'}</span>
+                <span className="text-muted dark:text-muted">Estimated Metric:</span>
+                <span className="font-bold text-rose-soft dark:text-rose-soft">{result.estimated_metric || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#556376] dark:text-[#A8B4C2]">Risk Grade:</span>
+                <span className="text-muted dark:text-muted">Risk Grade:</span>
                 <span className="font-bold">{result.risk}</span>
               </div>
             </div>
@@ -782,7 +782,7 @@ export default function Screening() {
                     toast.success('ABDM FHIR DiagnosticReport JSON download hua');
                   }
                 }}
-                className="touch-target flex-1 py-3 px-4 rounded-xl bg-[#5A7855] text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-[#4a6346]"
+                className="touch-target flex-1 py-3 px-4 rounded-xl bg-sage text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-sage/90"
               >
                 <Download className="w-4 h-4" />
                 <span>Download FHIR JSON</span>
@@ -803,14 +803,14 @@ export default function Screening() {
       )}
 
       {/* Safety Footer */}
-      <div className="max-w-4xl mx-auto mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#556376] dark:text-[#A8B4C2] text-center sm:text-left bg-white dark:bg-[#1E2A43] p-4 rounded-2xl border border-[#5A7855]/15">
+      <div className="max-w-4xl mx-auto mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted dark:text-muted text-center sm:text-left bg-white dark:bg-warm-indigo p-4 rounded-2xl border border-sage/15">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-[#5A7855] shrink-0" />
-          <span>Yeh suvidha prathmik edge screening hetu hai aur kisi bhi aapaat sthiti mein doctor se sampark karein.</span>
+          <ShieldCheck className="w-4 h-4 text-sage shrink-0" />
+          <span>Yeh suvidha keval prathmik computer-vision edge simulation hetu hai aur antim clinical nidaan nahi hai. Kisi bhi aapaat sthiti mein turant doctor ya CHC se sampark karein.</span>
         </div>
         <a
           href="tel:108"
-          className="shrink-0 inline-flex items-center gap-1 font-bold text-[#B85042] dark:text-[#FF7878] hover:underline"
+          className="shrink-0 inline-flex items-center gap-1 font-bold text-rose-soft dark:text-rose-soft hover:underline"
         >
           <PhoneCall className="w-3.5 h-3.5" /> Aapaatkaal: 108
         </a>

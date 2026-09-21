@@ -119,3 +119,32 @@ def test_reset_password_with_otp_flow():
     assert new_login.status_code == 200
     assert new_login.json()["access_token"] is not None
     assert new_login.json()["user"]["username"] == reg_user
+
+
+def test_admin_reset_password_security():
+    # Unauthenticated request to /auth/reset-password must be rejected
+    unauth_resp = client.post("/auth/reset-password", json={
+        "identifier": "otp_reset_user",
+        "new_password": "unauthorized_pw_123"
+    })
+    assert unauth_resp.status_code in (401, 403), f"Expected 401/403, got {unauth_resp.status_code}"
+
+    # Authenticate as default admin
+    admin_login = client.post("/auth/login", json={
+        "identifier": "admin",
+        "password": "sanjeevani2026"
+    })
+    assert admin_login.status_code == 200
+    admin_token = admin_login.json()["access_token"]
+
+    # Admin request must succeed
+    auth_resp = client.post(
+        "/auth/reset-password",
+        json={
+            "identifier": "otp_reset_user",
+            "new_password": "admin_reset_pw_123"
+        },
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert auth_resp.status_code == 200
+
