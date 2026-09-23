@@ -15,6 +15,7 @@ import re
 import json
 import docx
 from typing import List, Dict, Any, Tuple
+from app.core.logger import logger
 
 
 # Ailment conditions strictly flagged as Emergency or requiring immediate hospital care.
@@ -53,7 +54,7 @@ def classify_safety_tier(title: str) -> str:
 def extract_botanical_herbs(docx_path: str) -> List[Dict[str, Any]]:
     """Parses BotanicalHerb.docx (119 medicinal herbs with Dravyaguna properties)."""
     if not os.path.exists(docx_path):
-        print(f"[Curator] Botanical herb file not found at: {docx_path}")
+        logger.warning(f"[Curator] Botanical herb file not found at: {docx_path}")
         return []
 
     doc = docx.Document(docx_path)
@@ -100,7 +101,7 @@ def extract_botanical_herbs(docx_path: str) -> List[Dict[str, Any]]:
 def extract_vaidya_chikitsa(docx_path: str) -> List[Dict[str, Any]]:
     """Parses vaidya_chikitsha.docx (114 clinical disease management chapters)."""
     if not os.path.exists(docx_path):
-        print(f"[Curator] Vaidya Chikitsa file not found at: {docx_path}")
+        logger.warning(f"[Curator] Vaidya Chikitsa file not found at: {docx_path}")
         return []
 
     doc = docx.Document(docx_path)
@@ -209,25 +210,25 @@ def build_and_save_curated_knowledge(data_dir: str = "DATA/Ayush", output_dir: s
     botanical_path = os.path.join(data_dir, "BotanicalHerb.docx")
     vaidya_path = os.path.join(data_dir, "vaidya_chikitsha.docx")
 
-    print(f"[Knowledge Curator] Processing {botanical_path}...")
+    logger.info(f"[Knowledge Curator] Processing {botanical_path}...")
     herbs = extract_botanical_herbs(botanical_path)
     herbs_out = os.path.join(output_dir, "botanical_herbs_curated.json")
     with open(herbs_out, "w", encoding="utf-8") as f:
         json.dump(herbs, f, indent=2, ensure_ascii=False)
-    print(f"[Knowledge Curator] Saved {len(herbs)} botanical herbs to {herbs_out}")
+    logger.info(f"[Knowledge Curator] Saved {len(herbs)} botanical herbs to {herbs_out}")
 
-    print(f"[Knowledge Curator] Processing {vaidya_path}...")
+    logger.info(f"[Knowledge Curator] Processing {vaidya_path}...")
     ailments = extract_vaidya_chikitsa(vaidya_path)
     ailments_out = os.path.join(output_dir, "vaidya_chikitsa_curated.json")
     with open(ailments_out, "w", encoding="utf-8") as f:
         json.dump(ailments, f, indent=2, ensure_ascii=False)
-    print(f"[Knowledge Curator] Saved {len(ailments)} clinical ailments to {ailments_out}")
+    logger.info(f"[Knowledge Curator] Saved {len(ailments)} clinical ailments to {ailments_out}")
 
     safe_count = sum(1 for a in ailments if a["safety_tier"] == "household_safe")
     consult_count = sum(1 for a in ailments if a["safety_tier"] == "requires_consultation")
     emerg_count = sum(1 for a in ailments if a["safety_tier"] == "clinical_emergency")
 
-    print(f"[Knowledge Curator] Tiers: {safe_count} Household-Safe, {consult_count} Require Consultation, {emerg_count} Clinical Emergency.")
+    logger.info(f"[Knowledge Curator] Tiers: {safe_count} Household-Safe, {consult_count} Require Consultation, {emerg_count} Clinical Emergency.")
     return len(herbs), len(ailments)
 
 

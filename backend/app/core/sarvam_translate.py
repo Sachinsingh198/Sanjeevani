@@ -8,6 +8,7 @@ import os
 from typing import Optional, Dict, Any
 import httpx
 from app.config import settings
+from app.core.logger import logger
 
 
 class SarvamTranslateClient:
@@ -71,9 +72,9 @@ class SarvamTranslateClient:
                 translated = data.get("translated_text", "")
                 if translated and translated.strip():
                     return translated.strip()
-            print(f"[Sarvam Translate] API response {res.status_code}: {res.text[:200]}")
+            logger.warning(f"[Sarvam Translate] API response {res.status_code}: {res.text[:200]}")
         except Exception as e:
-            print(f"[Sarvam Translate] Request failed: {e}")
+            logger.warning(f"[Sarvam Translate] Request failed: {e}")
 
         return self._fallback_translate(text, target_language_code)
 
@@ -111,7 +112,7 @@ class SarvamTranslateClient:
                     if translated and translated.strip():
                         return translated.strip()
         except Exception as e:
-            print(f"[Sarvam Translate Sync] Request failed: {e}")
+            logger.warning(f"[Sarvam Translate Sync] Request failed: {e}")
 
         return self._fallback_translate(text, target_language_code)
 

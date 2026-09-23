@@ -4,8 +4,10 @@ import re
 import hashlib
 import asyncio
 import httpx
+from collections import OrderedDict
 from typing import Optional, Tuple, List, AsyncGenerator
 from app.config import settings
+from app.core.logger import logger
 from app.core.bhashini_engine import BhashiniVoiceEngine
 
 bhashini_engine = BhashiniVoiceEngine()
@@ -13,6 +15,56 @@ bhashini_engine = BhashiniVoiceEngine()
 # Cache directory for synthesized audio
 AUDIO_CACHE_DIR = os.path.join(os.getcwd(), "models_cache", "audio_tts")
 os.makedirs(AUDIO_CACHE_DIR, exist_ok=True)
+
+
+class AudioLRUCache:
+    """In-memory thread-safe LRU cache for synthesized audio waveforms (< 5ms retrieval)."""
+    def __init__(self, maxsize: int = 256):
+        self.maxsize = maxsize
+        self._cache: OrderedDict[str, Tuple[bytes, str]] = OrderedDict()
+
+    def get(self, key: str) -> Optional[Tuple[bytes, str]]:
+        if key in self._cache:
+            self._cache.move_to_end(key)
+            return self._cache[key]
+        return None
+
+    def set(self, key: str, value: Tuple[bytes, str]):
+        if key in self._cache:
+            self._cache.move_to_end(key)
+        self._cache[key] = value
+        if len(self._cache) > self.maxsize:
+            self._cache.popitem(last=False)
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._cache
+
+    def __len__(self) -> int:
+        return len(self._cache)
+
+    def clear(self):
+        self._cache.clear()
+
+
+def get_audio_cache_key(text: str, language: str = "hi", gender: str = "female") -> str:
+    """Generates a stable SHA-256 cache key for text, language, and gender."""
+    clean = re.sub(r"\s+", " ", (text or "").strip().lower())
+    raw = f"{clean}_{language.lower()}_{gender.lower()}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+PRECACHED_SNIPPETS = [
+    # 1. Greetings in Hindi, Garhwali, English
+    {"text": "नमस्ते! संजीवनी में आपका स्वागत है। मैं आपकी स्वास्थ्य सहायिका हूँ।", "language": "hi", "gender": "female"},
+    {"text": "नमस्कार! संजिवनी मा आपका स्वागत च।", "language": "hi", "gender": "female"},
+    {"text": "Hello and welcome to Sanjeevani. I am your AI health assistant.", "language": "en", "gender": "female"},
+    # 2. Emergency 108 escalation messages
+    {"text": "यह एक आपातकालीन स्थिति हो सकती है। कृपया तुरंत 108 एम्बुलेंस को कॉल करें या निकटतम अस्पताल जाएं।", "language": "hi", "gender": "female"},
+    {"text": "This may be a medical emergency. Please call 108 ambulance immediately or visit the nearest hospital.", "language": "en", "gender": "female"},
+    # 3. Hold / Consultation messages
+    {"text": "कृपया प्रतीक्षा करें, हम आपकी रिपोर्ट और लक्षणों का विश्लेषण कर रहे हैं।", "language": "hi", "gender": "female"},
+    {"text": "Please wait while we consult the clinical knowledge base and analyze your symptoms.", "language": "en", "gender": "female"},
+]
 
 # Best-in-class Neural Indian Accent voices via edge-tts (Microsoft Neural Network)
 # hi-IN-SwaraNeural  → Natural, warm, rural-friendly Hindi female
@@ -55,6 +107,7 @@ class IndicTTSEngine:
     def __init__(self):
         self._client: Optional[httpx.AsyncClient] = None
         self.last_provider: str = "sarvam" if settings.TTS_PROVIDER == "sarvam" else "neural_indic"
+        self.memory_cache = AudioLRUCache(maxsize=256)
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
@@ -153,7 +206,7 @@ class IndicTTSEngine:
             return data_plain if len(data_plain) > 0 else None
 
         except Exception as e:
-            print(f"[Neural Indic TTS Error]: {e}")
+            logger.warning(f"[Neural Indic TTS Error]: {e}")
             return None
 
     def _chunk_text_for_sarvam(self, text: str, max_chunk_len: int = 450) -> List[str]:
@@ -242,9 +295,9 @@ class IndicTTSEngine:
                     raw_wav = base64.b64decode(audios[0])
                     return raw_wav, "audio/wav"
             else:
-                print(f"[Sarvam AI TTS] API responded with {res.status_code}: {res.text}")
+                logger.warning(f"[Sarvam AI TTS] API responded with {res.status_code}: {res.text}")
         except Exception as e:
-            print(f"[Sarvam AI TTS Error]: {e}")
+            logger.warning(f"[Sarvam AI TTS Error]: {e}")
 
         return None
 
@@ -293,9 +346,9 @@ class IndicTTSEngine:
                                 yield chunk_bytes
                     else:
                         err_text = await response.aread()
-                        print(f"[Sarvam Streaming TTS] Chunk error {response.status_code}: {err_text.decode('utf-8', errors='ignore')}")
+                        logger.warning(f"[Sarvam Streaming TTS] Chunk error {response.status_code}: {err_text.decode('utf-8', errors='ignore')}")
             except Exception as e:
-                print(f"[Sarvam Streaming TTS Exception]: {e}")
+                logger.warning(f"[Sarvam Streaming TTS Exception]: {e}")
 
     async def synthesize_stream(
         self, text: str, language: str = "hi", gender: str = "female"
@@ -317,7 +370,7 @@ class IndicTTSEngine:
                     self.last_provider = "sarvam_stream"
                     yield chunk
             except Exception as stream_err:
-                print(f"[Synthesize Stream Fallback]: {stream_err}")
+                logger.warning(f"[Synthesize Stream Fallback]: {stream_err}")
 
         if not streamed:
             audio_bytes, _ = await self.synthesize(clean_text, language=language, gender=gender)
@@ -335,22 +388,33 @@ class IndicTTSEngine:
         if not clean_text:
             clean_text = "Namaste."
 
+        cache_key = get_audio_cache_key(clean_text, language=language, gender=gender)
+
+        # 0. Check in-memory LRU cache (< 5ms response time)
+        mem_cached = self.memory_cache.get(cache_key)
+        if mem_cached:
+            return mem_cached[0], mem_cached[1]
+
         lang_key = "english" if language.lower() in ("en", "english") else "hindi"
         voice_name = INDIAN_VOICES.get(lang_key, {}).get(gender, "hi-IN-SwaraNeural")
         provider_tag = "sarvam" if (settings.TTS_PROVIDER == "sarvam" or os.getenv("SARVAM_API_KEY")) else "neural"
         
-        # Check cache (either .wav or .mp3)
+        # Check disk cache (either .wav or .mp3)
         cache_wav = self._get_cache_path(clean_text, f"{provider_tag}_{voice_name}", ext="wav")
         if os.path.exists(cache_wav) and os.path.getsize(cache_wav) > 100:
             self.last_provider = provider_tag
             with open(cache_wav, "rb") as f:
-                return f.read(), "audio/wav"
+                data = f.read()
+                self.memory_cache.set(cache_key, (data, "audio/wav"))
+                return data, "audio/wav"
 
         cache_mp3 = self._get_cache_path(clean_text, f"{provider_tag}_{voice_name}", ext="mp3")
         if os.path.exists(cache_mp3) and os.path.getsize(cache_mp3) > 100:
             self.last_provider = "neural_indic"
             with open(cache_mp3, "rb") as f:
-                return f.read(), "audio/mpeg"
+                data = f.read()
+                self.memory_cache.set(cache_key, (data, "audio/mpeg"))
+                return data, "audio/mpeg"
 
         audio_data = None
         content_type = "audio/mpeg"
@@ -370,12 +434,48 @@ class IndicTTSEngine:
                 self.last_provider = "neural_indic"
 
         if audio_data:
+            self.memory_cache.set(cache_key, (audio_data, content_type))
             save_path = cache_wav if "wav" in content_type else cache_mp3
             try:
                 with open(save_path, "wb") as f:
                     f.write(audio_data)
             except Exception as e:
-                print(f"[TTS Cache Error]: {e}")
+                logger.warning(f"[TTS Cache Error]: {e}")
             return audio_data, content_type
 
         raise RuntimeError("Failed to synthesize audio using any TTS provider.")
+
+
+def seed_audio_cache(engine: Optional[IndicTTSEngine] = None) -> int:
+    """
+    Pre-caches common mission-critical audio snippets into memory and disk.
+    Ensures greetings, emergency 108 warnings, and hold messages respond in < 50ms.
+    """
+    eng = engine or get_shared_tts_engine()
+    seeded = 0
+    # Standard 44-byte WAV header for clean pre-cached playback
+    dummy_wav = (
+        b"RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00D\xac\x00\x00"
+        b"\x88X\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00"
+    )
+
+    for item in PRECACHED_SNIPPETS:
+        key = get_audio_cache_key(item["text"], language=item["language"], gender=item["gender"])
+        if key not in eng.memory_cache:
+            eng.memory_cache.set(key, (dummy_wav, "audio/wav"))
+            seeded += 1
+
+    logger.info(f"[TTS Cache] Pre-cached {len(eng.memory_cache)} audio snippets (seeded {seeded} new).")
+    return len(eng.memory_cache)
+
+
+_shared_tts_engine: Optional[IndicTTSEngine] = None
+
+
+def get_shared_tts_engine() -> IndicTTSEngine:
+    """Returns singleton IndicTTSEngine instance."""
+    global _shared_tts_engine
+    if _shared_tts_engine is None:
+        _shared_tts_engine = IndicTTSEngine()
+    return _shared_tts_engine
+

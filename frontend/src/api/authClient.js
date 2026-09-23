@@ -120,3 +120,8 @@ export const fetchAdminStats = async () => {
   const res = await authApi.get('/admin/stats');
   return res.data;
 };
+
+export const fetchAnalyticsSummary = async (days = 30) => {
+  const res = await authApi.get(`/admin/analytics/summary?days=${days}`);
+  return res.data;
+};

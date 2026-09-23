@@ -24,6 +24,12 @@ export default function LiveVoiceRoom({ onClose }) {
   const [isLiveActive, setIsLiveActive]       = useState(true);
   const [transcript, setTranscript]           = useState([]);
   const [micNotice, setMicNotice]             = useState('');
+  const [detectedLanguage, setDetectedLanguage] = useState('hindi');
+  const [sttLangOverride, setSttLangOverride]   = useState(null);
+
+  const effectiveLang = sttLangOverride || (detectedLanguage === 'english' ? 'en-IN' : 'hi-IN');
+  const effectiveLangRef   = useRef(effectiveLang);
+  effectiveLangRef.current = effectiveLang;
 
   const convId             = useRef(getOrCreateConversationId());
   const convStateRef       = useRef('idle');
@@ -64,6 +70,7 @@ export default function LiveVoiceRoom({ onClose }) {
     // Start native speech recognition if ready
     try {
       if (recognitionRef.current && !isRecognizingRef.current) {
+        recognitionRef.current.lang = effectiveLangRef.current;
         recognitionRef.current.start();
       }
     } catch (err) {
@@ -191,6 +198,9 @@ export default function LiveVoiceRoom({ onClose }) {
     try {
       // High-speed combined call: returns triage text AND inline Sarvam TTS audio
       const res = await sendChatMessage(convId.current, cleanText, [], 'auto', true, 'female');
+      if (res.detected_language) {
+        setDetectedLanguage(res.detected_language);
+      }
       setLatestReply(res.reply_text);
       setTier(res.tier || 'Green');
       setTranscript(prev => [...prev, { role: 'ai', text: res.reply_text }]);
@@ -253,7 +263,7 @@ export default function LiveVoiceRoom({ onClose }) {
     let rec = null;
     if (SR) {
       rec = new SR();
-      rec.lang = 'hi-IN';
+      rec.lang = effectiveLangRef.current;
       rec.interimResults = true;
       rec.continuous = true;
       rec.maxAlternatives = 1;
@@ -426,6 +436,17 @@ export default function LiveVoiceRoom({ onClose }) {
     };
   }, []);
 
+  /* ── Sync Speech Recognition Language ──────────────────────────────── */
+  useEffect(() => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.lang = effectiveLang;
+      } catch (e) {
+        console.debug('Failed to update rec.lang:', e);
+      }
+    }
+  }, [effectiveLang]);
+
   /* ── Derived UI values ─────────────────────────────────────────────── */
   const tc = TIER_COLOR[tier] || TIER_COLOR.Green;
 
@@ -466,6 +487,14 @@ export default function LiveVoiceRoom({ onClose }) {
 
         {/* Tier + Status chip + Close button */}
         <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setSttLangOverride(prev => (prev === 'en-IN' || (!prev && detectedLanguage === 'english')) ? 'hi-IN' : 'en-IN')}
+            className="px-2.5 py-1 rounded-full text-[11px] font-bold border border-white/20 bg-white/10 hover:bg-white/20 text-white/90 transition-all flex items-center gap-1 shadow-sm"
+            title="Aawaaz ki bhasha badlein / Toggle Speech Recognition Language (Hindi / English)"
+          >
+            🎙️ {effectiveLang === 'en-IN' ? 'EN' : 'HI'}
+          </button>
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-white/10 ${tc.bg} ${tc.text}`}>
             <span className={`w-2 h-2 rounded-full ${tier === 'Green' ? 'animate-pulse' : ''} ${tc.dot}`} />
             Tier {tier}

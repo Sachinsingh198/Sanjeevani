@@ -1,12 +1,16 @@
 """
 Admin API routes: user management, analytics, and ASHA worker oversight.
 All endpoints require the 'admin' role.
+Migrated to SQLAlchemy Core abstraction layer.
 """
+from typing import Dict, Any, List
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import select, insert, delete, func
 from app.schemas.auth_schemas import RegisterRequest, UserProfile
 from app.core.auth import hash_password, require_role
-from app.models import get_db
-from typing import Dict, Any, List
+from app.db import get_db_connection, users_table, row_to_dict, rows_to_dicts
+from app.core.analytics import get_analytics_summary
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -14,12 +18,10 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 @router.get("/users", response_model=List[UserProfile])
 async def list_all_users(admin: Dict[str, Any] = Depends(require_role("admin"))):
     """List all registered users across all roles."""
-    conn = get_db()
-    try:
-        rows = conn.execute("SELECT * FROM users ORDER BY created_at DESC").fetchall()
-        return [UserProfile(**dict(row)) for row in rows]
-    finally:
-        conn.close()
+    with get_db_connection() as conn:
+        stmt = select(users_table).order_by(users_table.c.created_at.desc())
+        rows = conn.execute(stmt).fetchall()
+        return [UserProfile(**row_dict) for row_dict in rows_to_dicts(rows)]
 
 
 @router.post("/users", response_model=UserProfile)
@@ -28,23 +30,29 @@ async def create_user(req: RegisterRequest, admin: Dict[str, Any] = Depends(requ
     if req.role not in ("patient", "asha", "admin"):
         raise HTTPException(status_code=400, detail="Invalid role")
 
-    conn = get_db()
-    try:
-        existing = conn.execute("SELECT id FROM users WHERE phone = ?", (req.phone,)).fetchone()
+    with get_db_connection() as conn:
+        existing = conn.execute(
+            select(users_table.c.id).where(users_table.c.phone == req.phone)
+        ).fetchone()
         if existing:
             raise HTTPException(status_code=409, detail="Phone number already registered")
 
         hashed = hash_password(req.password)
-        cursor = conn.execute(
-            "INSERT INTO users (name, phone, hashed_password, role, village) VALUES (?, ?, ?, ?, ?)",
-            (req.name, req.phone, hashed, req.role, req.village)
+        ins = (
+            insert(users_table)
+            .values(
+                name=req.name,
+                phone=req.phone,
+                hashed_password=hashed,
+                role=req.role,
+                village=req.village,
+            )
         )
-        conn.commit()
+        result = conn.execute(ins)
+        user_id = result.inserted_primary_key[0] if result.inserted_primary_key else None
 
-        row = conn.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,)).fetchone()
-        return UserProfile(**dict(row))
-    finally:
-        conn.close()
+        row = conn.execute(select(users_table).where(users_table.c.id == user_id)).fetchone()
+        return UserProfile(**row_to_dict(row))
 
 
 @router.delete("/users/{user_id}")
@@ -53,40 +61,50 @@ async def delete_user(user_id: int, admin: Dict[str, Any] = Depends(require_role
     if admin["id"] == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
 
-    conn = get_db()
-    try:
-        existing = conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+    with get_db_connection() as conn:
+        existing = conn.execute(
+            select(users_table.c.id).where(users_table.c.id == user_id)
+        ).fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail="User not found")
 
-        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
-        conn.commit()
+        conn.execute(delete(users_table).where(users_table.c.id == user_id))
         return {"message": "User deleted successfully", "deleted_id": user_id}
-    finally:
-        conn.close()
 
 
 @router.get("/stats")
 async def get_system_stats(admin: Dict[str, Any] = Depends(require_role("admin"))):
     """Admin-only: Returns platform analytics and system health overview."""
-    conn = get_db()
-    try:
+    cutoff_7d = datetime.now(timezone.utc) - timedelta(days=7)
+
+    with get_db_connection() as conn:
         # User counts by role
-        total_users = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()["count"]
-        patients = conn.execute("SELECT COUNT(*) as count FROM users WHERE role = 'patient'").fetchone()["count"]
-        asha_workers = conn.execute("SELECT COUNT(*) as count FROM users WHERE role = 'asha'").fetchone()["count"]
-        admins = conn.execute("SELECT COUNT(*) as count FROM users WHERE role = 'admin'").fetchone()["count"]
+        total_users = conn.execute(select(func.count()).select_from(users_table)).scalar() or 0
+        patients = conn.execute(
+            select(func.count()).select_from(users_table).where(users_table.c.role == "patient")
+        ).scalar() or 0
+        asha_workers = conn.execute(
+            select(func.count()).select_from(users_table).where(users_table.c.role == "asha")
+        ).scalar() or 0
+        admins = conn.execute(
+            select(func.count()).select_from(users_table).where(users_table.c.role == "admin")
+        ).scalar() or 0
 
         # Recent registrations (last 7 days)
         recent = conn.execute(
-            "SELECT COUNT(*) as count FROM users WHERE created_at >= datetime('now', '-7 days')"
-        ).fetchone()["count"]
+            select(func.count()).select_from(users_table).where(users_table.c.created_at >= cutoff_7d)
+        ).scalar() or 0
 
         # Village distribution
-        village_rows = conn.execute(
-            "SELECT village, COUNT(*) as count FROM users WHERE village IS NOT NULL AND TRIM(village) != '' GROUP BY village ORDER BY count DESC LIMIT 6"
-        ).fetchall()
-        village_distribution = [{"village": row["village"], "count": row["count"]} for row in village_rows]
+        stmt_villages = (
+            select(users_table.c.village, func.count().label("count"))
+            .where(users_table.c.village.is_not(None), users_table.c.village != "")
+            .group_by(users_table.c.village)
+            .order_by(func.count().desc())
+            .limit(6)
+        )
+        village_rows = conn.execute(stmt_villages).fetchall()
+        village_distribution = [{"village": row.village, "count": row.count} for row in village_rows]
 
         # Triage distribution (proportional to activity or baseline mountain case load)
         base = max(patients, 10)
@@ -110,6 +128,15 @@ async def get_system_stats(admin: Dict[str, Any] = Depends(require_role("admin")
             "qdrant_status": "active",
             "llm_provider": "groq",
         }
-    finally:
-        conn.close()
 
+
+@router.get("/analytics/summary")
+async def get_admin_analytics_summary(
+    days: int = 30,
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """
+    Admin-only: Aggregate privacy-respecting analytics summary over the last N days (default 30).
+    Returns consultation lifecycle events (started, concluded, emergencies, remedies) grouped by day, tier, and language.
+    """
+    return get_analytics_summary(days=days)

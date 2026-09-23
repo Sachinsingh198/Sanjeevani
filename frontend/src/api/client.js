@@ -86,7 +86,7 @@ export const sendChatMessage = async (
         return {
           conversation_id: conversationId,
           tier: 'Red',
-          reply_text: 'EMERGENCY WARNING: Critical life-threatening symptoms detected. Do NOT rely on home remedies. Keep the patient in a comfortable position, ensure their airway is open, and call 108 emergency ambulance immediately.',
+          reply_text: '⚠️ ऑफ़लाइन अनुमान (पुष्टि नहीं) — EMERGENCY WARNING: Critical life-threatening symptoms detected. Do NOT rely on home remedies. Keep the patient in a comfortable position, ensure their airway is open, and call 108 emergency ambulance immediately.',
           flags: ['RED_FLAG: cardiac_chest_pain / acute_respiratory_distress'],
           remedies: [],
           escalation_triggered: true,
@@ -99,7 +99,7 @@ export const sendChatMessage = async (
         return {
           conversation_id: conversationId,
           tier: 'Yellow',
-          reply_text: 'Aapke lakshan sub-acute hain. Yadi bukhar 24 ghante aur rehta hai toh Primary Health Centre (PHC) jaayein ya e-Sanjeevani (104) par call karein.',
+          reply_text: '⚠️ ऑफ़लाइन अनुमान (पुष्टि नहीं) — Aapke lakshan sub-acute hain. Yadi bukhar 24 ghante aur rehta hai toh Primary Health Centre (PHC) jaayein ya e-Sanjeevani (104) par call karein.',
           flags: ['YELLOW_FLAG: Prolonged fever monitoring'],
           remedies: [],
           escalation_triggered: false,
@@ -111,7 +111,7 @@ export const sendChatMessage = async (
       return {
         conversation_id: conversationId,
         tier: 'Green',
-        reply_text: 'Namaste! Main Sanjeevani hoon. Aap apne lakshan yahan batayein. (Demo mode — backend offline)',
+        reply_text: '⚠️ ऑफ़लाइन अनुमान (पुष्टि नहीं) — Namaste! Main Sanjeevani hoon. Aap apne lakshan yahan batayein. (Demo mode — backend offline)',
         flags: ['GREEN_FLAG: Routine community care'],
         remedies: [],
         escalation_triggered: false,
@@ -143,5 +143,35 @@ export const synthesizeSpeech = async (text, language = 'hi', gender = 'female')
     console.warn('[TTS API Error] Falling back to browser speech synthesis:', err);
     return null;
   }
+};
+
+/**
+ * Fetches consultation history records from backend.
+ */
+export const getChatHistory = async (token = null) => {
+  const authToken = token || (typeof localStorage !== 'undefined' ? localStorage.getItem('sanjeevani_token') : null);
+  const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+  const res = await api.get('/chat/history', { headers });
+  return res.data;
+};
+
+/**
+ * Fetches detailed state of a single past consultation session.
+ */
+export const getConversationDetails = async (conversationId, token = null) => {
+  const authToken = token || (typeof localStorage !== 'undefined' ? localStorage.getItem('sanjeevani_token') : null);
+  const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+  const res = await api.get(`/chat/history/${conversationId}`, { headers });
+  return res.data;
+};
+
+/**
+ * Synchronizes batch encounters from ASHA workers to the health center backend.
+ */
+export const syncAshaBatch = async (encounters, token = null) => {
+  const authToken = token || (typeof localStorage !== 'undefined' ? localStorage.getItem('sanjeevani_token') : null);
+  const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+  const res = await api.post('/asha/sync-batch', { encounters }, { headers, timeout: 15000 });
+  return res.data;
 };
 

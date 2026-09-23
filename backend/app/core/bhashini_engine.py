@@ -3,6 +3,7 @@ import os
 import re
 from typing import Dict, Optional, List, Any
 from app.config import settings
+from app.core.logger import logger
 
 from app.core.clinical_lexicon import GARHWALI_TOKENS, ENGLISH_COMMON_WORDS
 
@@ -20,6 +21,10 @@ class BhashiniVoiceEngine:
         lexicon_path: str = "DATA/garhwali_lexicon.json",
         dialogues_path: str = "DATA/garhwali_clinical_dialogues.json"
     ):
+        if not os.path.exists(lexicon_path) and os.path.exists(os.path.join("backend", lexicon_path)):
+            lexicon_path = os.path.join("backend", lexicon_path)
+        if not os.path.exists(dialogues_path) and os.path.exists(os.path.join("backend", dialogues_path)):
+            dialogues_path = os.path.join("backend", dialogues_path)
         self.lexicon_path = lexicon_path
         self.dialogues_path = dialogues_path
         self.lexicon: Dict[str, str] = {}
@@ -33,11 +38,11 @@ class BhashiniVoiceEngine:
             try:
                 with open(self.lexicon_path, "r", encoding="utf-8") as f:
                     self.lexicon = json.load(f)
-                print(f"[Bhashini] Loaded {len(self.lexicon)} Garhwali dialect translation rules.")
+                logger.info(f"[Bhashini] Loaded {len(self.lexicon)} Garhwali dialect translation rules.")
             except Exception as e:
-                print(f"[Bhashini] Error loading lexicon {self.lexicon_path}: {e}")
+                logger.error(f"[Bhashini] Error loading lexicon {self.lexicon_path}: {e}")
         else:
-            print(f"[Bhashini] WARNING: Lexicon not found at {self.lexicon_path}")
+            logger.warning(f"[Bhashini] WARNING: Lexicon not found at {self.lexicon_path}")
 
     def _load_dialogues(self):
         """Loads curated clinical dialogue templates and grammar rules."""
@@ -46,9 +51,9 @@ class BhashiniVoiceEngine:
                 with open(self.dialogues_path, "r", encoding="utf-8") as f:
                     self.dialogues_data = json.load(f)
                 count = len(self.dialogues_data.get("clinical_dialogues", []))
-                print(f"[Bhashini] Loaded {count} curated Garhwali clinical dialogue modules.")
+                logger.info(f"[Bhashini] Loaded {count} curated Garhwali clinical dialogue modules.")
             except Exception as e:
-                print(f"[Bhashini] Error loading dialogues {self.dialogues_path}: {e}")
+                logger.error(f"[Bhashini] Error loading dialogues {self.dialogues_path}: {e}")
 
     def normalize_dialect(self, text: str) -> str:
         """

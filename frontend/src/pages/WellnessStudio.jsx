@@ -7,8 +7,9 @@ import {
   ChevronRight, RefreshCw, Eye, ArrowRight, Sun, Moon, Mountain
 } from 'lucide-react';
 import {
-  YOGA_ASANAS, evaluatePosture, drawSkeletonOnCanvas, detectPoseFromVideo, POSE_LANDMARKS
+  YOGA_ASANAS, evaluatePosture, drawSkeletonOnCanvas, detectPoseFromVideo, POSE_LANDMARKS, resetPoseSmoothing
 } from '../lib/poseDetection';
+import { initPoseLandmarker } from '../lib/mediapipePoseClient';
 import {
   playSingingBowl, playMeditationChime, ambientSoundscape, speakCue
 } from '../lib/audioSynthesizer';
@@ -240,6 +241,7 @@ export default function WellnessStudio({ defaultTab = 'flow' }) {
   const [selectedAsana, setSelectedAsana] = useState(YOGA_ASANAS[0]);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isSimulatedMode, setIsSimulatedMode] = useState(false);
+  const [poseModelLoading, setPoseModelLoading] = useState(false);
   const [isHoldingPose, setIsHoldingPose] = useState(false);
   const [holdTimerSec, setHoldTimerSec] = useState(selectedAsana.targetHoldsSec);
   const [alignmentScore, setAlignmentScore] = useState(0);
@@ -257,6 +259,14 @@ export default function WellnessStudio({ defaultTab = 'flow' }) {
   const startCamera = async () => {
     try {
       setIsSimulatedMode(false);
+      setPoseModelLoading(true);
+      resetPoseSmoothing();
+
+      // Launch MediaPipe pose initialization in parallel
+      const modelPromise = initPoseLandmarker().catch((err) => {
+        console.warn('Pose model preload warning in WellnessStudio:', err);
+      });
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
         audio: false,
@@ -267,10 +277,16 @@ export default function WellnessStudio({ defaultTab = 'flow' }) {
         videoRef.current.play();
       }
       setIsCameraActive(true);
+
+      // Settle model initialization
+      await modelPromise;
+      setPoseModelLoading(false);
+
       toast.success('Camera connected! Stand back to fit your full body.');
       playSingingBowl(216, 2.5);
       if (voiceCuesEnabled) speakCue('Camera chalu ho gaya hai. Kripya thoda peeche hokar mudra shuru karein.', 'hi-IN');
     } catch (err) {
+      setPoseModelLoading(false);
       console.warn('Camera access error:', err);
       toast.error('Camera access nahi mila. Practice Simulation Mode shuru kiya gaya.');
       startSimulationMode();
@@ -278,6 +294,8 @@ export default function WellnessStudio({ defaultTab = 'flow' }) {
   };
 
   const stopCamera = () => {
+    resetPoseSmoothing();
+    setPoseModelLoading(false);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -365,11 +383,11 @@ export default function WellnessStudio({ defaultTab = 'flow' }) {
 
       if (isSimulatedMode) {
         landmarks = generateSimulatedLandmarks(selectedAsana.id, tick);
-      } else if (isCameraActive && videoRef.current && videoRef.current.readyState >= 2) {
-        landmarks = detectPoseFromVideo(videoRef.current);
+      } else if (!poseModelLoading && isCameraActive && videoRef.current && videoRef.current.readyState >= 2) {
+        landmarks = detectPoseFromVideo(videoRef.current, selectedAsana.id);
       }
 
-      if (landmarks && canvasRef.current) {
+      if (canvasRef.current) {
         const assessment = evaluatePosture(landmarks, selectedAsana.id);
         setAlignmentScore(assessment.score);
         setPostureChecks(assessment.checks);
@@ -396,7 +414,7 @@ export default function WellnessStudio({ defaultTab = 'flow' }) {
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [isCameraActive, isSimulatedMode, selectedAsana]);
+  }, [isCameraActive, isSimulatedMode, selectedAsana, poseModelLoading]);
 
   // Hold Timer logic
   useEffect(() => {
@@ -860,6 +878,17 @@ export default function WellnessStudio({ defaultTab = 'flow' }) {
                     height={480}
                     className={`absolute inset-0 w-full h-full object-cover scale-x-[-1] pointer-events-none z-10 ${isCameraActive ? 'opacity-100' : 'opacity-0'}`}
                   />
+
+                  {/* MediaPipe Pose Model Loading State Overlay */}
+                  {poseModelLoading && (
+                    <div className="absolute inset-0 bg-black/85 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 text-center text-white">
+                      <div className="w-12 h-12 border-3 border-[#5A7855] border-t-transparent rounded-full animate-spin mb-4" />
+                      <h4 className="font-bold text-sm text-white font-serif">AI model load ho raha hai... 10-15 second lagenge</h4>
+                      <p className="text-xs text-white/70 mt-1 max-w-xs">
+                        Real-time skeletal tracking model initialize ho raha hai. Kripya prateeksha karein.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Standby Camera Placard */}
                   {!isCameraActive && (

@@ -96,3 +96,46 @@ def test_skin_erythema_screening(engine):
     assert result["screening_type"] == "SKIN_LESION"
     assert "ACTIVE_INFLAMMATION_RISK" in result["risk_level"]
     assert "Erythema" in result["biomarker"]
+    assert result["roi_localization_method"] == "estimated"
+
+def test_mediapipe_detected_eye_localization(engine):
+    """
+    Verifies that an image with detectable facial and ocular geometry
+    triggers real MediaPipe localization with roi_localization_method == 'detected'.
+    """
+    face_img = np.full((400, 400, 3), (180, 190, 220), dtype=np.uint8)  # background
+    # Face head contour
+    cv2.ellipse(face_img, (200, 200), (120, 160), 0, 0, 360, (130, 150, 200), -1)
+    # Eyes with sclera and pupils
+    cv2.circle(face_img, (160, 170), 16, (255, 255, 255), -1)
+    cv2.circle(face_img, (160, 170), 8, (20, 20, 20), -1)
+    # Vascular lower lid
+    cv2.ellipse(face_img, (160, 185), (14, 6), 0, 0, 180, (50, 60, 210), -1)
+    # Right eye
+    cv2.circle(face_img, (240, 170), 16, (255, 255, 255), -1)
+    cv2.circle(face_img, (240, 170), 8, (20, 20, 20), -1)
+    cv2.ellipse(face_img, (240, 185), (14, 6), 0, 0, 180, (50, 60, 210), -1)
+    # Mouth
+    cv2.ellipse(face_img, (200, 270), (40, 15), 0, 0, 360, (50, 50, 180), -1)
+
+    result = engine.screen_anemia(face_img)
+    assert result["screening_type"] == "ANEMIA"
+    assert result["roi_localization_method"] == "detected"
+    assert "estimated_metric" in result
+    assert result["annotated_image_base64"].startswith("data:image/jpeg;base64,")
+
+    # Jaundice screening on same face
+    jaundice_res = engine.screen_jaundice(face_img)
+    assert jaundice_res["screening_type"] == "JAUNDICE"
+    assert jaundice_res["roi_localization_method"] == "detected"
+
+def test_mediapipe_fallback_on_headless_crop(engine):
+    """
+    Confirms that tightly cropped or non-face patches gracefully
+    fall back to roi_localization_method == 'estimated'.
+    """
+    patch = np.zeros((80, 80, 3), dtype=np.uint8)
+    patch[:, :, 2] = 200
+
+    result = engine.screen_anemia(patch)
+    assert result["roi_localization_method"] == "estimated"

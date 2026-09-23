@@ -2,6 +2,7 @@ import os
 import re
 import json
 from typing import List, Dict, Any
+from app.core.logger import logger
 
 def clean_unicode(text: str) -> str:
     """Removes non-standard MS Word symbols and private use characters."""
@@ -41,7 +42,7 @@ def extract_docx_paragraphs(file_path: str) -> List[str]:
         paras = [clean_unicode(p.text) for p in doc.paragraphs if clean_unicode(p.text)]
         return paras
     except Exception as e:
-        print(f"[Docx Extractor] python-docx error: {e}. Attempting raw xml parse...")
+        logger.warning(f"[Docx Extractor] python-docx error: {e}. Attempting raw xml parse...")
         import zipfile
         import xml.etree.ElementTree as ET
         try:
@@ -56,7 +57,7 @@ def extract_docx_paragraphs(file_path: str) -> List[str]:
                     paras.append(p_text)
             return paras
         except Exception as e2:
-            print(f"[Docx Extractor] Critical error reading docx: {e2}")
+            logger.error(f"[Docx Extractor] Critical error reading docx: {e2}")
             return []
 
 def parse_ayurveda_remedies(file_path: str = None) -> List[Dict[str, Any]]:
@@ -67,12 +68,12 @@ def parse_ayurveda_remedies(file_path: str = None) -> List[Dict[str, Any]]:
         file_path = find_docx_file()
 
     if not file_path or not os.path.exists(file_path):
-        print(f"[Docx Extractor] No docx file found.")
+        logger.warning("[Docx Extractor] No docx file found.")
         return []
 
     paras = extract_docx_paragraphs(file_path)
     if not paras:
-        print(f"[Docx Extractor] No content in {file_path}")
+        logger.warning(f"[Docx Extractor] No content in {file_path}")
         return []
 
     raw_sections = []
@@ -122,7 +123,7 @@ def parse_ayurveda_remedies(file_path: str = None) -> List[Dict[str, Any]]:
     if current_title and current_body:
         raw_sections.append((current_title, list(current_body)))
 
-    print(f"[Docx Extractor] Discovered {len(raw_sections)} formulation sections in {os.path.basename(file_path)}")
+    logger.info(f"[Docx Extractor] Discovered {len(raw_sections)} formulation sections in {os.path.basename(file_path)}")
 
     remedies = []
     seen_names = set()
@@ -228,9 +229,9 @@ def save_docx_remedies_json(output_path: str = "DATA/ayurveda_docx_remedies.json
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(remedies, f, ensure_ascii=False, indent=2)
-        print(f"[Docx Extractor] Successfully saved {len(remedies)} remedies to {output_path}")
+        logger.info(f"[Docx Extractor] Successfully saved {len(remedies)} remedies to {output_path}")
     return remedies
 
 if __name__ == "__main__":
     rems = save_docx_remedies_json()
-    print(f"Extraction complete. Total: {len(rems)}")
+    logger.info(f"Extraction complete. Total: {len(rems)}")

@@ -258,6 +258,7 @@ export default function Screening() {
         ayurveda: data.ayurvedic_recommendation,
         annotated_image: data.annotated_image_base64,
         fhir_report: data.abdm_fhir_report,
+        roi_localization_method: data.roi_localization_method || 'estimated',
         source: 'backend_cv',
       });
 
@@ -573,6 +574,19 @@ export default function Screening() {
           {result ? (
             <div className="space-y-5 animate-fadeIn">
               
+              {/* Persistent Medical Disclaimer */}
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5 shadow-xs">
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <strong className="block font-semibold">
+                    यह प्रारंभिक AI जांच है, अंतिम चिकित्सा निदान नहीं। किसी भी चिंता के लिए डॉक्टर से मिलें।
+                  </strong>
+                  <span className="text-[11px] opacity-90 block mt-0.5">
+                    (Preliminary AI screening — not a final medical diagnosis.)
+                  </span>
+                </div>
+              </div>
+
               {/* Header result badge */}
               <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
                 <div className="flex items-center justify-between gap-2 mb-2">
@@ -646,7 +660,28 @@ export default function Screening() {
                     <span className="text-[11px] text-sage dark:text-booti-glow font-medium">{result.quality}</span>
                   </div>
                 )}
+                <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700">
+                  <span className="text-muted dark:text-muted">ROI Localization:</span>
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                    result.roi_localization_method === 'detected'
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
+                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20'
+                  }`}>
+                    {result.roi_localization_method === 'detected' ? '🎯 Detected (MediaPipe)' : '📐 Estimated (Fallback)'}
+                  </span>
+                </div>
               </div>
+
+              {/* ROI Localization Confidence Warning / Notice */}
+              {result.roi_localization_method === 'estimated' && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs leading-relaxed text-amber-900 dark:text-amber-300 flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold block mb-0.5">Anumanit Kshetra (Estimated ROI):</span>
+                    Tasveer mein aankh/mooh clearly nahi mila — anumanit kshetra ka upyog kiya gaya. Behtar tasveer ke liye dobara try karein.
+                  </div>
+                </div>
+              )}
 
               {/* Clinical Advice */}
               <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs leading-relaxed text-primary dark:text-mist">

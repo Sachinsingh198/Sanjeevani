@@ -6,10 +6,12 @@ import sys, os
 
 # Read API key from .env
 key = ""
-with open(".env") as f:
-    for line in f:
-        if line.startswith("GROQ_API_KEY="):
-            key = line.split("=", 1)[1].strip()
+env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
+if os.path.exists(env_path):
+    with open(env_path) as f:
+        for line in f:
+            if line.startswith("GROQ_API_KEY="):
+                key = line.split("=", 1)[1].strip()
 
 def run_groq_test():
     model = "qwen/qwen3.6-27b"

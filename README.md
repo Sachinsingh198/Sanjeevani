@@ -17,8 +17,9 @@
 1. [Executive Summary & Regional Context](#-executive-summary--regional-context)
 2. [Key Architectural Highlights](#-key-architectural-highlights)
 3. [System Architecture & Dataflow](#-system-architecture--dataflow)
-4. [Complete Technology Stack](#-complete-technology-stack)
-5. [Core Subsystems Deep Dive](#-core-subsystems-deep-dive)
+4. [Why These Choices (Architectural Decisions)](#-why-these-choices-architectural-decisions)
+5. [Complete Technology Stack](#-complete-technology-stack)
+6. [Core Subsystems Deep Dive](#-core-subsystems-deep-dive)
    - [1. Deterministic Clinical Triage Engine](#1-deterministic-clinical-triage-engine)
    - [2. LangGraph Agentic Consultation Flow](#2-langgraph-agentic-consultation-flow)
    - [3. Multilingual Voice & Speech Subsystem](#3-multilingual-voice--speech-subsystem)
@@ -27,11 +28,11 @@
    - [6. Community Health, Yoga & Elder Companionship](#6-community-health-yoga--elder-companionship)
    - [7. Role-Based Access Control & Dashboards](#7-role-based-access-control--dashboards)
    - [8. Production Tracing with LangSmith](#8-production-tracing-with-langsmith)
-6. [Repository Structure & Codebase Map](#-repository-structure--codebase-map)
-7. [Installation & Getting Started](#-installation--getting-started)
-8. [Default Demo Credentials & Testing](#-default-demo-credentials--testing)
-9. [API Route Directory](#-api-route-directory)
-10. [Clinical Disclaimers & Ethical Safeguards](#-clinical-disclaimers--ethical-safeguards)
+7. [Repository Structure & Codebase Map](#-repository-structure--codebase-map)
+8. [Installation & Getting Started](#-installation--getting-started)
+9. [Default Demo Credentials & Testing](#-default-demo-credentials--testing)
+10. [API Route Directory](#-api-route-directory)
+11. [Clinical Disclaimers & Ethical Safeguards](#-clinical-disclaimers--ethical-safeguards)
 
 ---
 
@@ -127,6 +128,38 @@ flowchart TD
     Router -.->|Users & OTPs| DB
     VisionSubsystem --> AnemiaCalc & JaundiceCalc & OralSkin
 ```
+
+### 🔄 End-to-End Clinical Consultation Dataflow
+
+The sequence below illustrates the runtime flow for both text and voice interactions:
+
+```mermaid
+flowchart LR
+    Input["Voice / Text Input"] --> STT["Sarvam Saaras STT\n(Voice Only)"]
+    Input --> Triage["triage_node\n(Manchester Triage System)"]
+    STT --> Triage
+    Triage --> Routing{"LangGraph Routing\n(Clinical State Machine)"}
+    
+    Routing -->|Red Tier: Emergency| Emergency["emergency_node\n(108 & PHC Escalation)"]
+    Routing -->|Concluded: Remedies| Retriever["retriever_node\n(Qdrant AYUSH RAG)"]
+    Routing -->|Active Dialogue| Responder["doctor_consultation_node\n(Groq / Gemini / Sarvam LLM)"]
+    
+    Retriever --> Responder
+    Emergency --> Response["Final Response\n(Markdown / Referral Slip)"]
+    Responder --> TTS["Sarvam Bulbul TTS\n(Streaming Audio)"]
+    Responder --> Response
+    TTS --> Response
+```
+
+---
+
+## 💡 Why These Choices (Architectural Decisions)
+
+| Component Choice | Alternative Considered | Why We Chose It for Sanjeevani |
+|---|---|---|
+| **LangGraph** | Linear Chains / Single-Prompt Agents (LCEL) | **Stateful multi-turn clinical interview, explicit branching & reliable persistence**: Standard linear chains cannot safely handle clinical dialogue where symptoms evolve across turns. LangGraph enables deterministic conditional edges (e.g., immediate bypass to emergency if red-tier symptoms appear on turn 4), structured cycle loops for differential clarification, and durable checkpointing (`SqliteSaver` / Postgres checkpointer) so intermittent village connectivity never drops patient conversation context. |
+| **Qdrant** | PostgreSQL `pgvector` / ChromaDB | **Zero-ops embedded mode for development, seamless cloud scaling for production, & high-speed hybrid search**: At this stage of development and field trials, Qdrant allows local file-based embedded mode (`qdrant_client.QdrantClient(path="./qdrant_data")`) with zero database daemon overhead. For production scale, it switches via a single environment variable to managed Qdrant Cloud. Furthermore, Qdrant provides sub-millisecond dense cosine filtering optimized for bilingual AYUSH formulary metadata. |
+| **Sarvam AI** | Bhashini / Indic-Trans / OpenAI Whisper | **Ultra-low latency, streaming chunked TTS, and native Garhwali/Hindi phoneme handling**: Bhashini APIs often suffer from erratic response latencies (>4–8s) and lack streaming audio primitives essential for low-bandwidth village connections. Sarvam AI's Saaras:v3 STT and Bulbul:v3 TTS deliver sub-second (<1.2s) round-trips with code-mixed Hindi/Garhwali dialect comprehension and natural expressive village tones (*"Dada-ji"*, *"Behen-ji"*), preventing elder cognitive fatigue. |
 
 ---
 

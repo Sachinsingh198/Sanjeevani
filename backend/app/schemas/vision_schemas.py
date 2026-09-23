@@ -8,6 +8,7 @@ class VisionScreenResponse(BaseModel):
     cutoff_threshold: float
     risk_level: str
     clinical_recommendation: str
+    roi_localization_method: str = Field("estimated", description="Method used to localize ROI: 'detected' (MediaPipe) or 'estimated' (fallback)")
     estimated_metric: Optional[str] = Field(None, description="Clinical estimate such as Hb (g/dL) or Serum Bilirubin (mg/dL)")
     confidence_score: Optional[float] = Field(None, description="Confidence score between 0.0 and 1.0 based on image lighting and ROI quality")
     quality_assessment: Optional[str] = Field(None, description="Lighting and photographic quality metrics")

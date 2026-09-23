@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { fetchAllUsers, createUser, deleteUser, fetchAdminStats, resetPassword } from '../api/authClient';
+import { fetchAllUsers, createUser, deleteUser, fetchAdminStats, resetPassword, fetchAnalyticsSummary } from '../api/authClient';
 import TierDistributionChart from '../components/TierDistributionChart';
 import {
   Users, UserPlus, Trash2, Activity, BarChart3, Shield,
@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
+  const [analyticsSummary, setAnalyticsSummary] = useState(null);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -38,9 +39,14 @@ export default function AdminDashboard() {
   const loadData = async () => {
     setLoadingUsers(true);
     try {
-      const [usersData, statsData] = await Promise.all([fetchAllUsers(), fetchAdminStats()]);
+      const [usersData, statsData, analyticsData] = await Promise.all([
+        fetchAllUsers(),
+        fetchAdminStats(),
+        fetchAnalyticsSummary(30).catch(() => null)
+      ]);
       setUsers(usersData);
       setStats(statsData);
+      if (analyticsData) setAnalyticsSummary(analyticsData);
     } catch {
       toast.error('Failed to load admin data');
     } finally {
@@ -254,6 +260,51 @@ export default function AdminDashboard() {
             <StatCard icon={HeartPulse} label="Patients / Mitra" value={stats.patients} colorClass="bg-sage/15 text-sage" />
             <StatCard icon={Users} label="ASHA Workers" value={stats.asha_workers} colorClass="bg-gold-warm/15 text-gold-warm" />
             <StatCard icon={Activity} label="New Ingest (7 Days)" value={stats.recent_registrations_7d} colorClass="bg-warm-indigo/15 text-warm-indigo" />
+          </div>
+        )}
+
+        {/* ── 30-Day Aggregate Triage Analytics Card (Additive, Zero PII) ── */}
+        {analyticsSummary && (
+          <div className="bg-white dark:bg-warm-indigo rounded-3xl p-5 sm:p-6 border border-gray-200/80 dark:border-gray-800 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xs shrink-0 bg-sage/15 text-sage">
+                  <BarChart3 className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xl sm:text-2xl font-bold text-primary dark:text-mist">
+                      {analyticsSummary.total_events}
+                    </p>
+                    <span className="text-[10px] bg-sage/20 text-sage dark:text-booti-glow px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                      30-Day Activity
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted dark:text-muted font-bold uppercase tracking-wider mt-0.5">
+                    Anonymous Aggregate Triage Encounters (Zero PII)
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full md:w-auto">
+                <div className="bg-gray-50 dark:bg-mist/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
+                  <span className="text-[10px] text-muted uppercase font-bold block">Consultations</span>
+                  <span className="font-bold text-sm text-primary dark:text-mist">{analyticsSummary.consultations_started}</span>
+                </div>
+                <div className="bg-gray-50 dark:bg-mist/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
+                  <span className="text-[10px] text-muted uppercase font-bold block">Concluded</span>
+                  <span className="font-bold text-sm text-sage">{analyticsSummary.consultations_concluded}</span>
+                </div>
+                <div className="bg-gray-50 dark:bg-mist/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
+                  <span className="text-[10px] text-muted uppercase font-bold block">Escalations</span>
+                  <span className="font-bold text-rose-soft text-sm">{analyticsSummary.emergency_escalations}</span>
+                </div>
+                <div className="bg-gray-50 dark:bg-mist/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
+                  <span className="text-[10px] text-muted uppercase font-bold block">Remedies</span>
+                  <span className="font-bold text-gold-warm text-sm">{analyticsSummary.remedies_delivered}</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

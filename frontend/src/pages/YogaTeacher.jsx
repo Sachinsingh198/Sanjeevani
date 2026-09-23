@@ -6,8 +6,9 @@ import {
   Award, ArrowLeft, ShieldCheck, ChevronRight, RefreshCw, Eye, Flame, Trophy, Clock
 } from 'lucide-react';
 import {
-  YOGA_ASANAS, evaluatePosture, drawSkeletonOnCanvas, detectPoseFromVideo, POSE_LANDMARKS
+  YOGA_ASANAS, evaluatePosture, drawSkeletonOnCanvas, detectPoseFromVideo, POSE_LANDMARKS, resetPoseSmoothing
 } from '../lib/poseDetection';
+import { initPoseLandmarker } from '../lib/mediapipePoseClient';
 import { playSingingBowl, playMeditationChime, speakCue } from '../lib/audioSynthesizer';
 import toast from 'react-hot-toast';
 
@@ -15,6 +16,7 @@ export default function YogaTeacher() {
   const [selectedAsana, setSelectedAsana] = useState(YOGA_ASANAS[0]);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isSimulatedMode, setIsSimulatedMode] = useState(false);
+  const [poseModelLoading, setPoseModelLoading] = useState(false);
   const [isHoldingPose, setIsHoldingPose] = useState(false);
   const [holdTimerSec, setHoldTimerSec] = useState(selectedAsana.targetHoldsSec);
   const [poseCompleted, setPoseCompleted] = useState(false);
@@ -48,6 +50,14 @@ export default function YogaTeacher() {
   const startCamera = async () => {
     try {
       setIsSimulatedMode(false);
+      setPoseModelLoading(true);
+      resetPoseSmoothing();
+
+      // Initialize MediaPipe PoseLandmarker singleton in parallel
+      const modelPromise = initPoseLandmarker().catch((err) => {
+        console.warn('Pose model preload warning:', err);
+      });
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
         audio: false,
@@ -58,10 +68,16 @@ export default function YogaTeacher() {
         videoRef.current.play();
       }
       setIsCameraActive(true);
+
+      // Settle model initialization
+      await modelPromise;
+      setPoseModelLoading(false);
+
       toast.success('Camera connected! Stand back to fit your full body.');
       if (soundEnabled) playSingingBowl(216, 3.0);
       if (voiceCuesEnabled) speakCue('Camera chalu ho gaya hai. Kripya thoda peeche khade hokar apna poora sharir dikhayein.', 'hi-IN');
     } catch (err) {
+      setPoseModelLoading(false);
       console.warn('Camera access error:', err);
       toast.error('Camera access nahi mila. Practice Simulation Mode shuru kiya gaya.');
       startSimulationMode();
@@ -69,6 +85,8 @@ export default function YogaTeacher() {
   };
 
   const stopCamera = () => {
+    resetPoseSmoothing();
+    setPoseModelLoading(false);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -169,14 +187,12 @@ export default function YogaTeacher() {
 
       let currentLandmarks = null;
 
-      // 1. If in real camera mode, analyze live video frame!
-      if (!isSimulatedMode && videoRef.current && videoRef.current.readyState >= 2) {
-        currentLandmarks = detectPoseFromVideo(videoRef.current, selectedAsana.id);
-      }
-
-      // 2. Fallback to simulated geometry if user not detected or in Practice Mode
-      if (!currentLandmarks) {
+      // 1. If in Practice Mode, generate simulated geometry
+      if (isSimulatedMode) {
         currentLandmarks = generateSimulatedLandmarks(selectedAsana.id, tick);
+      } else if (!poseModelLoading && videoRef.current && videoRef.current.readyState >= 2) {
+        // 2. Real camera mode: analyze live video frame with MediaPipe Pose
+        currentLandmarks = detectPoseFromVideo(videoRef.current, selectedAsana.id);
       }
       tick++;
 
@@ -473,8 +489,19 @@ export default function YogaTeacher() {
                 ref={canvasRef}
                 width={640}
                 height={480}
-                className="absolute inset-0 w-full h-full object-contain pointer-events-none z-10"
+                className="absolute inset-0 w-full h-full object-cover transform -scale-x-100 pointer-events-none z-10"
               />
+
+              {/* MediaPipe Pose Model Loading State Overlay */}
+              {poseModelLoading && (
+                <div className="absolute inset-0 bg-black/85 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 text-center text-white">
+                  <div className="w-12 h-12 border-3 border-sage border-t-transparent rounded-full animate-spin mb-4" />
+                  <h4 className="font-bold text-sm text-white">AI model load ho raha hai... 10-15 second lagenge</h4>
+                  <p className="text-xs text-white/70 mt-1 max-w-xs">
+                    Real-time skeletal tracking model initialize ho raha hai. Kripya prateeksha karein.
+                  </p>
+                </div>
+              )}
 
               {!isCameraActive && (
                 <div className="relative z-20 text-center p-6 max-w-sm">

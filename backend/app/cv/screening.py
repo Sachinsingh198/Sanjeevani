@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, Tuple, Optional
 from app.cv.preprocessor import ImagePreprocessor
+from app.cv.face_landmarks import locate_eye_regions, locate_mouth_region
 
 class DiagnosticScreeningEngine:
     """
@@ -51,29 +52,48 @@ class DiagnosticScreeningEngine:
             return 0.75, "Dhundlepan (Mild Blur): Camera ko sthir rakhein."
         return 0.95, "Uttam Prakash (Optimal Illumination): Rang aur roshni santulit hain."
 
-    def _localize_conjunctiva_roi(self, img_bgr: np.ndarray) -> Tuple[np.ndarray, Tuple[int, int, int, int]]:
+    def _localize_conjunctiva_roi(self, img_bgr: np.ndarray) -> Tuple[np.ndarray, Tuple[int, int, int, int], str]:
         """
         Localizes the palpebral conjunctiva (lower eyelid mucosa).
-        If input is already a cropped patch (< 120x120), uses it directly.
-        Otherwise, finds the lower eye region, discarding the iris/pupil and eyelid skin.
+        Attempts real MediaPipe Face Landmarker eye detection first.
+        If a face/eye is found, starts from that bounding box.
+        Otherwise falls back to the fixed-percentage lower third box.
         """
         h, w = img_bgr.shape[:2]
         if h < 120 and w < 120:
-            return img_bgr, (0, 0, w, h)
+            return img_bgr, (0, 0, w, h), "estimated"
 
-        # For eye photos: palpebral conjunctiva lies in the lower third
-        # Below the cornea/iris where the user gently pulls the lower lid down
-        y_start = int(h * 0.55)
-        y_end = int(h * 0.95)
-        x_start = int(w * 0.15)
-        x_end = int(w * 0.85)
+        eye_regions = locate_eye_regions(img_bgr)
+        loc_method = "detected" if eye_regions is not None else "estimated"
 
-        roi = img_bgr[y_start:y_end, x_start:x_end]
-        if roi.size == 0:
-            return img_bgr, (0, 0, w, h)
+        if eye_regions is not None:
+            # Primary eye bounding box detected by MediaPipe
+            ex, ey, ew, eh = eye_regions["primary_eye"]
+            # Palpebral conjunctiva lies in the lower half of the eye box
+            conj_y_start = ey + int(eh * 0.40)
+            conj_y_end = min(h, ey + eh)
+            conj_x_start = ex
+            conj_x_end = min(w, ex + ew)
+
+            base_roi = img_bgr[conj_y_start:conj_y_end, conj_x_start:conj_x_end]
+            offset_x, offset_y = conj_x_start, conj_y_start
+            if base_roi.size == 0:
+                base_roi = img_bgr[ey:min(h, ey+eh), ex:min(w, ex+ew)]
+                offset_x, offset_y = ex, ey
+        else:
+            # Fallback to fixed-percentage lower third crop
+            y_start = int(h * 0.55)
+            y_end = int(h * 0.95)
+            x_start = int(w * 0.15)
+            x_end = int(w * 0.85)
+
+            base_roi = img_bgr[y_start:y_end, x_start:x_end]
+            offset_x, offset_y = x_start, y_start
+            if base_roi.size == 0:
+                return img_bgr, (0, 0, w, h), "estimated"
 
         # In CIELAB, conjunctival mucosal capillaries have elevated a* (red)
-        lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
+        lab = cv2.cvtColor(base_roi, cv2.COLOR_BGR2LAB)
         a_chan = lab[:, :, 1]
         
         threshold_val = np.percentile(a_chan, 60)
@@ -87,31 +107,45 @@ class DiagnosticScreeningEngine:
             largest = max(contours, key=cv2.contourArea)
             rx, ry, rw, rh = cv2.boundingRect(largest)
             if rw > 10 and rh > 10:
-                refined_roi = roi[ry:ry+rh, rx:rx+rw]
-                return refined_roi, (x_start + rx, y_start + ry, rw, rh)
+                refined_roi = base_roi[ry:ry+rh, rx:rx+rw]
+                return refined_roi, (offset_x + rx, offset_y + ry, rw, rh), loc_method
 
-        return roi, (x_start, y_start, x_end - x_start, y_end - y_start)
+        return base_roi, (offset_x, offset_y, base_roi.shape[1], base_roi.shape[0]), loc_method
 
-    def _localize_sclera_roi(self, img_bgr: np.ndarray) -> Tuple[np.ndarray, Tuple[int, int, int, int]]:
+    def _localize_sclera_roi(self, img_bgr: np.ndarray) -> Tuple[np.ndarray, Tuple[int, int, int, int], str]:
         """
         Localizes the ocular sclera (white of the eye).
-        Segmenting the high-reflectance regions flanking the iris.
+        Attempts real MediaPipe Face Landmarker eye detection first.
+        If a face/eye is found, starts from that bounding box.
+        Otherwise falls back to the fixed-percentage central box.
         """
         h, w = img_bgr.shape[:2]
         if h < 120 and w < 120:
-            return img_bgr, (0, 0, w, h)
+            return img_bgr, (0, 0, w, h), "estimated"
 
-        y_start = int(h * 0.25)
-        y_end = int(h * 0.75)
-        x_start = int(w * 0.10)
-        x_end = int(w * 0.90)
+        eye_regions = locate_eye_regions(img_bgr)
+        loc_method = "detected" if eye_regions is not None else "estimated"
 
-        roi = img_bgr[y_start:y_end, x_start:x_end]
-        if roi.size == 0:
-            return img_bgr, (0, 0, w, h)
+        if eye_regions is not None:
+            ex, ey, ew, eh = eye_regions["primary_eye"]
+            base_roi = img_bgr[ey:min(h, ey+eh), ex:min(w, ex+ew)]
+            offset_x, offset_y = ex, ey
+            if base_roi.size == 0:
+                base_roi = img_bgr
+                offset_x, offset_y = 0, 0
+        else:
+            y_start = int(h * 0.25)
+            y_end = int(h * 0.75)
+            x_start = int(w * 0.10)
+            x_end = int(w * 0.90)
 
-        hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-        lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
+            base_roi = img_bgr[y_start:y_end, x_start:x_end]
+            offset_x, offset_y = x_start, y_start
+            if base_roi.size == 0:
+                return img_bgr, (0, 0, w, h), "estimated"
+
+        hsv = cv2.cvtColor(base_roi, cv2.COLOR_BGR2HSV)
+        lab = cv2.cvtColor(base_roi, cv2.COLOR_BGR2LAB)
         
         l_chan = lab[:, :, 0]
         s_chan = hsv[:, :, 1]
@@ -123,10 +157,10 @@ class DiagnosticScreeningEngine:
             largest = max(contours, key=cv2.contourArea)
             rx, ry, rw, rh = cv2.boundingRect(largest)
             if rw > 15 and rh > 15:
-                refined_roi = roi[ry:ry+rh, rx:rx+rw]
-                return refined_roi, (x_start + rx, y_start + ry, rw, rh)
+                refined_roi = base_roi[ry:ry+rh, rx:rx+rw]
+                return refined_roi, (offset_x + rx, offset_y + ry, rw, rh), loc_method
 
-        return roi, (x_start, y_start, x_end - x_start, y_end - y_start)
+        return base_roi, (offset_x, offset_y, base_roi.shape[1], base_roi.shape[0]), loc_method
 
     def screen_anemia(self, image_bgr: np.ndarray) -> Dict[str, Any]:
         """
@@ -137,7 +171,7 @@ class DiagnosticScreeningEngine:
             return {"screening_type": "ANEMIA", "error": "Invalid or empty image."}
 
         conf, quality_notes = self._assess_image_quality(image_bgr)
-        roi, (rx, ry, rw, rh) = self._localize_conjunctiva_roi(image_bgr)
+        roi, (rx, ry, rw, rh), loc_method = self._localize_conjunctiva_roi(image_bgr)
 
         # Step 1: Convert to CIELAB space
         img_float = roi.astype(np.float32) / 255.0
@@ -208,6 +242,7 @@ class DiagnosticScreeningEngine:
             "calculated_index": round(erythema_score, 4),
             "erythema_index": round(erythema_score, 4),
             "cutoff_threshold": self.anemia_pallor_threshold,
+            "roi_localization_method": loc_method,
             "estimated_metric": f"Estimated Hb: {estimated_hb} g/dL ({'Severe/Moderate' if 'HIGH' in risk_level else ('Mild' if 'MILD' in risk_level else 'Normal')})",
             "risk_level": risk_level,
             "confidence_score": conf,
@@ -227,7 +262,7 @@ class DiagnosticScreeningEngine:
             return {"screening_type": "JAUNDICE", "error": "Invalid or empty image."}
 
         conf, quality_notes = self._assess_image_quality(image_bgr)
-        roi, (rx, ry, rw, rh) = self._localize_sclera_roi(image_bgr)
+        roi, (rx, ry, rw, rh), loc_method = self._localize_sclera_roi(image_bgr)
 
         # Step 1: Convert to HSV & CIELAB
         hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
@@ -304,6 +339,7 @@ class DiagnosticScreeningEngine:
             "calculated_index": round(icterus_index, 4),
             "icterus_index": round(yellow_ratio, 4),
             "cutoff_threshold": self.jaundice_threshold,
+            "roi_localization_method": loc_method,
             "estimated_metric": f"Estimated Bilirubin: {estimated_bilirubin} mg/dL ({'Clinical Jaundice' if 'RISK' in risk_level else ('Subclinical' if 'BORDERLINE' in risk_level else 'Normal')})",
             "risk_level": risk_level,
             "confidence_score": conf,
@@ -325,9 +361,23 @@ class DiagnosticScreeningEngine:
         conf, quality_notes = self._assess_image_quality(image_bgr)
         h, w = image_bgr.shape[:2]
 
-        y_start, y_end = int(h * 0.15), int(h * 0.85)
-        x_start, x_end = int(w * 0.15), int(w * 0.85)
-        roi = image_bgr[y_start:y_end, x_start:x_end]
+        mouth_bbox = locate_mouth_region(image_bgr)
+        loc_method = "detected" if mouth_bbox is not None else "estimated"
+
+        if mouth_bbox is not None:
+            mx, my, mw, mh = mouth_bbox
+            x_start, y_start = mx, my
+            x_end, y_end = min(w, mx + mw), min(h, my + mh)
+            roi = image_bgr[y_start:y_end, x_start:x_end]
+            if roi.size == 0:
+                y_start, y_end = int(h * 0.15), int(h * 0.85)
+                x_start, x_end = int(w * 0.15), int(w * 0.85)
+                roi = image_bgr[y_start:y_end, x_start:x_end]
+                loc_method = "estimated"
+        else:
+            y_start, y_end = int(h * 0.15), int(h * 0.85)
+            x_start, x_end = int(w * 0.15), int(w * 0.85)
+            roi = image_bgr[y_start:y_end, x_start:x_end]
 
         lab = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
         l_chan, a_chan, b_chan = cv2.split(lab.astype(np.float32))
@@ -396,6 +446,7 @@ class DiagnosticScreeningEngine:
             "biomarker": "Mucosal Hyperkeratosis / Whiteness Index (W)",
             "calculated_index": round(keratosis_index, 4),
             "cutoff_threshold": self.oral_keratosis_threshold,
+            "roi_localization_method": loc_method,
             "estimated_metric": f"Keratosis Ratio: {round(white_patch_ratio * 100, 1)}% ({'Suspected Lesion' if 'SUSPECTED' in risk_level else ('Mild Keratosis' if 'MILD' in risk_level else 'Healthy Mucosa')})",
             "risk_level": risk_level,
             "confidence_score": conf,
@@ -490,6 +541,7 @@ class DiagnosticScreeningEngine:
             "biomarker": "Cutaneous Erythema & Edge Gradient Index",
             "calculated_index": round(lesion_score, 4),
             "cutoff_threshold": self.skin_erythema_threshold,
+            "roi_localization_method": "estimated",
             "estimated_metric": f"Erythema Index: {round(focal_erythema, 3)} ({'Active Infection/Rash' if 'ACTIVE' in risk_level else ('Mild Irritation' if 'MILD' in risk_level else 'Normal Skin')})",
             "risk_level": risk_level,
             "confidence_score": conf,

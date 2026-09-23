@@ -24,7 +24,8 @@ def get_remedy_store() -> HybridRemedyStore:
     except Exception:
         pass
 
-    _remedy_store = HybridRemedyStore()
+    from app.core.hybrid_rag import get_shared_remedy_store
+    _remedy_store = get_shared_remedy_store()
     return _remedy_store
 
 

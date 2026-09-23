@@ -25,6 +25,7 @@ psycopg2-binary
 opencv-python-headless
 pillow
 numpy
+mediapipe
 
 # Evaluation & Metrics
 ragas
@@ -35,6 +36,9 @@ httpx
 requests
 
 langgraph-checkpoint-sqlite
+langgraph-checkpoint-postgres
+psycopg[binary]
+psycopg-pool
 
 # Authentication
 bcrypt
@@ -43,4 +47,10 @@ pyjwt
 # Speech & Documents
 edge-tts
 python-docx
-httpx
+httpx
+
+# Monitoring & Error Tracking
+sentry-sdk[fastapi]
+
+# Rate Limiting & Protection
+slowapi

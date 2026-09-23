@@ -10,6 +10,8 @@ class SafetyKnowledgeGraph:
     """
     def __init__(self, data_path: str = "DATA/contraindications_graph.json"):
         self.graph = nx.DiGraph()
+        if not os.path.exists(data_path) and os.path.exists(os.path.join("backend", data_path)):
+            data_path = os.path.join("backend", data_path)
         self.data_path = data_path
         self._load_and_build_graph()
 

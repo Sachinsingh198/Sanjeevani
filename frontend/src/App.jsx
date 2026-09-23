@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
+import OfflineBanner from './components/OfflineBanner';
 import SanjeevaniOrb from './components/SanjeevaniOrb';
 
 // Public pages (lazy loaded)
@@ -42,6 +43,7 @@ export default function App() {
         <div className={`flex flex-col bg-mist text-primary transition-colors duration-300 ${
           isChatPage ? 'h-screen overflow-hidden' : 'min-h-screen'
         }`}>
+          <OfflineBanner />
           <Navbar />
           <main className={isChatPage ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 animate-fadeIn'}>
             <React.Suspense fallback={<RouteLoadingFallback />}>
@@ -51,6 +53,9 @@ export default function App() {
               <Route path="/about" element={<About />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/yoga" element={<YogaTeacher />} />
+              <Route path="/wellness" element={<WellnessStudio />} />
+              <Route path="/screening" element={<Screening />} />
 
               {/* ── Sanjeevani Mitra / Citizen Wellness Routes ─────── */}
               {/* Mitra Hub (Dashboard) */}

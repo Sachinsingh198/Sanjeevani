@@ -7,6 +7,7 @@ import {
   Activity, Thermometer, Heart, ShieldAlert, Copy, Check, ChevronDown, CheckCircle2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { checkBackendHealth, syncAshaBatch } from '../api/client';
 
 const QUEUE_STORAGE_KEY = 'sanjeevani_asha_queue_v2';
 
@@ -55,13 +56,51 @@ export default function AshaDashboard() {
     }
   }, [offlineQueue]);
 
-  const handleSyncAll = () => {
+  // Auto-replay queued encounters when connection is restored
+  useEffect(() => {
+    const handleOnlineAutoSync = () => {
+      const pending = offlineQueue.filter((p) => !p.synced);
+      if (pending.length > 0) {
+        toast('Network wapas aa gaya. Records sync ho rahe hain...', { icon: '🌐' });
+        handleSyncAll();
+      }
+    };
+    window.addEventListener('online', handleOnlineAutoSync);
+    return () => window.removeEventListener('online', handleOnlineAutoSync);
+  }, [offlineQueue]);
+
+  const handleSyncAll = async () => {
+    if (!navigator.onLine) {
+      toast.error('Internet ya server uplabdh nahi hai. Record surakshit hain, network aane par sync karein');
+      return;
+    }
+
     setIsSyncing(true);
-    setTimeout(() => {
-      setOfflineQueue((prev) => prev.map((p) => ({ ...p, synced: true })));
+    try {
+      const isOnline = await checkBackendHealth();
+      if (!isOnline) {
+        toast.error('Internet ya server uplabdh nahi hai. Record surakshit hain, network aane par sync karein');
+        return;
+      }
+
+      const pending = offlineQueue.filter((p) => !p.synced);
+      if (pending.length === 0) {
+        toast.success('Koi pending record nahi hai.');
+        return;
+      }
+
+      const res = await syncAshaBatch(pending);
+      const syncedIds = new Set(res.ids || []);
+      setOfflineQueue((prev) =>
+        prev.map((p) => (syncedIds.has(p.id) ? { ...p, synced: true } : p))
+      );
+      toast.success(`${res.synced_count || pending.length} records PHC server par safalta-poorvak sync ho gaye! ✨`);
+    } catch (err) {
+      console.error('[ASHA Sync Error]:', err);
+      toast.error('Sync asafal raha. Kripya dobara prayas karein.');
+    } finally {
       setIsSyncing(false);
-      toast.success('Sabhi pending records PHC server par sync ho gaye');
-    }, 1200);
+    }
   };
 
   const handleMarkFollowedUp = (patientId) => {
@@ -194,8 +233,8 @@ export default function AshaDashboard() {
               {pendingCount > 0 ? <WifiOff className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
               <span>
                 {pendingCount > 0
-                  ? `${pendingCount} records offline me surakshit hain (Network aate hi sync karein)`
-                  : 'Sabhi records PHC server par sync ho chuke hain'}
+                  ? `${pendingCount} encounters queued for sync (${pendingCount} records offline me surakshit hain)`
+                  : 'Sabhi records PHC server par sync ho chuke hain (0 encounters queued for sync)'}
               </span>
             </div>
           </div>

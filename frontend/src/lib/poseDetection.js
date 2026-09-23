@@ -449,132 +449,69 @@ export function evaluatePosture(landmarks, asanaId) {
   };
 }
 
-/**
- * Real-Time Video Frame Optical Pose Detector
- * Analyzes video element pixels, detects head, torso, shoulder width, arm elevation,
- * and leg spread directly from the live video stream with EMA temporal smoothing.
- */
+import { getPoseLandmarker } from './mediapipePoseClient';
+
 let prevLandmarks = null;
-let helperCanvas = null;
+let lastVideoTimestamp = -1;
+
+export function resetPoseSmoothing() {
+  prevLandmarks = null;
+  lastVideoTimestamp = -1;
+}
 
 export function detectPoseFromVideo(videoElement, selectedAsanaId = 'tadasana') {
   if (!videoElement || videoElement.readyState < 2) {
     return null;
   }
 
-  const vWidth = videoElement.videoWidth || 640;
-  const vHeight = videoElement.videoHeight || 480;
-
-  if (!helperCanvas) {
-    helperCanvas = document.createElement('canvas');
-    helperCanvas.width = 160;
-    helperCanvas.height = 120;
-  }
-
-  const hCtx = helperCanvas.getContext('2d', { willReadFrequently: true });
-  if (!hCtx) return null;
-
-  hCtx.drawImage(videoElement, 0, 0, 160, 120);
-  const frameData = hCtx.getImageData(0, 0, 160, 120).data;
-
-  // Scan brightness / skin / motion intensity across vertical columns and horizontal rows
-  let minX = 160, maxX = 0, minY = 120, maxY = 0;
-  let sumX = 0, sumY = 0, count = 0;
-
-  // Segment user silhouette by luminosity difference from background edge
-  for (let y = 10; y < 110; y += 2) {
-    for (let x = 10; x < 150; x += 2) {
-      const idx = (y * 160 + x) * 4;
-      const r = frameData[idx];
-      const g = frameData[idx + 1];
-      const b = frameData[idx + 2];
-      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-
-      // Detect human presence vs ambient background
-      if (lum > 35 && lum < 235) {
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-        sumX += x;
-        sumY += y;
-        count++;
-      }
-    }
-  }
-
-  // If user is not detected in frame
-  if (count < 120 || maxX - minX < 20) {
+  const poseLandmarker = getPoseLandmarker();
+  if (!poseLandmarker) {
     return null;
   }
 
-  const normMinX = minX / 160;
-  const normMaxX = maxX / 160;
-  const normMinY = minY / 120;
-  const normMaxY = maxY / 120;
-  const centerX = sumX / (count * 160);
-  const centerY = sumY / (count * 120);
+  try {
+    let now = performance.now();
+    if (now <= lastVideoTimestamp) {
+      now = lastVideoTimestamp + 1;
+    }
+    lastVideoTimestamp = now;
 
-  const spanW = normMaxX - normMinX;
-  const spanH = normMaxY - normMinY;
+    const result = poseLandmarker.detectForVideo(videoElement, now);
+    if (!result || !result.landmarks || result.landmarks.length === 0 || !result.landmarks[0] || result.landmarks[0].length === 0) {
+      // Empty pose result: return null to preserve existing "Camera feed active: Stand back..." message
+      return null;
+    }
 
-  // Derive physiological landmarks from actual body dimensions
-  const noseY = normMinY + spanH * 0.08;
-  const shoulderY = normMinY + spanH * 0.22;
-  const hipY = normMinY + spanH * 0.50;
-  const kneeY = normMinY + spanH * 0.72;
-  const ankleY = Math.min(0.92, normMaxY - spanH * 0.04);
+    const detected = result.landmarks[0];
+    const raw = detected.map((lm) => ({
+      x: lm.x,
+      y: lm.y,
+      z: lm.z ?? 0,
+      visibility: lm.visibility ?? lm.presence ?? 1.0,
+    }));
 
-  const shoulderHalfWidth = Math.max(0.08, spanW * 0.28);
-  const leftShoulderX = Math.max(0.1, centerX - shoulderHalfWidth);
-  const rightShoulderX = Math.min(0.9, centerX + shoulderHalfWidth);
+    // Temporal Exponential Moving Average smoothing (alpha = 0.35)
+    if (!prevLandmarks || prevLandmarks.length !== raw.length) {
+      prevLandmarks = raw;
+      return raw;
+    }
 
-  // Arm positions based on lateral extents
-  let leftWristX = Math.max(0.06, normMinX);
-  let rightWristX = Math.min(0.94, normMaxX);
-  let wristY = shoulderY + spanH * 0.15;
+    const smoothed = raw.map((pt, i) => {
+      const p = prevLandmarks[i] || pt;
+      return {
+        x: p.x * 0.65 + pt.x * 0.35,
+        y: p.y * 0.65 + pt.y * 0.35,
+        z: (p.z ?? 0) * 0.65 + (pt.z ?? 0) * 0.35,
+        visibility: pt.visibility,
+      };
+    });
 
-  // Asana-specific adjustments reacting to detected bounds
-  if (spanW > 0.45) {
-    // Arms outstretched wide or warrior stance
-    wristY = shoulderY;
-  } else if (spanH > 0.65 && spanW < 0.30) {
-    // Reaching high in Tadasana or Utkatasana
-    wristY = Math.max(0.10, normMinY);
+    prevLandmarks = smoothed;
+    return smoothed;
+  } catch (err) {
+    console.warn('MediaPipe pose detection frame error:', err);
+    return null;
   }
-
-  const raw = Array(33).fill(null).map(() => ({ x: centerX, y: centerY, z: 0 }));
-  raw[POSE_LANDMARKS.NOSE] = { x: centerX, y: noseY, z: 0 };
-  raw[POSE_LANDMARKS.LEFT_SHOULDER] = { x: leftShoulderX, y: shoulderY, z: 0 };
-  raw[POSE_LANDMARKS.RIGHT_SHOULDER] = { x: rightShoulderX, y: shoulderY, z: 0 };
-  raw[POSE_LANDMARKS.LEFT_ELBOW] = { x: (leftShoulderX + leftWristX) / 2, y: (shoulderY + wristY) / 2, z: 0 };
-  raw[POSE_LANDMARKS.RIGHT_ELBOW] = { x: (rightShoulderX + rightWristX) / 2, y: (shoulderY + wristY) / 2, z: 0 };
-  raw[POSE_LANDMARKS.LEFT_WRIST] = { x: leftWristX, y: wristY, z: 0 };
-  raw[POSE_LANDMARKS.RIGHT_WRIST] = { x: rightWristX, y: wristY, z: 0 };
-  raw[POSE_LANDMARKS.LEFT_HIP] = { x: centerX - shoulderHalfWidth * 0.75, y: hipY, z: 0 };
-  raw[POSE_LANDMARKS.RIGHT_HIP] = { x: centerX + shoulderHalfWidth * 0.75, y: hipY, z: 0 };
-  raw[POSE_LANDMARKS.LEFT_KNEE] = { x: centerX - shoulderHalfWidth * 0.75, y: kneeY, z: 0 };
-  raw[POSE_LANDMARKS.RIGHT_KNEE] = { x: centerX + shoulderHalfWidth * 0.75, y: kneeY, z: 0 };
-  raw[POSE_LANDMARKS.LEFT_ANKLE] = { x: centerX - shoulderHalfWidth * 0.75, y: ankleY, z: 0 };
-  raw[POSE_LANDMARKS.RIGHT_ANKLE] = { x: centerX + shoulderHalfWidth * 0.75, y: ankleY, z: 0 };
-
-  // Temporal Exponential Moving Average smoothing (alpha = 0.35)
-  if (!prevLandmarks) {
-    prevLandmarks = raw;
-    return raw;
-  }
-
-  const smoothed = raw.map((pt, i) => {
-    const p = prevLandmarks[i] || pt;
-    return {
-      x: p.x * 0.65 + pt.x * 0.35,
-      y: p.y * 0.65 + pt.y * 0.35,
-      z: 0,
-    };
-  });
-
-  prevLandmarks = smoothed;
-  return smoothed;
 }
 
 /**
@@ -583,7 +520,13 @@ export function detectPoseFromVideo(videoElement, selectedAsanaId = 'tadasana') 
 export function drawSkeletonOnCanvas(ctx, landmarks, checks = [], width, height) {
   if (!ctx || !landmarks || landmarks.length === 0) return;
 
-  ctx.clearRect(0, 0, width, height);
+  const renderCtx = typeof ctx.getContext === 'function' ? ctx.getContext('2d') : ctx;
+  if (!renderCtx) return;
+
+  const renderW = width || (ctx.canvas ? ctx.canvas.width : (ctx.width || 640));
+  const renderH = height || (ctx.canvas ? ctx.canvas.height : (ctx.height || 480));
+
+  renderCtx.clearRect(0, 0, renderW, renderH);
 
   const passedIds = new Set(checks.filter((c) => c.passed).map((c) => c.jointIndex));
   const failedIds = new Set(checks.filter((c) => !c.passed).map((c) => c.jointIndex));
@@ -596,13 +539,13 @@ export function drawSkeletonOnCanvas(ctx, landmarks, checks = [], width, height)
 
     const hasIssue = failedIds.has(idxA) || failedIds.has(idxB);
 
-    ctx.beginPath();
-    ctx.moveTo(ptA.x * width, ptA.y * height);
-    ctx.lineTo(ptB.x * width, ptB.y * height);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = hasIssue ? 'rgba(239, 68, 68, 0.85)' : 'rgba(16, 185, 129, 0.9)';
-    ctx.lineCap = 'round';
-    ctx.stroke();
+    renderCtx.beginPath();
+    renderCtx.moveTo(ptA.x * renderW, ptA.y * renderH);
+    renderCtx.lineTo(ptB.x * renderW, ptB.y * renderH);
+    renderCtx.lineWidth = 4;
+    renderCtx.strokeStyle = hasIssue ? 'rgba(239, 68, 68, 0.85)' : 'rgba(16, 185, 129, 0.9)';
+    renderCtx.lineCap = 'round';
+    renderCtx.stroke();
   });
 
   // 2. Draw Joint Landmarks
@@ -610,25 +553,25 @@ export function drawSkeletonOnCanvas(ctx, landmarks, checks = [], width, height)
     const pt = landmarks[idx];
     if (!pt) return;
 
-    const x = pt.x * width;
-    const y = pt.y * height;
+    const x = pt.x * renderW;
+    const y = pt.y * renderH;
     const isFailed = failedIds.has(idx);
     const isPassed = passedIds.has(idx);
 
     if (isFailed) {
-      ctx.beginPath();
-      ctx.arc(x, y, 14, 0, 2 * Math.PI);
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
-      ctx.fill();
+      renderCtx.beginPath();
+      renderCtx.arc(x, y, 14, 0, 2 * Math.PI);
+      renderCtx.fillStyle = 'rgba(239, 68, 68, 0.35)';
+      renderCtx.fill();
     }
 
-    ctx.beginPath();
-    ctx.arc(x, y, isFailed ? 8 : 6, 0, 2 * Math.PI);
-    ctx.fillStyle = isFailed ? '#EF4444' : isPassed ? '#10B981' : '#F59E0B';
-    ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.stroke();
+    renderCtx.beginPath();
+    renderCtx.arc(x, y, isFailed ? 8 : 6, 0, 2 * Math.PI);
+    renderCtx.fillStyle = isFailed ? '#EF4444' : isPassed ? '#10B981' : '#F59E0B';
+    renderCtx.fill();
+    renderCtx.lineWidth = 2;
+    renderCtx.strokeStyle = '#FFFFFF';
+    renderCtx.stroke();
   });
 
   // 3. Draw Real-Time Angle Badges Next to Key Active Joints
@@ -636,24 +579,24 @@ export function drawSkeletonOnCanvas(ctx, landmarks, checks = [], width, height)
     const pt = landmarks[chk.jointIndex];
     if (!pt) return;
 
-    const x = pt.x * width;
-    const y = pt.y * height;
+    const x = pt.x * renderW;
+    const y = pt.y * renderH;
 
     const badgeText = `${chk.current} (${chk.target})`;
-    ctx.font = 'bold 10px sans-serif';
-    const textWidth = ctx.measureText(badgeText).width;
+    renderCtx.font = 'bold 10px sans-serif';
+    const textWidth = renderCtx.measureText(badgeText).width;
 
-    const badgeX = Math.min(width - textWidth - 14, Math.max(10, x + 12));
-    const badgeY = Math.min(height - 10, Math.max(20, y - 8));
+    const badgeX = Math.min(renderW - textWidth - 14, Math.max(10, x + 12));
+    const badgeY = Math.min(renderH - 10, Math.max(20, y - 8));
 
     // Pill background
-    ctx.beginPath();
-    ctx.roundRect(badgeX - 4, badgeY - 12, textWidth + 8, 16, 6);
-    ctx.fillStyle = chk.passed ? 'rgba(16, 185, 129, 0.92)' : 'rgba(239, 68, 68, 0.92)';
-    ctx.fill();
+    renderCtx.beginPath();
+    renderCtx.roundRect(badgeX - 4, badgeY - 12, textWidth + 8, 16, 6);
+    renderCtx.fillStyle = chk.passed ? 'rgba(16, 185, 129, 0.92)' : 'rgba(239, 68, 68, 0.92)';
+    renderCtx.fill();
 
     // Text
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(badgeText, badgeX, badgeY);
+    renderCtx.fillStyle = '#FFFFFF';
+    renderCtx.fillText(badgeText, badgeX, badgeY);
   });
 }

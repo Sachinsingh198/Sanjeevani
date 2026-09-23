@@ -13,6 +13,7 @@ import NearbyFacilityFinder from '../components/NearbyFacilityFinder';
 import SanjeevaniOrb from '../components/SanjeevaniOrb';
 import MountainRidge from '../components/MountainRidge';
 import { listSessions } from '../lib/sessionStore';
+import { getChatHistory } from '../api/client';
 import { speakCue } from '../lib/audioSynthesizer';
 import toast from 'react-hot-toast';
 
@@ -52,20 +53,45 @@ export default function PatientDashboard() {
   const [showAddRemedy, setShowAddRemedy] = useState(false);
 
   useEffect(() => {
-    const stored = listSessions();
-    if (stored.length > 0) {
-      setConsultations(stored);
-    } else {
-      setConsultations([
-        { conversationId: 'demo-1', updatedAt: '2026-09-15T09:30:00.000Z', summary: 'Gale me kharash aur sookhi khasi (Dry Cough)', tier: 'Green' },
-        { conversationId: 'demo-2', updatedAt: '2026-09-12T14:15:00.000Z', summary: 'Do din se bukhar aur thakan (Mild Fever)', tier: 'Yellow' },
-      ]);
+    let active = true;
+
+    async function loadConsultations() {
+      try {
+        const historyData = await getChatHistory();
+        if (active && Array.isArray(historyData) && historyData.length > 0) {
+          setConsultations(historyData.map((item) => ({
+            conversationId: item.conversation_id,
+            summary: item.summary,
+            tier: item.tier,
+            updatedAt: item.updated_at || item.created_at,
+          })));
+          return;
+        }
+      } catch (err) {
+        console.debug('Failed to fetch backend chat history, falling back to local storage:', err);
+      }
+
+      if (active) {
+        const stored = listSessions();
+        if (stored.length > 0) {
+          setConsultations(stored);
+        } else {
+          setConsultations([
+            { conversationId: 'demo-1', updatedAt: '2026-09-15T09:30:00.000Z', summary: 'Gale me kharash aur sookhi khasi (Dry Cough)', tier: 'Green' },
+            { conversationId: 'demo-2', updatedAt: '2026-09-12T14:15:00.000Z', summary: 'Do din se bukhar aur thakan (Mild Fever)', tier: 'Yellow' },
+          ]);
+        }
+      }
     }
+
+    loadConsultations();
 
     const storedAdvisory = localStorage.getItem(ADVISORY_STORAGE_KEY);
     if (storedAdvisory) {
       setAdvisory(storedAdvisory);
     }
+
+    return () => { active = false; };
   }, []);
 
   const handleToggleRemedy = (id) => {

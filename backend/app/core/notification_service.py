@@ -7,6 +7,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any
 from app.config import settings
+from app.core.logger import logger
 
 
 def build_otp_html(otp: str, purpose_text: str) -> str:
@@ -89,16 +90,16 @@ def send_email_otp(to_email: str, otp: str, purpose: str = "register") -> Dict[s
                 server.login(smtp_user, smtp_pass)
                 server.send_message(msg)
 
-            print(f"[NotificationService] Successfully delivered OTP email to {to_email} via Gmail SMTP.")
+            logger.info(f"[NotificationService] Successfully delivered OTP email to {to_email} via Gmail SMTP.")
             return {"success": True, "message": f"OTP email successfully sent to {to_email}.", "status": "sent"}
         except Exception as e:
             err_msg = f"Failed to send email via SMTP ({e})."
-            print(f"[NotificationService Error] {err_msg}")
+            logger.error(f"[NotificationService Error] {err_msg}")
             # Fallback to simulation report
             return {"success": True, "message": f"Simulated OTP sent (SMTP error: {e}).", "status": "simulated"}
     else:
         # Development simulation mode
-        print(f"[NotificationService] [DEV SIMULATION] Sent OTP [{otp}] to email: {to_email} (Purpose: {purpose})")
+        logger.info(f"[NotificationService] [DEV SIMULATION] Sent OTP [{otp}] to email: {to_email} (Purpose: {purpose})")
         return {"success": True, "message": f"Simulated OTP {otp} dispatched to {to_email}.", "status": "simulated"}
 
 
@@ -132,10 +133,10 @@ def send_sms_otp(to_phone: str, otp: str, purpose: str = "register") -> Dict[str
 
             with urllib.request.urlopen(req, timeout=10.0) as resp:
                 if resp.status in (200, 201):
-                    print(f"[NotificationService] SMS delivered to +91{to_phone} via Twilio.")
+                    logger.info(f"[NotificationService] SMS delivered to +91{to_phone} via Twilio.")
                     return {"success": True, "message": f"OTP SMS sent to +91{to_phone}.", "status": "sent"}
         except Exception as e:
-            print(f"[NotificationService Error] Twilio SMS failed: {e}")
+            logger.error(f"[NotificationService Error] Twilio SMS failed: {e}")
 
     # Fast2SMS integration if configured (Direct Indian SMS Gateway)
     if settings.FAST2SMS_API_KEY:
@@ -157,13 +158,13 @@ def send_sms_otp(to_phone: str, otp: str, purpose: str = "register") -> Dict[str
 
             with urllib.request.urlopen(req, timeout=10.0) as resp:
                 if resp.status in (200, 201):
-                    print(f"[NotificationService] SMS delivered to +91{clean_phone} via Fast2SMS.")
+                    logger.info(f"[NotificationService] SMS delivered to +91{clean_phone} via Fast2SMS.")
                     return {"success": True, "message": f"OTP SMS sent to +91{clean_phone}.", "status": "sent"}
         except Exception as e:
-            print(f"[NotificationService Error] Fast2SMS failed: {e}")
+            logger.error(f"[NotificationService Error] Fast2SMS failed: {e}")
 
     # Fallback to simulation log
-    print(f"[NotificationService] [DEV SIMULATION] Sent SMS OTP [{otp}] to mobile: +91 {to_phone} (Purpose: {purpose})")
+    logger.info(f"[NotificationService] [DEV SIMULATION] Sent SMS OTP [{otp}] to mobile: +91 {to_phone} (Purpose: {purpose})")
     return {"success": True, "message": f"Simulated OTP {otp} sent to mobile +91{to_phone}.", "status": "simulated"}
 
 

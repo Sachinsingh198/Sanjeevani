@@ -20,7 +20,8 @@ def triage_node(state: AgentState) -> AgentState:
 
     # 2. Update state tracking
     current_phase = state.get("dialogue_phase", "GREETING")
-    turn_count = state.get("turn_count", 0) + 1
+    prior_turn_count = state.get("turn_count", 0)
+    turn_count = prior_turn_count + 1
 
     state["normalized_message"] = normalized
     state["detected_tier"] = tier.value
@@ -39,17 +40,20 @@ def triage_node(state: AgentState) -> AgentState:
         state["dialogue_phase"] = "EMERGENCY"
 
     elif intent == "GREETING":
-        # If user is in an active CONSULTATION and just answering, do not reset!
-        is_explicit_greeting = any(re.search(pat, normalized) for pat in GREETING_PATTERNS)
-        if current_phase == "CONSULTATION" and not is_explicit_greeting:
-            pass  # Retain ongoing CONSULTATION phase
-        else:
+        # Only allow a full reset-to-GREETING when in initial/guardrail phase or turn_count == 0.
+        # If in active CONSULTATION with turn_count > 0, treat greeting as a benign acknowledgment:
+        # keep CONSULTATION phase and retain all consultation notes.
+        if current_phase == "CONSULTATION" and prior_turn_count > 0:
+            pass
+        elif current_phase in ("GREETING", "GUARDRAIL_BLOCKED", None, "") or prior_turn_count == 0:
             state["dialogue_phase"] = "GREETING"
             state["consultation_notes"] = ""
             state["retrieved_remedies"] = []
             state["turn_count"] = 0
             state["detected_tier"] = "Green"
             state["clinical_flags"] = []
+        else:
+            pass
 
     elif current_phase in ("CONCLUDED", "EMERGENCY"):
         msg_lower = normalized.lower().strip()

@@ -3,12 +3,26 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.models import get_db, create_tables, seed_default_admin
 
+from app.config import settings
+
 client = TestClient(app)
 
 @pytest.fixture(autouse=True)
-def setup_db():
+def setup_db(monkeypatch):
     create_tables()
     seed_default_admin()
+    monkeypatch.setattr(settings, "ENABLE_DEV_OTP_HINT", True)
+
+
+def test_dev_otp_suppressed_when_flag_disabled(monkeypatch):
+    """Verify that dev_otp is strictly omitted when ENABLE_DEV_OTP_HINT is False."""
+    monkeypatch.setattr(settings, "ENABLE_DEV_OTP_HINT", False)
+    resp = client.post("/auth/otp/send", json={
+        "target": "security_test@gmail.com",
+        "purpose": "register"
+    })
+    assert resp.status_code == 200
+    assert resp.json().get("dev_otp") is None
 
 
 def test_send_otp_email_and_verify():

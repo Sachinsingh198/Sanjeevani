@@ -1,15 +1,19 @@
 import json
 import os
 import re
-from typing import List, Dict, Any
+import time
+import concurrent.futures
+from typing import List, Dict, Any, Optional
 from qdrant_client import QdrantClient, models
 from fastembed import TextEmbedding
 from app.config import settings
+from app.core.logger import logger
 
 class HybridRemedyStore:
     """
     Production-grade Vector RAG store for AYUSH remedies.
     Supports Qdrant Cloud clusters with automatic local on-disk fallback using FastEmbed.
+    Hardened with 5.0s query timeout, 1s cloud retry, and in-memory keyword search fallback.
     """
     def __init__(self, data_path: str = "DATA/remedies_dataset.json"):
         # Resolve data path safely across different working directories
@@ -44,6 +48,8 @@ class HybridRemedyStore:
         self.garhwali_collection_name = "sanjeevani_garhwali"
         self.garhwali_data_dir = "DATA/Garhwali" if os.path.exists("DATA/Garhwali") else os.path.join("backend", "DATA", "Garhwali")
         self.vector_dim = 384  # Standard dimension for sentence-transformers/all-MiniLM-L6-v2
+        self.degraded = False
+        self._all_cached_remedies = []
 
         # 1. Initialize FastEmbed with project-local cache directory (prevents Windows Temp corruptions)
         cache_dir = os.path.join(os.getcwd(), "models_cache")
@@ -54,33 +60,47 @@ class HybridRemedyStore:
             cache_dir=cache_dir
         )
 
-        # 2. Initialize Qdrant Client (Cloud vs. Local On-Disk)
+        # 2. Initialize Qdrant Client (Cloud vs. Local On-Disk with 3s connection probe)
         qdrant_url = (settings.QDRANT_URL or "").strip()
         qdrant_api_key = (settings.QDRANT_API_KEY or "").strip()
 
         if qdrant_url and qdrant_api_key:
             try:
-                self.client = QdrantClient(
+                # 3-second startup connection health check
+                test_client = QdrantClient(
                     url=qdrant_url,
                     api_key=qdrant_api_key,
-                    timeout=10.0
+                    timeout=3.0
                 )
+                test_client.get_collections()
+                self.client = test_client
                 self.is_cloud = True
-                print(f"[Qdrant] Connected to Cloud Cluster: {qdrant_url}")
+                logger.info(f"[Qdrant] Connected to Cloud Cluster: {qdrant_url}")
                 self._initialize_and_seed()
                 self._initialize_and_seed_garhwali()
             except Exception as e:
-                print(f"[Qdrant Cloud Connection Failed]: {e}. Falling back to local on-disk storage.")
+                logger.warning(f"[Qdrant Cloud Connection Failed]: {e}. Falling back to local on-disk storage.")
+                self.degraded = True
+                self.is_cloud = False
+                try:
+                    self.client = QdrantClient(path=settings.QDRANT_PATH)
+                    self._initialize_and_seed()
+                    self._initialize_and_seed_garhwali()
+                except Exception as local_err:
+                    logger.warning(f"[Qdrant Local Fallback Failed]: {local_err}. Running with in-memory keyword fallback.")
+                    self.client = None
+        else:
+            try:
                 self.client = QdrantClient(path=settings.QDRANT_PATH)
                 self.is_cloud = False
+                logger.info(f"[Qdrant] Connected to Local On-Disk Storage: {settings.QDRANT_PATH}")
                 self._initialize_and_seed()
                 self._initialize_and_seed_garhwali()
-        else:
-            self.client = QdrantClient(path=settings.QDRANT_PATH)
-            self.is_cloud = False
-            print(f"[Qdrant] Connected to Local On-Disk Storage: {settings.QDRANT_PATH}")
-            self._initialize_and_seed()
-            self._initialize_and_seed_garhwali()
+            except Exception as e:
+                logger.warning(f"[Qdrant Local Storage Failed]: {e}. Running with in-memory keyword fallback.")
+                self.client = None
+                self.is_cloud = False
+                self.degraded = True
 
     def _load_botanical_herbs(self):
         """Loads curated medicinal herbs with their Dravyaguna energetic profiles."""
@@ -89,7 +109,7 @@ class HybridRemedyStore:
                 from app.core.ayush_knowledge_curator import build_and_save_curated_knowledge
                 build_and_save_curated_knowledge()
             except Exception as e:
-                print(f"[Qdrant Curator] Notice: could not auto-build curated knowledge: {e}")
+                logger.info(f"[Qdrant Curator] Notice: could not auto-build curated knowledge: {e}")
 
         if os.path.exists(self.botanical_herbs_path):
             try:
@@ -102,9 +122,9 @@ class HybridRemedyStore:
                             self.herbs_lookup[v_name] = h
                         if c_name:
                             self.herbs_lookup[c_name] = h
-                print(f"[Qdrant] Loaded {len(herbs)} botanical Dravyaguna herbs into memory.")
+                logger.info(f"[Qdrant] Loaded {len(herbs)} botanical Dravyaguna herbs into memory.")
             except Exception as e:
-                print(f"[Qdrant Error] Failed loading botanical herbs: {e}")
+                logger.error(f"[Qdrant Error] Failed loading botanical herbs: {e}")
 
     def load_all_remedies(self) -> List[Dict[str, Any]]:
         """
@@ -128,7 +148,7 @@ class HybridRemedyStore:
                             item["safety_tier"] = "household_safe"
                             all_remedies.append(item)
             except Exception as e:
-                print(f"[Qdrant Error] Failed reading base remedies {self.data_path}: {e}")
+                logger.error(f"[Qdrant Error] Failed reading base remedies {self.data_path}: {e}")
 
         # 2. Docx remedies (from cache JSON or directly extracted)
         docx_items: List[Dict[str, Any]] = []
@@ -137,14 +157,14 @@ class HybridRemedyStore:
                 with open(self.docx_remedies_path, "r", encoding="utf-8") as f:
                     docx_items = json.load(f)
             except Exception as e:
-                print(f"[Qdrant Error] Failed reading docx remedies JSON {self.docx_remedies_path}: {e}")
+                logger.error(f"[Qdrant Error] Failed reading docx remedies JSON {self.docx_remedies_path}: {e}")
 
         if not docx_items:
             try:
                 from app.core.ayush_docx_extractor import save_docx_remedies_json
                 docx_items = save_docx_remedies_json(self.docx_remedies_path)
             except Exception as e:
-                print(f"[Qdrant Error] Failed extracting docx remedies: {e}")
+                logger.error(f"[Qdrant Error] Failed extracting docx remedies: {e}")
 
         for item in docx_items:
             name_key = item.get("remedy_name", "").strip().lower()
@@ -160,14 +180,14 @@ class HybridRemedyStore:
                 from app.core.ayush_knowledge_curator import build_and_save_curated_knowledge
                 build_and_save_curated_knowledge()
             except Exception as e:
-                print(f"[Qdrant Curator] Notice: could not auto-build Vaidya Chikitsa: {e}")
+                logger.info(f"[Qdrant Curator] Notice: could not auto-build Vaidya Chikitsa: {e}")
 
         if os.path.exists(self.vaidya_chikitsa_path):
             try:
                 with open(self.vaidya_chikitsa_path, "r", encoding="utf-8") as f:
                     vc_items = json.load(f)
             except Exception as e:
-                print(f"[Qdrant Error] Failed reading Vaidya Chikitsa JSON: {e}")
+                logger.error(f"[Qdrant Error] Failed reading Vaidya Chikitsa JSON: {e}")
 
         for item in vc_items:
             # SAFETY RULE: Never index clinical emergencies as home remedies!
@@ -192,7 +212,7 @@ class HybridRemedyStore:
                     distance=models.Distance.COSINE
                 )
             )
-            print(f"[Qdrant] Created new Qdrant collection: '{self.collection_name}'")
+            logger.info(f"[Qdrant] Created new Qdrant collection: '{self.collection_name}'")
 
         # Check point count
         collection_info = self.client.get_collection(self.collection_name)
@@ -200,16 +220,16 @@ class HybridRemedyStore:
         all_remedies = self.load_all_remedies()
 
         if points_count < len(all_remedies):
-            print(f"[Qdrant] Collection '{self.collection_name}' has {points_count} points, but {len(all_remedies)} remedies available. Seeding/syncing remedies...")
+            logger.info(f"[Qdrant] Collection '{self.collection_name}' has {points_count} points, but {len(all_remedies)} remedies available. Seeding/syncing remedies...")
             self.seed_dataset(force=True)
         else:
-            print(f"[Qdrant] Collection '{self.collection_name}' is fully up to date with {points_count} indexed points.")
+            logger.info(f"[Qdrant] Collection '{self.collection_name}' is fully up to date with {points_count} indexed points.")
 
     def seed_dataset(self, force: bool = False):
         """Loads all remedies, generates embeddings on clinical indications, and upserts them into Qdrant."""
         remedies = self.load_all_remedies()
         if not remedies:
-            print("[Qdrant Error] No remedies found to seed.")
+            logger.error("[Qdrant Error] No remedies found to seed.")
             return
 
         search_texts: List[str] = []
@@ -255,7 +275,7 @@ class HybridRemedyStore:
             )
             total_upserted += len(points)
 
-        print(f"[Qdrant] Successfully uploaded and indexed {total_upserted} vector points in '{self.collection_name}'.")
+        logger.info(f"[Qdrant] Successfully uploaded and indexed {total_upserted} vector points in '{self.collection_name}'.")
 
     def _enrich_with_botanicals(self, remedy: Dict[str, Any]) -> Dict[str, Any]:
         """Matches ingredients or text against Dravyaguna herbs and attaches energetic profiles."""
@@ -280,61 +300,103 @@ class HybridRemedyStore:
             enriched["matched_botanicals"] = matched_herbs
         return enriched
 
-    def search_remedies(self, query_text: str, limit: int = 2, min_score: float = 0.25) -> List[Dict[str, Any]]:
+    def close(self):
+        """Closes the underlying Qdrant client connection cleanly if open."""
+        if self.client is not None and hasattr(self.client, "close"):
+            try:
+                self.client.close()
+                logger.info("[Qdrant] Closed client connection cleanly.")
+            except Exception as e:
+                logger.warning(f"[Qdrant] Error closing client: {e}")
+
+    def keyword_search_fallback(self, query_text: str, limit: int = 2) -> List[Dict[str, Any]]:
         """
-        Embeds the query text and retrieves top matching remedies from Qdrant,
-        filtering by minimum similarity score and enriching with Dravyaguna properties.
+        In-memory keyword / BM25 lexical search fallback over remedies dataset.
+        Always sets source: 'fallback_keyword' and never crashes.
         """
-        try:
+        if not hasattr(self, "_all_cached_remedies") or not self._all_cached_remedies:
+            try:
+                self._all_cached_remedies = self.load_all_remedies()
+            except Exception as e:
+                logger.warning(f"[RAG] Failed to load dataset for keyword fallback: {e}")
+                self._all_cached_remedies = []
+
+        query_tokens = [w for w in re.split(r'\W+', query_text.lower()) if len(w) > 2]
+        scored = []
+        for r in self._all_cached_remedies:
+            searchable = f"{r.get('remedy_name', '')} {r.get('ailment', '')} {r.get('preparation', '')} {r.get('ingredients', '')}".lower()
+            score = sum(1 for token in query_tokens if token in searchable)
+            if score > 0:
+                item = dict(r)
+                item["source"] = "fallback_keyword"
+                item["similarity_score"] = float(score) / (len(query_tokens) + 1)
+                scored.append((score, self._enrich_with_botanicals(item)))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        results = [s[1] for s in scored[:limit]]
+
+        # If no specific keyword matched, safely return up to 'limit' household safe remedies
+        if not results and self._all_cached_remedies:
+            for r in self._all_cached_remedies:
+                if r.get("safety_tier") == "household_safe":
+                    item = dict(r)
+                    item["source"] = "fallback_keyword"
+                    results.append(self._enrich_with_botanicals(item))
+                    if len(results) >= limit:
+                        break
+
+        return results
+
+    def search_remedies(self, query_text: str, limit: int = 2, min_score: float = 0.25, timeout: float = 5.0) -> List[Dict[str, Any]]:
+        """
+        Embeds the query text and retrieves top matching remedies from Qdrant with a 5.0s timeout.
+        On timeout or connection failure, retries once (for cloud) and falls back to keyword search.
+        """
+        if self.client is None:
+            logger.warning("[RAG] Qdrant search timed out / failed, falling back to BM25 / keyword search")
+            return self.keyword_search_fallback(query_text, limit=limit)
+
+        def _do_qdrant_query():
             query_embedding = list(self.embedding_model.embed([query_text]))[0].tolist()
-            
             search_result = self.client.query_points(
                 collection_name=self.collection_name,
                 query=query_embedding,
-                limit=limit * 2  # fetch slightly more to filter
+                limit=limit * 2,
+                timeout=int(timeout)
             )
-
             matched = []
             for point in search_result.points:
                 if not point.payload:
                     continue
-                # Score threshold filter
                 if hasattr(point, "score") and point.score is not None and point.score < min_score:
                     continue
-                
                 enriched = self._enrich_with_botanicals(point.payload)
                 enriched["similarity_score"] = getattr(point, "score", None)
                 matched.append(enriched)
                 if len(matched) >= limit:
                     break
-
             return matched
-        except Exception as e:
-            print(f"[Qdrant Search Error]: {e}")
-            # Resilient fallback to local storage if cloud connection fails
-            if getattr(self, "is_cloud", False):
-                try:
-                    local_c = QdrantClient(path=settings.QDRANT_PATH)
-                    res = local_c.query_points(
-                        collection_name=self.collection_name,
-                        query=query_embedding,
-                        limit=limit * 2
-                    )
-                    matched = []
-                    for point in res.points:
-                        if not point.payload:
-                            continue
-                        if hasattr(point, "score") and point.score is not None and point.score < min_score:
-                            continue
-                        enriched = self._enrich_with_botanicals(point.payload)
-                        enriched["similarity_score"] = getattr(point, "score", None)
-                        matched.append(enriched)
-                        if len(matched) >= limit:
-                            break
+
+        max_attempts = 2 if getattr(self, "is_cloud", False) else 1
+        last_error = None
+
+        for attempt in range(max_attempts):
+            try:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(_do_qdrant_query)
+                    matched = future.result(timeout=timeout)
+                if matched:
                     return matched
-                except Exception as local_err:
-                    print(f"[Qdrant Local Search Fallback Error]: {local_err}")
-            return []
+                # If matched is empty but search succeeded, return keyword fallback
+                break
+            except Exception as e:
+                last_error = e
+                if attempt < max_attempts - 1:
+                    time.sleep(1.0)
+                    continue
+
+        logger.warning(f"[RAG] Qdrant search timed out / failed, falling back to BM25 / keyword search (Error: {last_error})")
+        return self.keyword_search_fallback(query_text, limit=limit)
 
     def _initialize_and_seed_garhwali(self):
         """Creates collection for Garhwali texts if missing, and seeds points if empty."""
@@ -346,14 +408,14 @@ class HybridRemedyStore:
                     distance=models.Distance.COSINE
                 )
             )
-            print(f"[Qdrant] Created new Qdrant collection: '{self.garhwali_collection_name}'")
+            logger.info(f"[Qdrant] Created new Qdrant collection: '{self.garhwali_collection_name}'")
 
         collection_info = self.client.get_collection(self.garhwali_collection_name)
         if (collection_info.points_count or 0) == 0:
-            print(f"[Qdrant] Collection '{self.garhwali_collection_name}' is empty. Seeding Garhwali dataset...")
+            logger.info(f"[Qdrant] Collection '{self.garhwali_collection_name}' is empty. Seeding Garhwali dataset...")
             self.seed_garhwali_dataset()
         else:
-            print(f"[Qdrant] Collection '{self.garhwali_collection_name}' is active with {collection_info.points_count} points.")
+            logger.info(f"[Qdrant] Collection '{self.garhwali_collection_name}' is active with {collection_info.points_count} points.")
 
     def _extract_text_from_file(self, file_path: str, filename: str) -> str:
         """Reads .txt, .md, or .docx files safely."""
@@ -371,7 +433,7 @@ class HybridRemedyStore:
                     tree = ET.fromstring(xml_content)
                     return "".join(node.text for node in tree.iter() if node.text)
                 except Exception as e2:
-                    print(f"[Qdrant Error] Failed reading docx {filename}: {e2}")
+                    logger.error(f"[Qdrant Error] Failed reading docx {filename}: {e2}")
                     return ""
         else:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -379,7 +441,7 @@ class HybridRemedyStore:
 
     def seed_garhwali_dataset(self):
         if not os.path.exists(self.garhwali_data_dir):
-            print(f"[Qdrant Error] Garhwali dataset folder not found: {self.garhwali_data_dir}")
+            logger.error(f"[Qdrant Error] Garhwali dataset folder not found: {self.garhwali_data_dir}")
             return
 
         search_texts = []
@@ -424,7 +486,7 @@ class HybridRemedyStore:
                     ids.append(point_id)
                     point_id += 1
             except Exception as e:
-                print(f"[Qdrant Error] Error reading {filename}: {e}")
+                logger.error(f"[Qdrant Error] Error reading {filename}: {e}")
 
         # Batch upload to avoid memory/network issues
         batch_size = 100
@@ -441,7 +503,7 @@ class HybridRemedyStore:
                 ]
                 self.client.upsert(collection_name=self.garhwali_collection_name, points=points, wait=True)
 
-        print(f"[Qdrant] Successfully indexed {len(ids)} Garhwali vector points.")
+        logger.info(f"[Qdrant] Successfully indexed {len(ids)} Garhwali vector points.")
 
     def search_garhwali(self, query_text: str, limit: int = 3) -> List[Dict[str, Any]]:
         """
@@ -469,7 +531,7 @@ class HybridRemedyStore:
                                 if len(results) >= limit:
                                     break
                 except Exception as e:
-                    print(f"[Garhwali Lexical Search Error]: {e}")
+                    logger.error(f"[Garhwali Lexical Search Error]: {e}")
 
         # 2. Dense Vector Search in Qdrant
         try:
@@ -486,6 +548,17 @@ class HybridRemedyStore:
                         seen_contents.add(c)
                         results.append(point.payload)
         except Exception as e:
-            print(f"[Qdrant Search Error (Garhwali)]: {e}")
+            logger.error(f"[Qdrant Search Error (Garhwali)]: {e}")
 
-        return results[:limit]
+        return results[:limit]
+
+
+_shared_remedy_store: Optional[HybridRemedyStore] = None
+
+def get_shared_remedy_store(data_path: str = "DATA/remedies_dataset.json") -> HybridRemedyStore:
+    """Returns a process-wide singleton HybridRemedyStore instance."""
+    global _shared_remedy_store
+    if _shared_remedy_store is None:
+        _shared_remedy_store = HybridRemedyStore(data_path=data_path)
+    return _shared_remedy_store
+

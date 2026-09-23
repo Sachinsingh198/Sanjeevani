@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from app.config import settings
 from app.schemas.voice_schemas import TTSRequest, TTSResponse, STTResponse
 from app.core.bhashini_engine import BhashiniVoiceEngine
-from app.core.tts_engine import IndicTTSEngine
+from app.core.tts_engine import IndicTTSEngine, get_shared_tts_engine
 from app.core.sarvam_stt import (
     sarvam_stt_client,
     SarvamNotConfiguredError,
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/voice", tags=["Voice / TTS / STT"])
 # Reuses the same markdown-stripping cleaner already used for speech
 # synthesis payloads (strips **bold**, *italic*, # headers before speaking).
 _voice_engine = BhashiniVoiceEngine()
-_indic_tts_engine = IndicTTSEngine()
+_indic_tts_engine = get_shared_tts_engine()
 
 
 async def _synthesize_fallback(clean_text: str, req: TTSRequest) -> TTSResponse:

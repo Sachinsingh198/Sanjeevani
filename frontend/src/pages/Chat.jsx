@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Send, Mic, MicOff, RefreshCw, User, AlertTriangle, RotateCcw,
   Volume2, Settings2, Wifi, WifiOff, FileDown, PhoneCall,
   Sparkles, Stethoscope, X, ChevronLeft, ChevronRight,
-  MessageSquare, Plus, Clock, Trash2, Leaf,
+  MessageSquare, Plus, Clock, Trash2, Leaf, Edit3,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import TierBadge from '../components/TierBadge';
@@ -21,6 +21,7 @@ import {
 import { speakText, transcribeAudio } from '../api/voiceClient';
 import { downloadConsultationReport } from '../api/reportsClient';
 import { listSessions, clearSessionHistory, recordSessionTurn } from '../lib/sessionStore';
+import { evaluateLocalRedFlags } from '../lib/localTriageFallback';
 
 const COMORBIDITY_OPTIONS = [
   { label: 'BP', value: 'hypertension', icon: '❤️' },
@@ -59,13 +60,39 @@ export default function Chat() {
   const [currentPhase, setCurrentPhase]     = useState('GREETING');
   const [error, setError]                   = useState(null);
   const [sidebarOpen, setSidebarOpen]       = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
-  const [settingsOpen, setSettingsOpen]     = useState(false);
-  const [textScale, setTextScale]           = useState(1);
-  const [uiLang, setUiLang]                 = useState('hi');
+  const [textScale, setTextScale]           = useState(() => {
+    try {
+      const saved = localStorage.getItem('sanjeevani_text_scale');
+      return saved ? parseFloat(saved) : 1;
+    } catch {
+      return 1;
+    }
+  });
+  const [uiLang, setUiLang]                 = useState(() => {
+    try {
+      return localStorage.getItem('sanjeevani_ui_lang') || 'hi';
+    } catch {
+      return 'hi';
+    }
+  });
+  const [detectedLanguage, setDetectedLanguage] = useState('hindi');
+  const [sttLangOverride, setSttLangOverride]   = useState(null);
+  const [correctingIdx, setCorrectingIdx]       = useState(null);
+  const [correctionText, setCorrectionText]     = useState('');
   const [backendOnline, setBackendOnline]   = useState(null);
   const [speakingMsgIdx, setSpeakingMsgIdx] = useState(null);
   const [downloadingIdx, setDownloadingIdx] = useState(null);
   const [sessions, setSessions]             = useState([]);
+  const [settingsOpen, setSettingsOpen]     = useState(false);
+
+  /* Persist accessibility text-scale and UI language */
+  useEffect(() => {
+    try { localStorage.setItem('sanjeevani_text_scale', textScale); } catch { /* ignore */ }
+  }, [textScale]);
+
+  useEffect(() => {
+    try { localStorage.setItem('sanjeevani_ui_lang', uiLang); } catch { /* ignore */ }
+  }, [uiLang]);
 
   /* Refs */
   const chatEndRef        = useRef(null);
@@ -139,7 +166,8 @@ export default function Chat() {
     }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const r = new SR();
-    r.lang = 'hi-IN';
+    const effectiveLang = sttLangOverride || (detectedLanguage === 'english' ? 'en-IN' : 'hi-IN');
+    r.lang = effectiveLang;
     r.interimResults = false;
     r.maxAlternatives = 1;
     r.onresult = e => {
@@ -152,8 +180,8 @@ export default function Chat() {
     recognitionRef.current = r;
     r.start();
     setIsListening(true);
-    toast('Sun raha hoon... Kahiye (Offline mode)', { icon: '🎙️' });
-  }, []);
+    toast(`Sun raha hoon... (${effectiveLang === 'en-IN' ? 'English' : 'Hindi'} mode)`, { icon: '🎙️' });
+  }, [detectedLanguage, sttLangOverride]);
 
   const toggleListening = useCallback(async () => {
     if (isListening) {
@@ -250,10 +278,27 @@ export default function Chat() {
   }, []);
 
   const inferPhase = response => {
-    if (response.escalation_triggered || response.tier === 'Red') return 'EMERGENCY';
-    if (response.remedies?.length > 0) return 'CONCLUDED';
+    if (response.phase === 'GUARDRAIL_BLOCKED' || response.guardrail_blocked) return 'GUARDRAIL_BLOCKED';
+    if (response.phase === 'EMERGENCY' || response.escalation_triggered || response.tier === 'Red') return 'EMERGENCY';
+    if (response.phase === 'CONCLUDED' || response.remedies?.length > 0) return 'CONCLUDED';
+    if (response.phase === 'CONSULTATION') return 'CONSULTATION';
+    if (response.phase === 'GREETING') return 'GREETING';
     return currentPhase;
   };
+
+  const lastUserText = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].sender === 'user') return messages[i].text;
+    }
+    return '';
+  }, [messages]);
+
+  const lastBotIdx = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].sender === 'bot') return i;
+    }
+    return -1;
+  }, [messages]);
 
   const sendText = useCallback(async rawText => {
     const trimmed = rawText.trim();
@@ -263,17 +308,41 @@ export default function Chat() {
     setLoading(true);
     try {
       const res = await sendChatMessage(conversationIdRef.current, trimmed, knownConditions);
-      const phase = res.phase ?? inferPhase(res);
+      if (res.detected_language) setDetectedLanguage(res.detected_language);
+      const phase = (res.phase !== undefined && res.phase !== null && res.phase !== '') ? res.phase : inferPhase(res);
       setCurrentPhase(phase);
       setMessages(p => [...p, { sender: 'bot', text: res.reply_text, tier: res.tier, flags: res.flags ?? [], remedies: res.remedies ?? [], escalation: res.escalation_triggered, phase }]);
       recordSessionTurn({ conversationId: conversationIdRef.current, summary: trimmed, tier: res.tier });
       refreshSessions();
     } catch (err) {
       setError(err?.response?.data?.detail ?? err.message ?? 'Unknown error');
-      setMessages(p => [...p, { sender: 'bot', text: 'Kshama karein, abhi sampark me asuvidha hai.', tier: 'Green', remedies: [] }]);
+      // Deliberately conservative fail-safe check to prevent emergency downgrade during network dropouts; not a full triage replacement.
+      const fallbackCheck = evaluateLocalRedFlags(trimmed);
+      if (fallbackCheck.isRed) {
+        setCurrentPhase('EMERGENCY');
+        setMessages(p => [...p, {
+          sender: 'bot',
+          text: 'चेतावनी: आपातकालीन लक्षण पहचाने गए हैं। नेटवर्क उपलब्ध न होने के कारण कृपया तुरंत 108 एम्बुलेंस को कॉल करें। (Emergency symptoms detected — network unavailable, call 108 immediately.)',
+          tier: 'Red',
+          flags: [fallbackCheck.flag || 'CLIENT_FALLBACK_FLAG: possible emergency — network unavailable, please call 108'],
+          remedies: [],
+          escalation: true,
+          phase: 'EMERGENCY'
+        }]);
+      } else {
+        setMessages(p => [...p, { sender: 'bot', text: 'Kshama karein, abhi sampark me asuvidha hai.', tier: 'Green', remedies: [] }]);
+      }
     } finally { setLoading(false); inputRef.current?.focus(); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, knownConditions, currentPhase, refreshSessions]);
+
+  const handleCorrectionSubmit = useCallback((e) => {
+    e?.preventDefault();
+    if (!correctionText.trim()) return;
+    const corrected = correctionText.trim();
+    setCorrectingIdx(null);
+    sendText(`[CORRECTION] ${corrected}`);
+  }, [correctionText, sendText]);
 
   const handleSend    = useCallback(e => { e?.preventDefault(); sendText(inputText); }, [inputText, sendText]);
   const handleKeyDown = useCallback(e => { if (e.key === 'Enter' && !e.shiftKey) handleSend(e); }, [handleSend]);
@@ -436,12 +505,14 @@ export default function Chat() {
           </div>
 
           {/* Connection */}
-          <div className={`hidden sm:flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg ${
-            backendOnline === null ? 'text-gray-400' : backendOnline ? 'text-[#5A7855] bg-[#5A7855]/10' : 'text-[#D4A359] bg-[#D4A359]/10'
-          }`}>
-            {backendOnline === null ? <RefreshCw className="w-3 h-3 animate-spin" /> : backendOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-            <span className="hidden md:inline">{backendOnline === null ? 'Jud raha…' : backendOnline ? 'Online' : 'Offline'}</span>
-          </div>
+          {backendOnline !== false && (
+            <div className={`hidden sm:flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg ${
+              backendOnline === null ? 'text-gray-400' : 'text-[#5A7855] bg-[#5A7855]/10'
+            }`}>
+              {backendOnline === null ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Wifi className="w-3 h-3" />}
+              <span className="hidden md:inline">{backendOnline === null ? 'Jud raha…' : 'Online'}</span>
+            </div>
+          )}
 
           <div className="flex-1" />
 
@@ -484,6 +555,21 @@ export default function Chat() {
             {/* Mobile Phase */}
             <div className="lg:hidden mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
               <PhaseProgress currentPhase={currentPhase} />
+            </div>
+          </div>
+        )}
+
+        {/* ── Full-Width Sticky Offline Banner ──────────────────── */}
+        {backendOnline === false && (
+          <div className="shrink-0 mx-4 mt-2 bg-[#D4A359]/15 border border-[#D4A359]/40 rounded-2xl p-3 flex items-start gap-2.5 text-xs text-[#2E4057] dark:text-[#F4F6F0] animate-fadeIn shadow-xs">
+            <WifiOff className="w-4 h-4 shrink-0 text-[#D4A359] mt-0.5" />
+            <div>
+              <strong className="block font-bold text-[#D4A359]">
+                ऑफ़लाइन डेमो मोड (Offline Demo Mode):
+              </strong>
+              <span>
+                सर्वर से संपर्क नहीं हो पा रहा है। यह अनुमानित ऑफ़लाइन सलाह है — पुष्टि हेतु नेटवर्क उपलब्ध होने पर पुनः जांचें।
+              </span>
             </div>
           </div>
         )}
@@ -557,6 +643,17 @@ export default function Chat() {
                   msg={msg}
                   isSpeaking={speakingMsgIdx === idx}
                   isDownloading={downloadingIdx === idx}
+                  isLatestBot={idx === lastBotIdx}
+                  currentPhase={currentPhase}
+                  isCorrecting={correctingIdx === idx}
+                  correctionText={correctionText}
+                  onStartCorrection={() => {
+                    setCorrectionText(lastUserText);
+                    setCorrectingIdx(idx);
+                  }}
+                  onCancelCorrection={() => setCorrectingIdx(null)}
+                  onCorrectionChange={setCorrectionText}
+                  onSubmitCorrection={handleCorrectionSubmit}
                   onReadAloud={() => readAloud(msg.text, idx)}
                   onDownloadReport={() => handleDownloadReport(msg, idx)}
                 />
@@ -589,6 +686,21 @@ export default function Chat() {
               {isListening ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </button>
 
+            {/* Manual EN/HI STT Voice Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                const current = sttLangOverride || (detectedLanguage === 'english' ? 'en-IN' : 'hi-IN');
+                const next = current === 'en-IN' ? 'hi-IN' : 'en-IN';
+                setSttLangOverride(next);
+                toast.success(`Voice language: ${next === 'en-IN' ? 'English (en-IN)' : 'Hindi (hi-IN)'}`);
+              }}
+              className="shrink-0 h-9 sm:h-10 mb-0.5 px-2 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1A2538] text-[10px] sm:text-[11px] font-bold text-[#5A7855] dark:text-[#8ED14C] hover:bg-[#5A7855]/10 transition-all flex items-center justify-center"
+              title="Voice Language Toggle (EN/HI)"
+            >
+              {(sttLangOverride || (detectedLanguage === 'english' ? 'en-IN' : 'hi-IN')) === 'en-IN' ? 'EN' : 'HI'}
+            </button>
+
             {/* Expandable Textarea */}
             <textarea
               ref={inputRef}
@@ -617,7 +729,21 @@ export default function Chat() {
 }
 
 /* ── MessageBubble ─────────────────────────────────────────────────────── */
-function MessageBubble({ msg, onReadAloud, isSpeaking, onDownloadReport, isDownloading }) {
+function MessageBubble({
+  msg,
+  onReadAloud,
+  isSpeaking,
+  onDownloadReport,
+  isDownloading,
+  isLatestBot,
+  currentPhase,
+  isCorrecting,
+  correctionText,
+  onStartCorrection,
+  onCancelCorrection,
+  onCorrectionChange,
+  onSubmitCorrection,
+}) {
   const isUser = msg.sender === 'user';
   return (
     <div className={`flex gap-1.5 sm:gap-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
@@ -655,6 +781,52 @@ function MessageBubble({ msg, onReadAloud, isSpeaking, onDownloadReport, isDownl
             <StructuredBotMessage text={msg.text} tier={msg.tier} />
           )}
         </div>
+
+        {/* In-consultation symptom correction */}
+        {!isUser && isLatestBot && currentPhase === 'CONSULTATION' && (
+          <div className="mt-2 pt-1.5 border-t border-[#5A7855]/10 dark:border-gray-700/40">
+            {!isCorrecting ? (
+              <button
+                type="button"
+                onClick={onStartCorrection}
+                className="inline-flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500 hover:text-[#5A7855] dark:hover:text-[#8ED14C] transition-colors"
+                title="Pichla lakshan sudharein"
+              >
+                <Edit3 className="w-3 h-3" />
+                <span>यह सही नहीं था / correct this</span>
+              </button>
+            ) : (
+              <form onSubmit={onSubmitCorrection} className="mt-1 space-y-1.5 animate-fadeIn">
+                <p className="text-[10px] font-semibold text-[#5A7855] dark:text-[#8ED14C]">
+                  Apna lakshan sahi karein:
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={correctionText}
+                    onChange={(e) => onCorrectionChange(e.target.value)}
+                    className="flex-1 px-2.5 py-1 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[#131E2B] text-[#2E4057] dark:text-[#F4F6F0] focus:outline-none focus:ring-1 focus:ring-[#5A7855]"
+                    placeholder="Sahi lakshan likhein..."
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-[#5A7855] text-white hover:bg-[#4a6346] transition-colors"
+                  >
+                    Bhejein
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCancelCorrection}
+                    className="px-2 py-1 text-[11px] font-semibold rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300"
+                  >
+                    Radd
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
         {!isUser && (msg.tier === 'Red' || msg.tier === 'Yellow') && (
           <div className="mt-2 sm:mt-2.5"><EscalationCard tier={msg.tier} flags={msg.flags ?? []} /></div>
         )}

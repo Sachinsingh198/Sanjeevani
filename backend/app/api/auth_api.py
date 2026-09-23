@@ -1,12 +1,16 @@
 """
 Authentication API routes: registration, login, current-user fetch, and username availability.
+Migrated to SQLAlchemy Core abstraction layer.
 """
 import re
 import random
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from sqlalchemy import select, insert, update, or_, and_, func
+
 from app.config import settings
+from app.core.limiter import limiter, get_otp_key
 from app.schemas.auth_schemas import (
     RegisterRequest,
     LoginRequest,
@@ -21,11 +25,10 @@ from app.schemas.auth_schemas import (
 )
 from app.core.auth import hash_password, verify_password, create_access_token, get_current_user, require_role
 from app.core.notification_service import send_email_otp, send_sms_otp
-from app.models import get_db, normalize_phone
+from app.models import normalize_phone
+from app.db import get_db_connection, users_table, otps_table, row_to_dict
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-
 
 
 def validate_mobile_number(phone_str: str) -> str:
@@ -37,23 +40,16 @@ def validate_mobile_number(phone_str: str) -> str:
     if not phone_str:
         raise HTTPException(
             status_code=400,
-            detail="Mobile number is required."
+            detail="Kripya ek maanya 10-digit mobile number darz karein (e.g. 9876543210)."
         )
 
     cleaned = phone_str.strip()
-    
-    # Allow demo keywords during development/testing
-    if cleaned.lower() in ("admin", "asha", "patient"):
-        return cleaned.lower()
-
-    # Extract digits
     digits = re.sub(r"[^\d]", "", cleaned)
     if digits.startswith("91") and len(digits) == 12:
         digits = digits[2:]
     elif digits.startswith("0") and len(digits) == 11:
         digits = digits[1:]
 
-    # Must be exactly 10 digits starting with 6, 7, 8, or 9
     if not re.match(r"^[6-9]\d{9}$", digits):
         raise HTTPException(
             status_code=400,
@@ -63,17 +59,16 @@ def validate_mobile_number(phone_str: str) -> str:
     return digits
 
 
-def generate_username_suggestions(candidate: str, full_name: str, conn) -> List[str]:
+def generate_username_suggestions(candidate: str, full_name: str, conn=None) -> List[str]:
     """
     Generates 3 to 4 unique, clean username suggestions based on user input or name,
     ensuring none of them already exist in the database.
     """
     base_raw = candidate if candidate and len(candidate.strip()) >= 2 else full_name
-    # Clean non-alphanumeric
     base = re.sub(r"[^a-zA-Z0-9]", "", base_raw or "user").lower()
     if len(base) < 3:
         base = (base + "user")[:6]
-    base = base[:12]  # Keep base concise
+    base = base[:12]
 
     current_yr = str(datetime.now().year)[-2:]
     pool = [
@@ -85,7 +80,6 @@ def generate_username_suggestions(candidate: str, full_name: str, conn) -> List[
         f"{base}_doc",
     ]
 
-    # If full name has multiple parts (e.g. "Sachin Singh")
     name_parts = [re.sub(r"[^a-zA-Z0-9]", "", p).lower() for p in (full_name or "").split() if p]
     if len(name_parts) >= 2:
         pool.insert(0, f"{name_parts[0]}_{name_parts[1]}")
@@ -93,17 +87,26 @@ def generate_username_suggestions(candidate: str, full_name: str, conn) -> List[
 
     suggestions = []
     seen = set()
-    for cand in pool:
-        cand_clean = cand.lower()
-        if cand_clean in seen:
-            continue
-        seen.add(cand_clean)
 
-        existing = conn.execute("SELECT id FROM users WHERE LOWER(username) = ?", (cand_clean,)).fetchone()
-        if not existing:
-            suggestions.append(cand_clean)
-        if len(suggestions) >= 4:
-            break
+    def check_pool(connection):
+        for cand in pool:
+            cand_clean = cand.lower()
+            if cand_clean in seen:
+                continue
+            seen.add(cand_clean)
+
+            stmt = select(users_table.c.id).where(func.lower(users_table.c.username) == cand_clean)
+            existing = connection.execute(stmt).fetchone()
+            if not existing:
+                suggestions.append(cand_clean)
+            if len(suggestions) >= 4:
+                break
+
+    if conn is not None:
+        check_pool(conn)
+    else:
+        with get_db_connection() as c:
+            check_pool(c)
 
     return suggestions
 
@@ -119,9 +122,7 @@ async def check_username(
     """
     clean_user = username.strip().lower()
 
-    conn = get_db()
-    try:
-        # Validate username pattern (3-20 characters, lowercase alphanumeric and underscore)
+    with get_db_connection() as conn:
         if not re.match(r"^[a-z0-9_]{3,20}$", clean_user):
             suggestions = generate_username_suggestions(clean_user, name or "", conn)
             return CheckUsernameResponse(
@@ -130,7 +131,8 @@ async def check_username(
                 suggestions=suggestions
             )
 
-        existing = conn.execute("SELECT id FROM users WHERE LOWER(username) = ?", (clean_user,)).fetchone()
+        stmt = select(users_table.c.id).where(func.lower(users_table.c.username) == clean_user)
+        existing = conn.execute(stmt).fetchone()
         if existing:
             suggestions = generate_username_suggestions(clean_user, name or "", conn)
             return CheckUsernameResponse(
@@ -144,8 +146,6 @@ async def check_username(
             available=True,
             suggestions=[]
         )
-    finally:
-        conn.close()
 
 
 @router.post("/register", response_model=LoginResponse)
@@ -159,7 +159,6 @@ async def register_user(req: RegisterRequest):
     if req.role not in ("patient", "asha", "admin"):
         raise HTTPException(status_code=400, detail="Invalid role. Must be: patient, asha, or admin")
 
-    # Only allow patient self-registration through this endpoint
     if req.role != "patient":
         raise HTTPException(
             status_code=403,
@@ -172,36 +171,24 @@ async def register_user(req: RegisterRequest):
     if not req.password or len(req.password.strip()) < 4:
         raise HTTPException(status_code=400, detail="Password kam se kam 4 aksharon ka hona chahiye.")
 
-    # 1. Validate Mobile Number strictly
     norm_phone = validate_mobile_number(req.phone)
 
-    # 2. Validate Email / Gmail if provided
     clean_email = None
     if req.email and req.email.strip():
         clean_email = req.email.strip().lower()
         if not re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", clean_email):
             raise HTTPException(status_code=400, detail="Kripya ek maanya email ya Gmail pata darz karein.")
 
-    conn = get_db()
-    try:
-        # Check if phone already registered
-        existing_phone = conn.execute(
-            "SELECT id FROM users WHERE phone = ?",
-            (norm_phone,)
-        ).fetchone()
-        if existing_phone:
+    with get_db_connection() as conn:
+        stmt_phone = select(users_table.c.id).where(users_table.c.phone == norm_phone)
+        if conn.execute(stmt_phone).fetchone():
             raise HTTPException(status_code=409, detail="Is mobile number se pehle se account bana hua hai. Kripya login karein.")
 
-        # Check if email already registered
         if clean_email:
-            existing_email = conn.execute(
-                "SELECT id FROM users WHERE LOWER(email) = ?",
-                (clean_email,)
-            ).fetchone()
-            if existing_email:
+            stmt_email = select(users_table.c.id).where(func.lower(users_table.c.email) == clean_email)
+            if conn.execute(stmt_email).fetchone():
                 raise HTTPException(status_code=409, detail="Is email/Gmail se pehle se account bana hua hai. Kripya login karein.")
 
-        # 3. Handle Username
         chosen_username = (req.username or "").strip().lower()
         if chosen_username:
             if not re.match(r"^[a-z0-9_]{3,20}$", chosen_username):
@@ -209,12 +196,8 @@ async def register_user(req: RegisterRequest):
                     status_code=400,
                     detail="Username 3 se 20 aksharon ka hona chahiye (sirf a-z, 0-9 aur underscore '_' maanya hain)."
                 )
-
-            existing_user = conn.execute(
-                "SELECT id FROM users WHERE LOWER(username) = ?",
-                (chosen_username,)
-            ).fetchone()
-            if existing_user:
+            stmt_user = select(users_table.c.id).where(func.lower(users_table.c.username) == chosen_username)
+            if conn.execute(stmt_user).fetchone():
                 suggestions = generate_username_suggestions(chosen_username, req.name, conn)
                 sugg_str = ", ".join(suggestions[:3])
                 raise HTTPException(
@@ -222,24 +205,24 @@ async def register_user(req: RegisterRequest):
                     detail=f"Username '{chosen_username}' pehle se uplabdh nahi hai. Yeh chunein: {sugg_str}"
                 )
         else:
-            # Auto-generate a clean username
             suggestions = generate_username_suggestions(req.name, req.name, conn)
             chosen_username = suggestions[0] if suggestions else f"user_{norm_phone[-4:]}"
 
         hashed = hash_password(req.password)
-        cursor = conn.execute(
-            """
-            INSERT INTO users (name, phone, hashed_password, role, village, username, email) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (req.name.strip(), norm_phone, hashed, req.role, req.village.strip(), chosen_username, clean_email)
+        ins = insert(users_table).values(
+            name=req.name.strip(),
+            phone=norm_phone,
+            hashed_password=hashed,
+            role=req.role,
+            village=req.village.strip(),
+            username=chosen_username,
+            email=clean_email,
         )
-        conn.commit()
-        user_id = cursor.lastrowid
+        res = conn.execute(ins)
+        user_id = res.inserted_primary_key[0] if res.inserted_primary_key else None
 
-        # Fetch the created user
-        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-        user_dict = dict(row)
+        row = conn.execute(select(users_table).where(users_table.c.id == user_id)).fetchone()
+        user_dict = row_to_dict(row)
 
         token = create_access_token({"user_id": user_id, "role": req.role})
 
@@ -247,12 +230,11 @@ async def register_user(req: RegisterRequest):
             access_token=token,
             user=UserProfile(**user_dict)
         )
-    finally:
-        conn.close()
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login_user(req: LoginRequest):
+@limiter.limit("20/hour")
+async def login_user(request: Request, req: LoginRequest):
     """
     Authenticate a user via Username, Gmail/Email, OR Mobile Number and return a JWT access token.
     """
@@ -260,21 +242,19 @@ async def login_user(req: LoginRequest):
     if not identifier:
         raise HTTPException(status_code=400, detail="Username, Email/Gmail ya Mobile Number darz karein.")
 
-    conn = get_db()
-    try:
-        norm_phone = normalize_phone(identifier)
-        ident_lower = identifier.lower()
+    norm_phone = normalize_phone(identifier)
+    ident_lower = identifier.lower()
 
-        row = conn.execute(
-            """
-            SELECT * FROM users 
-            WHERE phone = ? 
-               OR phone = ? 
-               OR LOWER(username) = ? 
-               OR LOWER(email) = ?
-            """,
-            (identifier, norm_phone, ident_lower, ident_lower)
-        ).fetchone()
+    with get_db_connection() as conn:
+        stmt = select(users_table).where(
+            or_(
+                users_table.c.phone == identifier,
+                users_table.c.phone == norm_phone,
+                func.lower(users_table.c.username) == ident_lower,
+                func.lower(users_table.c.email) == ident_lower
+            )
+        )
+        row = conn.execute(stmt).fetchone()
 
         if not row:
             raise HTTPException(
@@ -282,7 +262,7 @@ async def login_user(req: LoginRequest):
                 detail="Galat login jankari. Kripya apna Username, Email ya Mobile Number aur password janch kar fir koshish karein."
             )
 
-        user_dict = dict(row)
+        user_dict = row_to_dict(row)
         if not verify_password(req.password, user_dict["hashed_password"]):
             raise HTTPException(
                 status_code=401,
@@ -295,8 +275,6 @@ async def login_user(req: LoginRequest):
             access_token=token,
             user=UserProfile(**user_dict)
         )
-    finally:
-        conn.close()
 
 
 @router.post("/reset-password")
@@ -312,21 +290,19 @@ async def reset_password(
     if not identifier:
         raise HTTPException(status_code=400, detail="Phone number, Username, ya Email darz karein.")
 
-    conn = get_db()
-    try:
-        norm_phone = normalize_phone(identifier)
-        ident_lower = identifier.lower()
+    norm_phone = normalize_phone(identifier)
+    ident_lower = identifier.lower()
 
-        row = conn.execute(
-            """
-            SELECT id, name FROM users 
-            WHERE phone = ? 
-               OR phone = ? 
-               OR LOWER(username) = ? 
-               OR LOWER(email) = ?
-            """,
-            (identifier, norm_phone, ident_lower, ident_lower)
-        ).fetchone()
+    with get_db_connection() as conn:
+        stmt = select(users_table).where(
+            or_(
+                users_table.c.phone == identifier,
+                users_table.c.phone == norm_phone,
+                func.lower(users_table.c.username) == ident_lower,
+                func.lower(users_table.c.email) == ident_lower
+            )
+        )
+        row = conn.execute(stmt).fetchone()
 
         if not row:
             raise HTTPException(
@@ -335,11 +311,10 @@ async def reset_password(
             )
 
         hashed = hash_password(req.new_password.strip())
-        conn.execute("UPDATE users SET hashed_password = ? WHERE id = ?", (hashed, row["id"]))
-        conn.commit()
-        return {"message": f"{row['name']} ke liye password safaltapoorvak reset ho gaya hai. Ab aap login kar sakte hain."}
-    finally:
-        conn.close()
+        conn.execute(
+            update(users_table).where(users_table.c.id == row.id).values(hashed_password=hashed)
+        )
+        return {"message": f"{row.name} ke liye password safaltapoorvak reset ho gaya hai. Ab aap login kar sakte hain."}
 
 
 @router.get("/me", response_model=UserProfile)
@@ -349,29 +324,29 @@ async def get_me(user: Dict[str, Any] = Depends(get_current_user)):
 
 
 @router.post("/otp/send", response_model=OtpResponse)
-async def send_otp(req: SendOtpRequest):
+@limiter.limit("5/hour", key_func=get_otp_key)
+async def send_otp(request: Request, req: SendOtpRequest):
     """
-    Generates and sends a 6-digit OTP via Email/Gmail or SMS.
-    Purpose can be 'register', 'login', or 'reset_password'.
+    Generates and sends a 6-digit OTP via Email/Gmail or SMS using SQLAlchemy Core storage.
     """
     raw_target = req.target.strip()
     if not raw_target:
         raise HTTPException(status_code=400, detail="Mobile number ya Email darz karein.")
 
-    conn = get_db()
-    try:
-        actual_target = raw_target
-        target_type = "email" if "@" in raw_target else "sms"
+    actual_target = raw_target
+    target_type = "email" if "@" in raw_target else "sms"
 
-        # If purpose is reset_password, look up user first
+    with get_db_connection() as conn:
         if req.purpose == "reset_password":
-            user_row = conn.execute(
-                """
-                SELECT id, name, phone, email, username FROM users
-                WHERE phone = ? OR phone = ? OR LOWER(email) = ? OR LOWER(username) = ?
-                """,
-                (raw_target, normalize_phone(raw_target), raw_target.lower(), raw_target.lower())
-            ).fetchone()
+            stmt = select(users_table).where(
+                or_(
+                    users_table.c.phone == raw_target,
+                    users_table.c.phone == normalize_phone(raw_target),
+                    func.lower(users_table.c.email) == raw_target.lower(),
+                    func.lower(users_table.c.username) == raw_target.lower()
+                )
+            )
+            user_row = conn.execute(stmt).fetchone()
 
             if not user_row:
                 raise HTTPException(
@@ -379,7 +354,6 @@ async def send_otp(req: SendOtpRequest):
                     detail="Is Email, Mobile number ya Username se juda koi khata nahi mila."
                 )
 
-            # If user entered an email address
             if "@" in raw_target:
                 actual_target = raw_target.lower()
                 target_type = "email"
@@ -387,12 +361,11 @@ async def send_otp(req: SendOtpRequest):
                 actual_target = normalize_phone(raw_target)
                 target_type = "sms"
             else:
-                # User entered username: deliver to their email if available, else phone
-                if user_row["email"]:
-                    actual_target = user_row["email"]
+                if user_row.email:
+                    actual_target = user_row.email
                     target_type = "email"
                 else:
-                    actual_target = user_row["phone"]
+                    actual_target = user_row.phone
                     target_type = "sms"
         else:
             if target_type == "email":
@@ -402,46 +375,44 @@ async def send_otp(req: SendOtpRequest):
             else:
                 actual_target = validate_mobile_number(raw_target)
 
-        # Generate 6-digit OTP
         otp_code = f"{random.randint(100000, 999999)}"
         expires_at = (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat()
 
-        # Save to otps table for actual_target and raw_target
         conn.execute(
-            """
-            INSERT INTO otps (target, target_type, otp_code, purpose, expires_at, verified)
-            VALUES (?, ?, ?, ?, ?, 0)
-            """,
-            (actual_target.lower(), target_type, otp_code, req.purpose, expires_at)
+            insert(otps_table).values(
+                target=actual_target.lower(),
+                target_type=target_type,
+                otp_code=otp_code,
+                purpose=req.purpose,
+                expires_at=expires_at,
+                verified=0
+            )
         )
         if raw_target.lower() != actual_target.lower():
             conn.execute(
-                """
-                INSERT INTO otps (target, target_type, otp_code, purpose, expires_at, verified)
-                VALUES (?, ?, ?, ?, ?, 0)
-                """,
-                (raw_target.lower(), target_type, otp_code, req.purpose, expires_at)
+                insert(otps_table).values(
+                    target=raw_target.lower(),
+                    target_type=target_type,
+                    otp_code=otp_code,
+                    purpose=req.purpose,
+                    expires_at=expires_at,
+                    verified=0
+                )
             )
-        conn.commit()
 
-        # Dispatch via notification service
-        if target_type == "email":
-            notif_res = send_email_otp(to_email=actual_target, otp=otp_code, purpose=req.purpose)
-        else:
-            notif_res = send_sms_otp(to_phone=actual_target, otp=otp_code, purpose=req.purpose)
+    if target_type == "email":
+        notif_res = send_email_otp(to_email=actual_target, otp=otp_code, purpose=req.purpose)
+    else:
+        notif_res = send_sms_otp(to_phone=actual_target, otp=otp_code, purpose=req.purpose)
 
-        # Include dev_otp if in simulation mode or non-production environment
-        is_simulated = notif_res.get("status") == "simulated" or settings.APP_ENV != "production"
-        dev_otp = otp_code if is_simulated else None
+    dev_otp = otp_code if settings.ENABLE_DEV_OTP_HINT else None
 
-        return OtpResponse(
-            success=True,
-            message=notif_res.get("message", f"OTP {actual_target} par bhej diya gaya hai."),
-            target_type=target_type,
-            dev_otp=dev_otp
-        )
-    finally:
-        conn.close()
+    return OtpResponse(
+        success=True,
+        message=notif_res.get("message", f"OTP {actual_target} par bhej diya gaya hai."),
+        target_type=target_type,
+        dev_otp=dev_otp
+    )
 
 
 @router.post("/otp/verify", response_model=OtpResponse)
@@ -453,16 +424,19 @@ async def verify_otp(req: VerifyOtpRequest):
     norm_target = raw_target.lower() if "@" in raw_target else re.sub(r"[^\d]", "", raw_target)[-10:]
     submitted_otp = req.otp.strip()
 
-    conn = get_db()
-    try:
-        row = conn.execute(
-            """
-            SELECT id, otp_code, expires_at, verified FROM otps
-            WHERE (target = ? OR target = ?) AND purpose = ?
-            ORDER BY id DESC LIMIT 1
-            """,
-            (raw_target.lower(), norm_target.lower(), req.purpose)
-        ).fetchone()
+    with get_db_connection() as conn:
+        stmt = (
+            select(otps_table)
+            .where(
+                and_(
+                    or_(otps_table.c.target == raw_target.lower(), otps_table.c.target == norm_target.lower()),
+                    otps_table.c.purpose == req.purpose
+                )
+            )
+            .order_by(otps_table.c.id.desc())
+            .limit(1)
+        )
+        row = conn.execute(stmt).fetchone()
 
         if not row:
             raise HTTPException(
@@ -470,30 +444,25 @@ async def verify_otp(req: VerifyOtpRequest):
                 detail="Koi sakriya OTP anurodh nahi mila. Kripya naya OTP mangwayein."
             )
 
-        # Check expiration
         now_iso = datetime.now(timezone.utc).isoformat()
-        if row["expires_at"] < now_iso:
+        if str(row.expires_at) < now_iso:
             raise HTTPException(
                 status_code=400,
                 detail="Yeh OTP samapta (expired) ho chuka hai. Kripya naya OTP mangwayein."
             )
 
-        if row["otp_code"] != submitted_otp:
+        if str(row.otp_code) != submitted_otp:
             raise HTTPException(
                 status_code=400,
                 detail="Galat OTP code. Kripya 6-digit code dobara janch kar darz karein."
             )
 
-        # Mark OTP as verified
-        conn.execute("UPDATE otps SET verified = 1 WHERE id = ?", (row["id"],))
-        conn.commit()
+        conn.execute(update(otps_table).where(otps_table.c.id == row.id).values(verified=1))
 
         return OtpResponse(
             success=True,
             message="OTP safaltapoorvak verify ho gaya hai."
         )
-    finally:
-        conn.close()
 
 
 @router.post("/reset-password-with-otp")
@@ -508,17 +477,19 @@ async def reset_password_with_otp(req: ResetPasswordWithOtpRequest):
     norm_target = raw_target.lower() if "@" in raw_target else re.sub(r"[^\d]", "", raw_target)[-10:]
     submitted_otp = req.otp.strip()
 
-    conn = get_db()
-    try:
-        # Find the latest OTP row
-        row = conn.execute(
-            """
-            SELECT id, otp_code, expires_at, verified FROM otps
-            WHERE (target = ? OR target = ?) AND purpose = 'reset_password'
-            ORDER BY id DESC LIMIT 1
-            """,
-            (raw_target.lower(), norm_target.lower())
-        ).fetchone()
+    with get_db_connection() as conn:
+        stmt = (
+            select(otps_table)
+            .where(
+                and_(
+                    or_(otps_table.c.target == raw_target.lower(), otps_table.c.target == norm_target.lower()),
+                    otps_table.c.purpose == "reset_password"
+                )
+            )
+            .order_by(otps_table.c.id.desc())
+            .limit(1)
+        )
+        row = conn.execute(stmt).fetchone()
 
         if not row:
             raise HTTPException(
@@ -527,26 +498,27 @@ async def reset_password_with_otp(req: ResetPasswordWithOtpRequest):
             )
 
         now_iso = datetime.now(timezone.utc).isoformat()
-        if row["expires_at"] < now_iso:
+        if str(row.expires_at) < now_iso:
             raise HTTPException(
                 status_code=400,
                 detail="OTP expire ho chuka hai. Kripya naya OTP mangwayein."
             )
 
-        if row["otp_code"] != submitted_otp:
+        if str(row.otp_code) != submitted_otp:
             raise HTTPException(
                 status_code=400,
                 detail="Galat OTP code darz kiya gaya hai."
             )
 
-        # Find the user account
-        user_row = conn.execute(
-            """
-            SELECT id, name FROM users 
-            WHERE phone = ? OR phone = ? OR LOWER(email) = ? OR LOWER(username) = ?
-            """,
-            (raw_target, norm_target, raw_target.lower(), raw_target.lower())
-        ).fetchone()
+        stmt_user = select(users_table).where(
+            or_(
+                users_table.c.phone == raw_target,
+                users_table.c.phone == norm_target,
+                func.lower(users_table.c.email) == raw_target.lower(),
+                func.lower(users_table.c.username) == raw_target.lower()
+            )
+        )
+        user_row = conn.execute(stmt_user).fetchone()
 
         if not user_row:
             raise HTTPException(
@@ -554,19 +526,15 @@ async def reset_password_with_otp(req: ResetPasswordWithOtpRequest):
                 detail="Is target se juda user account nahi mila."
             )
 
-        # Update password
         hashed = hash_password(req.new_password.strip())
-        conn.execute("UPDATE users SET hashed_password = ? WHERE id = ?", (hashed, user_row["id"]))
-        conn.execute("UPDATE otps SET verified = 1 WHERE id = ?", (row["id"],))
-        conn.commit()
+        conn.execute(
+            update(users_table).where(users_table.c.id == user_row.id).values(hashed_password=hashed)
+        )
+        conn.execute(
+            update(otps_table).where(otps_table.c.id == row.id).values(verified=1)
+        )
 
         return {
             "success": True,
-            "message": f"{user_row['name']} ke liye password safaltapoorvak badal diya gaya hai. Ab aap naye password se login kar sakte hain."
+            "message": f"{user_row.name} ke liye password safaltapoorvak badal diya gaya hai. Ab aap naye password se login kar sakte hain."
         }
-    finally:
-        conn.close()
-
-
-
-

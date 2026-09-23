@@ -2,6 +2,7 @@ import re
 from typing import Dict, Any, Optional
 from app.agents.state import AgentState
 from app.config import settings
+from app.core.logger import logger
 from app.core.bhashini_engine import BhashiniVoiceEngine
 from app.core.sarvam_translate import sarvam_translate_client
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -185,7 +186,7 @@ def get_sarvam_llm():
             temperature=0.3,
         )
     except Exception as e:
-        print(f"[LLM] Sarvam init failed: {e}")
+        logger.error(f"[LLM] Sarvam init failed: {e}")
         return None
 
 
@@ -201,7 +202,7 @@ def get_llm():
                 max_tokens=1200,
             )
         except Exception as e:
-            print(f"[LLM] Groq init failed: {e}")
+            logger.error(f"[LLM] Groq init failed: {e}")
 
     if settings.GEMINI_API_KEY:
         try:
@@ -212,14 +213,14 @@ def get_llm():
                 temperature=0.3,
             )
         except Exception as e:
-            print(f"[LLM] Gemini init failed: {e}")
+            logger.error(f"[LLM] Gemini init failed: {e}")
 
     if settings.SARVAM_API_KEY:
         sarvam_llm = get_sarvam_llm()
         if sarvam_llm is not None:
             return sarvam_llm
 
-    print("[LLM] WARNING: No LLM configured. Running in deterministic fallback mode.")
+    logger.warning("[LLM] WARNING: No LLM configured. Running in deterministic fallback mode.")
     return None
 
 
@@ -229,7 +230,7 @@ def _try_llm(llm, messages) -> Optional[str]:
         res = llm.invoke(messages)
         return str(res.content).strip()
     except Exception as e:
-        print(f"[LLM] Inference error: {type(e).__name__}: {e}")
+        logger.error(f"[LLM] Inference error: {type(e).__name__}: {e}")
         if "sarvam" in str(e).lower() and ("deprecated" in str(e).lower() or "not found" in str(e).lower()):
             try:
                 from langchain_openai import ChatOpenAI
@@ -242,7 +243,7 @@ def _try_llm(llm, messages) -> Optional[str]:
                 res = retry_sarvam.invoke(messages)
                 return str(res.content).strip()
             except Exception as retry_err:
-                print(f"[LLM] Sarvam retry error: {retry_err}")
+                logger.error(f"[LLM] Sarvam retry error: {retry_err}")
         return None
 
 
@@ -316,6 +317,9 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             "**Dhyan Rakhein:**\n- [savdhani 1]\n- [savdhani 2]\n\n"
             "2 din mein aaram na aaye toh **104** par call karein ya **PHC** jaayein."
         )
+        if lang == "garhwali":
+            canonical_system_prompt += f"\n\n{bhashini_engine.get_garhwali_guidance(is_devanagari)}"
+
         user_prompt = (
             f"Patient Details:\n{notes}\n\n"
             f"Verified Remedy:\n"
@@ -332,7 +336,8 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             if lang == "english":
                 state["final_reply_text"] = sarvam_translate_client.translate_text_sync(reply, "hi-IN", "en-IN")
             elif lang == "garhwali":
-                state["final_reply_text"] = apply_garhwali_adaptation(reply, is_devanagari)
+                # LLM was prompted directly with native Garhwali guidance; avoid regex double-adaptation
+                state["final_reply_text"] = reply
             else:
                 state["final_reply_text"] = reply
             return state
@@ -415,6 +420,38 @@ def _limit_to_single_question(text: str) -> str:
     return clean
 
 
+def _has_sufficient_info(notes: str) -> bool:
+    """
+    Checks whether the patient's consultation notes contain:
+    (a) a duration/timing cue (e.g. 'din', 'hafte', 'ghante', 'kal', 'aaj', digits + 'din')
+    (b) at least one associated-symptom or severity cue beyond the chief complaint.
+    """
+    if not notes:
+        return False
+    notes_lower = notes.lower()
+
+    # (a) Duration / timing cue
+    duration_pattern = r"\b(?:\d+\s*(?:din|hafte|ghante|mahine|days?|hours?|weeks?)|din|hafte|ghante|kal|aaj|parso|yesterday|today|since|katga\s+din|kaba\s+bati)\b"
+    has_duration = bool(re.search(duration_pattern, notes_lower))
+    if not has_duration:
+        return False
+
+    # (b) Associated-symptom or severity cue beyond chief complaint
+    severity_cues = [
+        "tez", "tezz", "severe", "bahut", "mild", "halka", "halki", "high", "zyada", "badh", "intense", "ghani"
+    ]
+    has_severity = any(re.search(rf"\b{re.escape(cue)}\b", notes_lower) for cue in severity_cues)
+
+    from app.core.clinical_lexicon import SYMPTOM_KEYWORDS
+    matched_symptoms = set()
+    for kw in SYMPTOM_KEYWORDS:
+        if re.search(rf"\b{re.escape(kw)}\b", notes_lower):
+            matched_symptoms.add(kw)
+
+    has_associated_or_severity = has_severity or len(matched_symptoms) >= 2
+    return bool(has_duration and has_associated_or_severity)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Doctor Consultation Dialogue Inner Flow
 # ─────────────────────────────────────────────────────────────────────────────
@@ -443,13 +480,17 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                 "Ask how they are feeling today and what physical symptoms or health concerns they have. "
                 "CRITICAL: Do NOT give any diagnosis, disease assessment, or remedies yet."
             )
+            if lang == "garhwali":
+                sys_prompt += f"\n\n{bhashini_engine.get_garhwali_guidance(is_devanagari)}"
+
             hum_prompt = f"Patient message: \"{raw_msg}\""
             llm_reply = _try_llm(llm, [SystemMessage(content=sys_prompt), HumanMessage(content=hum_prompt)])
             if llm_reply:
                 if lang == "english":
                     state["final_reply_text"] = sarvam_translate_client.translate_text_sync(llm_reply, "hi-IN", "en-IN")
                 elif lang == "garhwali":
-                    state["final_reply_text"] = apply_garhwali_adaptation(llm_reply, is_devanagari)
+                    # LLM natively generated Garhwali; do not run regex substitution
+                    state["final_reply_text"] = llm_reply
                 else:
                     state["final_reply_text"] = llm_reply
                 return state
@@ -518,16 +559,36 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
         turn_count = state.get("turn_count", 1)
         patient_text = raw_msg or user_msg
 
+        # Handle in-consultation symptom correction without restarting
+        is_correction = patient_text.strip().startswith("[CORRECTION]")
+        if is_correction:
+            patient_text = re.sub(r"^\[CORRECTION\]\s*", "", patient_text.strip())
+
         # Maintain dialogue turns
         new_entry = f"Patient: {patient_text}"
-        updated_notes = f"{notes}\n{new_entry}" if notes else new_entry
+        if is_correction and notes:
+            note_lines = notes.splitlines()
+            last_p_idx = None
+            for idx in range(len(note_lines) - 1, -1, -1):
+                if note_lines[idx].startswith("Patient:"):
+                    last_p_idx = idx
+                    break
+            if last_p_idx is not None:
+                note_lines[last_p_idx] = new_entry
+                updated_notes = "\n".join(note_lines)
+            else:
+                updated_notes = f"{notes}\n{new_entry}"
+        else:
+            updated_notes = f"{notes}\n{new_entry}" if notes else new_entry
+
         state["consultation_notes"] = updated_notes
 
         from app.core.dialogue_manager import has_symptom_mention
         has_actual_symptoms = has_symptom_mention(updated_notes) or has_symptom_mention(patient_text)
 
-        can_conclude = (turn_count >= 2) and has_actual_symptoms
-        force_conclude = (turn_count >= 3) and has_actual_symptoms
+        has_sufficient = _has_sufficient_info(updated_notes)
+        can_conclude = ((turn_count >= 2) or has_sufficient) and has_actual_symptoms
+        force_conclude = ((turn_count >= 3) or has_sufficient) and has_actual_symptoms
 
         sym_data = get_symptom_data(updated_notes)
 
@@ -545,6 +606,9 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                 "   - Turn 3: Ab koi naya sawaal MAT poocho. Jaanch conclude karo aur aakhir mein ##CONCLUDE## likho.\n"
                 "3. Kabhi bhi koi aisa sawaal dubara na poochna jo patient pehle hi bata chuka ho."
             )
+            if lang == "garhwali":
+                canonical_consultation_prompt += f"\n\n{bhashini_engine.get_garhwali_guidance(is_devanagari)}"
+
             human_content = (
                 f"Conversation History:\n{updated_notes}\n\n"
                 f"Turn Count: {turn_count}/3\n"
@@ -566,7 +630,8 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                     if lang == "english":
                         translated_reply = sarvam_translate_client.translate_text_sync(clean_reply, "hi-IN", "en-IN")
                     elif lang == "garhwali":
-                        translated_reply = apply_garhwali_adaptation(clean_reply, is_devanagari)
+                        # Native Garhwali LLM generation; avoid regex double-adaptation
+                        translated_reply = clean_reply
                     else:
                         translated_reply = clean_reply
 
@@ -596,7 +661,7 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                 state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"
                 state["final_reply_text"] = reply
                 return state
-            elif turn_count < 3:
+            elif turn_count < 3 and not has_sufficient:
                 # Turn 2 warning question from registry
                 if lang == "garhwali":
                     reply = sym_data["t2_garh_dev"] if is_devanagari else sym_data["t2_garh_rom"]

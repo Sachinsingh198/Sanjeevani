@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Union
+from datetime import datetime
 
 
 class RegisterRequest(BaseModel):
@@ -26,7 +27,7 @@ class UserProfile(BaseModel):
     email: Optional[str] = None
     role: str
     village: Optional[str] = ""
-    created_at: str
+    created_at: Union[str, datetime]
 
 
 class LoginResponse(BaseModel):

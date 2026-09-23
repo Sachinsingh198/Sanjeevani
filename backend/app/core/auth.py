@@ -70,15 +70,42 @@ def get_current_user(
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
-    from app.models import get_db
-    conn = get_db()
-    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    conn.close()
+    from app.db import get_db_connection, users_table, row_to_dict
+    from sqlalchemy import select
+
+    with get_db_connection() as conn:
+        stmt = select(users_table).where(users_table.c.id == user_id)
+        row = conn.execute(stmt).fetchone()
 
     if not row:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return dict(row)
+    return row_to_dict(row)
+
+
+def get_optional_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+) -> Optional[Dict[str, Any]]:
+    """
+    Optional user dependency: returns user dict if valid Bearer token provided,
+    otherwise returns None without raising HTTPException.
+    """
+    if not credentials or not credentials.credentials:
+        return None
+    try:
+        payload = decode_access_token(credentials.credentials)
+        user_id = payload.get("user_id")
+        if not user_id:
+            return None
+        from app.db import get_db_connection, users_table, row_to_dict
+        from sqlalchemy import select
+
+        with get_db_connection() as conn:
+            stmt = select(users_table).where(users_table.c.id == user_id)
+            row = conn.execute(stmt).fetchone()
+            return row_to_dict(row)
+    except Exception:
+        return None
 
 
 def require_role(*roles: str):

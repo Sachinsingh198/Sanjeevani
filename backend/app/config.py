@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     """
     APP_ENV: str = "development"
     DEFAULT_LANGUAGE: str = "hi"
+    ENABLE_DEV_OTP_HINT: bool = False
 
     # LLM Settings
     PRIMARY_LLM_PROVIDER: str = "groq"
@@ -84,6 +85,9 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: Optional[str] = None
     TWILIO_FROM_NUMBER: Optional[str] = None
     FAST2SMS_API_KEY: Optional[str] = None
+
+    # Error Tracking (Sentry)
+    SENTRY_DSN: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
