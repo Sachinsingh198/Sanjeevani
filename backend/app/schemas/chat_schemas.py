@@ -21,6 +21,15 @@ class RemedyItem(BaseModel):
     source: str
     safety_check: str
 
+class ConsultationSummary(BaseModel):
+    condition: Optional[str] = None
+    possible_cause: Optional[str] = None
+    remedy_name: Optional[str] = None
+    preparation_steps: List[str] = Field(default_factory=list)
+    dosage: List[str] = Field(default_factory=list)
+    precautions: List[str] = Field(default_factory=list)
+    ayurvedic_note: Optional[str] = None
+
 class ChatResponse(BaseModel):
     conversation_id: str
     reply_text: str
@@ -35,6 +44,7 @@ class ChatResponse(BaseModel):
     detected_language: str = "hindi"
     audio_base64: Optional[str] = None
     audio_format: Optional[str] = None
+    consultation_summary: Optional[ConsultationSummary] = None
 
 class TTSRequest(BaseModel):
     text: str

@@ -236,6 +236,14 @@ class DiagnosticScreeningEngine:
             "Santulit poshan, rojana amla ras, hare saag-sabzi aur poshtik aahar banaye rakhein."
         )
 
+        # Clinical range band for Hemoglobin
+        if "HIGH" in risk_level:
+            hb_band = "Likely low (roughly 6.0–8.5 g/dL)"
+        elif "MILD" in risk_level:
+            hb_band = "Borderline low (roughly 8.5–11.0 g/dL)"
+        else:
+            hb_band = "Likely normal (roughly 11.5–15.0+ g/dL)"
+
         return {
             "screening_type": "ANEMIA",
             "biomarker": "Conjunctival Erythema Index (CIELAB a*/L*)",
@@ -243,7 +251,7 @@ class DiagnosticScreeningEngine:
             "erythema_index": round(erythema_score, 4),
             "cutoff_threshold": self.anemia_pallor_threshold,
             "roi_localization_method": loc_method,
-            "estimated_metric": f"Estimated Hb: {estimated_hb} g/dL ({'Severe/Moderate' if 'HIGH' in risk_level else ('Mild' if 'MILD' in risk_level else 'Normal')})",
+            "estimated_metric": f"Estimated Hb range: {hb_band}",
             "risk_level": risk_level,
             "confidence_score": conf,
             "quality_assessment": quality_notes,
@@ -333,6 +341,14 @@ class DiagnosticScreeningEngine:
             "Pachak Agni santulit rakhein, paryapt matra mein paani piyein, aur taaza saattvik aahar lein."
         )
 
+        # Clinical range band for Serum Bilirubin
+        if "RISK" in risk_level:
+            bili_band = "Likely elevated (roughly > 2.5 mg/dL)"
+        elif "BORDERLINE" in risk_level:
+            bili_band = "Borderline elevated (roughly 1.2–2.5 mg/dL)"
+        else:
+            bili_band = "Likely normal (roughly < 1.2 mg/dL)"
+
         return {
             "screening_type": "JAUNDICE",
             "biomarker": "Scleral Icterus Index (YI / HSV Yellow-Shift)",
@@ -340,7 +356,7 @@ class DiagnosticScreeningEngine:
             "icterus_index": round(yellow_ratio, 4),
             "cutoff_threshold": self.jaundice_threshold,
             "roi_localization_method": loc_method,
-            "estimated_metric": f"Estimated Bilirubin: {estimated_bilirubin} mg/dL ({'Clinical Jaundice' if 'RISK' in risk_level else ('Subclinical' if 'BORDERLINE' in risk_level else 'Normal')})",
+            "estimated_metric": f"Estimated Bilirubin range: {bili_band}",
             "risk_level": risk_level,
             "confidence_score": conf,
             "quality_assessment": quality_notes,

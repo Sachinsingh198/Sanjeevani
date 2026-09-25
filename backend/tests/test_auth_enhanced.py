@@ -66,10 +66,18 @@ def test_registration_and_multi_identifier_login():
     pwd = "secretpassword123"
 
     # Clean up if existed
-    conn = get_db()
-    conn.execute("DELETE FROM users WHERE phone = ? OR LOWER(username) = ?", (unique_phone, unique_user))
-    conn.commit()
-    conn.close()
+    from app.db.session import get_db_connection
+    from app.db.schema import users_table
+    from sqlalchemy import or_, func
+    with get_db_connection() as conn:
+        conn.execute(
+            users_table.delete().where(
+                or_(
+                    users_table.c.phone == unique_phone,
+                    func.lower(users_table.c.username) == unique_user.lower()
+                )
+            )
+        )
 
     # Register
     reg_res = client.post("/auth/register", json={

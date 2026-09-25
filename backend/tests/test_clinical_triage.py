@@ -39,3 +39,35 @@ def test_green_tier_routine_cold(engine):
     narrative = "Mujhe do din se gale me kharash aur halka zukaam hai."
     tier, _ = engine.evaluate(narrative)
     assert tier == SeverityTier.GREEN
+
+def test_backend_and_frontend_red_patterns_sync():
+    """
+    FAILURE WARNING: If this test fails, backend RED_PATTERNS in
+    `app/core/clinical_lexicon.py` and frontend RED_PATTERNS in
+    `frontend/src/lib/localTriageFallback.js` have diverged!
+    If you add, rename, or change a Red-flag clinical category or pattern on one side,
+    you MUST mirror it on the other side to keep client-side and server-side safety in sync.
+    """
+    from app.core.clinical_lexicon import RED_PATTERNS as BACKEND_RED_PATTERNS
+    from pathlib import Path
+    import re
+
+    js_path = Path(__file__).resolve().parents[2] / "frontend" / "src" / "lib" / "localTriageFallback.js"
+    assert js_path.exists(), f"Frontend fallback file not found at {js_path}"
+
+    js_content = js_path.read_text(encoding="utf-8")
+
+    # Extract categories defined in JS RED_PATTERNS
+    match = re.search(r"export\s+const\s+RED_PATTERNS\s*=\s*\{([\s\S]*?)\n\};", js_content)
+    assert match, "Could not find RED_PATTERNS in localTriageFallback.js"
+
+    js_block = match.group(1)
+    js_categories = set(re.findall(r"(\w+)\s*:\s*\[", js_block))
+    backend_categories = set(BACKEND_RED_PATTERNS.keys())
+
+    diff = backend_categories.symmetric_difference(js_categories)
+    assert not diff, (
+        f"CRITICAL CLINICAL SAFETY MISMATCH: Backend and frontend RED_PATTERNS categories diverged! "
+        f"Difference: {diff}. If you add/change a category or regex on one side, "
+        f"you MUST mirror it on the other side."
+    )

@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy import select, insert, update, func
 from app.db import get_db_connection, patient_encounters_table, row_to_dict, rows_to_dicts
-from app.core.auth import get_optional_current_user
+from app.core.auth import require_role
 
 router = APIRouter(prefix="/asha", tags=["ASHA Field Operations"])
 
@@ -36,7 +36,7 @@ class SyncBatchResponse(BaseModel):
 @router.post("/sync-batch", response_model=SyncBatchResponse)
 def sync_batch_encounters(
     req: SyncBatchRequest,
-    user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
+    user: Dict[str, Any] = Depends(require_role("asha", "admin")),
 ):
     """
     Accepts a list of patient encounter objects from ASHA workers,
@@ -88,7 +88,7 @@ def sync_batch_encounters(
 @router.get("/encounters")
 def list_synced_encounters(
     limit: int = 100,
-    user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
+    user: Dict[str, Any] = Depends(require_role("asha", "admin")),
 ):
     """
     Returns recent patient encounters synced from ASHA workers in the field.

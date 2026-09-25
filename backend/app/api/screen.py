@@ -1,8 +1,9 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Request
 import numpy as np
 import cv2
 from app.cv.screening import DiagnosticScreeningEngine
 from app.schemas.vision_schemas import VisionScreenResponse
+from app.core.limiter import limiter
 
 router = APIRouter(prefix="/screen", tags=["Edge Diagnostics"])
 engine = DiagnosticScreeningEngine()
@@ -16,7 +17,8 @@ def _decode_image_file(contents: bytes) -> np.ndarray:
     return img
 
 @router.post("/anemia", response_model=VisionScreenResponse)
-async def screen_anemia(file: UploadFile = File(...)):
+@limiter.limit("30/minute")
+async def screen_anemia(request: Request, file: UploadFile = File(...)):
     """
     Evaluates conjunctival pallor via the CIELAB Erythema Index (EI = a* / L*).
     Estimates Hemoglobin (Hb g/dL) and generates annotated ROI overlay.
@@ -31,7 +33,8 @@ async def screen_anemia(file: UploadFile = File(...)):
     return VisionScreenResponse(**res)
 
 @router.post("/jaundice", response_model=VisionScreenResponse)
-async def screen_jaundice(file: UploadFile = File(...)):
+@limiter.limit("30/minute")
+async def screen_jaundice(request: Request, file: UploadFile = File(...)):
     """
     Evaluates scleral icterus in HSV color space & CIELAB b* yellow chromatic shift.
     Estimates Total Serum Bilirubin (mg/dL) and generates annotated ROI overlay.
@@ -46,7 +49,8 @@ async def screen_jaundice(file: UploadFile = File(...)):
     return VisionScreenResponse(**res)
 
 @router.post("/oral", response_model=VisionScreenResponse)
-async def screen_oral(file: UploadFile = File(...)):
+@limiter.limit("30/minute")
+async def screen_oral(request: Request, file: UploadFile = File(...)):
     """
     Screens oral cavity photos for mucosal hyperkeratosis (Leukoplakia / White Patches)
     and erythroplakia, vital for rural tobacco/gutkha screening.
@@ -61,7 +65,8 @@ async def screen_oral(file: UploadFile = File(...)):
     return VisionScreenResponse(**res)
 
 @router.post("/skin", response_model=VisionScreenResponse)
-async def screen_skin(file: UploadFile = File(...)):
+@limiter.limit("30/minute")
+async def screen_skin(request: Request, file: UploadFile = File(...)):
     """
     Screens dermatological photos for cutaneous erythema (inflammation),
     ringworm (Tinea fungal infection), and eczema lesions.

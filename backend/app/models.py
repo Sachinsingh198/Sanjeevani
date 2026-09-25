@@ -147,7 +147,12 @@ def create_tables():
 
 
 def seed_default_admin():
-    """Seeds default demo accounts for all three roles if they don't exist using SQLAlchemy Core."""
+    """Seeds default demo accounts for all three roles if they don't exist using SQLAlchemy Core (dev/test only)."""
+    from app.config import settings
+    if settings.APP_ENV.lower() == "production":
+        logger.info("[Auth] Production environment detected; skipping demo account reseeding.")
+        return
+
     from app.core.auth import hash_password
 
     demo_accounts = [

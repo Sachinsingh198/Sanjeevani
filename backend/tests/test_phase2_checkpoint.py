@@ -1,7 +1,10 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
-from app.models import get_db, create_tables, seed_default_admin
+from app.db.session import get_db_connection
+from app.db.schema import users_table, analytics_events_table
+from sqlalchemy import select, func
+from app.models import create_tables, seed_default_admin
 from app.core.auth import create_access_token
 from app.core.analytics import log_analytics_event, get_analytics_summary
 from app.core.limiter import limiter, rate_limit_bilingual_handler
@@ -16,23 +19,17 @@ client = TestClient(app)
 
 @pytest.fixture
 def admin_headers():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE role = 'admin' LIMIT 1")
-    row = cursor.fetchone()
-    conn.close()
-    admin_id = row[0] if row else 1
+    with get_db_connection() as conn:
+        row = conn.execute(select(users_table.c.id).where(users_table.c.role == "admin")).fetchone()
+        admin_id = row[0] if row else 1
     token = create_access_token({"sub": "admin", "role": "admin", "user_id": admin_id})
     return {"Authorization": f"Bearer {token}"}
 
 
 def test_chat_message_and_analytics_logging():
     """Hit /chat/message with a sample consultation and verify analytics event is logged with zero PII."""
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM analytics_events")
-    count_before = cursor.fetchone()[0]
-    conn.close()
+    with get_db_connection() as conn:
+        count_before = conn.execute(select(func.count()).select_from(analytics_events_table)).scalar() or 0
 
     # 1. Send normal chat message with valid ChatRequest schema -> 200
     resp = client.post("/chat/message", json={
@@ -42,16 +39,17 @@ def test_chat_message_and_analytics_logging():
     })
     assert resp.status_code == 200
 
-    # 2. Check SQLite: row appears in analytics_events with correct tier and language, NO PII
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM analytics_events")
-    count_after = cursor.fetchone()[0]
-    assert count_after > count_before
+    # 2. Check: row appears in analytics_events with correct tier and language, NO PII
+    with get_db_connection() as conn:
+        count_after = conn.execute(select(func.count()).select_from(analytics_events_table)).scalar() or 0
+        assert count_after > count_before
 
-    cursor.execute("SELECT event_type, tier, language FROM analytics_events ORDER BY id DESC LIMIT 1")
-    latest = cursor.fetchone()
-    conn.close()
+        stmt = select(
+            analytics_events_table.c.event_type,
+            analytics_events_table.c.tier,
+            analytics_events_table.c.language
+        ).order_by(analytics_events_table.c.id.desc()).limit(1)
+        latest = conn.execute(stmt).fetchone()
 
     assert latest is not None
     assert latest[0] in ["consultation_started", "emergency_escalated", "remedy_delivered"]
@@ -80,33 +78,33 @@ def test_admin_analytics_summary_endpoint(admin_headers):
 
 def test_analytics_event_schema_zero_pii():
     """Verify that analytics_events table contains strictly non-PII columns and no user text."""
-    conn = get_db()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("PRAGMA table_info(analytics_events)")
-        columns = [row[1] for row in cursor.fetchall()]
-        
-        # Verify schema
-        assert "id" in columns
-        assert "event_type" in columns
-        assert "tier" in columns
-        assert "language" in columns
-        assert "created_at" in columns
-        
-        # Verify forbidden PII columns are NOT present
-        forbidden_pii = ["name", "phone", "email", "query", "message", "symptoms", "ip_address"]
-        for col in forbidden_pii:
-            assert col not in columns, f"Forbidden PII column '{col}' found in analytics_events!"
-            
-        # Verify stored rows don't contain freeform medical text
-        cursor.execute("SELECT event_type, tier, language FROM analytics_events ORDER BY id DESC LIMIT 5")
-        rows = cursor.fetchall()
-        valid_tiers = {None, "red", "yellow", "green"}
-        for r in rows:
-            val = r[1].lower() if r[1] is not None else None
-            assert val in valid_tiers
-    finally:
-        conn.close()
+    columns = list(analytics_events_table.c.keys())
+
+    # Verify schema
+    assert "id" in columns
+    assert "event_type" in columns
+    assert "tier" in columns
+    assert "language" in columns
+    assert "created_at" in columns
+
+    # Verify forbidden PII columns are NOT present
+    forbidden_pii = ["name", "phone", "email", "query", "message", "symptoms", "ip_address"]
+    for col in forbidden_pii:
+        assert col not in columns, f"Forbidden PII column '{col}' found in analytics_events!"
+
+    # Verify stored rows don't contain freeform medical text
+    with get_db_connection() as conn:
+        stmt = select(
+            analytics_events_table.c.event_type,
+            analytics_events_table.c.tier,
+            analytics_events_table.c.language
+        ).order_by(analytics_events_table.c.id.desc()).limit(5)
+        rows = conn.execute(stmt).fetchall()
+
+    valid_tiers = {None, "red", "yellow", "green"}
+    for r in rows:
+        val = r[1].lower() if r[1] is not None else None
+        assert val in valid_tiers
 
 
 def test_rate_limiting_chat_bilingual_response():

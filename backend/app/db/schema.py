@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    MetaData, Table, Column, Integer, String, Text, DateTime, func, Index
+    MetaData, Table, Column, Integer, String, Text, DateTime, func, Index, text
 )
 from app.core.logger import logger
 
@@ -83,4 +83,17 @@ def create_all_tables(engine):
     Ensures safe schema alignment and creates supporting indexes.
     """
     metadata.create_all(engine)
+    if engine.dialect.name == "postgresql":
+        try:
+            with engine.begin() as conn:
+                for table_name in ["users", "otps", "analytics_events"]:
+                    conn.execute(text(f"""
+                        SELECT setval(
+                            pg_get_serial_sequence('{table_name}', 'id'),
+                            COALESCE((SELECT MAX(id) FROM {table_name}), 0) + 1,
+                            false
+                        )
+                    """))
+        except Exception as e:
+            logger.debug(f"[DB] Sequence sync note: {e}")
     logger.info("[DB] Verified all SQLAlchemy Core tables exist.")

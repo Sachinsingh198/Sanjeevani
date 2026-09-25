@@ -176,7 +176,7 @@ export default function AshaDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-mist dark:bg-mist text-primary dark:text-mist transition-colors duration-300">
+    <div className="min-h-screen bg-mist dark:bg-card text-primary transition-colors duration-300">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
 
         {/* ── Mode B Header Banner ────────────────────────────────────────── */}
@@ -246,7 +246,7 @@ export default function AshaDashboard() {
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2.5 text-rose-soft dark:text-rose-soft">
                 <ShieldAlert className="w-6 h-6 shrink-0" />
-                <h3 className="font-serif font-bold text-base sm:text-lg text-primary dark:text-mist">
+                <h3 className="font-serif font-bold text-base sm:text-lg text-primary">
                   Uttarakhand Emergency 108 Ambulance Dispatcher
                 </h3>
               </div>
@@ -274,7 +274,7 @@ export default function AshaDashboard() {
               </a>
               <button
                 onClick={handleCopySosDetails}
-                className="touch-target inline-flex items-center gap-2 bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary dark:text-mist px-5 py-3 rounded-2xl text-xs font-bold hover:bg-gray-100 transition-all shadow-xs"
+                className="touch-target inline-flex items-center gap-2 bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary px-5 py-3 rounded-2xl text-xs font-bold hover:bg-gray-100 transition-all shadow-xs"
               >
                 {copiedSos ? <Check className="w-4 h-4 text-sage" /> : <Copy className="w-4 h-4 text-muted" />}
                 <span>{copiedSos ? 'Copied!' : 'Copy Dispatch Notes'}</span>
@@ -293,7 +293,7 @@ export default function AshaDashboard() {
             {showAddForm && (
               <form onSubmit={handleAddPatient} className="bg-white dark:bg-warm-indigo rounded-3xl p-5 sm:p-7 border border-gold-warm/50 shadow-sm space-y-4 animate-fadeIn">
                 <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-                  <h3 className="font-serif font-bold text-base text-primary dark:text-mist flex items-center gap-2">
+                  <h3 className="font-serif font-bold text-base text-primary flex items-center gap-2">
                     <UserPlus className="w-4 h-4 text-gold-warm" /> Naya Field Record (New Patient Encounter)
                   </h3>
                   <span className={`text-xs font-bold px-3 py-1 rounded-full text-white ${
@@ -305,32 +305,32 @@ export default function AshaDashboard() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                   <div>
-                    <label className="text-[11px] font-bold uppercase text-primary dark:text-mist mb-1.5 block">Marij Ka Naam *</label>
+                    <label className="text-[11px] font-bold uppercase text-primary mb-1.5 block">Marij Ka Naam *</label>
                     <input
                       type="text"
                       value={newPatient.name}
                       onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })}
                       placeholder="Jaise: Kamala Rawat"
                       required
-                      className="w-full bg-gray-50 dark:bg-mist text-primary dark:text-mist border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sage"
+                      className="w-full bg-gray-50 dark:bg-card text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sage"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold uppercase text-primary dark:text-mist mb-1.5 block">Gaon / Ward</label>
+                    <label className="text-[11px] font-bold uppercase text-primary mb-1.5 block">Gaon / Ward</label>
                     <input
                       type="text"
                       value={newPatient.village}
                       onChange={(e) => setNewPatient({ ...newPatient, village: e.target.value })}
                       placeholder={user?.village || "Mandal / Ward 3"}
-                      className="w-full bg-gray-50 dark:bg-mist text-primary dark:text-mist border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sage"
+                      className="w-full bg-gray-50 dark:bg-card text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sage"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold uppercase text-primary dark:text-mist mb-1.5 block">Triage Tier</label>
+                    <label className="text-[11px] font-bold uppercase text-primary mb-1.5 block">Triage Tier</label>
                     <select
                       value={newPatient.tier}
                       onChange={(e) => setNewPatient({ ...newPatient, tier: e.target.value })}
-                      className="w-full bg-gray-50 dark:bg-mist text-primary dark:text-mist border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sage"
+                      className="w-full bg-gray-50 dark:bg-card text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sage"
                     >
                       <option value="Green">Green (Gharelu Upchar / Samanya)</option>
                       <option value="Yellow">Yellow (PHC Doctor Review)</option>
@@ -354,7 +354,7 @@ export default function AshaDashboard() {
                         value={newPatient.spo2}
                         onChange={(e) => updateVitalsAndAutoTier('spo2', e.target.value)}
                         placeholder="e.g. 96"
-                        className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-primary dark:text-mist"
+                        className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-primary"
                       />
                     </div>
                     <div>
@@ -367,7 +367,7 @@ export default function AshaDashboard() {
                         value={newPatient.temp}
                         onChange={(e) => updateVitalsAndAutoTier('temp', e.target.value)}
                         placeholder="e.g. 99.2"
-                        className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-primary dark:text-mist"
+                        className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-primary"
                       />
                     </div>
                     <div>
@@ -379,21 +379,21 @@ export default function AshaDashboard() {
                         value={newPatient.pulse}
                         onChange={(e) => setNewPatient({ ...newPatient, pulse: e.target.value })}
                         placeholder="e.g. 78"
-                        className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-primary dark:text-mist"
+                        className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-primary"
                       />
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold uppercase text-primary dark:text-mist mb-1.5 block">Takleef / Lakshan (Chief Complaint) *</label>
+                  <label className="text-[11px] font-bold uppercase text-primary mb-1.5 block">Takleef / Lakshan (Chief Complaint) *</label>
                   <textarea
                     value={newPatient.symptom}
                     onChange={(e) => setNewPatient({ ...newPatient, symptom: e.target.value })}
                     placeholder="Jaise: 3 din se tez bukhar hai, sharir dard aur thand lagna"
                     rows={2}
                     required
-                    className="w-full bg-gray-50 dark:bg-mist text-primary dark:text-mist border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sage"
+                    className="w-full bg-gray-50 dark:bg-card text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sage"
                   />
                 </div>
 
@@ -410,7 +410,7 @@ export default function AshaDashboard() {
                       type="button"
                       key={s}
                       onClick={() => setNewPatient((prev) => ({ ...prev, symptom: prev.symptom ? `${prev.symptom}, ${s}` : s }))}
-                      className="touch-target text-xs bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-sage/15 text-primary dark:text-mist px-3.5 py-1.5 rounded-full transition-colors"
+                      className="touch-target text-xs bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-sage/15 text-primary px-3.5 py-1.5 rounded-full transition-colors"
                     >
                       + {s}
                     </button>
@@ -440,9 +440,16 @@ export default function AshaDashboard() {
             <div className="bg-white dark:bg-warm-indigo rounded-3xl shadow-sm border border-gray-200/80 dark:border-gray-800 overflow-hidden">
               <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3 bg-gray-50/60 dark:bg-card">
                 <div>
-                  <h3 className="font-serif font-bold text-base sm:text-lg text-primary dark:text-mist">
-                    Offline Field Log ({filteredPatients.length} of {offlineQueue.length})
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-serif font-bold text-base sm:text-lg text-primary">
+                      Offline Field Log ({filteredPatients.length} of {offlineQueue.length})
+                    </h3>
+                    {offlineQueue === DEFAULT_PATIENTS && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300">
+                        Sample data — connect backend for live numbers
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[11px] text-muted dark:text-muted">Auto-persisted to local browser storage</span>
                 </div>
 
@@ -454,14 +461,14 @@ export default function AshaDashboard() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Naam ya gaon..."
-                      className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 rounded-2xl pl-9 pr-3.5 py-2 text-xs text-primary dark:text-mist focus:outline-none focus:ring-2 focus:ring-sage w-36 sm:w-48"
+                      className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 rounded-2xl pl-9 pr-3.5 py-2 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-sage w-36 sm:w-48"
                     />
                   </div>
 
                   <select
                     value={tierFilter}
                     onChange={(e) => setTierFilter(e.target.value)}
-                    className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary dark:text-mist rounded-2xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sage"
+                    className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary rounded-2xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sage"
                   >
                     <option value="all">Sabhi Tiers</option>
                     <option value="needsFollowUp">Follow-Up Chahiye</option>
@@ -488,7 +495,7 @@ export default function AshaDashboard() {
                           {patient.name.charAt(0)}
                         </div>
                         <div>
-                          <div className="font-bold text-primary dark:text-mist text-sm sm:text-base flex items-center gap-2">
+                          <div className="font-bold text-primary text-sm sm:text-base flex items-center gap-2">
                             {patient.name}
                             <span className="text-xs font-normal text-muted dark:text-muted">• {patient.village}</span>
                             {patient.followedUp && (
@@ -498,13 +505,13 @@ export default function AshaDashboard() {
                             )}
                           </div>
                           <div className="text-xs text-muted dark:text-muted mt-0.5">
-                            Lakshan: <span className="font-medium text-primary dark:text-mist">{patient.symptom}</span>
+                            Lakshan: <span className="font-medium text-primary">{patient.symptom}</span>
                           </div>
                           {patient.vitals && (
                             <div className="flex items-center gap-3 text-[11px] text-muted dark:text-muted mt-1 font-mono">
-                              {patient.vitals.spo2 !== '--' && <span>SpO2: <b className="text-primary dark:text-mist">{patient.vitals.spo2}%</b></span>}
-                              {patient.vitals.temp !== '--' && <span>Temp: <b className="text-primary dark:text-mist">{patient.vitals.temp}°F</b></span>}
-                              {patient.vitals.pulse !== '--' && <span>Pulse: <b className="text-primary dark:text-mist">{patient.vitals.pulse} bpm</b></span>}
+                              {patient.vitals.spo2 !== '--' && <span>SpO2: <b className="text-primary">{patient.vitals.spo2}%</b></span>}
+                              {patient.vitals.temp !== '--' && <span>Temp: <b className="text-primary">{patient.vitals.temp}°F</b></span>}
+                              {patient.vitals.pulse !== '--' && <span>Pulse: <b className="text-primary">{patient.vitals.pulse} bpm</b></span>}
                             </div>
                           )}
                         </div>
@@ -545,7 +552,7 @@ export default function AshaDashboard() {
             <div className="bg-white dark:bg-warm-indigo rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-xs space-y-3">
               <div className="flex items-center gap-2">
                 <Leaf className="w-4 h-4 text-sage" />
-                <h4 className="font-serif font-bold text-sm text-primary dark:text-mist">
+                <h4 className="font-serif font-bold text-sm text-primary">
                   Offline Field Triage Protocol
                 </h4>
               </div>

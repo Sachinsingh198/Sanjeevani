@@ -12,7 +12,20 @@ def setup_database():
 
 
 def test_chat_message_indexes_and_history_retrieval():
+    from app.core.auth import create_access_token
+    from app.models import seed_default_admin
+    from app.db.session import get_db_connection
+    from app.db.schema import users_table
+    from sqlalchemy import select
+
+    seed_default_admin()
+    with get_db_connection() as conn:
+        row = conn.execute(select(users_table.c.id).where(users_table.c.role == "patient")).fetchone()
+        patient_id = row[0] if row else 3
+
     conv_id = f"test-hist-{int(__import__('time').time())}"
+    token = create_access_token({"user_id": patient_id, "role": "patient"})
+    auth_headers = {"Authorization": f"Bearer {token}"}
 
     # Send a message to /chat/message
     resp = client.post("/chat/message", json={
@@ -20,13 +33,13 @@ def test_chat_message_indexes_and_history_retrieval():
         "message": "Mujhe 2 din se halka bukhar hai",
         "language_hint": "hindi",
         "patient_context": {"known_conditions": []}
-    })
+    }, headers=auth_headers)
     assert resp.status_code == 200
     res_data = resp.json()
     assert res_data["conversation_id"] == conv_id
 
-    # Check that it appears in GET /chat/history
-    hist_resp = client.get("/chat/history")
+    # Check that it appears in GET /chat/history for the authenticated user
+    hist_resp = client.get("/chat/history", headers=auth_headers)
     assert hist_resp.status_code == 200
     history = hist_resp.json()
     assert isinstance(history, list)

@@ -6,10 +6,10 @@ import {
   Sparkles, Heart, PhoneCall, BookOpen, ShieldAlert,
   ArrowLeft, MessageSquare, Home,
 } from 'lucide-react';
-import axios from 'axios';
 import { speakCue } from '../lib/audioSynthesizer';
 import toast from 'react-hot-toast';
 import StructuredBotMessage from '../components/StructuredBotMessage';
+import { getStories, getDailyThought, sendCompanionMessage } from '../api/companionClient';
 
 /* ── Mood options ───────────────────────────────────────────────────────── */
 const MOOD_OPTIONS = [
@@ -78,8 +78,8 @@ export default function Companion() {
   }, [inputText]);
 
   useEffect(() => {
-    axios.get('/api/companion/stories')
-      .then((res) => { if (res.data?.stories) setStories(res.data.stories); })
+    getStories()
+      .then((data) => { if (data?.stories) setStories(data.stories); })
       .catch(() => setStories([
         {
           id: 'story-1', title: 'Chidiyan Aur Shivram Dada Ki Dosti', duration: '3 min',
@@ -94,12 +94,12 @@ export default function Companion() {
         {
           id: 'story-3', title: 'Badrinath Ki Teetli', duration: '5 min',
           summary: 'Ek choti teetli ki yatra jo Badrinath tak pahunchi aur sabko khushiyaan di.',
-          text: 'Badrinath ke paas ek rang birangi teetli rehti thi. Woh roz mandir ke charon taraf udti aur apni taraf se phoolon ka uphar chadhaati. Prakriti ki yeh chhoti si baat bahut badi khushi de sakti hai.',
+          text: 'Badrinath ke paas ek rang birangi teetli rehti thi. Woh roz mandir ke charon taraf udti aur apni taraf se phoolon ka uphar chadhaati. Prakriti ki yeh chhoti si बात bahut badi khushi de sakti hai.',
         },
       ]));
 
-    axios.get('/api/companion/daily-thought')
-      .then((res) => { if (res.data?.thought) setDailyThought(res.data.thought); })
+    getDailyThought()
+      .then((data) => { if (data?.thought) setDailyThought(data.thought); })
       .catch(() => setDailyThought({
         quote: 'Aap akele bilkul nahi hain — pahaadon ki shanti aur hamara sneh hamesha aapke sath hai.',
         author: 'Sanjeevani Saathi',
@@ -158,18 +158,18 @@ export default function Companion() {
       const historyTurns = messages.slice(-6).map((m) => ({
         role: m.sender === 'user' ? 'user' : 'assistant', text: m.text,
       }));
-      const res = await axios.post('/api/companion/chat', {
+      const resData = await sendCompanionMessage({
         message: text,
         user_name: user?.name || 'Aadarniya Mitra',
         language: 'hindi',
         mood: overrideMood,
         history: historyTurns,
       });
-      const replyText = res.data.reply;
+      const replyText = resData.reply;
       setMessages((prev) => [...prev, {
         sender: 'companion', text: replyText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        emergency: res.data.emergency_triggered,
+        emergency: resData.emergency_triggered,
       }]);
       if (autoSpeak) speakCue(replyText, 'hi-IN');
     } catch {
@@ -191,14 +191,14 @@ export default function Companion() {
 
   /* ── RENDER ─────────────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-mist dark:bg-mist text-primary dark:text-mist pb-20 transition-colors duration-300">
+    <div className="min-h-screen bg-mist dark:bg-card text-primary pb-20 transition-colors duration-300">
 
       {/* ── Page Header ──────────────────────────────────────────────── */}
       <div className="bg-gradient-to-b from-gold-warm/20 via-white/80 dark:via-card to-transparent border-b border-gray-200/60 dark:border-gray-800 pt-8 pb-6 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto">
           <Link
-            to="/patient"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-muted dark:text-muted hover:text-primary dark:hover:text-mist mb-4 transition-colors"
+            to="/mitra"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-muted dark:text-muted hover:text-primary mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Mitra Dashboard Par Wapas</span>
@@ -210,7 +210,7 @@ export default function Companion() {
                 <HeartHandshake className="w-3.5 h-3.5" />
                 <span>Apno Sa Saathi</span>
               </div>
-              <h1 className="font-serif text-2xl md:text-3xl font-bold text-primary dark:text-mist">
+              <h1 className="font-serif text-2xl md:text-3xl font-bold text-primary">
                 संजीवनी साथी 🤝
               </h1>
               <p className="text-xs text-muted dark:text-muted mt-1">
@@ -254,12 +254,12 @@ export default function Companion() {
                 className={`flex-1 flex flex-col items-center gap-1 py-3.5 transition-all relative ${
                   active
                     ? 'text-gold-warm dark:text-gold-warm'
-                    : 'text-muted dark:text-muted hover:text-primary dark:hover:text-mist'
+                    : 'text-muted dark:text-muted hover:text-primary'
                 }`}
               >
                 <span className="text-2xl leading-none">{tab.icon}</span>
                 <span className="text-[10px] font-bold tracking-wide">{tab.label}</span>
-                <span className="text-[9px] text-gray-400 dark:text-gray-600">{tab.sub}</span>
+                <span className="text-[9px] text-gray-500 dark:text-gray-400">{tab.sub}</span>
                 {active && (
                   <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-gold-warm rounded-full" />
                 )}
@@ -287,7 +287,7 @@ export default function Companion() {
                   </div>
                   <div>
                     <p className="text-[10px] font-bold uppercase text-gold-warm dark:text-gold-warm mb-1">Aaj Ka Sandesh</p>
-                    <p className="font-serif italic text-sm text-primary dark:text-mist leading-relaxed">
+                    <p className="font-serif italic text-sm text-primary leading-relaxed">
                       "{dailyThought.quote}"
                     </p>
                     <p className="text-[11px] text-muted dark:text-muted mt-1">
@@ -310,7 +310,7 @@ export default function Companion() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="font-serif text-lg font-bold text-primary dark:text-mist flex items-center gap-2">
+                  <h2 className="font-serif text-lg font-bold text-primary flex items-center gap-2">
                     <Heart className="w-5 h-5 text-rose-soft" />
                     Aaj Mann Kaisa Hai?
                   </h2>
@@ -339,7 +339,7 @@ export default function Companion() {
                       }`}
                     >
                       <span className="text-3xl sm:text-4xl">{mood.icon}</span>
-                      <span className="text-[10px] sm:text-xs font-bold text-center text-primary dark:text-mist leading-tight">{mood.sub}</span>
+                      <span className="text-[10px] sm:text-xs font-bold text-center text-primary leading-tight">{mood.sub}</span>
                     </button>
                   );
                 })}
@@ -349,7 +349,7 @@ export default function Companion() {
             {/* Quick Prompt Tiles — Big 4-tile grid */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-serif text-lg font-bold text-primary dark:text-mist">
+                <h2 className="font-serif text-lg font-bold text-primary">
                   💬 Jaldi Baat Karein
                 </h2>
                 <button
@@ -368,7 +368,7 @@ export default function Companion() {
                   >
                     <span className="text-4xl">{qp.icon}</span>
                     <div>
-                      <p className="font-bold text-sm text-primary dark:text-mist">{qp.label}</p>
+                      <p className="font-bold text-sm text-primary">{qp.label}</p>
                       <p className="text-xs text-muted dark:text-muted">{qp.sub}</p>
                     </div>
                   </button>
@@ -401,7 +401,7 @@ export default function Companion() {
                     🤝
                   </div>
                   <div>
-                    <h4 className="font-serif font-bold text-sm text-primary dark:text-mist">
+                    <h4 className="font-serif font-bold text-sm text-primary">
                       Sanjeevani Saathi
                     </h4>
                     <p className="text-[10px] text-muted dark:text-muted flex items-center gap-1.5 mt-0.5">
@@ -440,7 +440,7 @@ export default function Companion() {
                         className={`max-w-[80%] sm:max-w-[72%] rounded-3xl p-4 shadow-xs relative ${
                           isUser
                             ? 'bg-sage text-white rounded-br-none'
-                            : 'bg-sand dark:bg-sand text-primary dark:text-mist border border-gray-200/80 dark:border-gray-700/80 rounded-bl-none'
+                            : 'bg-sand dark:bg-sand text-primary border border-gray-200/80 dark:border-gray-700/80 rounded-bl-none'
                         }`}
                       >
                         {!isUser && (
@@ -518,7 +518,7 @@ export default function Companion() {
                       }
                     }}
                     placeholder={isListening ? 'Sun raha hoon...' : 'Ya yahan likhein... (Shift+Enter for new line)'}
-                    className="flex-1 bg-gray-50 dark:bg-mist border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-primary dark:text-mist focus:outline-none focus:ring-2 focus:ring-gold-warm resize-none overflow-y-auto leading-relaxed transition-[height] duration-75"
+                    className="flex-1 bg-gray-50 dark:bg-card border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-primary focus:outline-none focus:ring-2 focus:ring-gold-warm resize-none overflow-y-auto leading-relaxed transition-[height] duration-75"
                   />
                   <button
                     type="submit"
@@ -542,7 +542,7 @@ export default function Companion() {
           <div className="space-y-5 animate-fadeIn">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="font-serif text-xl font-bold text-primary dark:text-mist flex items-center gap-2">
+                <h2 className="font-serif text-xl font-bold text-primary flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-sage" />
                   Pahadi Kisse 📖
                 </h2>
@@ -576,7 +576,7 @@ export default function Companion() {
                         </span>
                         <span className="text-[10px] text-muted dark:text-muted">⏱ {story.duration}</span>
                       </div>
-                      <h3 className="font-serif font-bold text-base text-primary dark:text-mist leading-tight">
+                      <h3 className="font-serif font-bold text-base text-primary leading-tight">
                         {story.title}
                       </h3>
                       <p className="text-xs text-muted dark:text-muted mt-1 leading-relaxed line-clamp-2">
@@ -588,7 +588,7 @@ export default function Companion() {
 
                 {/* Story text preview */}
                 <div className="p-5 space-y-4">
-                  <p className="text-xs sm:text-sm text-primary dark:text-mist leading-relaxed font-serif italic border-l-4 border-gold-warm/40 pl-4">
+                  <p className="text-xs sm:text-sm text-primary leading-relaxed font-serif italic border-l-4 border-gold-warm/40 pl-4">
                     {story.text}
                   </p>
 
@@ -622,7 +622,7 @@ export default function Companion() {
           <div className="space-y-5 animate-fadeIn">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="font-serif text-xl font-bold text-primary dark:text-mist flex items-center gap-2">
+                <h2 className="font-serif text-xl font-bold text-primary flex items-center gap-2">
                   <ShieldAlert className="w-5 h-5 text-rose-soft" />
                   Madad & Sahara 🆘
                 </h2>
@@ -667,7 +667,7 @@ export default function Companion() {
 
             {/* Self-Care Reminder */}
             <div className="bg-white dark:bg-warm-indigo rounded-3xl p-5 border border-gray-200 dark:border-gray-800 space-y-4">
-              <h3 className="font-serif font-bold text-base text-primary dark:text-mist flex items-center gap-2">
+              <h3 className="font-serif font-bold text-base text-primary flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-gold-warm" />
                 Apna Khyaal Rakhein 💛
               </h3>
@@ -686,7 +686,7 @@ export default function Companion() {
                     className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-mist dark:bg-card hover:bg-gold-warm/10 border border-gray-200 dark:border-gray-700 transition-all active:scale-95 text-center"
                   >
                     <span className="text-3xl">{tip.icon}</span>
-                    <span className="text-xs font-bold text-primary dark:text-mist">{tip.label}</span>
+                    <span className="text-xs font-bold text-primary">{tip.label}</span>
                     <span className="text-[10px] text-muted dark:text-muted">{tip.sub}</span>
                     <span className="text-[9px] text-gold-warm font-bold">🔊 Tap karein</span>
                   </button>

@@ -157,6 +157,7 @@ async def process_chat_message(
             detected_language=result.get("detected_language", "hindi"),
             audio_base64=audio_b64,
             audio_format=audio_fmt,
+            consultation_summary=result.get("consultation_summary"),
         )
 
     except Exception as e:
@@ -185,12 +186,10 @@ def list_consultations(
             .limit(limit)
         )
         if user:
-            stmt = stmt.where(
-                or_(
-                    conversation_index_table.c.user_id == user["id"],
-                    conversation_index_table.c.user_id.is_(None)
-                )
-            )
+            stmt = stmt.where(conversation_index_table.c.user_id == user["id"])
+        else:
+            # Unauthenticated callers should not list anyone's conversations
+            return []
         rows = conn.execute(stmt).fetchall()
         return rows_to_dicts(rows)
 

@@ -168,8 +168,8 @@ async def register_user(req: RegisterRequest):
     if not req.name or len(req.name.strip()) < 2:
         raise HTTPException(status_code=400, detail="Kripya apna pura naam darz karein (kam se kam 2 akshar).")
 
-    if not req.password or len(req.password.strip()) < 4:
-        raise HTTPException(status_code=400, detail="Password kam se kam 4 aksharon ka hona chahiye.")
+    if not req.password or len(req.password.strip()) < 6:
+        raise HTTPException(status_code=400, detail="Password kam se kam 6 aksharon ka hona chahiye.")
 
     norm_phone = validate_mobile_number(req.phone)
 
@@ -470,8 +470,8 @@ async def reset_password_with_otp(req: ResetPasswordWithOtpRequest):
     """
     Resets the user's password using a verified OTP.
     """
-    if not req.new_password or len(req.new_password.strip()) < 4:
-        raise HTTPException(status_code=400, detail="Naya password kam se kam 4 aksharon ka hona chahiye.")
+    if not req.new_password or len(req.new_password.strip()) < 6:
+        raise HTTPException(status_code=400, detail="Naya password kam se kam 6 aksharon ka hona chahiye.")
 
     raw_target = req.target.strip()
     norm_target = raw_target.lower() if "@" in raw_target else re.sub(r"[^\d]", "", raw_target)[-10:]

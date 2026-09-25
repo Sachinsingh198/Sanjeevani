@@ -1,8 +1,9 @@
 from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from app.agents.nodes.responder_node import get_llm, _try_llm
 from langchain_core.messages import SystemMessage, HumanMessage
+from app.core.limiter import limiter
 
 router = APIRouter(prefix="/companion", tags=["Village Companion (Sanjeevani Saathi)"])
 
@@ -133,7 +134,8 @@ DAILY_BLESSINGS = [
 
 
 @router.post("/chat", response_model=CompanionMessageResponse)
-async def companion_chat(req: CompanionMessageRequest):
+@limiter.limit("30/minute")
+async def companion_chat(request: Request, req: CompanionMessageRequest):
     """
     Heart-to-heart companion conversation with emotional validation for lonely villagers and elders.
     """

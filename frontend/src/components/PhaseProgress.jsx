@@ -8,22 +8,26 @@ import { MessageCircle, Stethoscope, Search, CheckCircle2 } from 'lucide-react';
  */
 const PHASES = [
   { key: 'GREETING', label: 'Welcome', icon: MessageCircle },
-  { key: 'INTAKE', label: 'Symptoms', icon: Stethoscope },
-  { key: 'PROBING', label: 'Assessment', icon: Search },
+  { key: 'CONSULTATION_EARLY', label: 'Symptoms', icon: Stethoscope },
+  { key: 'CONSULTATION_LATE', label: 'Assessment', icon: Search },
   { key: 'CONCLUDED', label: 'Remedy', icon: CheckCircle2 },
 ];
 
-export default function PhaseProgress({ currentPhase }) {
-  const phaseToStep = {
-    GREETING: 0,
-    INTAKE: 1,
-    PROBING: 2,
-    CONCLUDED: 3,
-    EMERGENCY: 3,
-    GUARDRAIL_BLOCKED: 0,
-  };
+export default function PhaseProgress({ currentPhase, turnCount = 0 }) {
+  let currentStep = 0;
 
-  const currentStep = phaseToStep[currentPhase] ?? 0;
+  if (currentPhase === 'CONCLUDED' || currentPhase === 'EMERGENCY') {
+    currentStep = 3;
+  } else if (currentPhase === 'CONSULTATION') {
+    // turnCount >= 2 moves from Symptoms intake to Assessment probing
+    currentStep = turnCount >= 2 ? 2 : 1;
+  } else if (currentPhase === 'INTAKE') {
+    currentStep = 1;
+  } else if (currentPhase === 'PROBING') {
+    currentStep = 2;
+  } else {
+    currentStep = 0; // GREETING, GUARDRAIL_BLOCKED
+  }
 
   return (
     <div className="flex items-center w-full px-1 py-2">
@@ -47,7 +51,7 @@ export default function PhaseProgress({ currentPhase }) {
                 <Icon className="w-3.5 h-3.5" />
               </div>
               <span
-                className={`text-[9px] font-semibold uppercase tracking-wide transition-colors duration-300
+                className={`text-xs font-bold uppercase tracking-wide transition-colors duration-300
                   ${isDone ? 'text-sage' : ''}
                   ${isActive ? 'text-warm-indigo' : ''}
                   ${isFuture ? 'text-gray-400' : ''}

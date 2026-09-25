@@ -6,7 +6,7 @@ from datetime import datetime
 class RegisterRequest(BaseModel):
     name: str
     phone: str
-    password: str
+    password: str = Field(..., min_length=6, description="Password (at least 6 characters)")
     username: Optional[str] = None
     email: Optional[str] = None
     role: str = "patient"
@@ -39,7 +39,7 @@ class LoginResponse(BaseModel):
 class ResetPasswordRequest(BaseModel):
     phone: Optional[str] = None
     identifier: Optional[str] = None
-    new_password: str
+    new_password: str = Field(..., min_length=6, description="New password")
 
 
 class CheckUsernameResponse(BaseModel):

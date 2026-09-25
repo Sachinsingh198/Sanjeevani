@@ -19,6 +19,8 @@ export default function Screening() {
   const [showAnnotated, setShowAnnotated] = useState(true);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
+  const [isDemoSample, setIsDemoSample] = useState(false);
+  const [screeningError, setScreeningError] = useState(null);
 
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -125,6 +127,7 @@ export default function Screening() {
       if (blob) {
         setSelectedFile(blob);
         setSelectedImage(URL.createObjectURL(blob));
+        setIsDemoSample(false);
         setResult(null);
         setActiveStep(2);
         stopCamera();
@@ -139,6 +142,7 @@ export default function Screening() {
       stopCamera();
       setSelectedFile(file);
       setSelectedImage(URL.createObjectURL(file));
+      setIsDemoSample(false);
       setResult(null);
       setActiveStep(2);
       toast.success('Tasveer safalta-purvak chuni gayi');
@@ -203,6 +207,7 @@ export default function Screening() {
       if (blob) {
         setSelectedFile(blob);
         setSelectedImage(URL.createObjectURL(blob));
+        setIsDemoSample(true);
         setResult(null);
         setActiveStep(2);
         toast.success(`Namuna tasveer (${modalities[screeningType].title}) load hui`);
@@ -228,6 +233,7 @@ export default function Screening() {
     }
 
     setLoading(true);
+    setScreeningError(null);
     setActiveStep(2);
 
     try {
@@ -237,7 +243,17 @@ export default function Screening() {
         fileToSend = await res.blob();
       }
 
-      const data = await runEdgeDiagnosticScreening(screeningType, fileToSend);
+      // Enforce client-side timeout (~20s) distinct from generic axios timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('TIMEOUT: OpenCV Biomarker Jaanch mein 20 second se zyada samay laga. Server ya network slow ho sakta hai.'));
+        }, 20000);
+      });
+
+      const data = await Promise.race([
+        runEdgeDiagnosticScreening(screeningType, fileToSend),
+        timeoutPromise
+      ]);
 
       setResult({
         type: data.screening_type === 'ANEMIA'
@@ -259,6 +275,7 @@ export default function Screening() {
         annotated_image: data.annotated_image_base64,
         fhir_report: data.abdm_fhir_report,
         roi_localization_method: data.roi_localization_method || 'estimated',
+        is_demo: isDemoSample,
         source: 'backend_cv',
       });
 
@@ -267,7 +284,30 @@ export default function Screening() {
       toast.success('OpenCV AI Jaanch safalta-purvak poori hui');
     } catch (err) {
       console.error('Screening execution error:', err);
-      toast.error('Jaanch mein samasya aayi. Kripya tasveer dobara check karein.');
+      const isTimeout = err?.message?.includes('TIMEOUT');
+      const errorMsg = isTimeout
+        ? 'AI Jaanch timeout (20s) ho gayi. Kripya punah prayas karein.'
+        : (err?.response?.data?.detail || err?.message || 'Jaanch mein samasya aayi. Kripya tasveer dobara check karein.');
+      setScreeningError(errorMsg);
+
+      toast.error(
+        (t) => (
+          <div className="flex items-center justify-between gap-3 text-xs">
+            <span className="line-clamp-2">{errorMsg}</span>
+            <button
+              type="button"
+              onClick={() => {
+                toast.dismiss(t.id);
+                handleRunScreening();
+              }}
+              className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shrink-0 cursor-pointer shadow-xs"
+            >
+              Try Again
+            </button>
+          </div>
+        ),
+        { duration: 8000 }
+      );
     } finally {
       setLoading(false);
     }
@@ -277,13 +317,15 @@ export default function Screening() {
     stopCamera();
     setSelectedFile(null);
     setSelectedImage(null);
+    setIsDemoSample(false);
     setResult(null);
+    setScreeningError(null);
     setActiveStep(1);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-primary dark:text-mist">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-primary">
       
       {/* ── Header ────────────────────────────────────────────── */}
       <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
@@ -291,7 +333,7 @@ export default function Screening() {
           <Eye className="w-4 h-4 text-gold-warm" />
           <span>Netra & Mukh Edge Jaanch • Non-Invasive Diagnostics</span>
         </div>
-        <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-primary dark:text-mist leading-tight">
+        <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-primary leading-tight">
           Pahadi Kshetra Digital Swasthya Jaanch
         </h1>
         <p className="text-xs sm:text-sm text-muted dark:text-muted mt-2 leading-relaxed">
@@ -353,7 +395,7 @@ export default function Screening() {
                     ? 'bg-sage text-white shadow-xs'
                     : isCompleted
                     ? 'bg-sage/15 text-sage dark:text-booti-glow'
-                    : 'text-gray-400 dark:text-gray-500'
+                    : 'text-gray-400 dark:text-gray-400'
                 }`}
               >
                 <div className="font-bold leading-tight">{stage.label}</div>
@@ -373,7 +415,7 @@ export default function Screening() {
           {/* Section Heading & Audio Guide */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-primary dark:text-mist">
+              <h2 className="text-sm sm:text-base font-bold text-primary">
                 {modalities[screeningType].title}
               </h2>
               <p className="text-xs text-muted dark:text-muted">
@@ -391,7 +433,7 @@ export default function Screening() {
           </div>
 
           {/* Interactive Capture Frame / Dropzone */}
-          <div className="border-2 border-dashed border-sage/30 dark:border-gray-700 rounded-3xl p-4 text-center relative bg-mist/40 dark:bg-mist/40 overflow-hidden min-h-[260px] flex flex-col items-center justify-center">
+          <div className="border-2 border-dashed border-sage/30 dark:border-gray-700 rounded-3xl p-4 text-center relative bg-mist/40 dark:bg-warm-indigo/40 overflow-hidden min-h-[260px] flex flex-col items-center justify-center">
             
             {/* Live Camera View */}
             {isCameraActive ? (
@@ -501,7 +543,7 @@ export default function Screening() {
                   <Camera className="w-8 h-8" />
                 </div>
                 <div>
-                  <span className="text-sm sm:text-base font-bold text-primary dark:text-mist block">
+                  <span className="text-sm sm:text-base font-bold text-primary block">
                     Tasveer Upload Karein Ya Camera Se Kheinchein
                   </span>
                   <span className="text-xs text-muted dark:text-muted mt-1 block max-w-sm mx-auto">
@@ -525,7 +567,7 @@ export default function Screening() {
                   <button
                     type="button"
                     onClick={startCamera}
-                    className="touch-target px-4 py-2.5 bg-white dark:bg-mist border border-sage/30 text-sage dark:text-booti-glow rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-sage/10 transition-all"
+                    className="touch-target px-4 py-2.5 bg-white dark:bg-card border border-sage/30 text-sage dark:text-booti-glow rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-sage/10 transition-all"
                   >
                     <Camera className="w-4 h-4" />
                     <span>Live Camera Kholein</span>
@@ -546,7 +588,7 @@ export default function Screening() {
 
           {/* Clinical Photography Instructions */}
           <div className="bg-mist dark:bg-card p-4 rounded-2xl border border-sage/15 dark:border-gray-800 text-xs space-y-1.5 text-muted dark:text-muted">
-            <div className="flex items-center gap-1.5 font-bold text-primary dark:text-mist">
+            <div className="flex items-center gap-1.5 font-bold text-primary">
               <Info className="w-4 h-4 text-sage" />
               <span>Sahi Tasveer Lene Ke Niyam ({modalities[screeningType].title}):</span>
             </div>
@@ -573,6 +615,29 @@ export default function Screening() {
         <div className="lg:col-span-5 bg-white dark:bg-warm-indigo p-5 sm:p-7 rounded-3xl shadow-sm border border-sage/20 dark:border-gray-800 space-y-5">
           {result ? (
             <div className="space-y-5 animate-fadeIn">
+
+              {/* Prominent Simulated Demo Data Warning */}
+              {result.is_demo && (
+                <div className="p-3.5 rounded-2xl bg-red-600/15 border-2 border-red-500 text-red-800 dark:text-red-200 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm animate-pulse">
+                  <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+                  <span>DEMO / SIMULATED DATA — not a real screening</span>
+                </div>
+              )}
+
+              {/* Prominent Warning Banner for Estimated ROI */}
+              {result.roi_localization_method === 'estimated' && (
+                <div className="p-4 rounded-2xl bg-amber-500/20 border-2 border-amber-500/50 text-amber-950 dark:text-amber-100 text-xs leading-relaxed flex items-start gap-3 shadow-md">
+                  <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-sm font-bold block mb-1 text-amber-900 dark:text-amber-200">
+                      ⚠️ Anumanit Kshetra Chetwani (Estimated ROI — Lower Clinical Reliability)
+                    </strong>
+                    <span>
+                      Tasveer mein aankh, mooh ya twacha ka lakshya kshetra MediaPipe model dwara vishwasniya roop se nahi mila. Yeh parinam anumanit fallback crop par aadharit hai aur results kam bharosemand hain. Kripya behtar roshni mein dobara tasveer lein.
+                    </span>
+                  </div>
+                </div>
+              )}
               
               {/* Persistent Medical Disclaimer */}
               <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5 shadow-xs">
@@ -613,7 +678,7 @@ export default function Screening() {
                       : result.risk}
                   </span>
                 </div>
-                <h3 className="font-serif font-bold text-xl text-primary dark:text-mist">
+                <h3 className="font-serif font-bold text-xl text-primary">
                   {result.type}
                 </h3>
               </div>
@@ -625,7 +690,7 @@ export default function Screening() {
                     <span className="text-[11px] font-bold text-muted dark:text-muted block uppercase tracking-wider">
                       Anumaanit Clinical Metric:
                     </span>
-                    <span className="font-serif font-bold text-base sm:text-lg text-primary dark:text-mist">
+                    <span className="font-serif font-bold text-base sm:text-lg text-primary">
                       {result.estimated_metric}
                     </span>
                   </div>
@@ -633,7 +698,7 @@ export default function Screening() {
                     type="button"
                     onClick={handlePlayResult}
                     title="Audio Suniye"
-                    className="p-2.5 rounded-xl bg-white dark:bg-mist text-sage dark:text-booti-glow hover:bg-gray-50 shadow-xs"
+                    className="p-2.5 rounded-xl bg-white dark:bg-card text-sage dark:text-booti-glow hover:bg-gray-50 shadow-xs"
                   >
                     <Volume2 className="w-4 h-4" />
                   </button>
@@ -641,14 +706,14 @@ export default function Screening() {
               )}
 
               {/* Biomarker Index Breakdown */}
-              <div className="bg-mist dark:bg-mist p-4 rounded-2xl text-xs space-y-2.5 border border-sage/15 dark:border-gray-800">
+              <div className="bg-mist dark:bg-card p-4 rounded-2xl text-xs space-y-2.5 border border-sage/15 dark:border-gray-800">
                 <div className="flex justify-between items-center">
                   <span className="text-muted dark:text-muted">Biomarker Model:</span>
-                  <span className="font-medium text-primary dark:text-mist text-right truncate max-w-[200px]">{result.biomarker}</span>
+                  <span className="font-medium text-primary text-right truncate max-w-[200px]">{result.biomarker}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted dark:text-muted">Calculated Index Score:</span>
-                  <span className="font-mono font-bold text-primary dark:text-mist text-sm">{result.score}</span>
+                  <span className="font-mono font-bold text-primary text-sm">{result.score}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted dark:text-muted">Clinical Cutoff Baseline:</span>
@@ -684,7 +749,7 @@ export default function Screening() {
               )}
 
               {/* Clinical Advice */}
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs leading-relaxed text-primary dark:text-mist">
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs leading-relaxed text-primary">
                 <span className="font-bold block text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1.5">
                   <Stethoscope className="w-4 h-4" /> Doctor Ki Prathmik Salah:
                 </span>
@@ -693,7 +758,7 @@ export default function Screening() {
 
               {/* CCRAS Ayurvedic Care */}
               {result.ayurveda && (
-                <div className="p-4 rounded-2xl bg-sage/10 dark:bg-sage/15 border border-sage/20 text-xs leading-relaxed text-primary dark:text-mist">
+                <div className="p-4 rounded-2xl bg-sage/10 dark:bg-sage/15 border border-sage/20 text-xs leading-relaxed text-primary">
                   <span className="font-bold block text-sage dark:text-booti-glow mb-1 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4" /> CCRAS Ayurvedic Poshan & Upchar:
                   </span>
@@ -714,8 +779,8 @@ export default function Screening() {
                 </button>
 
                 <Link
-                  to="/chat"
-                  className="touch-target w-full bg-white dark:bg-mist border border-sage/30 hover:bg-sage/10 text-sage dark:text-booti-glow font-bold py-3.5 px-4 rounded-2xl text-xs transition-all flex items-center justify-center gap-2"
+                  to="/mitra/chat"
+                  className="touch-target w-full bg-white dark:bg-card border border-sage/30 hover:bg-sage/10 text-sage dark:text-booti-glow font-bold py-3.5 px-4 rounded-2xl text-xs transition-all flex items-center justify-center gap-2"
                 >
                   <Stethoscope className="w-4 h-4" />
                   <span>Dr. Sanjeevani Se Paramarsh Karein</span>
@@ -723,12 +788,36 @@ export default function Screening() {
               </div>
 
             </div>
+          ) : screeningError ? (
+            <div className="py-12 px-4 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto shadow-inner">
+                <AlertCircle className="w-7 h-7" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-bold text-sm text-red-700 dark:text-red-300">
+                  AI Jaanch Asafal Rahi (Screening Failed)
+                </h4>
+                <p className="text-xs text-muted dark:text-muted max-w-sm mx-auto">
+                  {screeningError}
+                </p>
+              </div>
+              <div className="flex justify-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleRunScreening}
+                  className="px-4 py-2.5 bg-sage hover:bg-sage/90 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Try Again (पुनः प्रयास करें)</span>
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="text-center text-muted dark:text-muted py-16 space-y-3">
               <div className="w-16 h-16 rounded-3xl bg-sage/10 dark:bg-gray-800 flex items-center justify-center mx-auto text-sage mb-2">
                 <Eye className="w-8 h-8 opacity-70" />
               </div>
-              <p className="text-sm font-bold text-primary dark:text-mist">
+              <p className="text-sm font-bold text-primary">
                 Tasveer chuniye aur jaanch shuru kijiye
               </p>
               <p className="text-xs text-muted dark:text-muted max-w-xs mx-auto leading-relaxed">
@@ -752,7 +841,7 @@ export default function Screening() {
                   सं
                 </div>
                 <div>
-                  <h3 className="font-serif font-bold text-base text-primary dark:text-mist">
+                  <h3 className="font-serif font-bold text-base text-primary">
                     ABDM Diagnostic Referral Parcha
                   </h3>
                   <p className="text-[10px] text-muted dark:text-muted">
@@ -769,11 +858,18 @@ export default function Screening() {
               </button>
             </div>
 
+            {/* Demo Notice inside Modal */}
+            {result.is_demo && (
+              <div className="p-3 rounded-2xl bg-red-600/20 border-2 border-red-500 text-red-800 dark:text-red-200 text-xs font-black text-center uppercase tracking-wide">
+                ⚠️ DEMO / SIMULATED DATA — not a real screening (Do not use for medical referral)
+              </div>
+            )}
+
             {/* Parcha Body */}
-            <div className="bg-mist dark:bg-mist p-4 rounded-2xl text-xs space-y-2.5 border border-sage/15 font-mono">
+            <div className="bg-mist dark:bg-card p-4 rounded-2xl text-xs space-y-2.5 border border-sage/15 font-mono">
               <div className="flex justify-between">
                 <span className="text-muted dark:text-muted">Report ID:</span>
-                <span className="font-bold text-primary dark:text-mist">{result.fhir_report?.id || 'SANJ-REF-001'}</span>
+                <span className="font-bold text-primary">{result.fhir_report?.id || 'SANJ-REF-001'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted dark:text-muted">Date / Time:</span>
@@ -808,29 +904,37 @@ export default function Screening() {
             </div>
 
             {/* Modal Actions */}
-            <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (result.fhir_report) {
-                    downloadAbdmFhirBundle(result.fhir_report);
-                    toast.success('ABDM FHIR DiagnosticReport JSON download hua');
-                  }
-                }}
-                className="touch-target flex-1 py-3 px-4 rounded-xl bg-sage text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-sage/90"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download FHIR JSON</span>
-              </button>
+            <div className="space-y-2 pt-2">
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (result.fhir_report) {
+                      downloadAbdmFhirBundle(result.fhir_report);
+                      toast.success('ABDM FHIR DiagnosticReport JSON download hua');
+                    }
+                  }}
+                  className="touch-target flex-1 py-3 px-4 rounded-xl bg-sage text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-sage/90"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download FHIR JSON</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="touch-target flex-1 py-3 px-4 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-bold flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Parcha Print Karein</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="touch-target flex-1 py-3 px-4 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-bold flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Parcha Print Karein</span>
+                </button>
+              </div>
+
+              {result.is_demo && (
+                <p className="text-[11px] text-red-600 dark:text-red-400 font-extrabold text-center uppercase tracking-wide">
+                  ⚠️ DEMO / SIMULATED DATA — not a real screening
+                </p>
+              )}
             </div>
 
           </div>

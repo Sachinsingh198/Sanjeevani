@@ -48,7 +48,10 @@ export default defineConfig(({ mode }) => {
               urlPattern: ({ url }) =>
                 url.pathname.startsWith('/chat') ||
                 url.pathname.startsWith('/auth') ||
-                url.pathname.startsWith('/admin'),
+                url.pathname.startsWith('/admin') ||
+                url.pathname.startsWith('/voice') ||
+                url.pathname.startsWith('/screen') ||
+                url.pathname.startsWith('/companion'),
               handler: 'NetworkOnly',
             },
             {

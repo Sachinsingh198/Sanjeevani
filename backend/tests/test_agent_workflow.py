@@ -48,9 +48,12 @@ def test_workflow_green_tier_routine():
 
 
 def test_sqlite_saver_wal_mode():
-    """Verify that the sessions.db SQLite connection operates in WAL journal mode."""
-    from app.agents.graph import conn
-    cursor = conn.execute("PRAGMA journal_mode")
-    row = cursor.fetchone()
-    assert row is not None
-    assert row[0].lower() == "wal"
+    """Verify that SQLite connection operates in WAL journal mode if SQLite checkpointer is used."""
+    from app.agents.graph import conn, checkpointer
+    if conn is not None and hasattr(conn, "execute"):
+        cursor = conn.execute("PRAGMA journal_mode")
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0].lower() == "wal"
+    else:
+        assert checkpointer is not None

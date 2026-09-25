@@ -100,8 +100,8 @@ export default function Login() {
       toast.error('Kripya sabhi fields (OTP aur Naya Password) bharein.');
       return;
     }
-    if (newPass.trim().length < 4) {
-      toast.error('Naya password kam se kam 4 aksharon ka hona chahiye.');
+    if (newPass.trim().length < 6) {
+      toast.error('Naya password kam se kam 6 aksharon ka hona chahiye.');
       return;
     }
     setResetting(true);
@@ -133,14 +133,14 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6F0] dark:bg-[#151D28] text-[#1E2A43] dark:text-[#EAEFEA] flex items-center justify-center px-4 py-12 relative overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen bg-mist text-primary flex items-center justify-center px-4 py-12 relative overflow-hidden transition-colors duration-300">
       
       {/* Mountain Contour Background */}
       <div className="absolute top-10 left-0 right-0 pointer-events-none opacity-25 dark:opacity-15 z-0">
         <MountainRidge tone="pine" className="w-full h-44 object-cover" />
       </div>
 
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gradient-to-b from-[#5A7855]/15 via-[#D4A359]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gradient-to-b from-sage/15 via-[#D4A359]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-sm relative z-10 space-y-6">
         
@@ -148,7 +148,7 @@ export default function Login() {
         <div className="text-left">
           <Link
             to="/"
-            className="touch-target inline-flex items-center gap-1.5 text-xs font-semibold text-[#556376] dark:text-[#A8B4C2] hover:text-[#1E2A43] dark:hover:text-[#F4F6F0] transition-colors"
+            className="touch-target inline-flex items-center gap-1.5 text-xs font-semibold text-muted dark:text-muted hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Home Par Wapas</span>
@@ -160,63 +160,65 @@ export default function Login() {
           <div className="inline-block mb-3 animate-slow-float">
             <SanjeevaniOrb state="idle" size={54} />
           </div>
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2E4057] dark:text-[#F4F6F0]">
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-primary">
             Sanjeevani Login
           </h1>
-          <p className="text-xs sm:text-sm text-[#556376] dark:text-[#A8B4C2] mt-1 flex items-center justify-center gap-1.5">
-            <Leaf className="w-3.5 h-3.5 text-[#5A7855]" />
+          <p className="text-xs sm:text-sm text-muted dark:text-muted mt-1 flex items-center justify-center gap-1.5">
+            <Leaf className="w-3.5 h-3.5 text-sage" />
             Apne Khate Me Pravesh Karein
           </p>
         </div>
 
-        {/* 1-Click Role Quick Fill Bar */}
-        <div className="bg-white/80 dark:bg-[#1E2A43]/80 backdrop-blur-sm rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs">
-          <p className="text-[11px] font-bold text-[#8C5E24] dark:text-[#D4A359] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <KeyRound className="w-3.5 h-3.5" />
-            1-Click Demo Quick Login
-          </p>
-          <div className="grid grid-cols-3 gap-1.5">
-            <button
-              type="button"
-              onClick={() => handleQuickFill('patient')}
-              className="touch-target flex flex-col items-center py-2 px-1 rounded-xl bg-[#5A7855]/10 dark:bg-[#5A7855]/20 hover:bg-[#5A7855]/20 dark:hover:bg-[#5A7855]/30 border border-[#5A7855]/30 text-[#1E2A43] dark:text-[#F4F6F0] transition-all cursor-pointer"
-            >
-              <User className="w-4 h-4 text-[#5A7855] dark:text-[#8ED14C] mb-0.5" />
-              <span className="text-[11px] font-bold leading-tight">Patient</span>
-              <span className="text-[9px] text-[#556376] dark:text-[#A8B4C2]">Mitra</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('asha')}
-              className="touch-target flex flex-col items-center py-2 px-1 rounded-xl bg-[#D4A359]/15 dark:bg-[#D4A359]/20 hover:bg-[#D4A359]/25 border border-[#D4A359]/30 text-[#1E2A43] dark:text-[#F4F6F0] transition-all cursor-pointer"
-            >
-              <Users className="w-4 h-4 text-[#8C5E24] dark:text-[#D4A359] mb-0.5" />
-              <span className="text-[11px] font-bold leading-tight">ASHA</span>
-              <span className="text-[9px] text-[#556376] dark:text-[#A8B4C2]">Worker</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('admin')}
-              className="touch-target flex flex-col items-center py-2 px-1 rounded-xl bg-[#2E4057]/10 dark:bg-white/10 hover:bg-[#2E4057]/15 border border-[#2E4057]/20 text-[#1E2A43] dark:text-[#F4F6F0] transition-all cursor-pointer"
-            >
-              <Shield className="w-4 h-4 text-[#2E4057] dark:text-[#8ED14C] mb-0.5" />
-              <span className="text-[11px] font-bold leading-tight">Admin</span>
-              <span className="text-[9px] text-[#556376] dark:text-[#A8B4C2]">PHC Desk</span>
-            </button>
+        {/* 1-Click Role Quick Fill Bar (DEV builds only) */}
+        {import.meta.env.DEV && (
+          <div className="bg-card dark:bg-card backdrop-blur-sm rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs">
+            <p className="text-[11px] font-bold text-gold-warm dark:text-gold-warm uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <KeyRound className="w-3.5 h-3.5" />
+              1-Click Demo Quick Login
+            </p>
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleQuickFill('patient')}
+                className="touch-target flex flex-col items-center py-2 px-1 rounded-xl bg-sage/10 dark:bg-sage/20 hover:bg-sage/20 dark:hover:bg-sage/30 border border-sage/30 text-primary transition-all cursor-pointer"
+              >
+                <User className="w-4 h-4 text-sage dark:text-booti-glow mb-0.5" />
+                <span className="text-[11px] font-bold leading-tight">Patient</span>
+                <span className="text-[9px] text-muted dark:text-muted">Mitra</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickFill('asha')}
+                className="touch-target flex flex-col items-center py-2 px-1 rounded-xl bg-gold-warm/15 dark:bg-gold-warm/20 hover:bg-gold-warm/25 border border-gold-warm/30 text-primary transition-all cursor-pointer"
+              >
+                <Users className="w-4 h-4 text-gold-warm dark:text-gold-warm mb-0.5" />
+                <span className="text-[11px] font-bold leading-tight">ASHA</span>
+                <span className="text-[9px] text-muted dark:text-muted">Worker</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickFill('admin')}
+                className="touch-target flex flex-col items-center py-2 px-1 rounded-xl bg-warm-indigo/10 dark:bg-white/10 hover:bg-warm-indigo/15 border border-warm-indigo/20 text-primary transition-all cursor-pointer"
+              >
+                <Shield className="w-4 h-4 text-primary dark:text-booti-glow mb-0.5" />
+                <span className="text-[11px] font-bold leading-tight">Admin</span>
+                <span className="text-[9px] text-muted dark:text-muted">PHC Desk</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="bg-white/95 dark:bg-[#1E2A43]/95 backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-gray-200/80 dark:border-gray-800 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white/95 dark:bg-card backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-gray-200/80 dark:border-gray-800 space-y-4">
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-[#1E2A43] dark:text-[#F4F6F0]">
+              <label className="block text-xs font-semibold text-primary">
                 Username, Gmail, ya Mobile Number
               </label>
               <button
                 type="button"
                 onClick={() => handleExplainField('phone')}
-                className="inline-flex items-center gap-1 text-[11px] text-[#5A7855] dark:text-[#8ED14C] hover:underline"
+                className="inline-flex items-center gap-1 text-[11px] text-sage dark:text-booti-glow hover:underline"
                 title="Aawaz mein sunein"
               >
                 <Volume2 className="w-3.5 h-3.5" />
@@ -228,7 +230,7 @@ export default function Login() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="e.g. sachin_singh, name@gmail.com, ya 9876543210"
-              className="w-full bg-gray-50 dark:bg-[#151D28] text-[#1E2A43] dark:text-[#F4F6F0] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#5A7855] transition-all"
+              className="w-full bg-white dark:bg-[#1E2A43] text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-sage transition-all"
               autoFocus
               required
             />
@@ -237,11 +239,11 @@ export default function Login() {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
-                <label className="block text-xs font-semibold text-[#1E2A43] dark:text-[#F4F6F0]">Password</label>
+                <label className="block text-xs font-semibold text-primary">Password</label>
                 <button
                   type="button"
                   onClick={() => handleExplainField('password')}
-                  className="inline-flex items-center gap-1 text-[11px] text-[#5A7855] dark:text-[#8ED14C] hover:underline"
+                  className="inline-flex items-center gap-1 text-[11px] text-sage dark:text-booti-glow hover:underline"
                   title="Aawaz mein sunein"
                 >
                   <Volume2 className="w-3.5 h-3.5" />
@@ -251,7 +253,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowResetModal(true)}
-                className="text-[11px] text-[#2B4A30] dark:text-[#8ED14C] font-medium hover:underline"
+                className="text-[11px] text-sage dark:text-booti-glow font-medium hover:underline"
               >
                 Password bhool gaye?
               </button>
@@ -262,7 +264,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password darz karein"
-                className="w-full bg-gray-50 dark:bg-[#151D28] text-[#1E2A43] dark:text-[#F4F6F0] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3.5 text-sm pr-11 focus:outline-none focus:ring-2 focus:ring-[#5A7855] transition-all"
+                className="w-full bg-white dark:bg-[#1E2A43] text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3.5 text-sm pr-11 focus:outline-none focus:ring-2 focus:ring-sage transition-all"
                 required
               />
               <button
@@ -279,15 +281,15 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading || !phone.trim() || !password.trim()}
-            className="touch-target w-full bg-[#5A7855] hover:bg-[#4a6346] text-white font-bold py-3.5 rounded-2xl shadow-sm transition-all disabled:opacity-50 text-sm flex items-center justify-center gap-2 cursor-pointer"
+            className="touch-target w-full bg-sage hover:bg-sage/90 text-white font-bold py-3.5 rounded-2xl shadow-sm transition-all disabled:opacity-50 text-sm flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? 'Sign in ho raha hai...' : <><span>Sign In</span> <ArrowRight className="w-4 h-4" /></>}
           </button>
         </form>
 
-        <p className="text-center text-sm text-[#556376] dark:text-[#A8B4C2]">
+        <p className="text-center text-sm text-muted dark:text-muted">
           Sanjeevani par naye hain?{' '}
-          <Link to="/register" className="text-[#2B4A30] dark:text-[#8ED14C] font-semibold hover:underline">
+          <Link to="/register" className="text-sage dark:text-booti-glow font-semibold hover:underline">
             Naya khata banayein (Register)
           </Link>
         </p>
@@ -295,19 +297,19 @@ export default function Login() {
         {/* Password Reset Modal (2-Step OTP Authentication) */}
         {showResetModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white dark:bg-[#1E2A43] w-full max-w-md rounded-3xl p-6 shadow-2xl border border-gray-200 dark:border-gray-800 space-y-4">
+            <div className="bg-white dark:bg-warm-indigo w-full max-w-md rounded-3xl p-6 shadow-2xl border border-gray-200 dark:border-gray-800 space-y-4">
               
               <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-2 text-[#1E2A43] dark:text-[#F4F6F0]">
-                  <div className="p-2 rounded-xl bg-[#5A7855]/10 dark:bg-[#5A7855]/20 text-[#5A7855] dark:text-[#8ED14C]">
+                <div className="flex items-center gap-2 text-primary">
+                  <div className="p-2 rounded-xl bg-sage/10 dark:bg-sage/20 text-sage dark:text-booti-glow">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
                     <h3 className="font-serif font-bold text-base sm:text-lg">Reset Password with OTP</h3>
-                    <p className="text-[11px] text-[#556376] dark:text-[#A8B4C2]">Surakshit Password Punarsthapana</p>
+                    <p className="text-[11px] text-muted dark:text-muted">Surakshit Password Punarsthapana</p>
                   </div>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-[#556376] dark:text-[#A8B4C2]">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-muted dark:text-muted">
                   Kadam {resetStep}/2
                 </span>
               </div>
@@ -315,7 +317,7 @@ export default function Login() {
               {resetStep === 1 ? (
                 /* Step 1: Enter Username / Gmail / Mobile */
                 <form onSubmit={handleSendResetOtp} className="space-y-4">
-                  <p className="text-xs text-[#556376] dark:text-[#A8B4C2] leading-relaxed">
+                  <p className="text-xs text-muted dark:text-muted leading-relaxed">
                     Apna registered Username, Gmail ya 10-digit Mobile Number darz karein. Hum turant aapko ek surakshit 6-digit OTP code bhejenge.
                   </p>
 
@@ -327,7 +329,7 @@ export default function Login() {
                       placeholder="e.g. sachin.singh@gmail.com ya 9876543210"
                       required
                       autoFocus
-                      className="w-full bg-gray-50 dark:bg-[#151D28] border border-gray-300 dark:border-gray-700 rounded-2xl pl-10 pr-3.5 py-3 text-xs sm:text-sm text-[#1E2A43] dark:text-[#F4F6F0] focus:outline-none focus:ring-2 focus:ring-[#5A7855]"
+                      className="w-full bg-white dark:bg-[#1E2A43] border border-gray-300 dark:border-gray-700 rounded-2xl pl-10 pr-3.5 py-3 text-xs sm:text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage"
                     />
                     <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
@@ -336,7 +338,7 @@ export default function Login() {
                     <button
                       type="submit"
                       disabled={sendingOtp || !resetTarget.trim()}
-                      className="touch-target flex-1 bg-[#5A7855] hover:bg-[#4a6346] text-white text-xs font-bold py-3 rounded-2xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                      className="touch-target flex-1 bg-sage hover:bg-sage/90 text-white text-xs font-bold py-3 rounded-2xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                     >
                       {sendingOtp ? (
                         <>
@@ -356,7 +358,7 @@ export default function Login() {
                         setShowResetModal(false);
                         setResetTarget('');
                       }}
-                      className="touch-target px-4 py-3 text-xs text-[#556376] dark:text-[#A8B4C2] hover:text-[#1E2A43] dark:hover:text-[#F4F6F0] cursor-pointer"
+                      className="touch-target px-4 py-3 text-xs text-muted dark:text-muted hover:text-primary cursor-pointer"
                     >
                       Radd (Cancel)
                     </button>
@@ -389,7 +391,7 @@ export default function Login() {
                   )}
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#1E2A43] dark:text-[#F4F6F0] mb-1">
+                    <label className="block text-xs font-semibold text-primary mb-1">
                       6-Digit OTP Code *
                     </label>
                     <input
@@ -401,13 +403,13 @@ export default function Login() {
                       placeholder="123456"
                       required
                       autoFocus
-                      className="w-full bg-gray-50 dark:bg-[#151D28] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-base text-center font-mono tracking-widest text-[#1E2A43] dark:text-[#F4F6F0] focus:outline-none focus:ring-2 focus:ring-[#5A7855]"
+                      className="w-full bg-white dark:bg-[#1E2A43] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-base text-center font-mono tracking-widest text-primary focus:outline-none focus:ring-2 focus:ring-sage"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#1E2A43] dark:text-[#F4F6F0] mb-1">
-                      Naya Password (Kam se kam 4 akshar) *
+                    <label className="block text-xs font-semibold text-primary mb-1">
+                      Naya Password (Kam se kam 6 akshar) *
                     </label>
                     <input
                       type="password"
@@ -415,12 +417,12 @@ export default function Login() {
                       onChange={(e) => setNewPass(e.target.value)}
                       placeholder="Naya surakshit password"
                       required
-                      minLength={4}
-                      className="w-full bg-gray-50 dark:bg-[#151D28] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-[#1E2A43] dark:text-[#F4F6F0] focus:outline-none focus:ring-2 focus:ring-[#5A7855]"
+                      minLength={6}
+                      className="w-full bg-white dark:bg-[#1E2A43] border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-[#556376] dark:text-[#A8B4C2] pt-1">
+                  <div className="flex items-center justify-between text-[11px] text-muted dark:text-muted pt-1">
                     <button
                       type="button"
                       onClick={() => setResetStep(1)}
@@ -432,7 +434,7 @@ export default function Login() {
                       type="button"
                       disabled={sendingOtp}
                       onClick={handleSendResetOtp}
-                      className="hover:underline text-[#5A7855] dark:text-[#8ED14C] font-semibold flex items-center gap-1 cursor-pointer"
+                      className="hover:underline text-sage dark:text-booti-glow font-semibold flex items-center gap-1 cursor-pointer"
                     >
                       <RefreshCw className={`w-3 h-3 ${sendingOtp ? 'animate-spin' : ''}`} />
                       OTP Dobara Bhejein
@@ -442,8 +444,8 @@ export default function Login() {
                   <div className="flex items-center gap-2 pt-2">
                     <button
                       type="submit"
-                      disabled={resetting || resetOtp.length !== 6 || newPass.length < 4}
-                      className="touch-target flex-1 bg-[#5A7855] hover:bg-[#4a6346] text-white text-xs font-bold py-3 rounded-2xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                      disabled={resetting || resetOtp.length !== 6 || newPass.length < 6}
+                      className="touch-target flex-1 bg-sage hover:bg-sage/90 text-white text-xs font-bold py-3 rounded-2xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                     >
                       {resetting ? (
                         <>
@@ -466,7 +468,7 @@ export default function Login() {
                         setResetOtp('');
                         setNewPass('');
                       }}
-                      className="touch-target px-3.5 py-3 text-xs text-[#556376] dark:text-[#A8B4C2] hover:text-[#1E2A43] cursor-pointer"
+                      className="touch-target px-3.5 py-3 text-xs text-muted dark:text-muted hover:text-primary cursor-pointer"
                     >
                       Radd
                     </button>

@@ -70,7 +70,7 @@ export const resetPassword = async (identifier, newPassword) => {
 };
 
 
-export const registerUser = async (registrationData) => {
+export const registerUser = async (registrationData, ...legacyArgs) => {
   // Support both object argument or legacy positional arguments
   const payload = typeof registrationData === 'object' && !Array.isArray(registrationData)
     ? {
@@ -83,11 +83,11 @@ export const registerUser = async (registrationData) => {
         village: registrationData.village || '',
       }
     : {
-        name: arguments[0],
-        phone: arguments[1],
-        password: arguments[2],
+        name: registrationData,
+        phone: legacyArgs[0],
+        password: legacyArgs[1],
         role: 'patient',
-        village: arguments[3] || '',
+        village: legacyArgs[2] || '',
       };
 
   const res = await authApi.post('/auth/register', payload);

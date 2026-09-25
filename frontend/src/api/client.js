@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { evaluateLocalRedFlags } from '../lib/localTriageFallback';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -28,6 +29,15 @@ export const getOrCreateConversationId = () => {
  */
 export const resetConversationId = () => {
   sessionStorage.removeItem('sanjeevani_conv_id');
+};
+
+/**
+ * Explicitly sets the active conversation ID.
+ */
+export const setStoredConversationId = (id) => {
+  if (id) {
+    sessionStorage.setItem('sanjeevani_conv_id', id);
+  }
 };
 
 /**
@@ -76,23 +86,22 @@ export const sendChatMessage = async (
     if (!err.response && err.code !== 'ECONNABORTED') {
       console.warn('[Sanjeevani] Backend offline — using client-side simulation for demo mode.');
 
-      const lower = message.toLowerCase();
-
-      // Emergency Simulation
-      if (
-        (lower.includes('chest') || lower.includes('seene me dard') || lower.includes('saans') || lower.includes('ghutan')) &&
-        !lower.includes('no') && !lower.includes('nahi')
-      ) {
+      const redEval = evaluateLocalRedFlags(message);
+      if (redEval.isRed) {
+        const flagStr = redEval.flag || 'RED_FLAG: Emergency detected offline';
         return {
           conversation_id: conversationId,
           tier: 'Red',
-          reply_text: '⚠️ ऑफ़लाइन अनुमान (पुष्टि नहीं) — EMERGENCY WARNING: Critical life-threatening symptoms detected. Do NOT rely on home remedies. Keep the patient in a comfortable position, ensure their airway is open, and call 108 emergency ambulance immediately.',
-          flags: ['RED_FLAG: cardiac_chest_pain / acute_respiratory_distress'],
+          reply_text: `⚠️ ऑफ़लाइन अनुमान (पुष्टि नहीं) — EMERGENCY WARNING: Critical life-threatening symptoms detected (${flagStr}). Do NOT rely on home remedies. Keep the patient in a comfortable position, ensure their airway is open, and call 108 emergency ambulance immediately.`,
+          flags: [flagStr],
           remedies: [],
           escalation_triggered: true,
           requires_immediate_doctor: true,
+          is_offline_fallback: true,
         };
       }
+
+      const lower = message.toLowerCase();
 
       // Yellow Tier Simulation
       if (lower.includes('3 din') || lower.includes('persistent fever') || lower.includes('lagaatar bukhar')) {
@@ -104,6 +113,7 @@ export const sendChatMessage = async (
           remedies: [],
           escalation_triggered: false,
           requires_immediate_doctor: false,
+          is_offline_fallback: true,
         };
       }
 
@@ -116,6 +126,7 @@ export const sendChatMessage = async (
         remedies: [],
         escalation_triggered: false,
         requires_immediate_doctor: false,
+        is_offline_fallback: true,
       };
     }
 

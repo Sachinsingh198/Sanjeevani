@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { fetchAllUsers, createUser, deleteUser, fetchAdminStats, resetPassword, fetchAnalyticsSummary } from '../api/authClient';
 import TierDistributionChart from '../components/TierDistributionChart';
@@ -10,12 +11,14 @@ import {
 import toast from 'react-hot-toast';
 
 const ADVISORY_STORAGE_KEY = 'sanjeevani_district_advisory';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
   const [analyticsSummary, setAnalyticsSummary] = useState(null);
+  const [healthData, setHealthData] = useState(null);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -32,6 +35,12 @@ export default function AdminDashboard() {
   const [newUser, setNewUser] = useState({ name: '', phone: '', password: '', role: 'asha', village: '' });
   const [creating, setCreating] = useState(false);
 
+  // Secure Password Reset Modal
+  const [resetModalUser, setResetModalUser] = useState(null);
+  const [newPasswordValue, setNewPasswordValue] = useState('');
+  const [confirmPasswordValue, setConfirmPasswordValue] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -39,14 +48,16 @@ export default function AdminDashboard() {
   const loadData = async () => {
     setLoadingUsers(true);
     try {
-      const [usersData, statsData, analyticsData] = await Promise.all([
+      const [usersData, statsData, analyticsData, healthRes] = await Promise.all([
         fetchAllUsers(),
         fetchAdminStats(),
-        fetchAnalyticsSummary(30).catch(() => null)
+        fetchAnalyticsSummary(30).catch(() => null),
+        axios.get(`${API_BASE}/health`, { timeout: 4000 }).catch(() => null),
       ]);
       setUsers(usersData);
       setStats(statsData);
       if (analyticsData) setAnalyticsSummary(analyticsData);
+      if (healthRes?.data) setHealthData(healthRes.data);
     } catch {
       toast.error('Failed to load admin data');
     } finally {
@@ -114,14 +125,34 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleAdminResetPassword = async (phone, name) => {
-    const newPass = window.prompt(`Enter new password for ${name} (${phone}):`, 'sanjeevani2026');
-    if (!newPass || !newPass.trim()) return;
+  const openResetPasswordModal = (userObj) => {
+    setResetModalUser(userObj);
+    setNewPasswordValue('');
+    setConfirmPasswordValue('');
+  };
+
+  const handleAdminResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!resetModalUser) return;
+    if (newPasswordValue.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    if (newPasswordValue !== confirmPasswordValue) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    setResettingPassword(true);
     try {
-      await resetPassword(phone, newPass.trim());
-      toast.success(`Password updated for ${name}!`);
+      await resetPassword(resetModalUser.phone, newPasswordValue.trim());
+      toast.success(`Password updated for ${resetModalUser.name}!`);
+      setResetModalUser(null);
+      setNewPasswordValue('');
+      setConfirmPasswordValue('');
     } catch (err) {
       toast.error(err?.response?.data?.detail || 'Failed to update password');
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -141,6 +172,7 @@ export default function AdminDashboard() {
     }
   };
 
+  const isVillageSample = !stats?.village_distribution || stats.village_distribution.length === 0;
   const villageCounts = stats?.village_distribution?.length
     ? stats.village_distribution
     : [
@@ -151,6 +183,7 @@ export default function AdminDashboard() {
         { village: 'Badrinath Road', count: 5 }
       ];
 
+  const isTierSample = !stats?.triage_distribution;
   const tierCounts = stats?.triage_distribution || {
     red: 4,
     yellow: 11,
@@ -158,7 +191,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-mist dark:bg-mist text-primary dark:text-mist transition-colors duration-300">
+    <div className="min-h-screen bg-mist dark:bg-card text-primary transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
 
         {/* ── Mode C Admin Header ───────────────────────────────────── */}
@@ -205,7 +238,7 @@ export default function AdminDashboard() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-serif font-bold text-base text-primary dark:text-mist">
+                  <h3 className="font-serif font-bold text-base text-primary">
                     District CMO Health Advisory Broadcast
                   </h3>
                   <span className="text-[10px] bg-gold-warm/20 text-gold-warm dark:text-gold-warm px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
@@ -218,7 +251,7 @@ export default function AdminDashboard() {
                       value={advisoryDraft}
                       onChange={(e) => setAdvisoryDraft(e.target.value)}
                       rows={2}
-                      className="w-full text-xs p-3 rounded-2xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-mist text-primary dark:text-mist focus:outline-none focus:ring-2 focus:ring-gold-warm"
+                      className="w-full text-xs p-3 rounded-2xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-card text-primary focus:outline-none focus:ring-2 focus:ring-gold-warm"
                     />
                     <div className="flex items-center gap-2">
                       <button
@@ -273,7 +306,7 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="text-xl sm:text-2xl font-bold text-primary dark:text-mist">
+                    <p className="text-xl sm:text-2xl font-bold text-primary">
                       {analyticsSummary.total_events}
                     </p>
                     <span className="text-[10px] bg-sage/20 text-sage dark:text-booti-glow px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
@@ -287,20 +320,20 @@ export default function AdminDashboard() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full md:w-auto">
-                <div className="bg-gray-50 dark:bg-mist/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
-                  <span className="text-[10px] text-muted uppercase font-bold block">Consultations</span>
-                  <span className="font-bold text-sm text-primary dark:text-mist">{analyticsSummary.consultations_started}</span>
+                <div className="bg-gray-50 dark:bg-card/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
+                  <span className="text-xs text-primary dark:text-muted uppercase font-extrabold block">Consultations</span>
+                  <span className="font-bold text-sm text-primary">{analyticsSummary.consultations_started}</span>
                 </div>
-                <div className="bg-gray-50 dark:bg-mist/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
-                  <span className="text-[10px] text-muted uppercase font-bold block">Concluded</span>
+                <div className="bg-gray-50 dark:bg-card/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
+                  <span className="text-xs text-primary dark:text-muted uppercase font-extrabold block">Concluded</span>
                   <span className="font-bold text-sm text-sage">{analyticsSummary.consultations_concluded}</span>
                 </div>
-                <div className="bg-gray-50 dark:bg-mist/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
-                  <span className="text-[10px] text-muted uppercase font-bold block">Escalations</span>
+                <div className="bg-gray-50 dark:bg-card/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
+                  <span className="text-xs text-primary dark:text-muted uppercase font-extrabold block">Escalations</span>
                   <span className="font-bold text-rose-soft text-sm">{analyticsSummary.emergency_escalations}</span>
                 </div>
-                <div className="bg-gray-50 dark:bg-mist/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
-                  <span className="text-[10px] text-muted uppercase font-bold block">Remedies</span>
+                <div className="bg-gray-50 dark:bg-card/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
+                  <span className="text-xs text-primary dark:text-muted uppercase font-extrabold block">Remedies</span>
                   <span className="font-bold text-gold-warm text-sm">{analyticsSummary.remedies_delivered}</span>
                 </div>
               </div>
@@ -310,40 +343,52 @@ export default function AdminDashboard() {
 
         {/* ── Triage Distribution Chart + System Health + Village Surveillance ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 relative">
+            {isTierSample && (
+              <div className="mb-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300">
+                <AlertTriangle className="w-3 h-3" /> Sample data — connect backend for live numbers
+              </div>
+            )}
             <TierDistributionChart counts={tierCounts} />
           </div>
 
           <div className="lg:col-span-1 bg-white dark:bg-warm-indigo rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-sm flex flex-col justify-between">
             <div>
-              <h3 className="font-serif font-bold text-base text-primary dark:text-mist mb-3 flex items-center gap-2">
+              <h3 className="font-serif font-bold text-base text-primary mb-3 flex items-center gap-2">
                 <Server className="w-4 h-4 text-sage" /> System & Model Health
               </h3>
               <p className="text-xs text-muted dark:text-muted mb-4">Core AI triage infrastructure & neural search clusters.</p>
               <div className="space-y-2.5">
-                <HealthPill label="FastAPI App Engine" status="healthy" />
-                <HealthPill label="Qdrant Vector DB" status={stats?.qdrant_status || 'active'} />
-                <HealthPill label="LLM Orchestration" status={stats?.llm_provider || 'groq'} extra="Groq Llama 3 CDSS" />
+                <HealthPill label="FastAPI App Engine" status={healthData?.status === 'unhealthy' ? 'unhealthy' : (healthData?.database === 'ok' ? 'healthy' : 'active')} />
+                <HealthPill label="Qdrant Vector DB" status={healthData?.qdrant || stats?.qdrant_status || 'unreachable'} />
+                <HealthPill label="LLM Orchestration" status={healthData?.llm_provider || stats?.llm_provider || 'groq'} extra={healthData?.llm_provider ? `Provider: ${healthData.llm_provider.toUpperCase()}` : 'Groq Llama 3 CDSS'} />
               </div>
             </div>
             <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[11px] text-muted dark:text-muted">
-              <span>Status: Operational</span>
-              <span className="text-sage dark:text-booti-glow font-semibold flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> 99.9% Triage Uptime
+              <span>Status: {healthData?.status ? healthData.status.toUpperCase() : 'Checking...'}</span>
+              <span className={`font-semibold flex items-center gap-1 ${healthData?.status === 'healthy' ? 'text-sage dark:text-booti-glow' : 'text-amber-500'}`}>
+                <CheckCircle2 className="w-3.5 h-3.5" /> {healthData?.status === 'healthy' ? 'Live Cluster Operational' : 'Cluster Degraded / Checking'}
               </span>
             </div>
           </div>
 
           <div className="lg:col-span-1 bg-white dark:bg-warm-indigo rounded-3xl p-6 border border-gray-200/80 dark:border-gray-800 shadow-sm flex flex-col justify-between">
             <div>
-              <h3 className="font-serif font-bold text-base text-primary dark:text-mist mb-3 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-gold-warm" /> Village Surveillance
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-serif font-bold text-base text-primary flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-gold-warm" /> Village Surveillance
+                </h3>
+                {isVillageSample && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300">
+                    Sample Data
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-muted dark:text-muted mb-3">Encounter volume breakdown across mountain sectors.</p>
               <div className="space-y-2">
                 {villageCounts.map((v, i) => (
                   <div key={i} className="flex items-center justify-between text-xs py-1.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                    <span className="text-primary dark:text-mist font-medium truncate">{v.village}</span>
+                    <span className="text-primary font-medium truncate">{v.village}</span>
                     <span className="font-bold text-sage dark:text-booti-glow bg-sage/10 px-2.5 py-0.5 rounded-lg shrink-0">
                       {v.count} cases
                     </span>
@@ -358,7 +403,7 @@ export default function AdminDashboard() {
         {/* ── User Management ──────────────────────────────────────── */}
         <div className="bg-white dark:bg-warm-indigo rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden">
           <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3 bg-gray-50/60 dark:bg-card">
-            <h3 className="font-serif font-bold text-base text-primary dark:text-mist flex items-center gap-2">
+            <h3 className="font-serif font-bold text-base text-primary flex items-center gap-2">
               <Users className="w-4 h-4 text-sage" /> User Directory ({filteredUsers.length})
             </h3>
             <div className="flex flex-wrap items-center gap-2.5">
@@ -369,14 +414,14 @@ export default function AdminDashboard() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search users..."
-                  className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary dark:text-mist rounded-2xl pl-9 pr-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-sage w-48"
+                  className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary rounded-2xl pl-9 pr-3.5 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-sage w-48"
                 />
               </div>
 
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary dark:text-mist rounded-2xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sage"
+                className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary rounded-2xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sage"
               >
                 <option value="all">All Roles</option>
                 <option value="patient">Patients (Mitra)</option>
@@ -397,20 +442,20 @@ export default function AdminDashboard() {
           {showCreateForm && (
             <form onSubmit={handleCreateUser} className="p-5 bg-mist/80 dark:bg-card border-b border-gray-200 dark:border-gray-800 grid grid-cols-1 sm:grid-cols-5 gap-3 items-end animate-fadeIn">
               <div>
-                <label className="text-[10px] font-bold text-primary dark:text-mist uppercase">Name</label>
-                <input type="text" value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary dark:text-mist rounded-xl px-3 py-2 text-xs mt-1" placeholder="Full name" required />
+                <label className="text-[10px] font-bold text-primary uppercase">Name</label>
+                <input type="text" value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary rounded-xl px-3 py-2 text-xs mt-1" placeholder="Full name" required />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-primary dark:text-mist uppercase">Phone</label>
-                <input type="text" value={newUser.phone} onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })} className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary dark:text-mist rounded-xl px-3 py-2 text-xs mt-1" placeholder="Phone" required />
+                <label className="text-[10px] font-bold text-primary uppercase">Phone</label>
+                <input type="text" value={newUser.phone} onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })} className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary rounded-xl px-3 py-2 text-xs mt-1" placeholder="Phone" required />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-primary dark:text-mist uppercase">Password</label>
-                <input type="text" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary dark:text-mist rounded-xl px-3 py-2 text-xs mt-1" placeholder="Password" required />
+                <label className="text-[10px] font-bold text-primary uppercase">Password</label>
+                <input type="text" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary rounded-xl px-3 py-2 text-xs mt-1" placeholder="Password" required />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-primary dark:text-mist uppercase">Role</label>
-                <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })} className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary dark:text-mist rounded-xl px-3 py-2 text-xs mt-1 font-medium">
+                <label className="text-[10px] font-bold text-primary uppercase">Role</label>
+                <select value={newUser.role} onChange={(e) => setNewUser({ ...newUser, role: e.target.value })} className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary rounded-xl px-3 py-2 text-xs mt-1 font-medium">
                   <option value="asha">ASHA Worker</option>
                   <option value="patient">Patient (Mitra)</option>
                   <option value="admin">Admin</option>
@@ -437,7 +482,7 @@ export default function AdminDashboard() {
                       {u.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-primary dark:text-mist">{u.name}</p>
+                      <p className="text-sm font-bold text-primary">{u.name}</p>
                       <p className="text-xs text-muted dark:text-muted">{u.phone} {u.village ? `• ${u.village}` : ''}</p>
                     </div>
                   </div>
@@ -447,7 +492,7 @@ export default function AdminDashboard() {
                     </span>
                     <span className="text-xs text-gray-400">{u.created_at?.split('T')[0]}</span>
                     <button
-                      onClick={() => handleAdminResetPassword(u.phone, u.name)}
+                      onClick={() => openResetPasswordModal(u)}
                       className="touch-target text-gray-400 hover:text-gold-warm transition-colors p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"
                       title="Reset user password"
                       aria-label="Reset password"
@@ -471,6 +516,75 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Secure Reset Password Modal */}
+        {resetModalUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
+            <div className="bg-white dark:bg-warm-indigo rounded-3xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-800 shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-primary">
+                  <KeyRound className="w-5 h-5 text-gold-warm" />
+                  <h3 className="font-serif font-bold text-base">Reset User Password</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setResetModalUser(null)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p className="text-xs text-muted dark:text-muted">
+                Updating credentials for <strong className="text-primary">{resetModalUser.name}</strong> ({resetModalUser.phone})
+              </p>
+
+              <form onSubmit={handleAdminResetPasswordSubmit} className="space-y-3 pt-1">
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-primary">New Password (Min 6 chars)</label>
+                  <input
+                    type="password"
+                    value={newPasswordValue}
+                    onChange={(e) => setNewPasswordValue(e.target.value)}
+                    placeholder="Enter new password"
+                    minLength={6}
+                    required
+                    className="w-full bg-gray-50 dark:bg-card border border-gray-300 dark:border-gray-700 text-primary rounded-xl px-3.5 py-2.5 text-xs mt-1 focus:outline-none focus:ring-2 focus:ring-gold-warm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-primary">Confirm Password</label>
+                  <input
+                    type="password"
+                    value={confirmPasswordValue}
+                    onChange={(e) => setConfirmPasswordValue(e.target.value)}
+                    placeholder="Confirm new password"
+                    minLength={6}
+                    required
+                    className="w-full bg-gray-50 dark:bg-card border border-gray-300 dark:border-gray-700 text-primary rounded-xl px-3.5 py-2.5 text-xs mt-1 focus:outline-none focus:ring-2 focus:ring-gold-warm"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setResetModalUser(null)}
+                    className="touch-target text-xs text-muted dark:text-muted hover:text-primary px-3 py-2"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resettingPassword}
+                    className="touch-target bg-gold-warm text-primary font-bold text-xs px-5 py-2.5 rounded-xl hover:bg-gold-warm/90 transition-all shadow-xs disabled:opacity-50"
+                  >
+                    {resettingPassword ? 'Updating...' : 'Update Password'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -485,20 +599,22 @@ function StatCard({ icon: Icon, label, value, colorClass = "bg-sage/15 text-sage
         </div>
         <div>
           <p className="text-2xl sm:text-3xl font-bold text-primary">{value}</p>
-          <p className="text-[10px] text-muted font-bold uppercase tracking-wider mt-0.5">{label}</p>
+          <p className="text-xs text-primary dark:text-muted font-extrabold uppercase tracking-wider mt-0.5">{label}</p>
         </div>
       </div>
     </div>
   );
 }
 
+const HEALTHY_STATES = new Set(['healthy', 'active', 'ok', 'operational', 'groq', 'gemini', 'sarvam']);
+
 function HealthPill({ label, status, extra }) {
-  const isHealthy = status === 'healthy' || status === 'active' || !!status;
+  const isHealthy = HEALTHY_STATES.has(String(status).toLowerCase());
   return (
-    <div className="flex items-center gap-2.5 bg-gray-50 dark:bg-mist text-primary dark:text-mist px-4 py-3 rounded-2xl border border-gray-200/60 dark:border-gray-800">
+    <div className="flex items-center gap-2.5 bg-gray-50 dark:bg-warm-indigo text-primary px-4 py-3 rounded-2xl border border-gray-200/60 dark:border-gray-800">
       <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isHealthy ? 'bg-sage' : 'bg-rose-soft'}`} />
       <span className="text-xs font-semibold">{label}</span>
-      <span className="text-[11px] text-muted dark:text-muted ml-auto font-mono">{extra || (isHealthy ? 'Online' : 'Offline')}</span>
+      <span className="text-xs text-[#374151] dark:text-[#D1D5DB] ml-auto font-mono font-medium">{extra || (isHealthy ? 'Online' : 'Offline')}</span>
     </div>
   );
 }

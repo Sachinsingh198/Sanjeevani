@@ -24,9 +24,12 @@ export const downloadConsultationReport = async ({
   flags = [],
   remedies = [],
   consultationSummary = '',
+  format = 'docx',
 }) => {
+  const isPdf = format.toLowerCase() === 'pdf';
+  const endpoint = isPdf ? '/reports/consultation-summary.pdf' : '/reports/consultation-summary';
   const res = await reportsApi.post(
-    '/reports/consultation-summary',
+    endpoint,
     {
       conversation_id: conversationId,
       tier,
@@ -40,7 +43,7 @@ export const downloadConsultationReport = async ({
   const url = URL.createObjectURL(res.data);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Sanjeevani_Consultation_${conversationId}.docx`;
+  a.download = `Sanjeevani_Consultation_${conversationId}.${isPdf ? 'pdf' : 'docx'}`;
   document.body.appendChild(a);
   a.click();
   a.remove();

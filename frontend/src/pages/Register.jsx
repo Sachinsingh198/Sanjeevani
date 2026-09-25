@@ -194,8 +194,8 @@ export default function Register() {
       return;
     }
 
-    if (!password.trim() || password.length < 4) {
-      toast.error('Password kam se kam 4 aksharon ka hona chahiye.');
+    if (!password.trim() || password.length < 6) {
+      toast.error('Password kam se kam 6 aksharon ka hona chahiye.');
       return;
     }
 
@@ -224,14 +224,14 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6F0] dark:bg-[#151D28] text-[#1E2A43] dark:text-[#EAEFEA] flex items-center justify-center px-4 py-12 relative overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen bg-mist text-primary flex items-center justify-center px-4 py-12 relative overflow-hidden transition-colors duration-300">
       
       {/* Mountain Silhouette Background */}
       <div className="absolute top-10 left-0 right-0 pointer-events-none opacity-25 dark:opacity-15 z-0">
         <MountainRidge tone="pine" className="w-full h-44 object-cover" />
       </div>
 
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gradient-to-b from-[#D4A359]/15 via-[#5A7855]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gradient-to-b from-gold-warm/15 via-[#5A7855]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10 space-y-6">
         
@@ -239,7 +239,7 @@ export default function Register() {
         <div className="text-left">
           <Link
             to="/"
-            className="touch-target inline-flex items-center gap-1.5 text-xs font-semibold text-[#556376] dark:text-[#A8B4C2] hover:text-[#1E2A43] dark:hover:text-[#F4F6F0] transition-colors"
+            className="touch-target inline-flex items-center gap-1.5 text-xs font-semibold text-muted dark:text-muted hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Home Par Wapas</span>
@@ -251,26 +251,26 @@ export default function Register() {
           <div className="inline-block mb-3 animate-slow-float">
             <SanjeevaniOrb state="idle" size={54} />
           </div>
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2E4057] dark:text-[#F4F6F0]">
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-primary">
             Naya Khata Banayein
           </h1>
-          <p className="text-xs sm:text-sm text-[#556376] dark:text-[#A8B4C2] mt-1 flex items-center justify-center gap-1.5">
-            <Leaf className="w-3.5 h-3.5 text-[#5A7855]" />
+          <p className="text-xs sm:text-sm text-muted dark:text-muted mt-1 flex items-center justify-center gap-1.5">
+            <Leaf className="w-3.5 h-3.5 text-sage" />
             Sanjeevani Mitra Seva Se Judein
           </p>
         </div>
 
         {/* Register Card */}
-        <form onSubmit={handleSubmit} className="bg-white/95 dark:bg-[#1E2A43]/95 backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-gray-200/80 dark:border-gray-800 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white/95 dark:bg-card backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-gray-200/80 dark:border-gray-800 space-y-4">
           
           <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#8C5E24] dark:text-[#D4A359] flex items-center gap-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-gold-warm dark:text-gold-warm flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5" /> Citizen Registration
             </span>
             <button
               type="button"
               onClick={handleExplain}
-              className="inline-flex items-center gap-1 text-[11px] text-[#5A7855] dark:text-[#8ED14C] hover:underline"
+              className="inline-flex items-center gap-1 text-[11px] text-sage dark:text-booti-glow hover:underline"
               title="Aawaz mein sunein"
             >
               <Volume2 className="w-3.5 h-3.5" />
@@ -280,7 +280,7 @@ export default function Register() {
 
           {/* Full Name */}
           <div>
-            <label className="block text-xs font-semibold text-[#1E2A43] dark:text-[#F4F6F0] mb-1.5">
+            <label className="block text-xs font-semibold text-primary mb-1.5">
               Pura Naam (Full Name) *
             </label>
             <div className="relative">
@@ -289,7 +289,7 @@ export default function Register() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Sachin Singh"
-                className="w-full bg-gray-50 dark:bg-[#151D28] text-[#1E2A43] dark:text-[#F4F6F0] border border-gray-300 dark:border-gray-700 rounded-2xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#5A7855] transition-all"
+                className="w-full bg-white dark:bg-[#1E2A43] text-primary border border-gray-300 dark:border-gray-700 rounded-2xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sage transition-all"
                 autoFocus
                 required
               />
@@ -300,17 +300,17 @@ export default function Register() {
           {/* Username Field with Auto-Suggestion */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-[#1E2A43] dark:text-[#F4F6F0]">
+              <label className="block text-xs font-semibold text-primary">
                 Username (Login ke liye) *
               </label>
               <button
                 type="button"
                 onClick={handleAutoSuggestUsername}
                 disabled={usernameChecking}
-                className="inline-flex items-center gap-1 text-[11px] text-[#5A7855] dark:text-[#8ED14C] hover:underline font-medium cursor-pointer"
+                className="inline-flex items-center gap-1 text-[11px] text-sage dark:text-booti-glow hover:underline font-medium cursor-pointer"
                 title="Naam se username suggest karein"
               >
-                <Sparkles className="w-3 h-3 text-[#D4A359]" />
+                <Sparkles className="w-3 h-3 text-gold-warm" />
                 <span>Auto-Suggest</span>
               </button>
             </div>
@@ -320,19 +320,19 @@ export default function Register() {
                 value={username}
                 onChange={handleUsernameChange}
                 placeholder="e.g. sachin_singh"
-                className={`w-full bg-gray-50 dark:bg-[#151D28] text-[#1E2A43] dark:text-[#F4F6F0] border rounded-2xl pl-10 pr-10 py-3 text-sm focus:outline-none transition-all ${
+                className={`w-full bg-white dark:bg-[#1E2A43] text-primary border rounded-2xl pl-10 pr-10 py-3 text-sm focus:outline-none transition-all ${
                   usernameAvailable === true
                     ? 'border-emerald-500 focus:ring-2 focus:ring-emerald-500'
                     : usernameAvailable === false
                     ? 'border-rose-500 focus:ring-2 focus:ring-rose-500'
-                    : 'border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-[#5A7855]'
+                    : 'border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-sage'
                 }`}
                 required
               />
               <AtSign className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
-                {usernameChecking && <Loader2 className="w-4 h-4 text-[#5A7855] animate-spin" />}
+                {usernameChecking && <Loader2 className="w-4 h-4 text-sage animate-spin" />}
                 {!usernameChecking && usernameAvailable === true && (
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" title="Username uplabdh hai" />
                 )}
@@ -363,7 +363,7 @@ export default function Register() {
                         key={sugg}
                         type="button"
                         onClick={() => handleSelectSuggestion(sugg)}
-                        className="text-[11px] font-medium bg-[#5A7855]/10 dark:bg-[#5A7855]/20 text-[#2B4A30] dark:text-[#8ED14C] border border-[#5A7855]/30 hover:bg-[#5A7855] hover:text-white px-2.5 py-1 rounded-full transition-all flex items-center gap-1 cursor-pointer"
+                        className="text-[11px] font-medium bg-sage/10 dark:bg-sage/20 text-sage dark:text-booti-glow border border-sage/30 hover:bg-sage hover:text-white px-2.5 py-1 rounded-full transition-all flex items-center gap-1 cursor-pointer"
                       >
                         <span>@{sugg}</span>
                         <span className="text-[9px] opacity-70">+ use</span>
@@ -378,7 +378,7 @@ export default function Register() {
           {/* Mobile Number - Strictly numeric with +91 indicator and OTP verification */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-[#1E2A43] dark:text-[#F4F6F0]">
+              <label className="block text-xs font-semibold text-primary">
                 Mobile Number (Sirf 10 Digits) *
               </label>
               <div className="flex items-center gap-2">
@@ -391,7 +391,7 @@ export default function Register() {
                     type="button"
                     disabled={!isPhoneValid || sendingOtp}
                     onClick={() => handleTriggerOtp('sms')}
-                    className="text-[11px] font-semibold text-[#5A7855] dark:text-[#8ED14C] hover:underline disabled:opacity-40 flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] font-semibold text-sage dark:text-booti-glow hover:underline disabled:opacity-40 flex items-center gap-1 cursor-pointer"
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>OTP Verify</span>
@@ -413,12 +413,12 @@ export default function Register() {
                 value={phone}
                 onChange={handlePhoneChange}
                 placeholder="9876543210"
-                className={`w-full bg-gray-50 dark:bg-[#151D28] text-[#1E2A43] dark:text-[#F4F6F0] border rounded-2xl pl-16 pr-10 py-3 text-sm focus:outline-none transition-all ${
+                className={`w-full bg-white dark:bg-[#1E2A43] text-primary border rounded-2xl pl-16 pr-10 py-3 text-sm focus:outline-none transition-all ${
                   isPhoneValid
                     ? 'border-emerald-500 focus:ring-2 focus:ring-emerald-500'
                     : phone.length > 0
                     ? 'border-amber-400 focus:ring-2 focus:ring-amber-400'
-                    : 'border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-[#5A7855]'
+                    : 'border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-sage'
                 }`}
                 required
               />
@@ -444,7 +444,7 @@ export default function Register() {
           {/* Email / Gmail Field with Optional OTP Verification */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-[#1E2A43] dark:text-[#F4F6F0]">
+              <label className="block text-xs font-semibold text-primary">
                 Gmail ya Email Address
               </label>
               <div className="flex items-center gap-2">
@@ -457,7 +457,7 @@ export default function Register() {
                     type="button"
                     disabled={sendingOtp}
                     onClick={() => handleTriggerOtp('email')}
-                    className="text-[11px] font-semibold text-[#5A7855] dark:text-[#8ED14C] hover:underline disabled:opacity-40 flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] font-semibold text-sage dark:text-booti-glow hover:underline disabled:opacity-40 flex items-center gap-1 cursor-pointer"
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>OTP Verify</span>
@@ -473,10 +473,10 @@ export default function Register() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="e.g. sachin.singh@gmail.com"
-                className={`w-full bg-gray-50 dark:bg-[#151D28] text-[#1E2A43] dark:text-[#F4F6F0] border rounded-2xl pl-10 pr-4 py-3 text-sm focus:outline-none transition-all ${
+                className={`w-full bg-white dark:bg-[#1E2A43] text-primary border rounded-2xl pl-10 pr-4 py-3 text-sm focus:outline-none transition-all ${
                   email && !isEmailValid
                     ? 'border-rose-500 focus:ring-2 focus:ring-rose-500'
-                    : 'border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-[#5A7855]'
+                    : 'border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-sage'
                 }`}
               />
               <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -530,13 +530,13 @@ export default function Register() {
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="6-Digit OTP"
-                  className="flex-1 bg-white dark:bg-[#151D28] border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-center font-mono tracking-widest text-sm focus:outline-none focus:ring-2 focus:ring-[#5A7855]"
+                  className="flex-1 bg-white dark:bg-[#1E2A43] border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-center font-mono tracking-widest text-sm focus:outline-none focus:ring-2 focus:ring-sage"
                 />
                 <button
                   type="button"
                   disabled={verifyingOtp || otpCode.length !== 6}
                   onClick={handleVerifyOtp}
-                  className="bg-[#5A7855] hover:bg-[#4a6346] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                  className="bg-sage hover:bg-sage/90 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all disabled:opacity-50 flex items-center gap-1 cursor-pointer"
                 >
                   {verifyingOtp ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                   <span>Verify</span>
@@ -545,7 +545,7 @@ export default function Register() {
                   type="button"
                   disabled={sendingOtp}
                   onClick={() => handleTriggerOtp(otpTargetType)}
-                  className="text-[11px] text-[#5A7855] dark:text-[#8ED14C] hover:underline px-1 cursor-pointer flex items-center gap-0.5"
+                  className="text-[11px] text-sage dark:text-booti-glow hover:underline px-1 cursor-pointer flex items-center gap-0.5"
                   title="Dobara OTP Bhejein"
                 >
                   <RefreshCw className={`w-3 h-3 ${sendingOtp ? 'animate-spin' : ''}`} />
@@ -558,7 +558,7 @@ export default function Register() {
 
           {/* Village / Town */}
           <div>
-            <label className="block text-xs font-semibold text-[#1E2A43] dark:text-[#F4F6F0] mb-1.5">
+            <label className="block text-xs font-semibold text-primary mb-1.5">
               Gaon ya Kasba (Village / Town)
             </label>
             <div className="relative">
@@ -567,16 +567,16 @@ export default function Register() {
                 value={village}
                 onChange={(e) => setVillage(e.target.value)}
                 placeholder="e.g. Mandal, Chamoli"
-                className="w-full bg-gray-50 dark:bg-[#151D28] text-[#1E2A43] dark:text-[#F4F6F0] border border-gray-300 dark:border-gray-700 rounded-2xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#5A7855] transition-all"
+                className="w-full bg-white dark:bg-[#1E2A43] text-primary border border-gray-300 dark:border-gray-700 rounded-2xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sage transition-all"
               />
-              <MapPin className="w-4 h-4 text-[#D4A359] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <MapPin className="w-4 h-4 text-gold-warm absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-xs font-semibold text-[#1E2A43] dark:text-[#F4F6F0] mb-1.5">
-              Password (Kam se kam 4 akshar) *
+            <label className="block text-xs font-semibold text-primary mb-1.5">
+              Password (Kam se kam 6 akshar) *
             </label>
             <div className="relative">
               <input
@@ -584,7 +584,7 @@ export default function Register() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password banayein"
-                className="w-full bg-gray-50 dark:bg-[#151D28] text-[#1E2A43] dark:text-[#F4F6F0] border border-gray-300 dark:border-gray-700 rounded-2xl pl-10 pr-11 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#5A7855] transition-all"
+                className="w-full bg-white dark:bg-[#1E2A43] text-primary border border-gray-300 dark:border-gray-700 rounded-2xl pl-10 pr-11 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sage transition-all"
                 required
               />
               <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -603,7 +603,7 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading || !name.trim() || !isPhoneValid || !password.trim() || usernameAvailable === false}
-            className="touch-target w-full bg-[#5A7855] hover:bg-[#4a6346] text-white font-bold py-3.5 rounded-2xl shadow-sm transition-all disabled:opacity-50 text-sm flex items-center justify-center gap-2 cursor-pointer mt-2"
+            className="touch-target w-full bg-sage hover:bg-sage/90 text-white font-bold py-3.5 rounded-2xl shadow-sm transition-all disabled:opacity-50 text-sm flex items-center justify-center gap-2 cursor-pointer mt-2"
           >
             {loading ? (
               <span className="flex items-center gap-2">
@@ -617,9 +617,9 @@ export default function Register() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-[#556376] dark:text-[#A8B4C2] mt-4">
+        <p className="text-center text-sm text-muted dark:text-muted mt-4">
           Pahle se khata hai?{' '}
-          <Link to="/login" className="text-[#2B4A30] dark:text-[#8ED14C] font-semibold hover:underline">
+          <Link to="/login" className="text-sage dark:text-booti-glow font-semibold hover:underline">
             Login Karein
           </Link>
         </p>

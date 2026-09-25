@@ -28,11 +28,14 @@ def admin_token():
 
 
 def test_sqlalchemy_engine_wal_mode():
-    """Verify that the central SQLAlchemy engine connects and operates in WAL mode."""
+    """Verify that the central SQLAlchemy engine connects and operates in WAL mode (or native Postgres)."""
     with get_db_connection() as conn:
-        res = conn.execute(text("PRAGMA journal_mode")).fetchone()
-        assert res is not None
-        assert res[0].lower() == "wal"
+        if conn.dialect.name == "sqlite":
+            res = conn.execute(text("PRAGMA journal_mode")).fetchone()
+            assert res is not None
+            assert res[0].lower() == "wal"
+        else:
+            assert conn.dialect.name == "postgresql"
 
 
 def test_auth_registration_and_login_flow():
@@ -114,6 +117,11 @@ def test_conversation_history_persistence():
 def test_asha_encounters_sync():
     """Verify ASHA batch sync persists encounters using SQLAlchemy Core."""
     enc_id = "enc_sqla_test_1"
+    with get_db_connection() as conn:
+        row = conn.execute(select(users_table.c.id).where(users_table.c.role == "asha")).fetchone()
+        asha_id = row[0] if row else 2
+    asha_token = create_access_token({"user_id": asha_id, "role": "asha"})
+    headers = {"Authorization": f"Bearer {asha_token}"}
     sync_resp = client.post("/asha/sync-batch", json={
         "encounters": [{
             "id": enc_id,
@@ -123,12 +131,12 @@ def test_asha_encounters_sync():
             "symptom": "fever",
             "vitals": {"bp": "120/80"},
         }]
-    })
+    }, headers=headers)
     assert sync_resp.status_code == 200
     assert enc_id in sync_resp.json()["ids"]
 
     # Verify encounter retrieval
-    list_resp = client.get("/asha/encounters?limit=10")
+    list_resp = client.get("/asha/encounters?limit=10", headers=headers)
     assert list_resp.status_code == 200
     encs = list_resp.json()
     assert any(e["id"] == enc_id for e in encs)

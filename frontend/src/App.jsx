@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import OfflineBanner from './components/OfflineBanner';
@@ -18,8 +19,6 @@ const PatientDashboard = React.lazy(() => import('./pages/PatientDashboard'));
 const Chat = React.lazy(() => import('./pages/Chat'));
 const Screening = React.lazy(() => import('./pages/Screening'));
 const WellnessStudio = React.lazy(() => import('./pages/WellnessStudio'));
-const MeditationTeacher = React.lazy(() => import('./pages/MeditationTeacher'));
-const YogaTeacher = React.lazy(() => import('./pages/YogaTeacher'));
 const Companion = React.lazy(() => import('./pages/Companion'));
 const AshaDashboard = React.lazy(() => import('./pages/AshaDashboard'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
@@ -39,7 +38,8 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
         <div className={`flex flex-col bg-mist text-primary transition-colors duration-300 ${
           isChatPage ? 'h-screen overflow-hidden' : 'min-h-screen'
         }`}>
@@ -53,9 +53,6 @@ export default function App() {
               <Route path="/about" element={<About />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/yoga" element={<YogaTeacher />} />
-              <Route path="/wellness" element={<WellnessStudio />} />
-              <Route path="/screening" element={<Screening />} />
 
               {/* ── Sanjeevani Mitra / Citizen Wellness Routes ─────── */}
               {/* Mitra Hub (Dashboard) */}
@@ -175,6 +172,7 @@ export default function App() {
           )}
         </div>
       </AuthProvider>
-    </ThemeProvider>
-  );
+    </LanguageProvider>
+  </ThemeProvider>
+);
 }

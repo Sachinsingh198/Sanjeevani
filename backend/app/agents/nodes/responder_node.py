@@ -106,6 +106,37 @@ CLINICAL_SYMPTOM_REGISTRY: Dict[str, Dict[str, Any]] = {
     },
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Patient-Facing Explanations for Yellow Triage Clinical Flags
+# Human-readable explanations across Hindi, English, and Garhwali.
+# ─────────────────────────────────────────────────────────────────────────────
+YELLOW_FLAG_EXPLANATIONS: Dict[str, Dict[str, str]] = {
+    "prolonged_fever": {
+        "hin": "aapko 3 din se zyada bukhar hai",
+        "eng": "you have had fever for more than 3 days",
+        "garh_dev": "त्वकु ३ दिन बटि लगातार बुखार छ",
+        "garh_rom": "twaku 3 din bati lagatar bukhar chha",
+    },
+    "severe_localized_pain": {
+        "hin": "pet ya sir mein tezz asahniya dard hai",
+        "eng": "you have severe localized pain in your abdomen or head",
+        "garh_dev": "पैट या मुंड मा तेज असहनीय पीर छ",
+        "garh_rom": "pet ya mund ma tezz asahniya peed chha",
+    },
+    "dehydration_signs": {
+        "hin": "sharir mein paani ki kami (dehydration) ke lakshan hain",
+        "eng": "there are signs of dehydration or lack of urination",
+        "garh_dev": "शरीर मा पाणी की कमी का लक्षण छन",
+        "garh_rom": "sharir ma paani ki kami ka lakshan chhan",
+    },
+    "persistent_vomiting": {
+        "hin": "baar baar ya lagatar ulti ho rahi hai",
+        "eng": "you are experiencing continuous vomiting",
+        "garh_dev": "बार-बार लगातार उलटी लग्यूँ छ",
+        "garh_rom": "baar baar lagatar ulti lagyu chha",
+    },
+}
+
 
 def get_symptom_data(text: str) -> Dict[str, Any]:
     """Retrieves clinical diagnosis and follow-up templates matching patient complaints."""
@@ -272,7 +303,13 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
         if lang == "english":
             state["final_reply_text"] = sarvam_translate_client.translate_text_sync(base_hin, "hi-IN", "en-IN")
         elif lang == "garhwali":
-            state["final_reply_text"] = apply_garhwali_adaptation(base_hin, is_devanagari)
+            state["final_reply_text"] = (
+                "यै बखत हमार पाणि त्वरि बीमारी खातिर कोइ परखीं नुस्खा नी च्छा।\n"
+                "कृप्या **PHC** या **104** पर फोन करा।"
+                if is_devanagari else
+                "Yai bakhat hamara paani twari bimari khatir koi parkhi nuskha ni chha.\n"
+                "Kripya **PHC** ya **104** par phone kara."
+            )
         else:
             state["final_reply_text"] = base_hin
         return state
@@ -298,6 +335,27 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
         )
     state["spoken_reply_text"] = spoken_voice_summary
 
+    # Structured consultation summary for robust frontend parsing
+    prep_steps = [s.strip() for s in remedy.get('remedy_text', '').split('\n') if s.strip()]
+    if not prep_steps and remedy.get('remedy_text'):
+        prep_steps = [remedy.get('remedy_text').strip()]
+
+    cause_str = sym_data.get('diagnosis_hin', '') if sym_data else 'Lakshan'
+    if lang == "english" and sym_data:
+        cause_str = sym_data.get('diagnosis_eng', cause_str)
+    elif lang == "garhwali" and sym_data:
+        cause_str = sym_data.get('diagnosis_garh_dev' if is_devanagari else 'diagnosis_garh_rom', cause_str)
+
+    state["consultation_summary"] = {
+        "condition": user_msg or (sym_data.get('spoken_hin', '') if sym_data else 'Lakshan'),
+        "possible_cause": cause_str,
+        "remedy_name": remedy.get('remedy_name', ''),
+        "preparation_steps": prep_steps,
+        "dosage": [remedy.get('dosage', 'Din mein 1-2 baar khana khane ke baad')] if remedy.get('dosage') else ["Din mein 1-2 baar khana khane ke baad"],
+        "precautions": ["2 din mein aaram na aaye toh 104 par call karein ya PHC jaayein."],
+        "ayurvedic_note": remedy.get('ayurvedic_note', '')
+    }
+
     # 2. LLM synthesis of prescription using ONE Canonical Hindi Template
     if llm:
         canonical_system_prompt = (
@@ -310,7 +368,7 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             "4. '**Dhyan Rakhein:**' ke andar har savdhani ko ALAG nayi line par '- ' se likhein. Kabhi bhi multiple bullets ko ek hi line mein mat milana!\n\n"
             "Bilkul is format mein likho:\n\n"
             "**Aapki Takleef:** [ek line mein mukhya lakshan]\n\n"
-            "**Sambhavit Jaanch (Diagnosis):** [clinical assessment: kya samasya lagti hai aur kyu, e.g. thakan ya sardi se hone wala sadharan sar dard]\n\n"
+            "**Sambhavit Karan (Possible Reason):** [possible cause: kya samasya lagti hai aur kyu, e.g. thakan ya sardi se hone wala sadharan sar dard]\n\n"
             "**Nuskha:** [nuskhe ka naam]\n\n"
             "**Kaise Banayein:**\n1. [Step 1]\n2. [Step 2]\n\n"
             "**Kab Tak Lein:**\n- [khuraak aur samay]\n\n"
@@ -348,7 +406,7 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
         if is_devanagari:
             state["final_reply_text"] = (
                 f"**त्वरि तकलीफ:** {user_msg or 'शारीरिक अस्वस्थता'}\n\n"
-                f"**हमार आंकलन (जांच):** {diag_garh}\n\n"
+                f"**हमार आंकलन (कारण):** {diag_garh}\n\n"
                 f"**नुस्खा:** {remedy.get('remedy_name', '')}\n\n"
                 f"**कन्नि बणावा (तरीका):**\n{remedy.get('remedy_text', '')}\n\n"
                 f"**आयुर्वेदिक लाभ:** {remedy.get('ayurvedic_note', '')}\n\n"
@@ -357,7 +415,7 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
         else:
             state["final_reply_text"] = (
                 f"**Twari Takleef:** {user_msg or 'Sharirik asuvidha'}\n\n"
-                f"**Jaanch (Clinical Assessment):** {diag_garh}\n\n"
+                f"**Sambhavit Karan (Possible Reason):** {diag_garh}\n\n"
                 f"**Nuskha:** {remedy.get('remedy_name', '')}\n\n"
                 f"**Kanna Banawa (Tarika):**\n{remedy.get('remedy_text', '')}\n\n"
                 f"**Ayurvedic Laabh:** {remedy.get('ayurvedic_note', '')}\n\n"
@@ -366,7 +424,7 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
     elif lang == "english":
         state["final_reply_text"] = (
             f"**Your Condition:** {user_msg or 'Reported symptoms'}\n\n"
-            f"**Clinical Assessment:** {sym_data['diagnosis_eng']}\n\n"
+            f"**Possible Cause:** {sym_data['diagnosis_eng']}\n\n"
             f"**Remedy:** {remedy.get('remedy_name', '')}\n\n"
             f"**How to Prepare:**\n{remedy.get('remedy_text', '')}\n\n"
             f"**Ayurvedic Rationale:** {remedy.get('ayurvedic_note', '')}\n\n"
@@ -375,7 +433,7 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
     else:
         state["final_reply_text"] = (
             f"**Aapki Takleef:** {user_msg or 'Bataaye gaye lakshan'}\n\n"
-            f"**Sambhavit Jaanch (Diagnosis):** {sym_data['diagnosis_hin']}\n\n"
+            f"**Sambhavit Karan (Possible Reason):** {sym_data['diagnosis_hin']}\n\n"
             f"**Nuskha:** {remedy.get('remedy_name', '')}\n\n"
             f"**Kaise Banayein:**\n{remedy.get('remedy_text', '')}\n\n"
             f"**Ayurvedic Labh:** {remedy.get('ayurvedic_note', '')}\n\n"
@@ -394,7 +452,7 @@ def _clean_text_for_speech(text: str) -> str:
     t = re.sub(r"Tier\s+(Green|Yellow|Red)[^\n]*", "", t, flags=re.I)
     t = re.sub(r"(\b\d{3}\b)\s*\([^)]*\)", r"\1", t)
     t = re.sub(
-        r"(Aapki Takleef|Sambhavit Jaanch\s*\(Diagnosis\)|Nuskha|Kaise Banayein|Kab Tak Lein|Dhyan Rakhein|Safety Verified|Ayurvedic Rationale)[:\s]*",
+        r"(Aapki Takleef|Sambhavit Jaanch\s*\(Diagnosis\)|Sambhavit Karan\s*\(Possible Reason\)|Possible Cause|Clinical Assessment|Nuskha|Kaise Banayein|Kab Tak Lein|Dhyan Rakhein|Safety Verified|Ayurvedic Rationale)[:\s]*",
         "",
         t,
         flags=re.I,
@@ -533,7 +591,13 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
         if lang == "english":
             state["final_reply_text"] = sarvam_translate_client.translate_text_sync(base_guard, "hi-IN", "en-IN")
         elif lang == "garhwali":
-            state["final_reply_text"] = apply_garhwali_adaptation(base_guard, is_devanagari)
+            state["final_reply_text"] = (
+                "मी सिर्फ स्वास्थ्य सम्बन्धी सवालूं का जवाब दे सकदू।\n"
+                "क्या त्वकु कोई तकलीफ या बीमारी छ?"
+                if is_devanagari else
+                "Mi sirf swasthya sambandhi sawalun ka jawab de sakdu.\n"
+                "Kya twaku koi takleef ya bimari chha?"
+            )
         else:
             state["final_reply_text"] = base_guard
         return state
@@ -541,17 +605,66 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
     # 3. YELLOW tier
     if tier == "Yellow":
         state["retrieved_remedies"] = []
-        base_yellow = (
-            "Aapke lakshan thodi gehri jaanch maangte hain.\n\n"
-            "Agar bukhar, tez dard ya ulti **3 din se zyada** hai — "
-            "toh **104** par call karein ya nazdiki **PHC** jaayein."
-        )
-        if lang == "english":
-            state["final_reply_text"] = sarvam_translate_client.translate_text_sync(base_yellow, "hi-IN", "en-IN")
-        elif lang == "garhwali":
-            state["final_reply_text"] = apply_garhwali_adaptation(base_yellow, is_devanagari)
+        flags = state.get("clinical_flags", [])
+
+        # Match specific yellow flag explanation strings
+        matched_reasons = []
+        for cat, expl in YELLOW_FLAG_EXPLANATIONS.items():
+            if any(cat in f for f in flags):
+                if lang == "garhwali":
+                    matched_reasons.append(expl["garh_dev"] if is_devanagari else expl["garh_rom"])
+                elif lang == "english":
+                    matched_reasons.append(expl["eng"])
+                else:
+                    matched_reasons.append(expl["hin"])
+
+        if matched_reasons:
+            reasons_str = " aur ".join(matched_reasons) if lang != "english" else " and ".join(matched_reasons)
+            if lang == "english":
+                reply = (
+                    f"Because {reasons_str}, your symptoms require a formal clinical evaluation.\n\n"
+                    "Please call **104** (e-Sanjeevani) or visit your nearest **Primary Health Centre (PHC)** promptly."
+                )
+            elif lang == "garhwali":
+                if is_devanagari:
+                    reply = (
+                        f"क्युंकी {reasons_str}, यै खातिर डॉक्टर की पूरी जांच जरूरी छ।\n\n"
+                        "**104** पर फोन करा या nazdiki **PHC** जावा।"
+                    )
+                else:
+                    reply = (
+                        f"Kyunki {reasons_str}, yaikhatir doctor ki poori jaanch zaroori chha.\n\n"
+                        "**104** par call kara ya nazdiki **PHC** jaawa."
+                    )
+            else:
+                reply = (
+                    f"Kyunki {reasons_str}, isliye yeh lakshan gehri doctori jaanch maangte hain.\n\n"
+                    "Kripya **104** (e-Sanjeevani) par call karein ya nazdiki **PHC** par doctor se sampark karein."
+                )
         else:
-            state["final_reply_text"] = base_yellow
+            if lang == "english":
+                reply = (
+                    "Your symptoms require a closer medical assessment.\n\n"
+                    "If fever, severe pain, or vomiting has persisted for **more than 3 days**, please call **104** or visit your nearest **PHC**."
+                )
+            elif lang == "garhwali":
+                if is_devanagari:
+                    reply = (
+                        "त्वरा लक्ष्णों मा डॉक्टर की जांच जरूरी छ।\n\n"
+                        "यदि बुखार, तेज पीर या उलटी **३ दिन बटि** छ त **104** पर फोन करा या **PHC** जावा।"
+                    )
+                else:
+                    reply = (
+                        "Twara lakshano ma doctor ki jaanch zaroori chha.\n\n"
+                        "Yadi bukhar, tezz peed ya ulti **3 din bati** chha toh **104** par call kara ya **PHC** jaawa."
+                    )
+            else:
+                reply = (
+                    "Aapke lakshan thodi gehri jaanch maangte hain.\n\n"
+                    "Agar bukhar, tez dard ya ulti **3 din se zyada** hai — toh **104** par call karein ya nazdiki **PHC** jaayein."
+                )
+
+        state["final_reply_text"] = reply
         return state
 
     # 4. CONSULTATION

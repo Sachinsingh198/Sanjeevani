@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { PhoneOff, Volume2, Mic, X, AlertCircle, Sparkles } from 'lucide-react';
+import { PhoneOff, Volume2, Mic, X, AlertCircle, Sparkles, PhoneCall, CheckCircle2 } from 'lucide-react';
 import { sendChatMessage, getOrCreateConversationId } from '../api/client';
 import { speakText, preloadSpeech, base64ToAudioUrl, transcribeAudio } from '../api/voiceClient';
 import SanjeevaniOrb from './SanjeevaniOrb';
@@ -21,6 +21,7 @@ export default function LiveVoiceRoom({ onClose }) {
   const [interimUserText, setInterimUserText] = useState('');
   const [latestReply, setLatestReply]         = useState(INITIAL_GREETING);
   const [tier, setTier]                       = useState('Green');
+  const [isRedAlert, setIsRedAlert]           = useState(false);
   const [isLiveActive, setIsLiveActive]       = useState(true);
   const [transcript, setTranscript]           = useState([]);
   const [micNotice, setMicNotice]             = useState('');
@@ -34,6 +35,8 @@ export default function LiveVoiceRoom({ onClose }) {
   const convId             = useRef(getOrCreateConversationId());
   const convStateRef       = useRef('idle');
   const isLiveActiveRef    = useRef(true);
+  const tierRef            = useRef('Green');
+  tierRef.current          = tier;
   const recognitionRef     = useRef(null);
   const mediaRecorderRef   = useRef(null);
   const audioChunksRef     = useRef([]);
@@ -202,7 +205,12 @@ export default function LiveVoiceRoom({ onClose }) {
         setDetectedLanguage(res.detected_language);
       }
       setLatestReply(res.reply_text);
-      setTier(res.tier || 'Green');
+      const resTier = res.tier || 'Green';
+      setTier(resTier);
+      tierRef.current = resTier;
+      if (resTier === 'Red') {
+        setIsRedAlert(true);
+      }
       setTranscript(prev => [...prev, { role: 'ai', text: res.reply_text }]);
 
       const voiceText = res.spoken_reply_text || res.reply_text;
@@ -276,8 +284,8 @@ export default function LiveVoiceRoom({ onClose }) {
       };
 
       rec.onresult = (e) => {
-        // Barge-in: if Sanjeevani is currently speaking, immediately stop voice
-        if (convStateRef.current === 'speaking') {
+        // Barge-in: if Sanjeevani is currently speaking, stop voice (except when Red emergency audio is playing)
+        if (convStateRef.current === 'speaking' && tierRef.current !== 'Red') {
           stopCurrentAudio();
           updateConvState('listening');
         }
@@ -304,7 +312,8 @@ export default function LiveVoiceRoom({ onClose }) {
         const activeText = ((speechBufferRef.current ? speechBufferRef.current + ' ' : '') + currentInterim).trim();
         setInterimUserText(activeText);
 
-        // VAD silence debounce: 1050ms pause dispatches message
+        // Adaptive VAD silence debounce: slower speech & short phrases get longer pauses (up to 1800ms)
+        const debounceMs = activeText.length < 15 ? 1800 : activeText.length < 40 ? 1400 : 1100;
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         if (activeText.length >= 2) {
           silenceTimerRef.current = setTimeout(async () => {
@@ -343,7 +352,7 @@ export default function LiveVoiceRoom({ onClose }) {
 
             // Fallback to local recognition transcript
             dispatchUserMessage(finalSpoken);
-          }, 1050);
+          }, debounceMs);
         }
       };
 
@@ -470,6 +479,10 @@ export default function LiveVoiceRoom({ onClose }) {
       className="fixed inset-0 z-[99999] w-screen h-screen flex flex-col justify-between overflow-hidden select-none"
       style={{ background: 'radial-gradient(ellipse at center top, #182838 0%, #0E1824 50%, #081118 100%)' }}
     >
+      {/* ── Visual Flash/Pulse Border for Red Emergency ── */}
+      {(isRedAlert || tier === 'Red') && (
+        <div className="absolute inset-0 pointer-events-none z-50 border-4 sm:border-8 border-red-600 animate-pulse bg-red-600/10 shadow-[inset_0_0_80px_rgba(220,38,38,0.4)]" />
+      )}
       {/* ── TOP HEADER BAR (CLEAN & FULL-WIDTH) ─────────────────────── */}
       <header className="shrink-0 flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4 border-b border-white/10 bg-black/20 backdrop-blur-md">
         <div className="flex items-center gap-3">
@@ -597,23 +610,60 @@ export default function LiveVoiceRoom({ onClose }) {
           <div className="w-full bg-white/8 backdrop-blur-md border border-white/15 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl transition-all">
             {/* Real-time Streaming User Speech Display */}
             {interimUserText ? (
-              <div className="px-4 py-2 border-b border-white/10 bg-[#D4A359]/15 flex items-center gap-2">
-                <span className="text-[10px] font-bold text-[#D4A359] uppercase tracking-wider shrink-0 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#D4A359] animate-ping" />
-                  Sun raha hoon:
-                </span>
-                <span className="text-white text-xs font-semibold italic truncate">"{interimUserText}"</span>
+              <div className="px-4 py-3 border-b border-white/10 bg-[#D4A359]/20 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#D4A359] uppercase tracking-wider shrink-0 flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#D4A359] animate-ping" />
+                    आपकी बात सुन रहे हैं (Live STT):
+                  </span>
+                  <span className="text-[11px] text-white/70 font-medium">बोलना पूरा होने पर बटन दबाएं</span>
+                </div>
+                <p className="text-white text-sm sm:text-base font-medium leading-relaxed bg-black/30 p-2.5 rounded-xl border border-white/15">
+                  "{interimUserText}"
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+                    const toSend = interimUserText.trim();
+                    if (!toSend || convStateRef.current === 'thinking') return;
+                    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                      try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
+                    }
+                    dispatchUserMessage(toSend);
+                  }}
+                  className="touch-target py-2 px-3 rounded-xl bg-[#5A7855] hover:bg-[#4a6346] active:scale-98 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-[#8ED14C]" />
+                  <span>मैं बोल चुका / चुकी हूँ • I'm Done (उत्तर सुनें)</span>
+                </button>
               </div>
             ) : latestUserText ? (
-              <div className="px-4 py-1.5 border-b border-white/10 bg-black/15 flex items-center gap-2">
-                <span className="text-[10px] font-bold text-white/45 uppercase tracking-wider shrink-0">Aapne kaha:</span>
-                <span className="text-white/90 text-xs italic truncate">"{latestUserText}"</span>
+              <div className="px-4 py-2 border-b border-white/10 bg-black/20 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 truncate">
+                  <span className="text-xs font-bold text-white/60 uppercase tracking-wider shrink-0">Aapne kaha:</span>
+                  <span className="text-white/95 text-xs sm:text-sm italic truncate">"{latestUserText}"</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    speechBufferRef.current = `[CORRECTION] `;
+                    setInterimUserText(`[CORRECTION] `);
+                    updateConvState('listening');
+                    speakText('Apna sahi lakshan dobara bolein.', { language: 'hi', gender: 'female' });
+                    setTimeout(startListening, 300);
+                  }}
+                  className="text-[11px] font-bold text-amber-400 hover:text-amber-300 underline shrink-0 cursor-pointer"
+                  title="Correct the last spoken statement"
+                >
+                  सुधारें (Correction)
+                </button>
               </div>
             ) : (
-              <div className="px-4 py-1.5 border-b border-white/10 bg-black/15 flex items-center justify-between">
-                <span className="text-[10px] text-white/40 italic">Aapki awaaz ka intezaar hai… (Boliye ya Orb tap karein)</span>
-                <span className="text-[9px] text-[#8ED14C] font-mono flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#8ED14C] animate-pulse" />
+              <div className="px-4 py-2 border-b border-white/10 bg-black/15 flex items-center justify-between">
+                <span className="text-xs text-white/60 italic">Aapki awaaz ka intezaar hai… (Boliye ya Orb tap karein)</span>
+                <span className="text-xs text-[#8ED14C] font-mono flex items-center gap-1 font-bold">
+                  <span className="w-2 h-2 rounded-full bg-[#8ED14C] animate-pulse" />
                   Mic On
                 </span>
               </div>
@@ -622,10 +672,10 @@ export default function LiveVoiceRoom({ onClose }) {
             {/* Sanjeevani Reply Text */}
             <div className="px-4 py-2.5 sm:py-3.5">
               <div className="flex items-center justify-between mb-1">
-                <span className={`text-[11px] font-bold uppercase tracking-wider ${tc.text}`}>
+                <span className={`text-xs font-bold uppercase tracking-wider ${tc.text}`}>
                   Sanjeevani
                 </span>
-                <span className="text-[10px] text-white/40 font-mono">
+                <span className="text-xs text-white/50 font-mono">
                   {convState === 'thinking' ? 'Generating Voice…' : 'Real-time Voice'}
                 </span>
               </div>
@@ -656,6 +706,30 @@ export default function LiveVoiceRoom({ onClose }) {
         </div>
 
       </main>
+
+      {/* ── Persistent Large Docked Call 108 Button for Emergency (Red Tier) ── */}
+      {tier === 'Red' && (
+        <div className="shrink-0 z-40 bg-gradient-to-r from-red-600 to-[#B85042] px-4 py-3 sm:py-3.5 border-t-2 border-white/30 shadow-2xl flex items-center justify-between gap-3 animate-pulse">
+          <div className="flex items-center gap-2.5 text-white min-w-0">
+            <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-white animate-bounce" />
+            <div>
+              <p className="font-extrabold text-xs sm:text-sm uppercase tracking-wide leading-tight">
+                आपातकालीन चेतावनी • Critical Emergency Alert
+              </p>
+              <p className="text-[11px] text-white/90 truncate">
+                Immediate medical evaluation required. Keep patient comfortable & call 108.
+              </p>
+            </div>
+          </div>
+          <a
+            href="tel:108"
+            className="touch-target px-5 sm:px-8 py-2.5 sm:py-3 rounded-xl bg-white text-red-600 hover:bg-gray-100 active:scale-95 font-black text-sm sm:text-base flex items-center gap-2 shadow-2xl shrink-0"
+          >
+            <PhoneCall className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 fill-current" />
+            <span>Call 108 Now</span>
+          </a>
+        </div>
+      )}
 
       {/* Subtle Bottom Ambient Note */}
       <footer className="shrink-0 py-2.5 text-center text-white/30 text-[11px]">

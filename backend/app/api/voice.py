@@ -1,10 +1,11 @@
 import base64
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Request
 from fastapi.responses import StreamingResponse
 from app.config import settings
 from app.schemas.voice_schemas import TTSRequest, TTSResponse, STTResponse
 from app.core.bhashini_engine import BhashiniVoiceEngine
 from app.core.tts_engine import IndicTTSEngine, get_shared_tts_engine
+from app.core.limiter import limiter
 from app.core.sarvam_stt import (
     sarvam_stt_client,
     SarvamNotConfiguredError,
@@ -46,7 +47,8 @@ async def _synthesize_fallback(clean_text: str, req: TTSRequest) -> TTSResponse:
 
 
 @router.post("/tts", response_model=TTSResponse)
-async def synthesize_speech(req: TTSRequest):
+@limiter.limit("60/minute")
+async def synthesize_speech(request: Request, req: TTSRequest):
     """
     Converts text to natural speech using Sarvam AI (bulbul:v3)
     with Neural Indic (Edge TTS) fallback.
@@ -56,7 +58,8 @@ async def synthesize_speech(req: TTSRequest):
 
 
 @router.post("/tts/stream")
-async def synthesize_speech_stream(req: TTSRequest):
+@limiter.limit("60/minute")
+async def synthesize_speech_stream(request: Request, req: TTSRequest):
     """
     Streams synthesized audio chunks directly from Sarvam AI for low-latency playback.
     Falls back seamlessly to neural Indic synthesis if unconfigured.
@@ -89,7 +92,9 @@ async def synthesize_speech_stream_get(text: str = "Namaste", language: str = "h
 
 
 @router.post("/stt", response_model=STTResponse)
+@limiter.limit("30/minute")
 async def transcribe_speech(
+    request: Request,
     file: UploadFile = File(...),
 ):
     """

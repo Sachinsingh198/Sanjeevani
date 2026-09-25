@@ -29,7 +29,7 @@ function renderInlineText(text) {
     if (match[2] !== undefined) {
       // **bold**
       parts.push(
-        <strong key={`b-${match.index}`} className="font-semibold text-[#1E2A43] dark:text-[#F4F6F0]">
+        <strong key={`b-${match.index}`} className="font-semibold text-primary">
           {match[2]}
         </strong>
       );
@@ -47,7 +47,7 @@ function renderInlineText(text) {
         <a
           key={`tel-${match.index}`}
           href={`tel:${num}`}
-          className="inline-flex items-center gap-1 font-bold text-[#5A7855] dark:text-[#8ED14C] hover:underline underline-offset-2 px-1 py-0.5 rounded bg-[#5A7855]/10 dark:bg-[#5A7855]/20 text-[11px] sm:text-xs"
+          className="inline-flex items-center gap-1 font-bold text-sage dark:text-booti-glow hover:underline underline-offset-2 px-1 py-0.5 rounded bg-sage/10 dark:bg-sage/20 text-[11px] sm:text-xs"
           title={`Call ${num}`}
         >
           <PhoneCall className="w-2.5 h-2.5 inline" />
@@ -94,8 +94,15 @@ function identifySectionType(keyText) {
   if (lower.includes('takleef') || lower.includes('condition') || lower.includes('lakshan') || lower.includes('तकलीफ')) {
     return 'condition';
   }
-  // Clinical Diagnosis / Assessment
+  // Possible Cause / Reason / Clinical Assessment
   if (
+    lower.includes('karan') ||
+    lower.includes('kaaran') ||
+    lower.includes('कारण') ||
+    lower.includes('possible cause') ||
+    lower.includes('possible reason') ||
+    lower.includes('reason') ||
+    lower.includes('cause') ||
     lower.includes('jaanch') ||
     lower.includes('diagnosis') ||
     lower.includes('assessment') ||
@@ -103,7 +110,7 @@ function identifySectionType(keyText) {
     lower.includes('आंकलन') ||
     lower.includes('जांच')
   ) {
-    return 'diagnosis';
+    return 'possible_cause';
   }
   // Remedy name
   if (lower.includes('nuskha') || lower.includes('remedy') || lower.includes('नुस्खा') || lower.includes('upchaar')) {
@@ -308,8 +315,109 @@ function parseMessageBlocks(rawText) {
   return blocks;
 }
 
-export default function StructuredBotMessage({ text, tier }) {
-  if (!text) return null;
+export default function StructuredBotMessage({ text, tier, summary }) {
+  if (!text && !summary) return null;
+
+  if (summary && (summary.remedy_name || summary.possible_cause || summary.condition)) {
+    return (
+      <div className="space-y-3 text-xs sm:text-sm leading-relaxed">
+        {summary.condition && (
+          <div className="p-2.5 sm:p-3 rounded-xl bg-mist dark:bg-[#131D2A] border border-sage/15 dark:border-gray-700/60">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+              <span className="w-2 h-2 rounded-full bg-sage" />
+              Aapki Takleef (Reported Symptoms)
+            </div>
+            <p className="text-xs sm:text-sm font-medium text-primary dark:text-[#E2E8F0]">
+              {summary.condition}
+            </p>
+          </div>
+        )}
+
+        {summary.possible_cause && (
+          <div className="p-2.5 sm:p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/50">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider mb-1">
+              <Stethoscope className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              Sambhavit Karan (Possible Reason)
+            </div>
+            <p className="text-xs sm:text-sm font-semibold text-primary">
+              {summary.possible_cause}
+            </p>
+          </div>
+        )}
+
+        {summary.remedy_name && (
+          <div className="p-3 rounded-xl bg-gold-warm/10 dark:bg-gold-warm/15 border border-gold-warm/30 flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gold-warm text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+              <Leaf className="w-4.5 h-4.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-extrabold uppercase tracking-wider text-gold-warm dark:text-gold-warm">
+                Nuskha (Verified Remedy)
+              </div>
+              <div className="text-sm font-bold text-primary">
+                {summary.remedy_name}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {summary.preparation_steps && summary.preparation_steps.length > 0 && (
+          <div className="p-3 rounded-xl bg-white dark:bg-[#15202E] border border-gray-200 dark:border-gray-700/80 shadow-xs space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+              <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
+              <span>Kaise Banayein (How to Prepare)</span>
+            </div>
+            <div className="space-y-1.5 pl-1">
+              {summary.preparation_steps.map((st, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs sm:text-sm">
+                  <span className="w-5 h-5 rounded-full bg-sage/15 dark:bg-sage/30 text-sage dark:text-booti-glow text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                    {i + 1}
+                  </span>
+                  <span className="text-gray-800 dark:text-gray-200 flex-1 leading-snug">{st}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {summary.dosage && summary.dosage.length > 0 && (
+          <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+              <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Kab Tak Lein (Dosage & Timing)</span>
+            </div>
+            <div className="space-y-1 pl-1">
+              {summary.dosage.map((d, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs sm:text-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 shrink-0 mt-1.5" />
+                  <span className="text-emerald-950 dark:text-emerald-100 font-medium">{d}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {summary.precautions && summary.precautions.length > 0 && (
+          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs sm:text-sm space-y-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                Dhyan Rakhein (Precautions)
+              </div>
+            </div>
+            <div className="space-y-1.5 pl-1">
+              {summary.precautions.map((p, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs sm:text-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0 mt-1.5" />
+                  <span className="leading-relaxed text-amber-950 dark:text-amber-100">{p}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const blocks = parseMessageBlocks(text);
 
@@ -344,32 +452,32 @@ export default function StructuredBotMessage({ text, tier }) {
             return (
               <div
                 key={idx}
-                className="p-2.5 sm:p-3 rounded-xl bg-[#F4F6F0] dark:bg-[#131D2A] border border-[#5A7855]/15 dark:border-gray-700/60"
+                className="p-2.5 sm:p-3 rounded-xl bg-mist dark:bg-[#131D2A] border border-sage/15 dark:border-gray-700/60"
               >
                 <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#5A7855]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-sage" />
                   {label}
                 </div>
-                <p className="text-xs sm:text-sm font-medium text-[#1E2A43] dark:text-[#E2E8F0]">
+                <p className="text-xs sm:text-sm font-medium text-primary dark:text-[#E2E8F0]">
                   {renderInlineText(bodyText)}
                 </p>
               </div>
             );
           }
 
-          // (b) Clinical Diagnosis / Sambhavit Jaanch
-          if (secType === 'diagnosis') {
+          // (b) Possible Reason / Cause / Clinical Assessment
+          if (secType === 'possible_cause' || secType === 'diagnosis') {
             const bodyText = content.filter((c) => typeof c === 'string').join(' ');
             return (
               <div
                 key={idx}
-                className="p-3 sm:p-3.5 rounded-xl bg-gradient-to-br from-[#5A7855]/10 via-[#5A7855]/5 to-transparent border border-[#5A7855]/30 dark:border-[#5A7855]/40 shadow-xs"
+                className="p-3 sm:p-3.5 rounded-xl bg-gradient-to-br from-sage/10 via-[#5A7855]/5 to-transparent border border-sage/30 dark:border-sage/40 shadow-xs"
               >
-                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-[#5A7855] dark:text-[#8ED14C] mb-1">
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-sage dark:text-booti-glow mb-1">
                   <Stethoscope className="w-3.5 h-3.5 shrink-0" />
-                  <span>{label}</span>
+                  <span>{label.replace(/Diagnosis/i, 'Possible Reason').replace(/Jaanch/i, 'Karan')}</span>
                 </div>
-                <p className="text-xs sm:text-sm font-semibold text-[#1E2A43] dark:text-[#F4F6F0] leading-snug">
+                <p className="text-xs sm:text-sm font-semibold text-primary leading-snug">
                   {renderInlineText(bodyText)}
                 </p>
               </div>
@@ -382,16 +490,16 @@ export default function StructuredBotMessage({ text, tier }) {
             return (
               <div
                 key={idx}
-                className="p-2.5 sm:p-3 rounded-xl bg-[#D4A359]/10 dark:bg-[#D4A359]/15 border border-[#D4A359]/30 flex items-start gap-2.5"
+                className="p-2.5 sm:p-3 rounded-xl bg-gold-warm/10 dark:bg-gold-warm/15 border border-gold-warm/30 flex items-start gap-2.5"
               >
-                <div className="w-7 h-7 rounded-lg bg-[#D4A359] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                <div className="w-7 h-7 rounded-lg bg-gold-warm text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
                   <Leaf className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#8C5E24] dark:text-[#D4A359]">
+                  <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-gold-warm dark:text-gold-warm">
                     {label}
                   </div>
-                  <div className="text-xs sm:text-sm font-bold text-[#1E2A43] dark:text-[#F4F6F0]">
+                  <div className="text-xs sm:text-sm font-bold text-primary">
                     {renderInlineText(bodyText)}
                   </div>
                 </div>
@@ -406,8 +514,8 @@ export default function StructuredBotMessage({ text, tier }) {
                 key={idx}
                 className="p-3 rounded-xl bg-white dark:bg-[#15202E] border border-gray-200 dark:border-gray-700/80 shadow-xs space-y-2"
               >
-                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-[#1E2A43] dark:text-[#F4F6F0]">
-                  <Sparkles className="w-3.5 h-3.5 text-[#D4A359]" />
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-primary">
+                  <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
                   <span>{label}</span>
                 </div>
                 <div className="space-y-1.5 pl-1">
@@ -415,7 +523,7 @@ export default function StructuredBotMessage({ text, tier }) {
                     if (typeof item === 'object' && item.type === 'step') {
                       return (
                         <div key={ci} className="flex items-start gap-2 text-xs sm:text-sm">
-                          <span className="w-5 h-5 rounded-full bg-[#5A7855]/15 dark:bg-[#5A7855]/30 text-[#5A7855] dark:text-[#8ED14C] text-[10px] font-extrabold flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="w-5 h-5 rounded-full bg-sage/15 dark:bg-sage/30 text-sage dark:text-booti-glow text-[10px] font-extrabold flex items-center justify-center shrink-0 mt-0.5">
                             {item.num}
                           </span>
                           <span className="text-gray-700 dark:text-gray-300 flex-1">{renderInlineText(item.text)}</span>
@@ -466,7 +574,7 @@ export default function StructuredBotMessage({ text, tier }) {
                 key={idx}
                 className="p-2.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 text-emerald-900 dark:text-emerald-200 text-xs sm:text-sm"
               >
-                <strong className="font-semibold text-[#5A7855] dark:text-[#8ED14C] mr-1">🌿 {label}:</strong>
+                <strong className="font-semibold text-sage dark:text-booti-glow mr-1">🌿 {label}:</strong>
                 <span>{renderInlineText(bodyText)}</span>
               </div>
             );
@@ -502,7 +610,7 @@ export default function StructuredBotMessage({ text, tier }) {
           // (h) Generic Section Fallback
           return (
             <div key={idx} className="p-2.5 rounded-xl bg-black/5 dark:bg-white/5 space-y-1">
-              <div className="text-xs font-bold text-[#1E2A43] dark:text-[#F4F6F0]">{label}</div>
+              <div className="text-xs font-bold text-primary">{label}</div>
               <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
                 {content.map((c, ci) => (
                   <p key={ci}>{typeof c === 'string' ? renderInlineText(c) : c.text}</p>
@@ -519,7 +627,7 @@ export default function StructuredBotMessage({ text, tier }) {
               <div key={idx} className="space-y-1.5 my-1">
                 {block.items.map((item, li) => (
                   <div key={li} className="flex items-start gap-2 text-xs sm:text-sm">
-                    <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#5A7855]/15 dark:bg-[#5A7855]/30 text-[#5A7855] dark:text-[#8ED14C] text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-sage/15 dark:bg-sage/30 text-sage dark:text-booti-glow text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                       {item.num}
                     </span>
                     <span className="text-gray-800 dark:text-gray-200 flex-1 leading-snug">
@@ -535,7 +643,7 @@ export default function StructuredBotMessage({ text, tier }) {
             <div key={idx} className="space-y-1 my-1 pl-1">
               {block.items.map((item, li) => (
                 <div key={li} className="flex items-start gap-2 text-xs sm:text-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#5A7855] dark:bg-[#8ED14C] shrink-0 mt-2" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-sage dark:bg-[#8ED14C] shrink-0 mt-2" />
                   <span className="text-gray-800 dark:text-gray-200 flex-1 leading-relaxed">
                     {renderInlineText(item)}
                   </span>
@@ -550,16 +658,16 @@ export default function StructuredBotMessage({ text, tier }) {
           return (
             <div
               key={idx}
-              className="mt-2 p-3 rounded-xl bg-[#5A7855]/10 dark:bg-[#5A7855]/15 border border-[#5A7855]/25 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs"
+              className="mt-2 p-3 rounded-xl bg-sage/10 dark:bg-sage/15 border border-sage/25 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs"
             >
               <div className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 flex items-start sm:items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-[#5A7855] dark:text-[#8ED14C] shrink-0 mt-0.5 sm:mt-0" />
+                <AlertTriangle className="w-3.5 h-3.5 text-sage dark:text-booti-glow shrink-0 mt-0.5 sm:mt-0" />
                 <span>{renderInlineText(block.text)}</span>
               </div>
               <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
                 <a
                   href="tel:104"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#5A7855] hover:bg-[#496345] text-white text-[10px] sm:text-xs font-bold transition-all shadow-xs"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sage hover:bg-[#496345] text-white text-[10px] sm:text-xs font-bold transition-all shadow-xs"
                   title="Call 104 Tele-Health Helpline"
                 >
                   <PhoneCall className="w-3 h-3" />
@@ -567,7 +675,7 @@ export default function StructuredBotMessage({ text, tier }) {
                 </a>
                 <a
                   href="tel:108"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#B85042] hover:bg-[#9c4337] text-white text-[10px] sm:text-xs font-bold transition-all shadow-xs"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-soft hover:bg-[#9c4337] text-white text-[10px] sm:text-xs font-bold transition-all shadow-xs"
                   title="Call 108 Emergency Ambulance"
                 >
                   <PhoneCall className="w-3 h-3" />
@@ -583,7 +691,7 @@ export default function StructuredBotMessage({ text, tier }) {
           return (
             <h4
               key={idx}
-              className="font-bold text-sm sm:text-base text-[#1E2A43] dark:text-[#F4F6F0] pt-1 border-b border-gray-100 dark:border-gray-800 pb-1"
+              className="font-bold text-sm sm:text-base text-primary pt-1 border-b border-gray-100 dark:border-gray-800 pb-1"
             >
               {renderInlineText(block.text)}
             </h4>

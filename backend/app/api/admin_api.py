@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import select, insert, delete, func
 from app.schemas.auth_schemas import RegisterRequest, UserProfile
 from app.core.auth import hash_password, require_role
-from app.db import get_db_connection, users_table, row_to_dict, rows_to_dicts
+from app.db import get_db_connection, users_table, conversation_index_table, row_to_dict, rows_to_dicts
 from app.core.analytics import get_analytics_summary
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -106,11 +106,19 @@ async def get_system_stats(admin: Dict[str, Any] = Depends(require_role("admin")
         village_rows = conn.execute(stmt_villages).fetchall()
         village_distribution = [{"village": row.village, "count": row.count} for row in village_rows]
 
-        # Triage distribution (proportional to activity or baseline mountain case load)
-        base = max(patients, 10)
-        red_cases = max(round(base * 0.15), 3)
-        yellow_cases = max(round(base * 0.35), 7)
-        green_cases = max(base - red_cases - yellow_cases, 12)
+        # Real triage distribution aggregate query from conversation_index_table
+        stmt_tiers = (
+            select(conversation_index_table.c.tier, func.count().label("count"))
+            .where(conversation_index_table.c.tier.is_not(None))
+            .group_by(conversation_index_table.c.tier)
+        )
+        tier_rows = conn.execute(stmt_tiers).fetchall()
+        tier_map = {str(row.tier).lower(): row.count for row in tier_rows}
+        triage_dist = {
+            "red": tier_map.get("red", 0),
+            "yellow": tier_map.get("yellow", 0),
+            "green": tier_map.get("green", 0),
+        }
 
         return {
             "total_users": total_users,
@@ -119,11 +127,7 @@ async def get_system_stats(admin: Dict[str, Any] = Depends(require_role("admin")
             "admins": admins,
             "recent_registrations_7d": recent,
             "village_distribution": village_distribution,
-            "triage_distribution": {
-                "red": red_cases,
-                "yellow": yellow_cases,
-                "green": green_cases,
-            },
+            "triage_distribution": triage_dist,
             "system_status": "healthy",
             "qdrant_status": "active",
             "llm_provider": "groq",
