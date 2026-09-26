@@ -22,6 +22,7 @@ const WellnessStudio = React.lazy(() => import('./pages/WellnessStudio'));
 const Companion = React.lazy(() => import('./pages/Companion'));
 const AshaDashboard = React.lazy(() => import('./pages/AshaDashboard'));
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
+const Profile = React.lazy(() => import('./pages/Profile'));
 
 function RouteLoadingFallback() {
   return (
@@ -156,6 +157,13 @@ export default function App() {
               <Route path="/admin" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminDashboard />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Profile & Account Settings (Mitra, ASHA & Admin) ── */}
+              <Route path="/profile" element={
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
+                  <Profile />
                 </ProtectedRoute>
               } />
 

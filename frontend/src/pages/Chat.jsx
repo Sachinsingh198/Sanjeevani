@@ -5,6 +5,7 @@ import {
   Sparkles, Stethoscope, X, ChevronLeft, ChevronRight,
   MessageSquare, Plus, Clock, Trash2, Leaf, Edit3,
 } from 'lucide-react';
+import useTypewriter from '../lib/useTypewriter';
 import toast from 'react-hot-toast';
 import TierBadge from '../components/TierBadge';
 import EscalationCard from '../components/EscalationCard';
@@ -22,6 +23,8 @@ import { speakText, transcribeAudio } from '../api/voiceClient';
 import { downloadConsultationReport } from '../api/reportsClient';
 import { listSessions, clearSessionHistory, recordSessionTurn } from '../lib/sessionStore';
 import { evaluateLocalRedFlags } from '../lib/localTriageFallback';
+import { processOfflineConsultation } from '../lib/offlineTriageEngine';
+import { queueOfflineChat } from '../lib/offlineSyncManager';
 
 const COMORBIDITY_OPTIONS = [
   { label: 'BP', value: 'hypertension', icon: '❤️' },
@@ -302,14 +305,21 @@ export default function Chat() {
     }
   }, [isListening, fallbackToWebSpeech]);
 
-  const readAloud = useCallback((text, idx) => {
+  const readAloud = useCallback((text, idx, spokenText) => {
     stopSpeakingRef.current?.();
-    stopSpeakingRef.current = speakText(text, {
-      language: uiLang === 'hi' ? 'hi' : 'en', gender: 'female',
+    const candidateText = (spokenText || text || '')
+      .replace(/[*_#`~>\[\]]/g, ' ')
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    stopSpeakingRef.current = speakText(candidateText, {
+      language: detectedLanguage || (uiLang === 'hi' ? 'hi' : 'en'),
+      gender: 'female',
       onStart: () => setSpeakingMsgIdx(idx),
       onEnd: () => setSpeakingMsgIdx(cur => cur === idx ? null : cur),
     });
-  }, [uiLang]);
+  }, [detectedLanguage, uiLang]);
 
   const handleDownloadReport = useCallback(async (msg, idx, format = 'docx') => {
     setDownloadingIdx(`${idx}-${format}`);
@@ -358,15 +368,15 @@ export default function Chat() {
     setMessages(p => [...p, { sender: 'user', text: trimmed }]);
     setLoading(true);
     try {
-      // Enforce client-side timeout (~20s) distinct from generic axios timeout
+      // Enforce client-side timeout (~45s) aligned with axios timeout
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
-          reject(new Error('REQUEST_TIMEOUT: AI paramarsh mein 20 second se zyada samay laga. Network slow ho sakta hai.'));
-        }, 20000);
+          reject(new Error('REQUEST_TIMEOUT: AI paramarsh mein 45 second se zyada samay laga. Network slow ho sakta hai.'));
+        }, 45000);
       });
 
       const res = await Promise.race([
-        sendChatMessage(conversationIdRef.current, trimmed, knownConditions),
+        sendChatMessage(conversationIdRef.current, trimmed, knownConditions, 'auto', false, 'female', messages),
         timeoutPromise
       ]);
 
@@ -376,6 +386,7 @@ export default function Chat() {
       setMessages(p => [...p, {
         sender: 'bot',
         text: res.reply_text,
+        spoken_text: res.spoken_reply_text || res.reply_text,
         tier: res.tier,
         flags: res.flags ?? [],
         remedies: res.remedies ?? [],
@@ -403,13 +414,27 @@ export default function Chat() {
           is_offline_fallback: true,
         }]);
       } else {
+        const offlineRes = processOfflineConsultation(trimmed, knownConditions, conversationIdRef.current, messages);
+        const resolvedPhase = offlineRes.phase || 'CONCLUDED';
+        setCurrentPhase(resolvedPhase);
         setMessages(p => [...p, {
           sender: 'bot',
-          text: 'Kshama karein, abhi sampark me asuvidha hai ya timeout hua. Kripya punah prayas karein.',
-          tier: 'Green',
-          remedies: [],
+          text: offlineRes.reply_text,
+          tier: offlineRes.tier,
+          flags: offlineRes.flags || [],
+          remedies: offlineRes.remedies || [],
+          escalation: offlineRes.escalation_triggered,
+          phase: resolvedPhase,
+          consultation_summary: offlineRes.consultation_summary,
           is_offline_fallback: true,
         }]);
+        recordSessionTurn({ conversationId: conversationIdRef.current, summary: trimmed, tier: offlineRes.tier });
+        refreshSessions();
+        try {
+          queueOfflineChat(offlineRes);
+        } catch (qErr) {
+          console.warn('[OfflineSync] Failed to queue chat encounter:', qErr);
+        }
       }
     } finally { setLoading(false); inputRef.current?.focus(); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -699,12 +724,12 @@ export default function Chat() {
                 <p className="text-[10px] sm:text-[11px] font-semibold text-gray-400 uppercase tracking-widest text-center mb-2 sm:mb-3">
                   Ya yahan se chuniye
                 </p>
-                <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-2.5 sm:mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-2.5 sm:mb-4">
                   {QUICK_SYMPTOMS.map(s => (
                     <button key={s.value} onClick={() => sendText(s.value)}
-                      className="flex flex-col items-center gap-1 sm:gap-1.5 py-2 sm:py-3 px-1 sm:px-2 rounded-xl sm:rounded-2xl bg-white dark:bg-[#1A2538] border border-gray-200 dark:border-gray-700 hover:border-sage/50 hover:shadow-sm transition-all active:scale-95 group">
-                      <span className="text-lg sm:text-2xl group-hover:scale-110 transition-transform">{s.emoji}</span>
-                      <span className="text-[10px] sm:text-[11px] font-bold text-primary dark:text-[#C8D4E0] truncate max-w-full">{s.label}</span>
+                      className="symptom-tile flex flex-col items-center justify-center gap-1.5 sm:gap-2 py-3 sm:py-4 px-2 sm:px-3 rounded-2xl bg-white dark:bg-[#1A2538] border border-gray-200 dark:border-gray-700 hover:border-sage/50 hover:shadow-md transition-all active:scale-95 group cursor-pointer">
+                      <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">{s.emoji}</span>
+                      <span className="text-xs sm:text-sm font-bold text-primary dark:text-[#C8D4E0] truncate max-w-full">{s.label}</span>
                     </button>
                   ))}
                 </div>
@@ -735,7 +760,7 @@ export default function Chat() {
                   onCancelCorrection={() => setCorrectingIdx(null)}
                   onCorrectionChange={setCorrectionText}
                   onSubmitCorrection={handleCorrectionSubmit}
-                  onReadAloud={() => readAloud(msg.text, idx)}
+                  onReadAloud={() => readAloud(msg.text, idx, msg.spoken_text || msg.spoken_reply_text)}
                   onDownloadReport={(format) => handleDownloadReport(msg, idx, format)}
                 />
               ))}
@@ -757,14 +782,14 @@ export default function Chat() {
           <form onSubmit={handleSend} className="max-w-2xl mx-auto flex items-end gap-1.5 sm:gap-2 p-2 sm:p-3">
             {/* Mic */}
             <button type="button" onClick={toggleListening}
-              className={`shrink-0 w-9 h-9 sm:w-10 sm:h-10 mb-0.5 rounded-lg sm:rounded-xl flex items-center justify-center transition-all ${
+              className={`shrink-0 w-11 h-11 sm:w-12 sm:h-12 mb-0.5 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all ${
                 isListening
                   ? 'bg-rose-soft text-white animate-pulse ring-4 ring-[#B85042]/20 shadow-md'
-                  : 'bg-sage/10 border border-sage/25 text-sage dark:text-booti-glow hover:bg-sage/15'
+                  : 'bg-sage/10 border-2 border-sage/30 text-sage dark:text-booti-glow hover:bg-sage/15'
               }`}
               aria-label="Voice input"
             >
-              {isListening ? <MicOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
 
             {/* Manual EN/HI STT Voice Toggle */}
@@ -791,15 +816,15 @@ export default function Chat() {
               onKeyDown={handleKeyDown}
               placeholder={isListening ? 'Sun raha hoon… 🎙️' : 'Apne lakshan batayein ya likhein… (Shift+Enter for new line)'}
               disabled={loading}
-              className="flex-1 min-w-0 bg-mist dark:bg-[#0F1521] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage/50 disabled:opacity-60 placeholder-gray-400 dark:placeholder-gray-600 resize-none overflow-y-auto leading-relaxed transition-[height] duration-75 ease-out"
+              className="flex-1 min-w-0 bg-mist dark:bg-[#0F1521] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base text-primary focus:outline-none focus:ring-2 focus:ring-sage/50 disabled:opacity-60 placeholder-gray-400 dark:placeholder-gray-600 resize-none overflow-y-auto leading-relaxed transition-[height] duration-75 ease-out"
             />
 
             {/* Send */}
             <button type="submit" disabled={!inputText.trim() || loading}
-              className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 mb-0.5 bg-sage hover:bg-sage/90 text-white rounded-lg sm:rounded-xl flex items-center justify-center transition-all disabled:opacity-40 shadow-sm"
+              className="shrink-0 w-11 h-11 sm:w-12 sm:h-12 mb-0.5 bg-sage hover:bg-sage/90 text-white rounded-xl sm:rounded-2xl flex items-center justify-center transition-all disabled:opacity-40 shadow-sm"
               aria-label="Send"
             >
-              {loading ? <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+              {loading ? <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <Send className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
           </form>
         </div>
@@ -827,12 +852,22 @@ function MessageBubble({
   onSubmitCorrection,
 }) {
   const isUser = msg.sender === 'user';
+  // Typewriter streaming: only the latest bot message animates
+  const shouldStream = !isUser && isLatestBot && !msg.is_offline_fallback;
+  const { displayText, isStreaming, skipToEnd } = useTypewriter(
+    msg.text || '',
+    shouldStream,
+    16,  // speed: 16ms per tick
+    3    // chunkSize: 3 chars per tick (~185 chars/sec)
+  );
+  const visibleText = shouldStream ? displayText : msg.text;
+
   return (
     <div className={`flex gap-1.5 sm:gap-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
       {!isUser && (
         <div className="shrink-0 mt-0.5">
-          <div className="hidden sm:block"><SanjeevaniOrb state={isSpeaking ? 'speaking' : 'idle'} size={28} /></div>
-          <div className="sm:hidden"><SanjeevaniOrb state={isSpeaking ? 'speaking' : 'idle'} size={22} /></div>
+          <div className="hidden sm:block"><SanjeevaniOrb state={isSpeaking ? 'speaking' : (isStreaming ? 'thinking' : 'idle')} size={28} /></div>
+          <div className="sm:hidden"><SanjeevaniOrb state={isSpeaking ? 'speaking' : (isStreaming ? 'thinking' : 'idle')} size={22} /></div>
         </div>
       )}
       <div className={`max-w-[88%] sm:max-w-[75%] rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm shadow-xs ${
@@ -873,7 +908,21 @@ function MessageBubble({
           {isUser ? (
             <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
           ) : (
-            <StructuredBotMessage text={msg.text} tier={msg.tier} summary={msg.consultation_summary} />
+            <>
+              <StructuredBotMessage text={visibleText} tier={msg.tier} summary={isStreaming ? null : msg.consultation_summary} />
+              {/* Streaming cursor & skip button */}
+              {isStreaming && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="inline-block w-1.5 h-4 bg-sage dark:bg-booti-glow rounded-full animate-pulse" />
+                  <button
+                    onClick={skipToEnd}
+                    className="text-[10px] text-muted dark:text-muted hover:text-primary transition-colors cursor-pointer opacity-70 hover:opacity-100"
+                  >
+                    Pura dikhayein ↓
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
 

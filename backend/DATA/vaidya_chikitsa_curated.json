@@ -1572,26 +1572,23 @@
   },
   {
     "remedy_id": "vc_072",
-    "remedy_name": "Nasal Diseases / Chronic Rhinitis (Naak na Dardo / Peenas Rog)",
+    "remedy_name": "Severe Chronic Purulent Rhinitis (Peenas Rog)",
     "category": "Classical Vaidya Chikitsa",
-    "safety_tier": "household_safe",
-    "indications": "Nasal Diseases / Chronic Rhinitis (Naak na Dardo / Peenas Rog)",
+    "safety_tier": "clinical_emergency",
+    "indications": "Severe Chronic Purulent Rhinitis (Peenas Rog)",
     "symptoms": [
       "Difficulty breathing properly",
-      "Phlegm (Kapha) constantly drops from the nose",
-      "and sometimes blood falls",
-      "Pus is discharged",
-      "causing a foul odor",
-      "The phlegm dries up and forms crusts inside the nose"
+      "Pus and blood discharge from nasal cavities",
+      "Severe foul odor and ulceration"
     ],
-    "causes": "Frequent episodes of colds (Salekham), syphilis (Upadansh), foreign objects entering the nose, or other external causes that result in nasal pain and infection.",
-    "preparation": "If it is a chronic cold (Peenas), sniffing Peenashari tobacco (snuff) is recommended. For internal medicine, Praval Panchamrit, Saptamrit Lauh, Chyawanprash Avaleha, Abhrak Bhasma, and Haritaki Avaleha are highly beneficial. If there is flesh decay or a foul smell inside, apply Kshar oil. If the condition stems from systemic heat, treat it with syphilis (Upadansh) protocols.",
-    "diet_pathya": "Light, cold, and highly nutritious food.",
-    "dosage": "As recommended under general treatment or physician guidance.",
+    "causes": "Chronic deep-seated infection of upper respiratory tract requiring hospital evaluation.",
+    "preparation": "Requires clinical examination at Primary Health Center or ENT department. Perform mild saline rinse and consult a doctor immediately.",
+    "diet_pathya": "Light and warm nutrition.",
+    "dosage": "As prescribed by physician.",
     "classical_medicines_note": "None",
-    "requires_doctor_visit": false,
-    "safety_precaution": "For severe symptoms or persistence > 2 days, consult your primary health center or ASHA worker immediately.",
-    "searchable_text": "Condition: Nasal Diseases / Chronic Rhinitis (Naak na Dardo / Peenas Rog). Symptoms: Difficulty breathing properly. Phlegm (Kapha) constantly drops from the nose, and sometimes blood falls. Pus is discharged, causing a foul odor. The phlegm dries up and forms crusts inside the nose. H."
+    "requires_doctor_visit": true,
+    "safety_precaution": "Emergency evaluation required. Visit nearest PHC or call 104.",
+    "searchable_text": "Condition: Severe Chronic Purulent Rhinitis (Peenas Rog). Symptoms: Difficulty breathing properly. Pus discharge."
   },
   {
     "remedy_id": "vc_073",
@@ -2436,7 +2433,7 @@
     "remedy_id": "vc_103",
     "remedy_name": "Hernia / Hydrocele (Vadharaval / Andavruddhi)",
     "category": "Classical Vaidya Chikitsa",
-    "safety_tier": "household_safe",
+    "safety_tier": "clinical_emergency",
     "indications": "Hernia / Hydrocele (Vadharaval / Andavruddhi)",
     "symptoms": [
       "Swelling occurs in one or both testicles",
@@ -2445,13 +2442,13 @@
       "pain is felt in the abdomen and pelvis",
       "and the stomach does not clear easily"
     ],
-    "causes": "Gonorrhea (Parmiyo), ulcers, masturbation, physical trauma/impact, or the accumulation of Ama (toxins) and Vata in the body.",
-    "preparation": "Give a castor oil purgation daily. Administer Rasa Sindoor and Abhrak Bhasma with Triphala decoction or cow urine. Give Vanagni or Agni Tundi after meals. External Treatment: Apply a paste of Devdar, Manshil, Kushtha, and Chitrak ground in water. Place a tobacco leaf or Shilaras over the area and tie a supportive bandage (Langot). If conservative treatments fail to reduce the fluid/swelling, seek surgical intervention (Shastra Chikitsa).",
+    "causes": "Physical trauma, anatomical defect, or severe fluid retention requiring clinical evaluation.",
+    "preparation": "Requires formal surgical and urological examination at Primary Health Center or District Hospital.",
     "diet_pathya": "Light and unctuous (Snigdh) food that does not cause constipation. Provide complete rest.",
-    "dosage": "As recommended under general treatment or physician guidance.",
+    "dosage": "As recommended by physician.",
     "classical_medicines_note": "None",
-    "requires_doctor_visit": false,
-    "safety_precaution": "For severe symptoms or persistence > 2 days, consult your primary health center or ASHA worker immediately.",
+    "requires_doctor_visit": true,
+    "safety_precaution": "Requires formal examination at Primary Health Center or District Hospital.",
     "searchable_text": "Condition: Hernia / Hydrocele (Vadharaval / Andavruddhi). Symptoms: Swelling occurs in one or both testicles, causing them to enlarge. If the swelling is suppressed, pain is felt in the abdomen and pelvis, and the stomach does not clear easily.."
   },
   {

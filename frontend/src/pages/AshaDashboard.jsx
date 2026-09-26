@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import FollowUpPanel from '../components/FollowUpPanel';
 import {
   Users, WifiOff, RefreshCw, Plus, CheckCircle, Clock, MapPin,
   UserPlus, Leaf, PhoneCall, AlertTriangle, Search, Filter,
-  Activity, Thermometer, Heart, ShieldAlert, Copy, Check, ChevronDown, CheckCircle2
+  Activity, Thermometer, Heart, ShieldAlert, Copy, Check, ChevronDown, CheckCircle2,
+  User
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { checkBackendHealth, syncAshaBatch } from '../api/client';
@@ -13,8 +15,8 @@ const QUEUE_STORAGE_KEY = 'sanjeevani_asha_queue_v2';
 
 const DEFAULT_PATIENTS = [
   { id: 'REC-101', name: 'Sunita Devi', village: 'Mandal, Chamoli', tier: 'Green', symptom: 'Dry Cough (Hill Cold)', vitals: { spo2: '97', temp: '98.6', pulse: '74' }, synced: true, followedUp: true },
-  { id: 'REC-102', name: 'Birendra Rawat', village: 'Gopeshwar Ward 3', tier: 'Yellow', symptom: 'Fever 4 days with mild dehydration', vitals: { spo2: '94', temp: '101.4', pulse: '88' }, synced: false, followedUp: false },
-  { id: 'REC-103', name: 'Manorama Negi', village: 'Joshimath Outskirts', tier: 'Red', symptom: 'Acute chest tightness & hypoxia (108 SOS Sent)', vitals: { spo2: '88', temp: '99.0', pulse: '110' }, synced: false, followedUp: false },
+  { id: 'REC-102', name: 'Birendra Rawat', village: 'Gopeshwar Ward 3', tier: 'Yellow', symptom: 'Fever 4 days with mild dehydration', vitals: { spo2: '94', temp: '101.4', pulse: '88' }, synced: true, followedUp: false },
+  { id: 'REC-103', name: 'Manorama Negi', village: 'Joshimath Outskirts', tier: 'Red', symptom: 'Acute chest tightness & hypoxia (108 SOS Sent)', vitals: { spo2: '88', temp: '99.0', pulse: '110' }, synced: true, followedUp: false },
   { id: 'REC-104', name: 'Deepak Joshi', village: 'Pipalkoti', tier: 'Yellow', symptom: 'Severe abdominal pain & persistent vomiting', vitals: { spo2: '96', temp: '100.2', pulse: '92' }, synced: true, followedUp: false },
 ];
 
@@ -224,6 +226,15 @@ export default function AshaDashboard() {
                 <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
                 <span>{isSyncing ? 'Syncing...' : `Sync (${pendingCount})`}</span>
               </button>
+
+              <Link
+                to="/profile"
+                className="touch-target flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-2xl font-bold text-xs transition-all border border-white/10"
+                title="ASHA Profile & Field Activities"
+              >
+                <User className="w-4 h-4 text-gold-warm" />
+                <span>Field Profile & Logs</span>
+              </Link>
             </div>
           </div>
 

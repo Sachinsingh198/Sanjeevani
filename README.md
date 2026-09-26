@@ -17,22 +17,23 @@
 1. [Executive Summary & Regional Context](#-executive-summary--regional-context)
 2. [Key Architectural Highlights](#-key-architectural-highlights)
 3. [System Architecture & Dataflow](#-system-architecture--dataflow)
-4. [Why These Choices (Architectural Decisions)](#-why-these-choices-architectural-decisions)
-5. [Complete Technology Stack](#-complete-technology-stack)
-6. [Core Subsystems Deep Dive](#-core-subsystems-deep-dive)
+4. [Master Visual Workflows & Mermaid Compendium](#-master-visual-workflows--mermaid-compendium)
+5. [Why These Choices (Architectural Decisions)](#-why-these-choices-architectural-decisions)
+6. [Complete Technology Stack](#-complete-technology-stack)
+7. [Core Subsystems Deep Dive](#-core-subsystems-deep-dive)
    - [1. Deterministic Clinical Triage Engine](#1-deterministic-clinical-triage-engine)
    - [2. LangGraph Agentic Consultation Flow](#2-langgraph-agentic-consultation-flow)
    - [3. Multilingual Voice & Speech Subsystem](#3-multilingual-voice--speech-subsystem)
-   - [4. AYUSH Hybrid Vector RAG](#4-ayush-hybrid-vector-rag)
+   - [4. AYUSH Hybrid Vector RAG & Safety Gates](#4-ayush-hybrid-vector-rag--safety-gates)
    - [5. Edge Computer Vision Diagnostics](#5-edge-computer-vision-diagnostics)
    - [6. Community Health, Yoga & Elder Companionship](#6-community-health-yoga--elder-companionship)
    - [7. Role-Based Access Control & Dashboards](#7-role-based-access-control--dashboards)
    - [8. Production Tracing with LangSmith](#8-production-tracing-with-langsmith)
-7. [Repository Structure & Codebase Map](#-repository-structure--codebase-map)
-8. [Installation & Getting Started](#-installation--getting-started)
-9. [Default Demo Credentials & Testing](#-default-demo-credentials--testing)
-10. [API Route Directory](#-api-route-directory)
-11. [Clinical Disclaimers & Ethical Safeguards](#-clinical-disclaimers--ethical-safeguards)
+8. [Repository Structure & Codebase Map](#-repository-structure--codebase-map)
+9. [Installation & Getting Started](#-installation--getting-started)
+10. [Default Demo Credentials & Testing](#-default-demo-credentials--testing)
+11. [API Route Directory](#-api-route-directory)
+12. [Clinical Disclaimers & Ethical Safeguards](#-clinical-disclaimers--ethical-safeguards)
 
 ---
 
@@ -153,6 +154,37 @@ flowchart LR
 
 ---
 
+## 🎨 Master Visual Workflows & Mermaid Compendium
+
+For evaluators, clinicians, and engineers seeking an immediate, intuitive understanding of Sanjeevani, we maintain an interactive visual compendium in **[`Documentation/13_SYSTEM_WORKFLOWS_AND_MERMAID_DIAGRAMS.md`](file:///d:/Sanjeevani/Documentation/13_SYSTEM_WORKFLOWS_AND_MERMAID_DIAGRAMS.md)** containing 10 comprehensive architectural diagrams:
+
+```mermaid
+flowchart TD
+    Patient(["🧑‍🌾 Rural Patient\n(Speaks Garhwali / Hindi)"]) --> VoiceStream["🎙️ Streaming Voice Input\n(Sarvam Saaras v3 STT)"]
+    VoiceStream --> TriageGate{"🛡️ Deterministic Manchester Triage\n(Bi-Directional Negation Window)"}
+
+    TriageGate -->|Red Tier: Critical Life Threat| RedEscalate["🚨 Emergency Node (Bypasses LLM)\n108 Ambulance Speed-Dial & First Aid"]
+    
+    TriageGate -->|Green/Yellow Tier| DoctorIntake["🩺 Adaptive Doctor Consultation Node\n(Socratic Intake: Turns 1 to 5)"]
+    DoctorIntake --> ConcludeTag{"Clinical Picture Complete?\n(Emits ##CONCLUDE##)"}
+
+    ConcludeTag -->|No: Needs Clarification| AskNextQuestion["Ask Progressive Diagnostic Question\n(Duration, Sputum, Radiation, Triggers)"]
+    AskNextQuestion --> Patient
+
+    ConcludeTag -->|Yes: Concluded| AYUSHRAG["📚 AYUSH Hybrid RAG\n(FastEmbed + Qdrant Dense Vector)"]
+    
+    AYUSHRAG --> SafetyGate{"Five-Layer Safety Gate\n- Knowledge Graph Comorbidity Check\n- Banned Substance (Tobacco/Opium) Filter\n- CCRAS Gold-Standard Override"}
+    
+    SafetyGate --> RemedyDelivery["🌿 Verified AYUSH Remedy Card\n(Ingredients, Preparation, Dosage, Precautions)"]
+    RemedyDelivery --> SpeechStream["🔊 Low-Latency Voice Playback\n(Sarvam Bulbul v3 Streaming Audio)"]
+    SpeechStream --> ASHASync["📅 Auto-Schedule 48h ASHA Visit\n& Sync to Offline IndexedDB"]
+```
+
+> 📖 **Explore the Full Compendium**:
+> See **[13_SYSTEM_WORKFLOWS_AND_MERMAID_DIAGRAMS.md](file:///d:/Sanjeevani/Documentation/13_SYSTEM_WORKFLOWS_AND_MERMAID_DIAGRAMS.md)** for detailed state machine diagrams, edge computer vision processing pipelines, bi-directional offline synchronization sequences, and multi-role portal architectures.
+
+---
+
 ## 💡 Why These Choices (Architectural Decisions)
 
 | Component Choice | Alternative Considered | Why We Chose It for Sanjeevani |
@@ -266,16 +298,29 @@ sequenceDiagram
 
 ---
 
-### 4. AYUSH Hybrid Vector RAG
+### 4. AYUSH Hybrid Vector RAG & Safety Gates
 Located in [`backend/app/core/hybrid_rag.py`](file:///d:/Sanjeevani/backend/app/core/hybrid_rag.py).
 
-Sanjeevani indexes and cross-references two authoritative knowledge bases:
-1. **CCRAS (Central Council for Research in Ayurvedic Sciences)**: Standardized Ayurvedic home remedies for common ailments (fever, cough, digestive disorders, joint aches).
-2. **Classical Ayurvedic Treatises**: Extracted formulations from classical literature (`DATA/Ayush/ayurveda_1.docx`) via [`ayush_docx_extractor.py`](file:///d:/Sanjeevani/backend/app/core/ayush_docx_extractor.py).
-3. **Garhwali Dialect Translation Lexicon**: Maps colloquial Garhwali terms (e.g., *mund dard* $\rightarrow$ headache, *pet chhutna* $\rightarrow$ diarrhea, *gala baithna* $\rightarrow$ hoarseness) into standard clinical terms.
+Sanjeevani grounds non-urgent health recommendations in validated traditional AYUSH treatises while enforcing an uncompromising safety protocol:
 
-All vectors are embedded via **FastEmbed (`all-MiniLM-L6-v2`)** and stored in **Qdrant** with Cosine Similarity scoring. When the patient's symptoms are categorized, relevant non-toxic remedies are retrieved with dosage disclaimers:
-> *"यह सुझाव केवल प्राथमिक स्वास्थ्य मार्गदर्शन के लिए है। किसी भी दवा का सेवन करने से पहले नजदीकी चिकित्सक या आशा कार्यकर्ता से परामर्श लें।"*
+```mermaid
+flowchart LR
+    Symptoms["Synthesized Patient Symptoms"] --> VectorSearch["Qdrant Hybrid Vector Search\n(FastEmbed 384-dim Dense Embeddings)"]
+    VectorSearch --> KGFilter{"Safety Knowledge Graph\n(Check Comorbidities)"}
+    KGFilter -->|Safe| SubstanceCheck{"Banned Substance Filter\n(Blocks Tobacco, Snuff, Opium)"}
+    SubstanceCheck -->|Safe Kitchen / Herbs| CCRASOverride{"CCRAS Gold-Standard\nRegistry Match?"}
+    CCRASOverride -->|Match| OfficialRemedy["CCRAS Official Formulation\n(e.g., Anu Taila, Haridra Bashpa)"]
+    CCRASOverride -->|General| CuratedRemedy["Curated Vaidya Chikitsa Remedy"]
+    KGFilter -->|Contraindicated| SafeAdvice["Safe Hydration & Rest Protocol"]
+    SubstanceCheck -->|Toxic / Banned| SafeAdvice
+    OfficialRemedy --> DeliverCard["Deliver Interactive Remedy Card\n(Dosage, Ingredients, Warnings)"]
+    CuratedRemedy --> DeliverCard
+    SafeAdvice --> DeliverCard
+```
+
+- **Five Knowledge Streams**: CCRAS Standard Formulations (100+ remedies), Classical Ayurveda Treatises (`ayurveda_1.docx`), Curated Vaidya Chikitsa (114 chapters), Dravyaguna Botanical Herbs (119 medicinal plants), and Garhwali Dialect Lexicon.
+- **Strict Substance Prohibition Filter**: Automatically quarantines and blocks any formulation mentioning tobacco, snuff, opium, cannabis, mercury, or toxic minerals, preventing folk-medicine hazards.
+- **Government CCRAS Gold-Standard Overrides**: Exact matches for common ailments (allergic rhinitis, tension headaches, vertigo, indigestion) enforce official Ministry of AYUSH clinical protocols.
 
 ---
 
@@ -284,29 +329,30 @@ Located in [`backend/app/cv/screening.py`](file:///d:/Sanjeevani/backend/app/cv/
 
 Designed to operate entirely on **client hardware or edge CPU nodes** without sending patient images to external cloud APIs:
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    EDGE COMPUTER VISION SCREENING PIPELINE              │
-└─────────────────────────────────────────────────────────────────────────┘
-  [Input Image] ────────► [Bilateral Filter & Illumination Normalization]
-                                      │
-       ┌──────────────────────────────┼─────────────────────────────┐
-       ▼                              ▼                             ▼
- [Palpebral Conjunctiva]      [Sclera Region]             [Oral Cavity / Skin]
-       │                              │                             │
- [RGB ➔ CIELAB Space]         [RGB ➔ HSV Space]           [Texture & Morph Mask]
-       │                              │                             │
- Calculate Erythema Index     Isolate Yellow Chroma       Detect Leukoplakia &
- (EI = a* / L*)               Shift in b* channel         Erythematous Lesions
-       │                              │                             │
-       ▼                              ▼                             ▼
- Hemoglobin Estimation (g/dL) Bilirubin Estimation        Pathology Risk Overlay
- & Pallor Classification      & Icterus Severity          & Clinical Referral
+```mermaid
+flowchart TD
+    Photo["Raw Patient Photo Upload\n(Eye, Oral Cavity, Skin)"] --> SpecularFilter["Bilateral Specular Denoising\n& Illumination Normalization"]
+
+    SpecularFilter --> AnemiaROI["Palpebral Conjunctiva\n(CIELAB Space)"]
+    SpecularFilter --> ScleraROI["Sclera Eye White\n(HSV Space)"]
+    SpecularFilter --> OralSkinROI["Oral Mucosa & Skin Patches\n(Morphological Masking)"]
+
+    AnemiaROI --> EI["Compute Erythema Index:\nEI = a* / L*"]
+    ScleraROI --> Bili["Measure Yellow Chroma Shift:\nmean(b*) in CIELAB"]
+    OralSkinROI --> Patches["Segment White/Red Plaques\n& Annular Rings"]
+
+    EI --> EstHb["Hemoglobin Estimation (g/dL)\nNormal / Mild / Moderate / Severe Pallor"]
+    Bili --> EstBili["Bilirubin Estimation (mg/dL)\nNormal / Borderline / Moderate / Severe Icterus"]
+    Patches --> RiskMap["Pre-Cancerous Leukoplakia / OSMF\n& Tinea / Eczema Classification"]
+
+    EstHb --> VisualOverlay["Annotated ROI Overlay Image (Base64 JPEG)\n+ Clinical Referral Card"]
+    EstBili --> VisualOverlay
+    RiskMap --> VisualOverlay
 ```
 
-- **Anemia Screening (`/screen/anemia`)**: Analyzes the palpebral conjunctiva. Converts region to CIELAB space and evaluates the Erythema Index:
-  $$\text{EI} = \frac{a^*}{L^*}$$
-  Estimates Hemoglobin ($Hb$) levels and classifies risk into *Normal*, *Mild*, *Moderate*, or *Severe Pallor*.
+- **Anemia Screening (`/screen/anemia`)**: Analyzes the microvascular beds of the palpebral conjunctiva using the CIELAB Erythema Index:
+  $$\text{EI} = \frac{a^*}{L^*}, \quad \text{Hb}_{\text{est}} \approx 13.5 \times \text{EI}$$
+  Classifies risk into *Normal*, *Mild*, *Moderate*, or *Severe Pallor*.
 - **Jaundice Screening (`/screen/jaundice`)**: Evaluates scleral icterus by filtering the eye white in HSV space, quantifying chromatic shift in the yellow-blue CIELAB $b^*$ axis, and estimating Serum Bilirubin.
 - **Oral Cavity Screening (`/screen/oral`)**: Evaluates mucosal hyperkeratosis (Leukoplakia white patches and Erythroplakia) vital for rural regions with high consumption of smokeless tobacco.
 - **Skin Lesion Screening (`/screen/skin`)**: Evaluates cutaneous erythema, tinea fungal rings, and eczema patterns.

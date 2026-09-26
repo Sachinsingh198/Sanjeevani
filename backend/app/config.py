@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Load .env file into environment immediately
-load_dotenv()
+load_dotenv(override=True)
 
 
 class Settings(BaseSettings):
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # LLM Settings
     PRIMARY_LLM_PROVIDER: str = "groq"
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
     
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-1.5-flash"
@@ -27,8 +27,20 @@ class Settings(BaseSettings):
     # Hugging Face Token (for gated models like ai4bharat/indic-parler-tts)
     HF_TOKEN: Optional[str] = None
 
-    # Voice / TTS Settings: "sarvam" (Sarvam AI bulbul:v3), "neural" (Edge TTS), or "ai4bharat" (local 2.2B model)
-    TTS_PROVIDER: str = "sarvam"
+    # Voice / Speech Settings: Primary "bhashini", Fallback "sarvam", Offline Fallback "neural" (Edge TTS)
+    TTS_PROVIDER: str = "bhashini"
+    STT_PROVIDER: str = "bhashini"
+
+    # Bhashini (MeitY / AI4Bharat) Voice Engine Settings (Primary)
+    BHASHINI_USER_ID: Optional[str] = "38192966e05e4769afa6b95b9493d9c9"
+    BHASHINI_ULCA_API_KEY: Optional[str] = None
+    BHASHINI_INFERENCE_API_KEY: Optional[str] = None
+    BHASHINI_PIPELINE_ID: str = "64392f96daac500b55c543cd"
+    BHASHINI_TTS_SERVICE_ID: Optional[str] = None
+    BHASHINI_CONFIG_URL: str = "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline"
+    BHASHINI_INFERENCE_URL: str = "https://dhruva-api.bhashini.gov.in/services/inference/pipeline"
+
+    # Sarvam AI Settings (Fallback)
     SARVAM_API_KEY: Optional[str] = None
     SARVAM_TTS_MODEL: str = "bulbul:v3"
     SARVAM_FEMALE_SPEAKER: str = "shreya"

@@ -189,16 +189,30 @@ class HybridRemedyStore:
             except Exception as e:
                 logger.error(f"[Qdrant Error] Failed reading Vaidya Chikitsa JSON: {e}")
 
+        BANNED_HOME_TERMS = (
+            "tobacco", "snuff", "tambaku", "opium", "afeem", "cannabis", "ganja", "bhang",
+            "syphilis", "upadansh", "gonorrhea", "flesh decay", "foul odor", "kshar oil"
+        )
+
         for item in vc_items:
-            # SAFETY RULE: Never index clinical emergencies as home remedies!
-            if item.get("safety_tier") == "clinical_emergency":
+            # SAFETY RULE: Never index clinical emergencies or consultation-only items as home remedies!
+            if item.get("safety_tier") in ("clinical_emergency", "requires_consultation"):
+                continue
+
+            full_desc = f"{item.get('remedy_name', '')} {item.get('preparation', '')} {item.get('causes', '')} {item.get('indications', '')}".lower()
+            if any(term in full_desc for term in BANNED_HOME_TERMS):
                 continue
 
             name_key = item.get("remedy_name", "").strip().lower()
             if name_key and name_key not in seen_names:
                 seen_names.add(name_key)
+                if not item.get("remedy_text"):
+                    item["remedy_text"] = item.get("preparation") or item.get("treatment") or item.get("instructions") or ""
+                if not item.get("ayurvedic_note"):
+                    item["ayurvedic_note"] = item.get("causes") or item.get("classical_medicines_note") or item.get("safety_precaution") or ""
                 all_remedies.append(item)
 
+        self._all_cached_remedies = all_remedies
         return all_remedies
 
     def _initialize_and_seed(self):
@@ -313,6 +327,7 @@ class HybridRemedyStore:
         """
         In-memory keyword / BM25 lexical search fallback over remedies dataset.
         Always sets source: 'fallback_keyword' and never crashes.
+        Includes clinical synonym mapping (Hindi/Garhwali/English) and category-aware safe fallbacks.
         """
         if not hasattr(self, "_all_cached_remedies") or not self._all_cached_remedies:
             try:
@@ -321,29 +336,127 @@ class HybridRemedyStore:
                 logger.warning(f"[RAG] Failed to load dataset for keyword fallback: {e}")
                 self._all_cached_remedies = []
 
-        query_tokens = [w for w in re.split(r'\W+', query_text.lower()) if len(w) > 2]
+        # Synonym expansion table for cross-lingual lexical matching (Hindi/Garhwali/English)
+        SYNONYM_MAP = {
+            "jod": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
+            "jodo": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
+            "jodon": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
+            "ghutna": ["joint", "knee", "sandhi", "stiffness", "jakdan", "amavata", "sandhivata"],
+            "ghutne": ["joint", "knee", "sandhi", "stiffness", "jakdan", "amavata", "sandhivata"],
+            "ghutno": ["joint", "knee", "sandhi", "stiffness", "jakdan", "amavata", "sandhivata"],
+            "jakdan": ["stiffness", "joint", "sandhi", "stiff", "amavata", "sandhivata", "morning stiffness"],
+            "sandhi": ["joint", "sandhivata", "stiffness", "amavata"],
+            "gathiya": ["arthritis", "rheumatoid", "joint", "amavata", "vatarakta"],
+            "pet": ["stomach", "abdomen", "abdominal", "indigestion", "gas", "bloating", "apach", "colic", "shoola"],
+            "gas": ["bloating", "flatulence", "indigestion", "pet", "stomach", "apach"],
+            "apach": ["indigestion", "digestion", "gas", "bloating", "stomach"],
+            "marod": ["colic", "cramps", "stomach", "abdomen", "shoola"],
+            "bukhar": ["fever", "pyrexia", "jwara", "taap", "temperature"],
+            "thand": ["fever", "chills", "cold", "pyrexia", "syal"],
+            "khansi": ["cough", "kasa", "cold", "respiratory", "throat"],
+            "khang": ["cough", "kasa", "cold", "throat"],
+            "gala": ["throat", "cough", "cold", "pharyngitis"],
+            "kharash": ["throat", "cough", "scratchy throat"],
+            "sar": ["headache", "head", "mund", "shirashoola"],
+            "sir": ["headache", "head", "mund", "shirashoola"],
+            "mund": ["headache", "head", "sir", "sar"],
+            "badan": ["body", "fatigue", "ache", "body ache", "thakan"],
+            "thakan": ["fatigue", "tiredness", "weakness", "body ache"],
+            "chakkar": ["dizziness", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
+            "dizzy": ["chakkar", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
+            "dizziness": ["chakkar", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
+            "vertigo": ["chakkar", "dizziness", "giddiness", "bhrama", "bhram"],
+        }
+
+        raw_tokens = [w for w in re.split(r'\W+', query_text.lower()) if len(w) > 2]
+        expanded_tokens = set(raw_tokens)
+        for t in raw_tokens:
+            if t in SYNONYM_MAP:
+                expanded_tokens.update(SYNONYM_MAP[t])
+
         scored = []
         for r in self._all_cached_remedies:
-            searchable = f"{r.get('remedy_name', '')} {r.get('ailment', '')} {r.get('preparation', '')} {r.get('ingredients', '')}".lower()
-            score = sum(1 for token in query_tokens if token in searchable)
+            # SAFETY: Exclude clinical emergencies and high-risk conditions
+            if r.get("safety_tier") in ("clinical_emergency", "requires_consultation"):
+                continue
+
+            keywords_list = r.get("keywords", [])
+            symptoms_list = r.get("symptoms", [])
+            kw_str = " ".join(keywords_list) if isinstance(keywords_list, list) else str(keywords_list)
+            sym_str = " ".join(symptoms_list) if isinstance(symptoms_list, list) else str(symptoms_list)
+
+            searchable = (
+                f"{r.get('remedy_name', '')} {r.get('condition_name', '')} {r.get('ailment', '')} "
+                f"{kw_str} {sym_str} {r.get('remedy_text', '')} {r.get('preparation', '')} "
+                f"{r.get('ingredients', '')} {r.get('searchable_text', '')} {r.get('ayurvedic_note', '')}"
+            ).lower()
+
+            # Direct token match
+            score = sum(3 for token in raw_tokens if token in searchable)
+            # Synonym token match
+            score += sum(1 for token in expanded_tokens if token in searchable)
+
+            # Extra weight for condition/remedy title match
+            for t in raw_tokens:
+                if t in r.get('remedy_name', '').lower() or t in r.get('condition_name', '').lower():
+                    score += 4
+
             if score > 0:
                 item = dict(r)
+                if not item.get("remedy_text"):
+                    item["remedy_text"] = item.get("preparation") or item.get("treatment") or ""
+                if not item.get("ayurvedic_note"):
+                    item["ayurvedic_note"] = item.get("causes") or item.get("classical_medicines_note") or item.get("safety_precaution") or ""
                 item["source"] = "fallback_keyword"
-                item["similarity_score"] = float(score) / (len(query_tokens) + 1)
+                item["similarity_score"] = min(1.0, float(score) / (len(raw_tokens) * 3 + 1))
                 scored.append((score, self._enrich_with_botanicals(item)))
 
         scored.sort(key=lambda x: x[0], reverse=True)
         results = [s[1] for s in scored[:limit]]
 
-        # If no specific keyword matched, safely return up to 'limit' household safe remedies
+        # If no specific keyword matched, safely return up to 'limit' category-matching or household safe remedies
         if not results and self._all_cached_remedies:
-            for r in self._all_cached_remedies:
-                if r.get("safety_tier") == "household_safe":
-                    item = dict(r)
-                    item["source"] = "fallback_keyword"
-                    results.append(self._enrich_with_botanicals(item))
-                    if len(results) >= limit:
-                        break
+            q_lower = query_text.lower()
+            category_target = None
+            if any(w in q_lower for w in ["jod", "ghutna", "jakdan", "sandhi", "joint", "arthritis"]):
+                category_target = "joint"
+            elif any(w in q_lower for w in ["pet", "gas", "apach", "marod", "stomach", "digest"]):
+                category_target = "digest"
+            elif any(w in q_lower for w in ["khansi", "khang", "gala", "cough", "throat"]):
+                category_target = "cough"
+            elif any(w in q_lower for w in ["bukhar", "fever", "thand"]):
+                category_target = "fever"
+            elif any(w in q_lower for w in ["sar", "sir", "mund", "headache"]):
+                category_target = "headache"
+
+            if category_target:
+                for r in self._all_cached_remedies:
+                    if r.get("safety_tier") == "household_safe":
+                        text_blob = f"{r.get('condition_name', '')} {r.get('remedy_name', '')} {r.get('keywords', '')}".lower()
+                        if category_target in text_blob:
+                            item = dict(r)
+                            if not item.get("remedy_text"):
+                                item["remedy_text"] = item.get("preparation") or ""
+                            if not item.get("ayurvedic_note"):
+                                item["ayurvedic_note"] = item.get("causes") or ""
+                            item["source"] = "fallback_keyword"
+                            results.append(self._enrich_with_botanicals(item))
+                            if len(results) >= limit:
+                                break
+
+            # Universal household safe remedies with guaranteed non-empty preparation text
+            if not results:
+                for r in self._all_cached_remedies:
+                    if r.get("safety_tier") == "household_safe" and (r.get("remedy_text") or r.get("preparation")):
+                        item = dict(r)
+                        if not item.get("remedy_text"):
+                            item["remedy_text"] = item.get("preparation") or ""
+                        if not item.get("ayurvedic_note"):
+                            item["ayurvedic_note"] = item.get("causes") or ""
+                        item["source"] = "fallback_keyword"
+                        results.append(self._enrich_with_botanicals(item))
+                        if len(results) >= limit:
+                            break
 
         return results
 
@@ -371,6 +484,10 @@ class HybridRemedyStore:
                 if hasattr(point, "score") and point.score is not None and point.score < min_score:
                     continue
                 enriched = self._enrich_with_botanicals(point.payload)
+                if not enriched.get("remedy_text"):
+                    enriched["remedy_text"] = enriched.get("preparation") or enriched.get("treatment") or ""
+                if not enriched.get("ayurvedic_note"):
+                    enriched["ayurvedic_note"] = enriched.get("causes") or enriched.get("classical_medicines_note") or ""
                 enriched["similarity_score"] = getattr(point, "score", None)
                 matched.append(enriched)
                 if len(matched) >= limit:

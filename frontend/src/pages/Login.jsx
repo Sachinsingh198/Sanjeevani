@@ -66,7 +66,7 @@ export default function Login() {
     } else if (role === 'patient') {
       setPhone('patient');
       setPassword('sanjeevani2026');
-      toast.success('Filled Sanjeevani Mitra demo credentials');
+      toast.success('Filled User (Mitra) demo credentials');
     }
   };
 
@@ -183,7 +183,7 @@ export default function Login() {
                 className="touch-target flex flex-col items-center py-2 px-1 rounded-xl bg-sage/10 dark:bg-sage/20 hover:bg-sage/20 dark:hover:bg-sage/30 border border-sage/30 text-primary transition-all cursor-pointer"
               >
                 <User className="w-4 h-4 text-sage dark:text-booti-glow mb-0.5" />
-                <span className="text-[11px] font-bold leading-tight">Patient</span>
+                <span className="text-[11px] font-bold leading-tight">User</span>
                 <span className="text-[9px] text-muted dark:text-muted">Mitra</span>
               </button>
               <button
@@ -230,7 +230,7 @@ export default function Login() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="e.g. sachin_singh, name@gmail.com, ya 9876543210"
-              className="w-full bg-white dark:bg-[#1E2A43] text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-sage transition-all"
+              className="w-full bg-white dark:bg-[#1E2A43] text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-sage transition-all"
               autoFocus
               required
             />
@@ -264,7 +264,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password darz karein"
-                className="w-full bg-white dark:bg-[#1E2A43] text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3.5 text-sm pr-11 focus:outline-none focus:ring-2 focus:ring-sage transition-all"
+                className="w-full bg-white dark:bg-[#1E2A43] text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-4 text-base pr-11 focus:outline-none focus:ring-2 focus:ring-sage transition-all"
                 required
               />
               <button
@@ -281,7 +281,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading || !phone.trim() || !password.trim()}
-            className="touch-target w-full bg-sage hover:bg-sage/90 text-white font-bold py-3.5 rounded-2xl shadow-sm transition-all disabled:opacity-50 text-sm flex items-center justify-center gap-2 cursor-pointer"
+            className="touch-target w-full bg-sage hover:bg-sage/90 text-white font-bold py-4 rounded-2xl shadow-sm transition-all disabled:opacity-50 text-base flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? 'Sign in ho raha hai...' : <><span>Sign In</span> <ArrowRight className="w-4 h-4" /></>}
           </button>

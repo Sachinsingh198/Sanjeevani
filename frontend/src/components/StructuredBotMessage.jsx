@@ -361,24 +361,46 @@ export default function StructuredBotMessage({ text, tier, summary }) {
           </div>
         )}
 
-        {summary.preparation_steps && summary.preparation_steps.length > 0 && (
-          <div className="p-3 rounded-xl bg-white dark:bg-[#15202E] border border-gray-200 dark:border-gray-700/80 shadow-xs space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
-              <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
-              <span>Kaise Banayein (How to Prepare)</span>
+        {summary.preparation_steps && summary.preparation_steps.length > 0 && (() => {
+          let steps = [];
+          summary.preparation_steps.forEach(st => {
+            if (typeof st === 'string') {
+              const lines = st.split(/\n+/).map(l => l.replace(/^\s*\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+              if (lines.length > 1) {
+                steps.push(...lines);
+              } else if (/\b(?:Ingredients|Indication|Method|Preparation|Dosage|Action):/i.test(st)) {
+                const parts = st.split(/(?=\b(?:Ingredients|Indication|Method|Preparation|Dosage|Action):)/i)
+                  .map(p => p.trim())
+                  .filter(Boolean);
+                if (parts.length > 1) steps.push(...parts);
+                else steps.push(st.trim());
+              } else {
+                steps.push(st.replace(/^\s*\d+[\.\)]\s*/, '').trim());
+              }
+            } else {
+              steps.push(String(st));
+            }
+          });
+          if (steps.length === 0) return null;
+          return (
+            <div className="p-3 rounded-xl bg-white dark:bg-[#15202E] border border-gray-200 dark:border-gray-700/80 shadow-xs space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
+                <span>Kaise Banayein (How to Prepare)</span>
+              </div>
+              <div className="space-y-1.5 pl-1">
+                {steps.map((st, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs sm:text-sm">
+                    <span className="w-5 h-5 rounded-full bg-sage/15 dark:bg-sage/30 text-sage dark:text-booti-glow text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      {i + 1}
+                    </span>
+                    <span className="text-gray-800 dark:text-gray-200 flex-1 leading-snug">{st}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="space-y-1.5 pl-1">
-              {summary.preparation_steps.map((st, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs sm:text-sm">
-                  <span className="w-5 h-5 rounded-full bg-sage/15 dark:bg-sage/30 text-sage dark:text-booti-glow text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-                    {i + 1}
-                  </span>
-                  <span className="text-gray-800 dark:text-gray-200 flex-1 leading-snug">{st}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {summary.dosage && summary.dosage.length > 0 && (
           <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 space-y-1.5">

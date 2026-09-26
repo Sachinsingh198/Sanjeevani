@@ -1,0 +1,133 @@
+=== SLIDE 1 ===
+  [P] SMART INDIA HACKATHON 2026
+  [P] •  Problem Statement ID - SIH26133
+  [P] •  Problem Statement Title- Accessibility and quality of public healthcare services, particularly in rural and underserved areas
+  [P] •  Theme- Healthcare & Biomedical Technology / Rural Development
+  [P] •  PS Category- Software
+  [P] •  Team ID- 107139
+  [P] •  Team Name:- Arogya
+  [P] •  Project Name:- Sanjeevani
+  [IMG] 2.10 x 1.05 at (10.80, 0.30)
+  [IMG] 3.64 x 4.30 at (8.58, 1.80)
+  [P] @Sanjeevani-TeleHealth                                                                                                                                           1
+=== SLIDE 2 ===
+  [P] Arogya
+  [P] Sanjeevani: AI Platform for Verifiable Himalayan Health
+  [P] @Sanjeevani-TeleHealth                                                                                                                                           2
+  [P] Detailed explanation of the proposed solution
+  [P] An autonomous, dialect-aware tele-triage and clinical decision platform that digitizes and secures primary healthcare delivery across remote mountain terrains.
+  [P] It ensures diagnostic accuracy, cultural safety, and real-time visibility through Manchester Triage protocols, AYUSH safety guardrails, and AI analytics.
+  [P] •  Autonomous clinical triage app designed for high-altitude villages and ASHA workers to operate in rugged, low-connectivity terrains.
+  [P] •  Conversational Garhwali dialect engine with auto-phonetic normalization and sub-50ms streaming Indic voice synthesis.
+  [P] •  Evidence-based AYUSH & CCRAS integration providing verified classical home remedies backed by an in-memory Safety Matrix blocking contraindications.
+  [P] •  Non-invasive Computer Vision screening detecting palpebral conjunctiva anemia, scleral jaundice, and oral leukoplakia with Gray-World lighting correction.
+  [P] •  Offline-first architecture with SQLite WAL enabling complete offline triage with background auto-sync upon network availability.
+  [P] •  Supervisor and CMO epidemiological dashboard providing live village health heatmaps, outbreak alerts, and FHIR standard referral summaries.
+  [P] How it addresses the problem
+  [P] •  Eliminates healthcare distance barriers in steep terrain where villagers hike 15–30 km to reach Primary Health Centers.
+  [P] •  Enables instant emergency escalation classifying Red-tier conditions (stroke, cardiac crisis) in <2s and initiating 1-tap 108 SOS dispatch.
+  [P] •  Prevents tertiary hospital overcrowding by resolving ~45% of mild routine symptoms safely with verified AYUSH home care.
+  [P] •  Overcomes low literacy and language barriers via hands-free Regional/Hindi voice interaction with zero medical jargon.
+  [P] •  Guarantees healthcare continuity during disasters functioning reliably during monsoons, landslides, and optical fiber breaks.
+  [P] Innovation and Uniqueness
+  [P] •  Deterministic Safety Knowledge Graph programmatically vetoes hazardous herb-comorbidity interactions (licorice in hypertension, ginger in ulcers).
+  [P] •  Gray-World Adaptive White Balance CV normalizes extreme Himalayan lighting disparities (glacier UV glare vs dim stone huts).
+  [P] •  Dual-Layer Offline Triage Pipeline combines client-side local rule decision trees with central LangGraph cloud intelligence.
+  [P] •  Sub-50ms Pre-Cached Dialect Audio delivers immediate spoken responses even on degraded 2G mobile data connections.
+  [P] •  HL7 FHIR v4.0.1 Interoperability generates standardized electronic referral records ready for direct ABDM ingest.
+  [IMG] 2.00 x 0.95 at (10.90, 0.15)
+=== SLIDE 3 ===
+  [P] Arogya
+  [P] TECHNICAL APPROACH
+  [P] @Sanjeevani-TeleHealth                                                                                                                                           3
+  [P] Tech Stack for Mobile App and Web
+  [P] Modular, High-Performance Stack
+  [P] • Client Application:
+PWA (React 18, Vite), Tailwind CSS, MediaPipe FaceMesh/Pose, Web Workers
+  [P] • Backend API Core:
+FastAPI (Async Python 3.13), LangGraph Multi-Agent, SQLAlchemy, Uvicorn
+  [P] • AI & Speech Engine:
+Sarvam AI (Indic STT & Bulbul TTS), Gemini Flash / Sarvam-2B, ChromaDB RAG
+  [P] • Database & Caching:
+SQLite in WAL mode (thread-safe concurrent sync), In-Memory Audio LRU Cache
+  [P] • CV Pipeline:
+OpenCV, NumPy, Gray-World White Balance, CIELAB color thresholding, CLAHE
+  [P] • Standards:
+HL7 FHIR Release 4, ABDM Electronic Health Record standards, Zero-PII Audit Log
+  [P] System Architecture & Prototype Flow
+  [P] Seamless Pipeline: Multimodal Edge Input → Multi-Agent Triage → Verified Clinical Output
+  [P] 1. Multimodal Edge Capture  |  Patient speaks in Garhwali or Hindi, or ASHA uploads camera scan
+  [P] • Sarvam Indic STT converts audio into normalized Devanagari text.• Dialect transliteration engine decodes Romanized Garhwali idioms.• Optical camera module captures palpebral conjunctiva/sclera under Gray World white-balance.
+  [P] 2. LangGraph Agentic Triage  |  Stateful Multi-Agent Clinical Evaluation
+  [P] • Node 1 (Triage Evaluator): Executes Manchester Triage Matrix & ESI severity scoring.• Node 2 (Safety Guard): Checks patient comorbidities against Safety Knowledge Graph.• Node 3 (Remedy Matcher): ChromaDB vector search retrieves verified CCRAS home remedies.
+  [P] 3. Clinical Verification & Output  |  Strict Deterministic Delivery Protocol
+  [P] • Green Tier: Safe AYUSH preparation steps + dosage + lifestyle wellness guidance.• Yellow Tier: Scheduled 24h Primary Health Center tele-referral with doctor notification.• Red Tier: Immediate high-priority siren, 108 ambulance dispatch, GPS facility mapping.
+  [P] 4. Sync & Government Integration  |  Offline Persistence & National ABDM Standard
+  [P] • In offline mode, client-side decision trees provide uninterrupted emergency triage.• SQLite WAL mode processes concurrent batched sync from ASHA field workers.• Formats FHIR JSON clinical encounter documents for state health authorities.
+  [IMG] 2.00 x 0.95 at (10.90, 0.15)
+=== SLIDE 4 ===
+  [P] Arogya
+  [P] FEASIBILITY AND VIABILITY
+  [P] @Sanjeevani-TeleHealth                                                                                                                                           4
+  [P] Feasibility
+  [P] •  Technical: Lightweight Progressive Web App runs smoothly on low-cost 2GB RAM smartphones; sub-50ms cached voice synthesis, <1.8s LLM response.
+  [P] •  Operational: Offline-first design, intuitive Devanagari UI, and audio voice prompts require less than 15 minutes of training for ASHA workers.
+  [P] •  Economic: Zero capital hardware expense; saves remote families ₹1,200 to ₹3,500 in mountain transit costs per health episode.
+  [P] •  Legal/Compliance: Patient consent architecture, Zero-PII analytics logging, and strict 'AI estimate, not doctor diagnosis' safety watermarks.
+  [P] •  User: High adoption driven by cultural resonance with AYUSH heritage, native Garhwali voice guidance, and single-tap emergency SOS.
+  [P] •  Market/Value: Directly bridges critical gaps for NHA's Ayushman Bharat Digital Mission (ABDM) and National Health Mission in mountain states.
+  [TABLE] <pptx.table._RowCollection object at 0x000001592A6A7620>x<pptx.table._ColumnCollection object at 0x000001592A6A7A10>
+    ROW: ['Challenges/Risk', 'Description', 'Strategy to overcome']
+    ROW: ['Network Disconnection / Landslides', 'Fiber breaks and zero cellular connectivity in mountain gorges block cloud LLM inference.', 'Dual-layer offline architecture: Client-side rule-based MTS triage engine + IndexedDB SQLite sync queue on network recovery.']
+    ROW: ['Dialect & Acoustic Noise Ambiguity', 'Alpine wind/river ambient noise and colloquial Garhwali idioms cause transcription errors.', 'Acoustic noise cancellation filter + specialized Garhwali phonetic dictionary + fallback confirmation chips.']
+    ROW: ['AI Clinical Hallucination Risk', 'Generative LLMs prescribing unsafe herbs or missing subtle acute cardiac/stroke symptoms.', 'Deterministic Safety Knowledge Graph blocks contraindicated herbs; critical Red flags bypass LLM to trigger 108 SOS instantly.']
+    ROW: ['Himalayan Lighting Disparities in CV', 'High-altitude UV glare or dim indoor stone huts causes severe color distortion on camera.', 'Gray-World adaptive white-balance algorithm + CLAHE contrast normalization in CIELAB/HSV color spaces.']
+    ROW: ['Low Tech Adoption among Elderly', 'Elderly villagers unable to read screens or navigate complex touch interfaces.', 'Hands-free conversational voice interface powered by Sarvam Indic TTS + visual iconography & 1-tap SOS.']
+  [IMG] 2.00 x 0.95 at (10.90, 0.15)
+=== SLIDE 5 ===
+  [P] Arogya
+  [P] IMPACT AND BENEFITS
+  [P] @Sanjeevani-TeleHealth                                                                                                                                           5
+  [P] Potential impact on the target audience
+  [P] •  Mountain Citizens & Remote Villagers:
+  [P] –  Eliminates arduous 15–30 km treks over hazardous mountain paths for minor ailments.
+  [P] –  Guarantees 24/7 clinical emergency assessment in their native mother tongue (Garhwali).
+  [P] –  Reduces average household healthcare travel expenditure by ₹1,200 to ₹3,500 per episode.
+  [P] •  ASHA Workers & Primary Health Centers:
+  [P] –  Equips 1,000+ frontline health workers with a digital copilot for vitals and eye screening.
+  [P] –  Generates standardized HL7 FHIR referral cards, eliminating manual record keeping errors.
+  [P] –  Safely resolves mild routine cases, saving ~35% of PHC doctor consultation bandwidth.
+  [P] •  District CMOs & State Health Authorities:
+  [P] –  Live geospatial outbreak heatmaps pinpoint typhoid, cholera, or flu spikes before spread.
+  [P] –  Complete auditable chain of custody with Zero-PII compliance for state health monitoring.
+  [P] –  Strengthens Uttarakhand's disaster preparedness during Monsoons and Char Dham Yatra.
+  [P] Benefits of Sanjeevani Tele-Triage Platform
+  [P] •  Social Impact:
+Democratizes specialist diagnostic triage to the outermost border villages. Replaces hazardous folk superstitions with scientifically verified AYUSH remedies, upholding indigenous heritage with modern clinical rigor.
+  [P] •  Economic Efficiency:
+Prevents catastrophic medical emergencies through early detection of Yellow/Red tier symptoms. Saves district hospitals up to ₹45 Lakhs annually in preventable emergency room congestion and ambulance misdirection.
+  [P] •  Operational Reliability:
+Delivers zero downtime during natural disasters. The offline-first architecture functions when mountain cellular towers fail, providing continuous guidance during high-altitude isolation.
+  [P] 🎯 TARGET OUTCOMES (12-MONTH UTTARAKHAND PILOT)
+  [P] •  45%+ — Reduction in unnecessary travel for routine non-emergency visits
+  [P] •  < 2s — Emergency Red-tier detection and 108 SOS ambulance dispatch trigger
+  [P] •  100% — Operational triage availability during monsoon network blackouts
+  [P] •  50+ — Ayurvedic Pharmacopoeia (CCRAS) verified remedies safe-screened
+  [IMG] 2.00 x 0.95 at (10.90, 0.15)
+=== SLIDE 6 ===
+  [P] Arogya
+  [P] RESEARCH AND REFERENCES
+  [P] @Sanjeevani-TeleHealth                                                                                                                                           6
+  [P] ❑  Mackway-Jones, K., Marsden, J., & Windle, J. (2014). Emergency Triage: Manchester Triage Group (3rd ed.). BMJ Books / Wiley-Blackwell. 
+     ↳ Clinical Relevance: Foundational protocol for Sanjeevani's 5-level clinical severity triage scoring (Red / Yellow / Green mapping).
+  [P] ❑  Ministry of Ayush, Government of India (2020). The Ayurvedic Pharmacopoeia of India (API), Part-I, Vol. I–IX. Pharmacopoeia Commission for Indian Medicine & Homoeopathy. 
+     ↳ Clinical Relevance: Clinical dosage, contraindications, and preparation standards for all 50+ classical remedies in ChromaDB.
+  [P] ❑  Mannino, R. G., Myers, D. R., Tyburski, E. A., et al. (2018). Smartphone app for non-invasive detection of anemia using optical imaging of palpebral conjunctiva. Nature Communications, 9(1), 4924. 
+     ↳ Clinical Relevance: Underlying biomedical computer vision basis for Sanjeevani's conjunctival erythema and pallor estimation.
+  [P] ❑  World Health Organization (2021). Recommendations on Digital Interventions for Health System Strengthening (WHO/RHR/19.7). Geneva: World Health Organization. 
+     ↳ Clinical Relevance: Validates frontline ASHA digital decision-support and offline-first mobile sync architectures for remote health.
+  [P] ❑  National Health Authority (NHA), Government of India (2023). Ayushman Bharat Digital Mission (ABDM): Health Information Exchange & Consent Artefact (FHIR Release 4 Specifications). 
+     ↳ Clinical Relevance: Standard for Sanjeevani's electronic referral payloads, role-based patient consent, and hospital interoperability.
+  [P] ❑  Sarvam AI & Bhashini Project (2024). Advancing Indic Speech & NLP Technologies for Low-Resource Regional Languages. Ministry of Electronics & IT (MeitY). 
+     ↳ Clinical Relevance: Benchmarks for Romanized Garhwali speech transcription and low-latency Indic acoustic voice synthesis.
+  [IMG] 2.00 x 0.95 at (10.90, 0.15)

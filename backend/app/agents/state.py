@@ -51,3 +51,6 @@ class AgentState(_AgentStateRequired, total=False):
 
     # Voice session mode flag (e.g. Sanjeevani Live active)
     voice_mode: bool
+
+    # Structured prescription / home remedy summary card
+    consultation_summary: Optional[Dict[str, Any]]

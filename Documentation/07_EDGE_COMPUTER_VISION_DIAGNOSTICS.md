@@ -111,3 +111,48 @@ The `/screen/*` endpoints receive a standard image file upload (`multipart/form-
 }
 ```
 The frontend automatically renders the annotated overlay image with the segmented Region of Interest (ROI) highlighted in emerald and amber contours.
+
+---
+
+## 5. Algorithmic Image Processing Flowchart
+
+```mermaid
+flowchart TD
+    RawImage["Raw Patient Photo Upload\n(Eye, Oral Cavity, or Skin Patch)"] --> Preprocess["In-Memory OpenCV Decoding\n& Bilateral Specular Denoising"]
+    
+    Preprocess --> RouteModality{"Screening Modality Selected"}
+
+    subgraph AnemiaPath ["Anemia (Palpebral Conjunctiva)"]
+        RouteModality -->|Anemia /screen/anemia| EyeROI["Palpebral Eyelid Segmentation\n(Adaptive Lower-Lid Masking)"]
+        EyeROI --> LabTransform["Convert to CIELAB Color Space"]
+        LabTransform --> CalcEI["Compute Erythema Index:\nEI = a* / L*"]
+        CalcEI --> EstHb["Calibrate Hemoglobin:\nHb = 13.5 * EI (g/dL)"]
+        EstHb --> PallorClass{"Pallor Severity Triage:\nNormal / Mild / Moderate / Severe"}
+    end
+
+    subgraph JaundicePath ["Jaundice (Sclera)"]
+        RouteModality -->|Jaundice /screen/jaundice| ScleraSeg["HSV Chromatic Isolation:\nIsolate High-Brightness, Low-Saturation Sclera"]
+        ScleraSeg --> LabB["Extract CIELAB b* Channel\n(Yellow-Blue Axis)"]
+        LabB --> EstBili["Estimate Serum Bilirubin:\nBilirubin = f(mean(b*)) mg/dL"]
+        EstBili --> JaundiceClass{"Icterus Severity Triage:\nNormal / Borderline / Moderate / Severe"}
+    end
+
+    subgraph OralPath ["Oral Cavity Screening"]
+        RouteModality -->|Oral /screen/oral| MucosaSeg["Mucosal Texture & Red/White Patch Analysis"]
+        MucosaSeg --> Leukoplakia["Detect Hyperkeratotic White Plaques (L* > 180)\n& Erythroplakia Red Lesions (High a*)"]
+        Leukoplakia --> OralAlert{"Pre-Cancerous / OSMF Alert Generation"}
+    end
+
+    subgraph SkinPath ["Dermatological Screening"]
+        RouteModality -->|Skin /screen/skin| EdgeDetect["Canny Contouring & Annular Border Analysis"]
+        EdgeDetect --> RingwormEczema["Circularity & Edge Regularity Scoring\n(Tinea vs Eczema vs Normal)"]
+        RingwormEczema --> SkinAlert{"Topical Antifungal / Emollient Protocol"}
+    end
+
+    PallorClass --> ResultFormatter["Generate Visual ROI Overlay\n(Emerald/Amber Bounding Polygons)"]
+    JaundiceClass --> ResultFormatter
+    OralAlert --> ResultFormatter
+    SkinAlert --> ResultFormatter
+
+    ResultFormatter --> ResponsePayload["Structured JSON Response\n(Estimated Value, Unit, Status, Action, Base64 JPEG)"]
+```

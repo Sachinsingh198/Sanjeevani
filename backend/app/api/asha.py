@@ -82,6 +82,18 @@ def sync_batch_encounters(
 
             synced_ids.append(enc.id)
 
+    if synced_ids:
+        from app.core.activity_logger import log_activity
+        log_activity(
+            action="ASHA_SYNC",
+            user_id=user["id"],
+            user_name=user["name"],
+            user_role=user["role"],
+            description=f"Synced {len(synced_ids)} field encounter(s) from village {user.get('village', 'Unknown')}",
+            village=user.get("village", ""),
+            metadata={"synced_count": len(synced_ids), "encounter_ids": synced_ids}
+        )
+
     return SyncBatchResponse(synced_count=len(synced_ids), ids=synced_ids)
 
 

@@ -20,13 +20,15 @@ Welcome to the comprehensive technical and operational documentation for **Proje
 | **10** | [10. LangSmith Observability & Tracing](./10_LANGSMITH_OBSERVABILITY_AND_TRACING.md) | Production telemetry, LangSmith project setup, trace tree structure, span inspection, latency monitoring, and token tracking. |
 | **11** | [11. API Reference & Endpoints](./11_API_REFERENCE_AND_ENDPOINTS.md) | Comprehensive REST API catalog covering Auth, Chat, Voice, Vision, Companion, Reports, and Admin endpoints. |
 | **12** | [12. Developer Setup & Deployment Guide](./12_DEVELOPER_SETUP_AND_DEPLOYMENT_GUIDE.md) | Step-by-step local environment setup, `.env` guide, demo accounts, Pytest commands, and production deployment guidelines. |
+| **13** | [13. System Workflows & Mermaid Diagrams Master Guide](./13_SYSTEM_WORKFLOWS_AND_MERMAID_DIAGRAMS.md) | **Master Visual Guide**: Comprehensive collection of intuitive Mermaid diagrams covering patient journey, triage, doctor intake, offline sync, voice loop, and computer vision. |
 
 ---
 
 ## 🎯 How to Read This Documentation
 
-1. **For System Architects & Tech Leads**: Start with [01. Project Overview](./01_PROJECT_OVERVIEW_AND_VISION.md), [02. Architecture](./02_ARCHITECTURE_AND_WORKFLOW.md), and [04. LangGraph Agent](./04_LANGGRAPH_AGENT_AND_DIALOGUE_FLOW.md).
-2. **For Clinical & Medical Reviewers**: Review [03. Clinical Triage & Safety](./03_CLINICAL_TRIAGE_AND_SAFETY_ENGINE.md) and [06. AYUSH Hybrid RAG](./06_AYUSH_HYBRID_RAG_AND_KNOWLEDGE_STORE.md).
-3. **For AI / ML Engineers**: Dive into [04. LangGraph Agent](./04_LANGGRAPH_AGENT_AND_DIALOGUE_FLOW.md), [05. Voice Subsystem](./05_MULTILINGUAL_VOICE_AND_SPEECH.md), [07. Computer Vision](./07_EDGE_COMPUTER_VISION_DIAGNOSTICS.md), and [10. LangSmith Tracing](./10_LANGSMITH_OBSERVABILITY_AND_TRACING.md).
-4. **For Frontend & UX Developers**: Focus on [08. Community Wellness](./08_COMMUNITY_WELLNESS_AND_ELDER_COMPANION.md), [09. User Roles](./09_USER_ROLES_AND_PORTALS.md), and [11. API Reference](./11_API_REFERENCE_AND_ENDPOINTS.md).
-5. **For DevOps & Contributors**: Go directly to [12. Developer Setup](./12_DEVELOPER_SETUP_AND_DEPLOYMENT_GUIDE.md).
+1. **For Evaluators, Judges & Quick Comprehension**: Start with **[13. System Workflows & Mermaid Diagrams Master Guide](./13_SYSTEM_WORKFLOWS_AND_MERMAID_DIAGRAMS.md)** for an immediate, high-level visual understanding of the entire platform.
+2. **For System Architects & Tech Leads**: Read [01. Project Overview](./01_PROJECT_OVERVIEW_AND_VISION.md), [02. Architecture](./02_ARCHITECTURE_AND_WORKFLOW.md), and [04. LangGraph Agent](./04_LANGGRAPH_AGENT_AND_DIALOGUE_FLOW.md).
+3. **For Clinical & Medical Reviewers**: Review [03. Clinical Triage & Safety](./03_CLINICAL_TRIAGE_AND_SAFETY_ENGINE.md) and [06. AYUSH Hybrid RAG](./06_AYUSH_HYBRID_RAG_AND_KNOWLEDGE_STORE.md).
+4. **For AI / ML Engineers**: Dive into [04. LangGraph Agent](./04_LANGGRAPH_AGENT_AND_DIALOGUE_FLOW.md), [05. Voice Subsystem](./05_MULTILINGUAL_VOICE_AND_SPEECH.md), [07. Computer Vision](./07_EDGE_COMPUTER_VISION_DIAGNOSTICS.md), and [10. LangSmith Tracing](./10_LANGSMITH_OBSERVABILITY_AND_TRACING.md).
+5. **For Frontend & UX Developers**: Focus on [08. Community Wellness](./08_COMMUNITY_WELLNESS_AND_ELDER_COMPANION.md), [09. User Roles](./09_USER_ROLES_AND_PORTALS.md), and [11. API Reference](./11_API_REFERENCE_AND_ENDPOINTS.md).
+6. **For DevOps & Contributors**: Go directly to [12. Developer Setup](./12_DEVELOPER_SETUP_AND_DEPLOYMENT_GUIDE.md).

@@ -15,8 +15,8 @@ def triage_node(state: AgentState) -> AgentState:
     tier, flags = triage_engine.evaluate(normalized)
     intent = classify_intent(normalized)
 
-    # 1.5 Instant, zero-latency Language Auto-Detection (Garhwali vs Hindi vs English)
-    detected_language = bhashini_engine.detect_language(raw_text)
+    # 1.5 Multi-Language Auto-Detection across all Indian languages
+    detected_language = bhashini_engine.detect_language(raw_text, hint=state.get("language_hint"))
 
     # 2. Update state tracking
     current_phase = state.get("dialogue_phase", "GREETING")
@@ -57,16 +57,19 @@ def triage_node(state: AgentState) -> AgentState:
 
     elif current_phase in ("CONCLUDED", "EMERGENCY"):
         msg_lower = normalized.lower().strip()
-        remedy_words = ["nuskha", "nushkha", "remedy", "dhanyawad", "thanks", "shukriya", "batao", "bataein", "upchar"]
-        if any(w in msg_lower for w in remedy_words):
-            # Retain CONCLUDED phase so it re-renders or maintains concluded remedy
-            state["dialogue_phase"] = "CONCLUDED"
-        else:
-            # Patient describes a new symptom directly → start new consultation from turn 1
+        from app.core.dialogue_manager import has_symptom_mention
+        has_new_symptoms = has_symptom_mention(normalized)
+        remedy_words = ["nuskha", "nushkha", "remedy", "dhanyawad", "thanks", "shukriya", "batao", "bataein", "upchar", "kaha", "kahan", "kab"]
+
+        if has_new_symptoms and not any(w in msg_lower for w in remedy_words):
+            # Patient describes a genuine new medical complaint → start new consultation
             state["dialogue_phase"] = "CONSULTATION"
             state["consultation_notes"] = ""
             state["retrieved_remedies"] = []
             state["turn_count"] = 1
+        else:
+            # Retain CONCLUDED phase so it maintains the verified remedy and does not wipe consultation notes
+            state["dialogue_phase"] = "CONCLUDED"
 
     elif current_phase in ("GREETING", "GUARDRAIL_BLOCKED", None, ""):
         state["dialogue_phase"] = "CONSULTATION"

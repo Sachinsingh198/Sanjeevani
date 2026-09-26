@@ -27,7 +27,49 @@ class UserProfile(BaseModel):
     email: Optional[str] = None
     role: str
     village: Optional[str] = ""
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    district: Optional[str] = "Chamoli"
+    state: Optional[str] = "Uttarakhand"
+    blood_group: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    language_preference: Optional[str] = "hi"
+    comorbidities: Optional[str] = None
+    allergies: Optional[str] = None
+    worker_id: Optional[str] = None
+    assigned_phc: Optional[str] = None
+    abha_id: Optional[str] = None
+    avatar_url: Optional[str] = None
+    settings_json: Optional[str] = None
     created_at: Union[str, datetime]
+
+
+class ProfileUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    username: Optional[str] = None
+    email: Optional[str] = None
+    village: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    blood_group: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    language_preference: Optional[str] = None
+    comorbidities: Optional[str] = None
+    allergies: Optional[str] = None
+    worker_id: Optional[str] = None
+    assigned_phc: Optional[str] = None
+    abha_id: Optional[str] = None
+    avatar_url: Optional[str] = None
+    settings_json: Optional[str] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str = Field(..., min_length=1, description="Current password")
+    new_password: str = Field(..., min_length=6, description="New password (minimum 6 characters)")
 
 
 class LoginResponse(BaseModel):
@@ -70,5 +112,24 @@ class OtpResponse(BaseModel):
     message: str
     target_type: Optional[str] = None
     dev_otp: Optional[str] = None
+
+
+class ActivityLogResponse(BaseModel):
+    id: int
+    user_id: Optional[int] = None
+    user_name: Optional[str] = None
+    user_role: Optional[str] = None
+    action: str
+    description: Optional[str] = None
+    village: Optional[str] = None
+    ip_address: Optional[str] = None
+    metadata_json: Optional[str] = None
+    created_at: Union[str, datetime]
+
+
+class ClientActivityRequest(BaseModel):
+    action: str = Field(..., description="Activity name, e.g. WELLNESS, SCREENING, EMERGENCY_SOS, CONSULTATION")
+    description: Optional[str] = None
+    metadata: Optional[dict] = None
 
 

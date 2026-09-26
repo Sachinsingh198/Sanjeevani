@@ -1,7 +1,9 @@
 import axios from 'axios';
-import { evaluateLocalRedFlags } from '../lib/localTriageFallback';
+import { evaluateLocalRedFlags } from '../lib/localTriageFallback.js';
+import { processOfflineConsultation } from '../lib/offlineTriageEngine.js';
+import { queueOfflineChat } from '../lib/offlineSyncManager.js';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL) || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -63,14 +65,41 @@ export const checkBackendHealth = async () => {
 };
 
 export const sendChatMessage = async (
-  conversationId,
-  message,
-  patientConditions = [],
-  languageHint = 'auto',
-  includeAudio = false,
-  voiceGender = 'female'
+  arg1,
+  arg2,
+  arg3 = [],
+  arg4 = 'auto',
+  arg5 = false,
+  arg6 = 'female',
+  arg7 = []
 ) => {
+  let conversationId;
+  let message;
+  let patientConditions;
+  let languageHint;
+  let includeAudio;
+  let voiceGender;
+  let conversationHistory = [];
+
   try {
+    if (typeof arg1 === 'object' && arg1 !== null) {
+      conversationId = arg1.conversation_id || arg1.conversationId;
+      message = arg1.message || arg1.text || '';
+      patientConditions = arg1.patient_context?.known_conditions || arg1.patientConditions || [];
+      languageHint = arg1.language_hint || arg1.languageHint || 'auto';
+      includeAudio = arg1.include_audio ?? arg1.includeAudio ?? false;
+      voiceGender = arg1.voice_gender || arg1.voiceGender || 'female';
+      conversationHistory = arg1.conversation_history || arg1.conversationHistory || [];
+    } else {
+      conversationId = arg1;
+      message = arg2;
+      patientConditions = arg3 || [];
+      languageHint = arg4 || 'auto';
+      includeAudio = arg5 || false;
+      voiceGender = arg6 || 'female';
+      conversationHistory = arg7 || [];
+    }
+
     const res = await api.post('/chat/message', {
       conversation_id: conversationId,
       message: message,
@@ -81,57 +110,26 @@ export const sendChatMessage = async (
     });
     return res.data;
   } catch (err) {
-    // Only fall back to client-side simulation if it's a network/offline error,
-    // NOT a timeout (so we don't mask real backend issues in development).
-    if (!err.response && err.code !== 'ECONNABORTED') {
-      console.warn('[Sanjeevani] Backend offline — using client-side simulation for demo mode.');
+    // If backend is unreachable, times out, network is offline, or database throws a 500 error:
+    // Seamlessly engage On-Device Clinical Triage & AYUSH Engine so the patient is NEVER left stranded!
+    console.warn('[Sanjeevani] Backend unavailable or encountering network/database issue — engaging On-Device Clinical Triage & AYUSH Engine.');
 
-      const redEval = evaluateLocalRedFlags(message);
-      if (redEval.isRed) {
-        const flagStr = redEval.flag || 'RED_FLAG: Emergency detected offline';
-        return {
-          conversation_id: conversationId,
-          tier: 'Red',
-          reply_text: `⚠️ ऑफ़लाइन अनुमान (पुष्टि नहीं) — EMERGENCY WARNING: Critical life-threatening symptoms detected (${flagStr}). Do NOT rely on home remedies. Keep the patient in a comfortable position, ensure their airway is open, and call 108 emergency ambulance immediately.`,
-          flags: [flagStr],
-          remedies: [],
-          escalation_triggered: true,
-          requires_immediate_doctor: true,
-          is_offline_fallback: true,
-        };
+    try {
+      const offlineResult = processOfflineConsultation(message, patientConditions, conversationId, conversationHistory);
+      offlineResult.raw_user_message = message;
+
+      // Automatically queue for background synchronization to database
+      try {
+        queueOfflineChat(offlineResult);
+      } catch (qErr) {
+        console.warn('[OfflineSync] Failed to queue chat encounter:', qErr);
       }
 
-      const lower = message.toLowerCase();
-
-      // Yellow Tier Simulation
-      if (lower.includes('3 din') || lower.includes('persistent fever') || lower.includes('lagaatar bukhar')) {
-        return {
-          conversation_id: conversationId,
-          tier: 'Yellow',
-          reply_text: '⚠️ ऑफ़लाइन अनुमान (पुष्टि नहीं) — Aapke lakshan sub-acute hain. Yadi bukhar 24 ghante aur rehta hai toh Primary Health Centre (PHC) jaayein ya e-Sanjeevani (104) par call karein.',
-          flags: ['YELLOW_FLAG: Prolonged fever monitoring'],
-          remedies: [],
-          escalation_triggered: false,
-          requires_immediate_doctor: false,
-          is_offline_fallback: true,
-        };
-      }
-
-      // Green Tier Simulation
-      return {
-        conversation_id: conversationId,
-        tier: 'Green',
-        reply_text: '⚠️ ऑफ़लाइन अनुमान (पुष्टि नहीं) — Namaste! Main Sanjeevani hoon. Aap apne lakshan yahan batayein. (Demo mode — backend offline)',
-        flags: ['GREEN_FLAG: Routine community care'],
-        remedies: [],
-        escalation_triggered: false,
-        requires_immediate_doctor: false,
-        is_offline_fallback: true,
-      };
+      return offlineResult;
+    } catch (offlineErr) {
+      console.error('[OfflineTriage] Critical failure in local offline engine:', offlineErr);
+      throw err;
     }
-
-    // Re-throw real errors (500s, timeouts) so the UI can display them
-    throw err;
   }
 };
 

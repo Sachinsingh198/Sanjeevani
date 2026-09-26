@@ -16,6 +16,8 @@ from app.schemas.auth_schemas import (
     LoginRequest,
     LoginResponse,
     UserProfile,
+    ProfileUpdateRequest,
+    ChangePasswordRequest,
     ResetPasswordRequest,
     CheckUsernameResponse,
     SendOtpRequest,
@@ -27,6 +29,7 @@ from app.core.auth import hash_password, verify_password, create_access_token, g
 from app.core.notification_service import send_email_otp, send_sms_otp
 from app.models import normalize_phone
 from app.db import get_db_connection, users_table, otps_table, row_to_dict
+from app.core.activity_logger import log_activity
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -149,7 +152,7 @@ async def check_username(
 
 
 @router.post("/register", response_model=LoginResponse)
-async def register_user(req: RegisterRequest):
+async def register_user(req: RegisterRequest, request: Request = None):
     """
     Register a new user account.
     - Strictly validates 10-digit mobile number.
@@ -224,6 +227,19 @@ async def register_user(req: RegisterRequest):
         row = conn.execute(select(users_table).where(users_table.c.id == user_id)).fetchone()
         user_dict = row_to_dict(row)
 
+        client_ip = request.client.host if (request and request.client) else None
+        log_activity(
+            action="REGISTER",
+            user_id=user_id,
+            user_name=req.name.strip(),
+            user_role=req.role,
+            description=f"New {req.role} account created ({chosen_username})",
+            village=req.village.strip(),
+            ip_address=client_ip,
+            metadata={"phone": norm_phone, "email": clean_email},
+            conn=conn
+        )
+
         token = create_access_token({"user_id": user_id, "role": req.role})
 
         return LoginResponse(
@@ -270,6 +286,20 @@ async def login_user(request: Request, req: LoginRequest):
             )
 
         token = create_access_token({"user_id": user_dict["id"], "role": user_dict["role"]})
+
+        client_ip = request.client.host if (request and request.client) else None
+        ua = request.headers.get("user-agent", "Unknown") if request else "Unknown"
+        log_activity(
+            action="LOGIN",
+            user_id=user_dict["id"],
+            user_name=user_dict["name"],
+            user_role=user_dict["role"],
+            description=f"User signed in via {identifier}",
+            village=user_dict.get("village", ""),
+            ip_address=client_ip,
+            metadata={"user_agent": ua[:120], "identifier": identifier},
+            conn=conn
+        )
 
         return LoginResponse(
             access_token=token,
@@ -321,6 +351,158 @@ async def reset_password(
 async def get_me(user: Dict[str, Any] = Depends(get_current_user)):
     """Returns the currently authenticated user's profile."""
     return UserProfile(**user)
+
+
+@router.post("/logout")
+async def logout_user(request: Request, user: Dict[str, Any] = Depends(get_current_user)):
+    """Logs out the user and records audit trail event."""
+    client_ip = request.client.host if (request and request.client) else None
+    log_activity(
+        action="LOGOUT",
+        user_id=user["id"],
+        user_name=user["name"],
+        user_role=user["role"],
+        description=f"User {user['name']} logged out",
+        village=user.get("village", ""),
+        ip_address=client_ip,
+    )
+    return {"success": True, "message": "Safaltapoorvak logout ho gaya."}
+
+
+@router.put("/profile", response_model=UserProfile)
+async def update_profile(
+    request: Request,
+    req: ProfileUpdateRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Update profile and settings for the authenticated user."""
+    update_vals = {}
+    with get_db_connection() as conn:
+        # Check username uniqueness if changed
+        if req.username is not None:
+            new_username = req.username.strip().lower()
+            if new_username and new_username != (user.get("username") or "").lower():
+                if not re.match(r"^[a-z0-9_]{3,20}$", new_username):
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Username 3 se 20 aksharon ka hona chahiye (sirf a-z, 0-9 aur underscore '_' maanya hain)."
+                    )
+                stmt_exist = select(users_table.c.id).where(
+                    and_(func.lower(users_table.c.username) == new_username, users_table.c.id != user["id"])
+                )
+                if conn.execute(stmt_exist).fetchone():
+                    raise HTTPException(status_code=409, detail="Yeh username pehle se kisi aur dwara liya gaya hai.")
+                update_vals["username"] = new_username
+
+        # Check email uniqueness if changed
+        if req.email is not None:
+            new_email = req.email.strip().lower()
+            if new_email and new_email != (user.get("email") or "").lower():
+                stmt_email = select(users_table.c.id).where(
+                    and_(func.lower(users_table.c.email) == new_email, users_table.c.id != user["id"])
+                )
+                if conn.execute(stmt_email).fetchone():
+                    raise HTTPException(status_code=409, detail="Yeh email pehle se kisi aur account me juda hai.")
+                update_vals["email"] = new_email
+            elif not new_email:
+                update_vals["email"] = ""
+
+        if req.name is not None and req.name.strip():
+            update_vals["name"] = req.name.strip()
+        if req.village is not None:
+            update_vals["village"] = req.village.strip()
+        if req.age is not None:
+            update_vals["age"] = req.age
+        if req.gender is not None:
+            update_vals["gender"] = req.gender.strip()
+        if req.district is not None:
+            update_vals["district"] = req.district.strip()
+        if req.state is not None:
+            update_vals["state"] = req.state.strip()
+        if req.blood_group is not None:
+            update_vals["blood_group"] = req.blood_group.strip()
+        if req.emergency_contact_name is not None:
+            update_vals["emergency_contact_name"] = req.emergency_contact_name.strip()
+        if req.emergency_contact_phone is not None:
+            update_vals["emergency_contact_phone"] = req.emergency_contact_phone.strip()
+        if req.language_preference is not None:
+            update_vals["language_preference"] = req.language_preference.strip()
+        if req.comorbidities is not None:
+            update_vals["comorbidities"] = req.comorbidities.strip()
+        if req.allergies is not None:
+            update_vals["allergies"] = req.allergies.strip()
+        if req.worker_id is not None:
+            update_vals["worker_id"] = req.worker_id.strip()
+        if req.assigned_phc is not None:
+            update_vals["assigned_phc"] = req.assigned_phc.strip()
+        if req.abha_id is not None:
+            update_vals["abha_id"] = req.abha_id.strip()
+        if req.avatar_url is not None:
+            update_vals["avatar_url"] = req.avatar_url.strip()
+        if req.settings_json is not None:
+            update_vals["settings_json"] = req.settings_json.strip()
+
+        if update_vals:
+            conn.execute(
+                update(users_table)
+                .where(users_table.c.id == user["id"])
+                .values(**update_vals)
+            )
+
+        updated_row = conn.execute(select(users_table).where(users_table.c.id == user["id"])).fetchone()
+        updated_dict = row_to_dict(updated_row)
+
+    client_ip = request.client.host if (request and request.client) else None
+    log_activity(
+        action="PROFILE_UPDATE",
+        user_id=user["id"],
+        user_name=updated_dict["name"],
+        user_role=user["role"],
+        description=f"Profile updated: {', '.join(update_vals.keys()) if update_vals else 'No changes'}",
+        village=updated_dict.get("village", ""),
+        ip_address=client_ip,
+        metadata={"updated_fields": list(update_vals.keys())}
+    )
+
+    return UserProfile(**updated_dict)
+
+
+@router.post("/change-password")
+async def change_password(
+    request: Request,
+    req: ChangePasswordRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Change account password by providing the current password."""
+    with get_db_connection() as conn:
+        stmt = select(users_table).where(users_table.c.id == user["id"])
+        row = conn.execute(stmt).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user_dict = row_to_dict(row)
+        if not verify_password(req.old_password, user_dict["hashed_password"]):
+            raise HTTPException(status_code=400, detail="Vartamaan (purana) password galat hai.")
+
+        new_hashed = hash_password(req.new_password.strip())
+        conn.execute(
+            update(users_table)
+            .where(users_table.c.id == user["id"])
+            .values(hashed_password=new_hashed)
+        )
+
+    client_ip = request.client.host if (request and request.client) else None
+    log_activity(
+        action="PASSWORD_CHANGE",
+        user_id=user["id"],
+        user_name=user["name"],
+        user_role=user["role"],
+        description="User successfully changed their password",
+        village=user.get("village", ""),
+        ip_address=client_ip
+    )
+
+    return {"success": True, "message": "Password safaltapoorvak badal diya gaya hai."}
 
 
 @router.post("/otp/send", response_model=OtpResponse)

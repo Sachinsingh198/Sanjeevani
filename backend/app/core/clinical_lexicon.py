@@ -19,19 +19,24 @@ SYMPTOM_KEYWORDS: List[str] = [
     "swelling", "swollen", "rash", "itching", "itchy", "burn", "burning", "cramp", "cramps",
     "fatigue", "tired", "weakness", "dizziness", "dizzy", "breath", "breathing",
     "shortness of breath", "chest pain", "sore throat", "stomach ache", "infection",
+    "congestion", "blocked nose", "runny nose", "sneezing", "sneeze", "allergy", "allergies",
+    "sinus", "sinusitis", "watery eyes", "itchy eyes", "nasal",
     # Hindi / Hinglish
     "dard", "peer", "peed", "bukhar", "taap", "khansi", "khang", "gala", "kanth",
-    "sardi", "zukaam", "zukam", "chheenk", "chhik", "sar dard", "sir dard", "sar me dard",
+    "sardi", "zukaam", "zukam", "chheenk", "chheekein", "chheken", "chhik", "sar dard", "sir dard", "sar me dard",
     "pet", "pet dard", "jalan", "marod", "gas", "acidity", "apach", "badhazmi",
     "ulti", "dast", "kabz", "chakkar", "thakan", "thakawat", "kamzori",
     "sujan", "khujli", "saans", "ghutan", "seena", "seene", "badan dard", "chot",
     "behoshi", "neend", "peshab", "khoon", "pitta",
+    "naak", "naak band", "band naak", "naak behna", "aankh", "aankhon", "aankhon mein khujli",
+    "aansu", "aanshu", "pratishyaya", "allergy", "sinus",
     # Garhwali / Regional
-    "mund", "mund ma peed", "syal", "thand", "bhyo", "kapkapi", "pait", "gal",
+    "mund", "mund ma peed", "syal", "thand", "bhyo", "kapkapi", "pait", "gal", "aankhi", "aankhiyo",
     # Devanagari
     "दर्द", "पीर", "पीड़", "बुखार", "ताप", "खांसी", "खंग", "गला", "सर्दी", "जुकाम",
     "पेट", "उल्टी", "दस्त", "कब्ज", "गैस", "सिरदर्द", "चक्कर", "थकान", "कमजोरी",
-    "सूजन", "खुजली", "सांस", "सीना", "खून", "मुंड", "स्याल", "जलन", "मरोड़"
+    "सूजन", "खुजली", "सांस", "सीना", "खून", "मुंड", "स्याल", "जलन", "मरोड़",
+    "नाक", "नाक बंद", "बंद नाक", "छींक", "छींकें", "आंख", "आँख", "आंखों", "आँसू", "आंसू", "एलर्जी", "साइनस"
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

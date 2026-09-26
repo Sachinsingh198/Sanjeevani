@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import chat, screen
-from app.api import auth_api, admin_api
+from app.api import auth_api, admin_api, activity_api
 from app.api import asha
 from app.models import create_tables, seed_default_admin, get_db
 from app.config import settings
@@ -54,21 +54,30 @@ async def lifespan(app: FastAPI):
         except Exception as sentry_err:
             logger.error(f"[Sanjeevani] Failed to initialize Sentry: {sentry_err}")
 
-    create_tables()
-    seed_default_admin()
+    try:
+        create_tables()
+        seed_default_admin()
+        logger.info("[Sanjeevani] Database initialized, admin seeded.")
+    except Exception as db_init_err:
+        logger.warning(f"[Sanjeevani] Database initialization warning ({db_init_err}). Running in resilient offline-first mode.")
 
     t0 = time.perf_counter()
     logger.info("[Sanjeevani] Loading remedy store and embedding model into memory...")
-    from app.core.hybrid_rag import get_shared_remedy_store
-    app.state.remedy_store = get_shared_remedy_store()
-    elapsed = time.perf_counter() - t0
-    logger.info(f"[Sanjeevani] HybridRemedyStore successfully loaded in {elapsed:.2f}s.")
+    try:
+        from app.core.hybrid_rag import get_shared_remedy_store
+        app.state.remedy_store = get_shared_remedy_store()
+        elapsed = time.perf_counter() - t0
+        logger.info(f"[Sanjeevani] HybridRemedyStore successfully loaded in {elapsed:.2f}s.")
+    except Exception as rag_err:
+        logger.warning(f"[Sanjeevani] Cloud vector store could not be reached ({rag_err}). Running with local CCRAS remedy fallback.")
+        app.state.remedy_store = None
 
     # Pre-cache common mission-critical audio snippets
-    from app.core.tts_engine import seed_audio_cache
-    seed_audio_cache()
-
-    logger.info("[Sanjeevani] Database initialized, admin seeded.")
+    try:
+        from app.core.tts_engine import seed_audio_cache
+        seed_audio_cache()
+    except Exception as tts_err:
+        logger.warning(f"[Sanjeevani] TTS audio cache seeding skipped: {tts_err}")
     try:
         yield
     finally:
@@ -137,6 +146,7 @@ app.include_router(voice.router)
 app.include_router(reports.router)
 app.include_router(companion.router)
 app.include_router(asha.router)
+app.include_router(activity_api.router)
 
 
 @app.get("/")

@@ -4,7 +4,7 @@ from app.agents.state import AgentState
 from app.config import settings
 from app.core.logger import logger
 from app.core.bhashini_engine import BhashiniVoiceEngine
-from app.core.sarvam_translate import sarvam_translate_client
+from app.core.sarvam_translate import sarvam_translate_client, get_sarvam_language_code
 from langchain_core.messages import SystemMessage, HumanMessage
 
 bhashini_engine = BhashiniVoiceEngine()
@@ -278,6 +278,117 @@ def _try_llm(llm, messages) -> Optional[str]:
         return None
 
 
+def localize_clinical_text(text: str, lang: str, is_devanagari: bool = False) -> str:
+    """
+    Translates clinical dialogue or prescription text into the patient's preferred language using Sarvam AI.
+    - Hindi: returned as-is.
+    - Garhwali: returned as-is (already generated natively or adapted).
+    - Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia, English, etc.:
+      translated via Sarvam AI Mayura v1 (hi-IN -> target language) with LRU caching.
+    """
+    if not text or not text.strip():
+        return text
+    if lang == "hindi":
+        return text
+    if lang == "garhwali":
+        return text
+    tgt_code = get_sarvam_language_code(lang)
+    if tgt_code == "hi-IN" and lang not in ("hindi", "hi"):
+        return text
+    try:
+        translated = sarvam_translate_client.translate_text_sync(text, "hi-IN", tgt_code)
+        return translated if translated and translated.strip() else text
+    except Exception as e:
+        logger.warning(f"[responder_node] Localization failed for {lang} ({tgt_code}): {e}")
+        return text
+
+
+def generate_structured_preparation_steps(remedy_text: str, remedy_name: str = "", lang: str = "hindi") -> list:
+    """
+    Deconstructs raw clinical remedy compendium text into clear, actionable,
+    numbered preparation steps (Ingredients, Preparation Method, Straining, and Consumption).
+    Guarantees that the patient always sees multiple complete steps in the chat UI.
+    """
+    if not remedy_text:
+        return ["Nirdharit aushadhi ko nirdesh anusar taaza taiyar karein."]
+
+    # 1. If text already has explicit numbered or bulleted lines, extract them
+    lines = [l.strip() for l in remedy_text.splitlines() if l.strip()]
+    extracted = []
+    for line in lines:
+        cleaned = re.sub(r"^(?:\d+[\.\)]|\-|\*)\s*", "", line).strip()
+        if cleaned and len(cleaned) > 5 and not cleaned.startswith("**"):
+            extracted.append(cleaned)
+    if len(extracted) >= 2:
+        return extracted
+
+    raw = remedy_text.strip()
+    raw = re.sub(r"^\([^)]+\)[:\s]*", "", raw).strip()  # strip formula title like (Bhunimbadi-Ashtadashanga Kashaya):
+
+    # 2. Extract ingredients clause
+    ingredients = ""
+    ing_match = re.search(r"Ingredients:\s*([^.]+?)(?:\.\s*(?:Indication|Administration|Action|Dosage|Preparation)|$)", raw, re.IGNORECASE)
+    if ing_match:
+        ingredients = ing_match.group(1).strip()
+    else:
+        parts = raw.split(".")
+        if len(parts) > 1 and len(parts[0]) > 15:
+            ingredients = parts[0].strip()
+
+    name_lower = (remedy_name or "").lower()
+    text_lower = raw.lower()
+    is_kashaya = any(w in name_lower or w in text_lower for w in ("kashaya", "decoction", "kadha", "kvatha"))
+    is_churna = any(w in name_lower or w in text_lower for w in ("churna", "powder", "bhasma", "vati"))
+    is_swarasa = any(w in name_lower or w in text_lower for w in ("swarasa", "juice", "rasa", "tea", "chai"))
+
+    if lang == "english":
+        steps = []
+        if ingredients:
+            clean_ing = re.sub(r"^Ingredients:\s*", "", ingredients, flags=re.IGNORECASE).strip()
+            steps.append(f"Ingredients: Take clean, equal quantities of {clean_ing}.")
+        else:
+            steps.append(f"Ingredients: Procure genuine {remedy_name or 'herbal ingredients'} in recommended quantity.")
+
+        if is_kashaya:
+            steps.append("Preparation Method: Coarsely crush the herbs and boil in 16 parts of fresh water (approx. 2-3 cups) on low flame until reduced to one-fourth (1/4th) volume.")
+            steps.append("Straining: Remove from heat and strain thoroughly through a clean cotton cloth or fine sieve.")
+            steps.append("How to Take: Drink lukewarm decoction once or twice daily approximately 30 minutes after meals.")
+        elif is_churna:
+            steps.append("Preparation Method: Finely grind the dried herbs and sieve through clean muslin cloth into a fine powder.")
+            steps.append("Storage & Intake: Store in an airtight container. Take 1 teaspoon with lukewarm water or honey twice daily.")
+        elif is_swarasa:
+            steps.append("Preparation Method: Wash fresh leaves/herbs thoroughly, crush in a mortar, and squeeze through clean cloth to extract fresh juice.")
+            steps.append("How to Take: Take 1-2 tablespoons freshly extracted juice with water or honey.")
+        else:
+            steps.append("Preparation Method: Boil the herbs in 2 cups of water for 5-7 minutes over low heat.")
+            steps.append("How to Take: Strain and consume lukewarm twice daily after meals.")
+        return steps
+
+    # Hindi / Garhwali / Indic canonical steps
+    steps = []
+    if ingredients:
+        clean_ing = re.sub(r"^Ingredients:\s*", "", ingredients, flags=re.IGNORECASE).strip()
+        steps.append(f"सामग्री (Ingredients): {clean_ing} को साफ करके बराबर मात्रा में लें।")
+    else:
+        steps.append(f"सामग्री (Ingredients): {remedy_name or 'नुस्खे की औषधियाँ'} उचित मात्रा में लें।")
+
+    if is_kashaya:
+        steps.append("काढ़ा बनाने की विधि (Preparation): सभी जड़ी-बूटियों को मोटा कूट लें और 16 गुना पानी (लगभग 2-3 कप) में धीमी आंच पर उबालें, जब तक एक-चौथाई (1/4) पानी न बच जाए।")
+        steps.append("छानने का तरीका (Straining): उबालने के बाद आंच से उतारें और साफ कपड़े या बारीक छलनी से अच्छी तरह छान लें।")
+        steps.append("सेवन विधि (How to Take): इस ताजे गुनगुने काढ़े को दिन में 1-2 बार भोजन के 30 मिनट बाद सेवन करें।")
+    elif is_churna:
+        steps.append("चूर्ण बनाने की विधि (Preparation): सभी सूखी जड़ी-बूटियों को बारीक पीसकर कपड़छान चूर्ण बना लें और साफ शीशी में रखें।")
+        steps.append("सेवन विधि (How to Take): 1 चम्मच चूर्ण गुनगुने पानी या शहद के साथ दिन में 2 बार लें।")
+    elif is_swarasa:
+        steps.append("स्वरस विधि (Preparation): ताजी पत्तियों/जड़ों को धोकर कूट लें और साफ कपड़े से निचोड़कर ताजा रस निकालें।")
+        steps.append("सेवन विधि (How to Take): 1-2 चम्मच ताजा स्वरस गुनगुने पानी के साथ दिन में 1-2 बार लें।")
+    else:
+        steps.append("बनाने की विधि (Preparation): इन औषधियों को 2 कप पानी में डालकर 5-7 मिनट धीमी आंच पर पकाएं।")
+        steps.append("सेवन विधि (How to Take): छानकर गुनगुना दिन में 1-2 बार भोजन के बाद नियमित रूप से लें।")
+
+    return steps
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Concluded Remedy Delivery Node
 # ─────────────────────────────────────────────────────────────────────────────
@@ -310,8 +421,14 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
                 "Yai bakhat hamara paani twari bimari khatir koi parkhi nuskha ni chha.\n"
                 "Kripya **PHC** ya **104** par phone kara."
             )
-        else:
+        elif lang == "hindi":
             state["final_reply_text"] = base_hin
+        else:
+            state["final_reply_text"] = localize_clinical_text(
+                "आपकी पूरी बात सुन ली।\n\nइस वक्त मेरे पास आपकी तकलीफ के लिए प्रमाणित नुस्खा नहीं मिला।\nकृपया **PHC** या **104** पर संपर्क करें।",
+                lang,
+                is_devanagari,
+            )
         return state
 
     remedy = remedies[0]
@@ -329,30 +446,53 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
         spoken_voice_summary = (
             f"Based on your symptoms, this appears to be {sym_data['diagnosis_eng']}. You can safely try {r_name}. Detailed instructions are shown on screen. If not improved in two days, please call 104 or visit the nearest PHC."
         )
-    else:
+    elif lang == "hindi":
         spoken_voice_summary = (
             f"Aapke bataye lakshano ke aadhar par {sym_data['spoken_hin']} lag raha hai. Iske liye aap {r_name} le sakte hain. Iska pura tarika screen par diya gaya hai. Agar do din mein aaram na aaye toh 104 par call karein ya PHC jaayein."
         )
+    else:
+        base_hin_spoken = (
+            f"आपके बताए लक्षणों के आधार पर {sym_data['spoken_hin']} लग रहा है। इसके लिए आप {r_name} ले सकते हैं। इसका पूरा तरीका स्क्रीन पर दिया गया है। अगर दो दिन में आराम न आए तो 104 पर कॉल करें या नजदीकी PHC जाएं।"
+        )
+        spoken_voice_summary = localize_clinical_text(base_hin_spoken, lang, is_devanagari)
     state["spoken_reply_text"] = spoken_voice_summary
 
-    # Structured consultation summary for robust frontend parsing
-    prep_steps = [s.strip() for s in remedy.get('remedy_text', '').split('\n') if s.strip()]
-    if not prep_steps and remedy.get('remedy_text'):
-        prep_steps = [remedy.get('remedy_text').strip()]
+    # Structured multi-step preparation steps
+    prep_steps = generate_structured_preparation_steps(
+        remedy.get('remedy_text', ''),
+        remedy.get('remedy_name', ''),
+        lang="english" if lang == "english" else "hindi"
+    )
+    if lang not in ("hindi", "garhwali", "english"):
+        prep_steps = [localize_clinical_text(s, lang, is_devanagari) for s in prep_steps]
 
     cause_str = sym_data.get('diagnosis_hin', '') if sym_data else 'Lakshan'
     if lang == "english" and sym_data:
         cause_str = sym_data.get('diagnosis_eng', cause_str)
     elif lang == "garhwali" and sym_data:
         cause_str = sym_data.get('diagnosis_garh_dev' if is_devanagari else 'diagnosis_garh_rom', cause_str)
+    elif lang != "hindi" and sym_data:
+        cause_str = localize_clinical_text(sym_data.get('diagnosis_hin', cause_str), lang, is_devanagari)
+
+    dosage_str = "Din mein 1-2 baar khana khane ke baad"
+    if lang == "english":
+        dosage_str = "Take 1-2 times daily after meals"
+    elif lang not in ("hindi", "garhwali"):
+        dosage_str = localize_clinical_text("दिन में 1-2 बार भोजन के बाद", lang, is_devanagari)
+
+    precaution_str = "2 din mein aaram na aaye toh 104 par call karein ya PHC jaayein."
+    if lang == "english":
+        precaution_str = "If no relief in 2 days, please call 104 or visit the nearest PHC."
+    elif lang not in ("hindi", "garhwali"):
+        precaution_str = localize_clinical_text("2 दिन में आराम न आए तो 104 पर कॉल करें या नजदीकी PHC जाएं।", lang, is_devanagari)
 
     state["consultation_summary"] = {
         "condition": user_msg or (sym_data.get('spoken_hin', '') if sym_data else 'Lakshan'),
         "possible_cause": cause_str,
         "remedy_name": remedy.get('remedy_name', ''),
         "preparation_steps": prep_steps,
-        "dosage": [remedy.get('dosage', 'Din mein 1-2 baar khana khane ke baad')] if remedy.get('dosage') else ["Din mein 1-2 baar khana khane ke baad"],
-        "precautions": ["2 din mein aaram na aaye toh 104 par call karein ya PHC jaayein."],
+        "dosage": [dosage_str],
+        "precautions": [precaution_str],
         "ayurvedic_note": remedy.get('ayurvedic_note', '')
     }
 
@@ -363,14 +503,14 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             "safe Ayurvedic nuskha batana hai. Sirf HINDI ya HINGLISH mein likh.\n\n"
             "CRITICAL FORMATTING RULES:\n"
             "1. Har section se pehle aur baad mein ek blank line chhodhein.\n"
-            "2. '**Kaise Banayein:**' ke andar har step ko ALAG nayi line par numbered list (1. ..., 2. ...) mein likhein.\n"
+            "2. '**Kaise Banayein:**' ke andar har step ko ALAG nayi line par numbered list (1. ..., 2. ..., 3. ...) mein likhein. Har point mein vistar se samjhayein.\n"
             "3. '**Kab Tak Lein:**' ke andar khuraak aur timing likhein (har point nayi line par '- ' se shuru karein).\n"
             "4. '**Dhyan Rakhein:**' ke andar har savdhani ko ALAG nayi line par '- ' se likhein. Kabhi bhi multiple bullets ko ek hi line mein mat milana!\n\n"
             "Bilkul is format mein likho:\n\n"
             "**Aapki Takleef:** [ek line mein mukhya lakshan]\n\n"
             "**Sambhavit Karan (Possible Reason):** [possible cause: kya samasya lagti hai aur kyu, e.g. thakan ya sardi se hone wala sadharan sar dard]\n\n"
             "**Nuskha:** [nuskhe ka naam]\n\n"
-            "**Kaise Banayein:**\n1. [Step 1]\n2. [Step 2]\n\n"
+            "**Kaise Banayein:**\n1. [Step 1: Samagri]\n2. [Step 2: Banane ki Vidhi]\n3. [Step 3: Chhanne aur Peene ka Tarika]\n\n"
             "**Kab Tak Lein:**\n- [khuraak aur samay]\n\n"
             "**Dhyan Rakhein:**\n- [savdhani 1]\n- [savdhani 2]\n\n"
             "2 din mein aaram na aaye toh **104** par call karein ya **PHC** jaayein."
@@ -382,7 +522,7 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             f"Patient Details:\n{notes}\n\n"
             f"Verified Remedy:\n"
             f"Name: {remedy.get('remedy_name', '')}\n"
-            f"Instructions: {remedy.get('remedy_text', '')}\n"
+            f"Instructions:\n" + "\n".join(prep_steps) + "\n\n"
             f"Ayurvedic Benefit: {remedy.get('ayurvedic_note', '')}\n"
             f"Safety: {remedy.get('safety_check', 'Verified safe')}"
         )
@@ -391,16 +531,36 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             HumanMessage(content=user_prompt),
         ])
         if reply:
+            # Parse numbered preparation steps from LLM output into consultation_summary
+            prep_match = re.search(r"\*\*(?:Kaise Banayein|How to Prepare|बनाने का तरीका)[^*:]*:\*\*\s*\n([\s\S]*?)(?=\n\s*\*\*|$)", reply, re.IGNORECASE)
+            if prep_match:
+                extracted_steps = re.findall(r"(?:^|\n)\s*(?:\d+[\.\)]|\-|\*)\s*(.+)", prep_match.group(1))
+                valid_steps = [s.strip() for s in extracted_steps if s.strip() and len(s.strip()) > 3]
+                if len(valid_steps) >= 2:
+                    if lang == "english":
+                        state["consultation_summary"]["preparation_steps"] = [
+                            sarvam_translate_client.translate_text_sync(s, "hi-IN", "en-IN") for s in valid_steps
+                        ]
+                    elif lang not in ("hindi", "garhwali"):
+                        state["consultation_summary"]["preparation_steps"] = [
+                            localize_clinical_text(s, lang, is_devanagari) for s in valid_steps
+                        ]
+                    else:
+                        state["consultation_summary"]["preparation_steps"] = valid_steps
+
             if lang == "english":
                 state["final_reply_text"] = sarvam_translate_client.translate_text_sync(reply, "hi-IN", "en-IN")
             elif lang == "garhwali":
-                # LLM was prompted directly with native Garhwali guidance; avoid regex double-adaptation
+                state["final_reply_text"] = reply
+            elif lang == "hindi":
                 state["final_reply_text"] = reply
             else:
-                state["final_reply_text"] = reply
+                state["final_reply_text"] = localize_clinical_text(reply, lang, is_devanagari)
             return state
 
-    # 3. Deterministic prescription card fallback
+    # 3. Deterministic prescription card fallback with explicit numbered steps
+    steps_formatted = "\n".join([f"{i+1}. {s}" for i, s in enumerate(prep_steps)])
+
     if lang == "garhwali":
         diag_garh = sym_data["diagnosis_garh_dev"] if is_devanagari else sym_data["diagnosis_garh_rom"]
         if is_devanagari:
@@ -408,7 +568,7 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
                 f"**त्वरि तकलीफ:** {user_msg or 'शारीरिक अस्वस्थता'}\n\n"
                 f"**हमार आंकलन (कारण):** {diag_garh}\n\n"
                 f"**नुस्खा:** {remedy.get('remedy_name', '')}\n\n"
-                f"**कन्नि बणावा (तरीका):**\n{remedy.get('remedy_text', '')}\n\n"
+                f"**कन्नि बणावा (तरीका):**\n{steps_formatted}\n\n"
                 f"**आयुर्वेदिक लाभ:** {remedy.get('ayurvedic_note', '')}\n\n"
                 "**ध्यान रखा:** 2 दिन मा आराम नी आला त **104** पर कॉल करा या **PHC** जावा।"
             )
@@ -417,7 +577,7 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
                 f"**Twari Takleef:** {user_msg or 'Sharirik asuvidha'}\n\n"
                 f"**Sambhavit Karan (Possible Reason):** {diag_garh}\n\n"
                 f"**Nuskha:** {remedy.get('remedy_name', '')}\n\n"
-                f"**Kanna Banawa (Tarika):**\n{remedy.get('remedy_text', '')}\n\n"
+                f"**Kanna Banawa (Tarika):**\n{steps_formatted}\n\n"
                 f"**Ayurvedic Laabh:** {remedy.get('ayurvedic_note', '')}\n\n"
                 "**Dhyan Rakha:** 2 din ma aaram ni aala toh **104** par call kara ya **PHC** jaawa."
             )
@@ -426,19 +586,29 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             f"**Your Condition:** {user_msg or 'Reported symptoms'}\n\n"
             f"**Possible Cause:** {sym_data['diagnosis_eng']}\n\n"
             f"**Remedy:** {remedy.get('remedy_name', '')}\n\n"
-            f"**How to Prepare:**\n{remedy.get('remedy_text', '')}\n\n"
+            f"**How to Prepare:**\n{steps_formatted}\n\n"
             f"**Ayurvedic Rationale:** {remedy.get('ayurvedic_note', '')}\n\n"
             "**Precautions:** If no relief in 2 days, please call **104** or visit your nearest **PHC**."
         )
-    else:
+    elif lang == "hindi":
         state["final_reply_text"] = (
             f"**Aapki Takleef:** {user_msg or 'Bataaye gaye lakshan'}\n\n"
             f"**Sambhavit Karan (Possible Reason):** {sym_data['diagnosis_hin']}\n\n"
             f"**Nuskha:** {remedy.get('remedy_name', '')}\n\n"
-            f"**Kaise Banayein:**\n{remedy.get('remedy_text', '')}\n\n"
+            f"**Kaise Banayein:**\n{steps_formatted}\n\n"
             f"**Ayurvedic Labh:** {remedy.get('ayurvedic_note', '')}\n\n"
             "**Dhyan Rakhein:** 2 din mein aaram na aaye toh **104** par call karein ya **PHC** jaayein."
         )
+    else:
+        hin_card = (
+            f"**आपकी तकलीफ:** {user_msg or 'बताए गए लक्षण'}\n\n"
+            f"**संभावित कारण:** {sym_data['diagnosis_hin']}\n\n"
+            f"**नुस्खा:** {remedy.get('remedy_name', '')}\n\n"
+            f"**बनाने का तरीका:**\n{steps_formatted}\n\n"
+            f"**आयुर्वेदिक लाभ:** {remedy.get('ayurvedic_note', '')}\n\n"
+            "**ध्यान रखें:** 2 दिन में आराम न आए तो **104** पर कॉल करें या नजदीकी **PHC** जाएं।"
+        )
+        state["final_reply_text"] = localize_clinical_text(hin_card, lang, is_devanagari)
     return state
 
 
@@ -549,8 +719,10 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                 elif lang == "garhwali":
                     # LLM natively generated Garhwali; do not run regex substitution
                     state["final_reply_text"] = llm_reply
-                else:
+                elif lang == "hindi":
                     state["final_reply_text"] = llm_reply
+                else:
+                    state["final_reply_text"] = localize_clinical_text(llm_reply, lang, is_devanagari)
                 return state
 
         # Deterministic fallback
@@ -573,12 +745,19 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                 f"Hello{name_txt}! I am Dr. Sanjeevani, your healthcare companion.\n\n"
                 "What health concern or symptoms are you experiencing today? Please tell me freely."
             )
-        else:
+        elif lang == "hindi":
             name_txt = f" {patient_name} ji" if patient_name else ""
             state["final_reply_text"] = (
                 f"Namaste{name_txt}! Main Dr. Sanjeevani hoon — aapki gaon ki doctor.\n\n"
                 "Aapko kya takleef ya lakshan mehsoos ho rahe hain? Aaram se batayein (jaise bukhar, sardi, pet dard, ya sar dard)."
             )
+        else:
+            name_txt = f" {patient_name} जी" if patient_name else ""
+            base_greeting = (
+                f"नमस्ते{name_txt}! मैं डॉ. संजीवनी हूँ — आपकी स्वास्थ्य सहायिका।\n\n"
+                "आपको क्या तकलीफ या लक्षण महसूस हो रहे हैं? आराम से बताइए (जैसे बुखार, सर्दी, पेट दर्द, या सिर दर्द)।"
+            )
+            state["final_reply_text"] = localize_clinical_text(base_greeting, lang, is_devanagari)
         return state
 
     # 2. GUARDRAIL
@@ -598,8 +777,11 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                 "Mi sirf swasthya sambandhi sawalun ka jawab de sakdu.\n"
                 "Kya twaku koi takleef ya bimari chha?"
             )
-        else:
+        elif lang == "hindi":
             state["final_reply_text"] = base_guard
+        else:
+            base_guard_hin = "मैं केवल स्वास्थ्य संबंधी सवालों का जवाब दे सकती हूँ। क्या आपको कोई तकलीफ या लक्षण है?"
+            state["final_reply_text"] = localize_clinical_text(base_guard_hin, lang, is_devanagari)
         return state
 
     # 3. YELLOW tier
@@ -636,11 +818,17 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                         f"Kyunki {reasons_str}, yaikhatir doctor ki poori jaanch zaroori chha.\n\n"
                         "**104** par call kara ya nazdiki **PHC** jaawa."
                     )
-            else:
+            elif lang == "hindi":
                 reply = (
                     f"Kyunki {reasons_str}, isliye yeh lakshan gehri doctori jaanch maangte hain.\n\n"
                     "Kripya **104** (e-Sanjeevani) par call karein ya nazdiki **PHC** par doctor se sampark karein."
                 )
+            else:
+                base_rep = (
+                    f"क्योंकि {reasons_str}, इसलिए यह लक्षण गहरी डॉक्टरी जांच मांगते हैं।\n\n"
+                    "कृपया **104** (ई-संजीवनी) पर कॉल करें या नजदीकी **PHC** पर डॉक्टर से संपर्क करें।"
+                )
+                reply = localize_clinical_text(base_rep, lang, is_devanagari)
         else:
             if lang == "english":
                 reply = (
@@ -658,11 +846,17 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                         "Twara lakshano ma doctor ki jaanch zaroori chha.\n\n"
                         "Yadi bukhar, tezz peed ya ulti **3 din bati** chha toh **104** par call kara ya **PHC** jaawa."
                     )
-            else:
+            elif lang == "hindi":
                 reply = (
                     "Aapke lakshan thodi gehri jaanch maangte hain.\n\n"
                     "Agar bukhar, tez dard ya ulti **3 din se zyada** hai — toh **104** par call karein ya nazdiki **PHC** jaayein."
                 )
+            else:
+                base_rep = (
+                    "आपके लक्षण थोड़ी गहरी डॉक्टरी जांच मांगते हैं।\n\n"
+                    "अगर बुखार, तेज दर्द या उल्टी **3 दिन से ज्यादा** है — तो **104** पर कॉल करें या नजदीकी **PHC** जाएं।"
+                )
+                reply = localize_clinical_text(base_rep, lang, is_devanagari)
 
         state["final_reply_text"] = reply
         return state
@@ -745,8 +939,10 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                     elif lang == "garhwali":
                         # Native Garhwali LLM generation; avoid regex double-adaptation
                         translated_reply = clean_reply
-                    else:
+                    elif lang == "hindi":
                         translated_reply = clean_reply
+                    else:
+                        translated_reply = localize_clinical_text(clean_reply, lang, is_devanagari)
 
                     state["consultation_notes"] = f"{updated_notes}\nDoctor: {translated_reply}"
                     state["final_reply_text"] = translated_reply
@@ -760,16 +956,21 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                         reply = "त्वकु क्या तकलीफ या बीमारी हो रयु छ? कल्याणी से अपणा लक्षण बतावा।" if is_devanagari else "Twaku kya takleef ya bimaari ho rahyu chha? Kripya apna lakshan batava."
                     elif lang == "english":
                         reply = "Could you please describe what specific symptoms or health concerns you are experiencing (such as fever, headache, cough, or stomach pain)?"
-                    else:
+                    elif lang == "hindi":
                         reply = "Aapko kya takleef ya lakshan mehsoos ho rahe hain? Kripya batayein (jaise bukhar, sardi, sar dard, ya pet dard) taaki main sahi jaanch kar sakoon."
+                    else:
+                        base_intake = "आपको क्या तकलीफ या लक्षण महसूस हो रहे हैं? कृपया बताएं (जैसे बुखार, सर्दी, सिर दर्द, या पेट दर्द) ताकि मैं सही जांच कर सकूं।"
+                        reply = localize_clinical_text(base_intake, lang, is_devanagari)
                 else:
                     # Turn 1 duration question from registry
                     if lang == "garhwali":
                         reply = sym_data["t1_garh_dev"] if is_devanagari else sym_data["t1_garh_rom"]
                     elif lang == "english":
                         reply = sym_data["t1_eng"]
-                    else:
+                    elif lang == "hindi":
                         reply = sym_data["t1_hin"]
+                    else:
+                        reply = localize_clinical_text(sym_data["t1_hin"], lang, is_devanagari)
 
                 state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"
                 state["final_reply_text"] = reply
@@ -780,8 +981,10 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                     reply = sym_data["t2_garh_dev"] if is_devanagari else sym_data["t2_garh_rom"]
                 elif lang == "english":
                     reply = sym_data["t2_eng"]
-                else:
+                elif lang == "hindi":
                     reply = sym_data["t2_hin"]
+                else:
+                    reply = localize_clinical_text(sym_data["t2_hin"], lang, is_devanagari)
 
                 state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"
                 state["final_reply_text"] = reply

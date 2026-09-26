@@ -20,20 +20,25 @@ def log_analytics_event(
     event_type: str,
     tier: Optional[str] = None,
     language: Optional[str] = None,
+    conn: Optional[Any] = None,
 ) -> None:
     """
     Fire-and-forget logging of an aggregate analytics event using SQLAlchemy Core insert.
     Wrapped in try/except so analytics failure NEVER affects user requests.
+    Supports reusing an existing Connection to avoid SQLite database locking in batch operations.
     """
     try:
         norm_tier = str(tier).lower() if tier else None
-        with get_db_connection() as conn:
-            stmt = insert(analytics_events_table).values(
-                event_type=event_type,
-                tier=norm_tier,
-                language=language,
-            )
+        stmt = insert(analytics_events_table).values(
+            event_type=event_type,
+            tier=norm_tier,
+            language=language,
+        )
+        if conn is not None:
             conn.execute(stmt)
+        else:
+            with get_db_connection() as db_conn:
+                db_conn.execute(stmt)
     except Exception as e:
         logger.warning(f"[Analytics] Failed to insert analytics event '{event_type}': {e}")
 

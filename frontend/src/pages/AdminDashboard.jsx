@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { fetchAllUsers, createUser, deleteUser, fetchAdminStats, resetPassword, fetchAnalyticsSummary } from '../api/authClient';
+import { fetchAllUsers, createUser, deleteUser, fetchAdminStats, resetPassword, fetchAnalyticsSummary, fetchAdminActivity } from '../api/authClient';
 import TierDistributionChart from '../components/TierDistributionChart';
 import {
   Users, UserPlus, Trash2, Activity, BarChart3, Shield,
@@ -41,9 +41,38 @@ export default function AdminDashboard() {
   const [confirmPasswordValue, setConfirmPasswordValue] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
 
+  // System Audit Trail State
+  const [auditActivities, setAuditActivities] = useState([]);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditActionFilter, setAuditActionFilter] = useState('all');
+  const [auditRoleFilter, setAuditRoleFilter] = useState('all');
+  const [auditSearch, setAuditSearch] = useState('');
+  const [loadingAudit, setLoadingAudit] = useState(false);
+
+  const loadAuditTrail = useCallback(async () => {
+    setLoadingAudit(true);
+    try {
+      const params = { limit: 50 };
+      if (auditActionFilter !== 'all') params.action = auditActionFilter;
+      if (auditRoleFilter !== 'all') params.role = auditRoleFilter;
+      if (auditSearch.trim()) params.search = auditSearch.trim();
+      const res = await fetchAdminActivity(params);
+      setAuditActivities(res.activities || []);
+      setAuditTotal(res.total || 0);
+    } catch {
+      console.warn('Could not load audit trail');
+    } finally {
+      setLoadingAudit(false);
+    }
+  }, [auditActionFilter, auditRoleFilter, auditSearch]);
+
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    loadAuditTrail();
+  }, [loadAuditTrail]);
 
   const loadData = async () => {
     setLoadingUsers(true);
@@ -510,6 +539,125 @@ export default function AdminDashboard() {
                       </button>
                     )}
                   </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* ── System-Wide Activity & Security Audit Trail ─────────── */}
+        <div className="bg-white dark:bg-warm-indigo rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden">
+          <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3 bg-gray-50/60 dark:bg-card">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-serif font-bold text-base text-primary flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-500" /> System Audit Trail ({auditTotal})
+                </h3>
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  Live Audit Feed
+                </span>
+              </div>
+              <p className="text-xs text-muted mt-0.5">Real-time log of user authentications, consultations, field syncs, and profile security changes.</p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <input
+                type="text"
+                value={auditSearch}
+                onChange={(e) => setAuditSearch(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') loadAuditTrail(); }}
+                placeholder="Search user, action, IP..."
+                className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary rounded-2xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-sage w-44"
+              />
+
+              <select
+                value={auditRoleFilter}
+                onChange={(e) => setAuditRoleFilter(e.target.value)}
+                className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary rounded-2xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-sage"
+              >
+                <option value="all">All Roles</option>
+                <option value="patient">Mitra / Patient</option>
+                <option value="asha">ASHA Worker</option>
+                <option value="admin">Administrator</option>
+              </select>
+
+              <select
+                value={auditActionFilter}
+                onChange={(e) => setAuditActionFilter(e.target.value)}
+                className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary rounded-2xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-sage"
+              >
+                <option value="all">All Actions</option>
+                <option value="LOGIN">LOGIN</option>
+                <option value="LOGOUT">LOGOUT</option>
+                <option value="REGISTER">REGISTER</option>
+                <option value="CONSULTATION">CONSULTATION</option>
+                <option value="SCREENING">SCREENING</option>
+                <option value="WELLNESS">WELLNESS</option>
+                <option value="EMERGENCY_SOS">EMERGENCY_SOS</option>
+                <option value="ASHA_SYNC">ASHA_SYNC</option>
+                <option value="PROFILE_UPDATE">PROFILE_UPDATE</option>
+                <option value="PASSWORD_CHANGE">PASSWORD_CHANGE</option>
+              </select>
+
+              <button
+                onClick={loadAuditTrail}
+                disabled={loadingAudit}
+                className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-muted hover:text-primary transition-all cursor-pointer"
+                title="Refresh Audit Logs"
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingAudit ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[420px] overflow-y-auto">
+            {loadingAudit ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted text-xs">
+                <RefreshCw className="w-5 h-5 animate-spin text-sage" />
+                <span>Loading system audit logs...</span>
+              </div>
+            ) : auditActivities.length === 0 ? (
+              <div className="py-12 text-center text-muted text-xs">
+                <Activity className="w-6 h-6 mx-auto mb-1 text-muted/40" />
+                No activity logs found matching the selected filters.
+              </div>
+            ) : (
+              auditActivities.map((act) => (
+                <div key={act.id} className="p-3.5 sm:px-5 flex items-start justify-between gap-3 text-xs hover:bg-gray-50/50 dark:hover:bg-card/40 transition-colors">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 border ${
+                      act.action === 'LOGIN' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                      act.action === 'LOGOUT' ? 'bg-slate-500/10 text-slate-600 border-slate-500/20' :
+                      act.action === 'EMERGENCY_SOS' ? 'bg-rose-500/10 text-rose-600 border-rose-500/20' :
+                      act.action === 'CONSULTATION' ? 'bg-sky-500/10 text-sky-600 border-sky-500/20' :
+                      act.action === 'ASHA_SYNC' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                      'bg-purple-500/10 text-purple-600 border-purple-500/20'
+                    }`}>
+                      {act.action}
+                    </span>
+
+                    <div className="min-w-0">
+                      <p className="font-semibold text-primary truncate">
+                        {act.description || act.action}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] text-muted font-mono">
+                        <span className="font-sans font-medium text-primary">
+                          {act.user_name || 'System User'} ({act.user_role || 'user'})
+                        </span>
+                        {act.village && <span>• {act.village}</span>}
+                        {act.ip_address && <span>• IP: {act.ip_address}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <span className="text-[11px] text-muted font-mono shrink-0">
+                    {new Date(act.created_at).toLocaleString('hi-IN', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
                 </div>
               ))
             )}

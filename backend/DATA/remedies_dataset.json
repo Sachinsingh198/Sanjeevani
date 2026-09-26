@@ -196,5 +196,49 @@
     "ayurvedic_note": "Laghu, Grahi, Deepana, Dhatu-satmya; provides instant hydration and energy without overloading weak digestive fire.",
     "altitude_band": "All Altitudes",
     "source": "Madanapāla Nighaṇṭu, Kritānna Varga, Sl. 23-27 & 135-136"
+  },
+  {
+    "id": "rem_019",
+    "condition_name": "Joint Pain & Morning Stiffness (Sandhivata / Amavata)",
+    "keywords": ["joint pain", "jod dard", "jodon me dard", "jodo me dard", "jodo", "jodon", "ghutno ka dard", "ghutna", "jakdan", "sandhivata", "amavata", "stiffness", "arthritis", "sandhi-shoola", "knee pain"],
+    "tier": "Green",
+    "remedy_name": "Methi-Sunthi Churna & Nirgundi Tel",
+    "remedy_text": "1. Ek chammach Methi dana powder aur aadha chammach Sunthi (Dry ginger) powder milayein.\n2. Subah khali pet gungune paani ke sath lein.\n3. Jodon par gungune Nirgundi ya Til ke tel ki halke haath se malish karein.",
+    "ayurvedic_note": "Methi aur Sunthi Vata-Kapha dosha ko shaant karte hain, jodon ki jakdan (Stambha) aur sujan ko door karte hain aur pachan ko theek karte hain.",
+    "altitude_band": "All Altitudes",
+    "source": "CCRAS Ayurvedic Home Formularies & Classical Treatise"
+  },
+  {
+    "id": "rem_020",
+    "condition_name": "Allergic Rhinitis, Sneezing & Nasal Congestion (Vata-Kapha Pratishyaya)",
+    "keywords": ["allergic rhinitis", "nasal congestion", "naak band", "chheenk", "chheekein", "chheken", "chhik", "sneezing", "pratishyaya", "running nose", "sinus", "khujli", "aankhon me khujli", "watery eyes", "peenas"],
+    "tier": "Green",
+    "remedy_name": "Anu Taila Pratimarsha Nasya & Haridra-Tulsi Bashpa",
+    "remedy_text": "1. Subah aur shaam gungune Anu Taila ya shuddh Til ke tel ki 2-2 boond dono naak ke chhidron (nostrils) mein daalein (Pratimarsha Nasya).\n2. 4-5 Tulsi ke patte aur ek chauthai chammach Haldi ko 1 litre paani mein ubaal kar uski bhaap (steam inhalation) din mein 1-2 baar lein.\n3. Thanda paani aur dhool-mitti se bachein aur gunguna paani piyein.",
+    "ayurvedic_note": "Anu Taila Urdhwajatrugata rogon (ENT) mein srotas ko kholta hai, kaph ko nikalta hai aur naak ki allergy tatha chheenko ko shaant karta hai.",
+    "altitude_band": "All Altitudes",
+    "source": "CCRAS / Ministry of AYUSH Guidelines"
+  },
+  {
+    "id": "rem_021",
+    "condition_name": "Tension Headache & Mental Fatigue (Shirashoola)",
+    "keywords": ["headache", "sar dard", "sir dard", "mund peed", "mund pid", "shirashoola", "tension headache", "forehead pain", "stress"],
+    "tier": "Green",
+    "remedy_name": "Adrak-Chandan Lep & Dhanyaka Infusion",
+    "remedy_text": "1. Saunth (dry ginger) ya Chandan ka paste banakar maathe par lagayein.\n2. 1 chammach Dhaniya seeds ko 1 cup paani mein ubaal kar gunguna piyein.",
+    "ayurvedic_note": "Pitta aur Vata dosha ko shaant karta hai aur sar ke tanav aur thakan ko door karta hai.",
+    "altitude_band": "All Altitudes",
+    "source": "CCRAS / Ministry of AYUSH Guidelines"
+  },
+  {
+    "id": "rem_022",
+    "condition_name": "Dizziness, Vertigo & Lightheadedness (Bhrama)",
+    "keywords": ["dizziness", "vertigo", "chakkar", "sir ghumna", "sar ghoomna", "bhrama", "bhram", "lightheadedness", "weakness"],
+    "tier": "Green",
+    "remedy_name": "Dhanyaka-Mishri Hima & Nimbu-Lavana Jal",
+    "remedy_text": "1. Turant aaram se baith jaayein aur pairon ko halka sa uncha rakhein.\n2. Ek glass taaze paani mein halka sa nimbu, ek chutki sendha namak aur thodi mishri milaakar ghoont-ghoont piyein.\n3. Ek chammach Dhaniya ke beej raat ko paani mein bhigo dein, subah chhaan kar mishri ke sath piyein (Dhanyaka Hima).",
+    "ayurvedic_note": "Dhanyaka aur Mishri Sheet-virya hone ke karan Pitta aur Vata dosha ko shaant karte hain aur Bhrama (chakkar) ko turant shaant karte hain.",
+    "altitude_band": "All Altitudes",
+    "source": "CCRAS / Ministry of AYUSH Guidelines"
   }
 ]

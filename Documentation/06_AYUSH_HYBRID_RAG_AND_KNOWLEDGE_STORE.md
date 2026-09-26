@@ -113,3 +113,41 @@ When the consultation state machine reaches the `CONCLUDED` phase:
    :::
    ```
 6. The frontend's `StructuredBotMessage.jsx` renders this tag as an interactive visual **Remedy Card**.
+
+---
+
+## 6. End-to-End AYUSH RAG & Knowledge Graph Safety Pipeline
+
+The following flowchart demonstrates how patient symptoms are safely matched against official government AYUSH guidelines while preventing contraindications, toxic folk remedies, or substance misuse:
+
+```mermaid
+flowchart TD
+    PatientSymptoms["Patient Chief Complaint & Associated Symptoms\n(e.g., Band Naak, Chhink, Khujli)"] --> QueryExtract["Agent Retriever Node:\nQuery Extraction & Symptom Synthesis"]
+
+    subgraph DualRetrieval ["Dual-Stream Retrieval Pipeline"]
+        QueryExtract --> FastEmbed["FastEmbed (ONNX CPU)\nall-MiniLM-L6-v2 (384-dim)"]
+        FastEmbed --> Qdrant["Qdrant Vector Database\n(Cosine Similarity >= 0.65)"]
+        Qdrant -->|Candidates Found| Candidates["Initial Remedy Candidates\n(CCRAS + Vaidya Chikitsa)"]
+        Qdrant -->|Vector Miss / Network Error| BM25["BM25 Lexical Search Fallback\n(DATA/remedies_dataset.json)"]
+        BM25 --> Candidates
+    end
+
+    subgraph SafetyGate ["Five-Layer Safety & Exclusion Gate"]
+        Candidates --> KGValidation{"Safety Knowledge Graph:\nComorbidity / Contraindication?"}
+        KGValidation -->|Conflict Found\ne.g., Ulcer + Spicy Churna| RejectKG["Discard Candidate &\nLog Safety Warning"]
+        KGValidation -->|Safe for Patient| SubstanceFilter{"Banned Substance Filter:\nTobacco, Snuff, Opium, Toxic Minerals?"}
+        SubstanceFilter -->|Contains Banned Term| RejectToxic["Quarantine & Block Formulation"]
+        SubstanceFilter -->|Safe Botanical / Kitchen Herbs| GoldStandard{"Gold-Standard CCRAS Match?"}
+        GoldStandard -->|Exact Symptom Match| ApplyCCRAS["Enforce Official CCRAS Protocol\n(e.g., Anu Taila Pratimarsha Nasya)"]
+        GoldStandard -->|General Non-urgent Match| AcceptGeneral["Approve Curated Formulation"]
+    end
+
+    RejectKG --> SafeFallback["Fallback to Hydration, Rest & Warm Water"]
+    RejectToxic --> SafeFallback
+
+    ApplyCCRAS --> StructuredFormatter["Structured JSON & Markdown Formatter\n(Preparation, Dosage, Warning, ASHA Reassessment)"]
+    AcceptGeneral --> StructuredFormatter
+    SafeFallback --> StructuredFormatter
+
+    StructuredFormatter --> FinalCard["Interactive AYUSH Remedy Card\n(Rendered by StructuredBotMessage.jsx)"]
+```

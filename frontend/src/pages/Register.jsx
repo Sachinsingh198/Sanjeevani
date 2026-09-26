@@ -209,7 +209,7 @@ export default function Register() {
         email: email.trim() || undefined,
         village: village.trim(),
       });
-      toast.success(`Swagat hai, ${user.name}! Aapka Sanjeevani Mitra account ban gaya.`);
+      toast.success(`Swagat hai, ${user.name}! Aapka Sanjeevani khata ban gaya. 🙏`);
       navigate('/mitra', { replace: true });
     } catch (err) {
       const msg = err?.response?.data?.detail || 'Registration failed. Please try again.';
@@ -265,7 +265,7 @@ export default function Register() {
           
           <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
             <span className="text-[11px] font-bold uppercase tracking-wider text-gold-warm dark:text-gold-warm flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" /> Citizen Registration
+              <Sparkles className="w-3.5 h-3.5" /> User Registration
             </span>
             <button
               type="button"

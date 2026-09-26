@@ -9,6 +9,7 @@ from typing import Optional, Tuple, List, AsyncGenerator
 from app.config import settings
 from app.core.logger import logger
 from app.core.bhashini_engine import BhashiniVoiceEngine
+from app.core.bhashini_client import bhashini_client
 
 bhashini_engine = BhashiniVoiceEngine()
 
@@ -84,7 +85,72 @@ INDIAN_VOICES = {
         "female": "en-IN-NeerjaExpressiveNeural",
         "male":   "en-IN-PrabhatNeural",
     },
+    "bengali": {
+        "female": "bn-IN-TanishaaNeural",
+        "male":   "bn-IN-BashkarNeural",
+    },
+    "tamil": {
+        "female": "ta-IN-PallaviNeural",
+        "male":   "ta-IN-ValluvarNeural",
+    },
+    "telugu": {
+        "female": "te-IN-ShrutiNeural",
+        "male":   "te-IN-MohanNeural",
+    },
+    "marathi": {
+        "female": "mr-IN-AarohiNeural",
+        "male":   "mr-IN-ManoharNeural",
+    },
+    "gujarati": {
+        "female": "gu-IN-DhwaniNeural",
+        "male":   "gu-IN-NiranjanNeural",
+    },
+    "kannada": {
+        "female": "kn-IN-SapnaNeural",
+        "male":   "kn-IN-GaganNeural",
+    },
+    "malayalam": {
+        "female": "ml-IN-SobhanaNeural",
+        "male":   "ml-IN-MidhunNeural",
+    },
+    "punjabi": {
+        "female": "hi-IN-SwaraNeural",
+        "male":   "hi-IN-MadhurNeural",
+    },
+    "odia": {
+        "female": "hi-IN-SwaraNeural",
+        "male":   "hi-IN-MadhurNeural",
+    },
 }
+
+def get_voice_lang_key(lang: str) -> str:
+    """Normalizes any language string to INDIAN_VOICES key."""
+    l = (lang or "hindi").lower().strip()
+    if l in ("hi", "hindi", "hi-in"):
+        return "hindi"
+    if l in ("en", "english", "en-in"):
+        return "english"
+    if l in ("bn", "bengali", "bangla", "bn-in"):
+        return "bengali"
+    if l in ("ta", "tamil", "ta-in"):
+        return "tamil"
+    if l in ("te", "telugu", "te-in"):
+        return "telugu"
+    if l in ("mr", "marathi", "mr-in"):
+        return "marathi"
+    if l in ("gu", "gujarati", "gu-in"):
+        return "gujarati"
+    if l in ("kn", "kannada", "kn-in"):
+        return "kannada"
+    if l in ("ml", "malayalam", "ml-in"):
+        return "malayalam"
+    if l in ("pa", "punjabi", "pa-in"):
+        return "punjabi"
+    if l in ("od", "or", "odia", "oriya", "od-in"):
+        return "odia"
+    if l == "garhwali":
+        return "garhwali"
+    return "hindi"
 
 # SSML prosody settings per voice for warm, natural, human cadence
 # Neutral/slightly brisk rate prevents sluggish or robotic articulation.
@@ -106,7 +172,7 @@ class IndicTTSEngine:
     """
     def __init__(self):
         self._client: Optional[httpx.AsyncClient] = None
-        self.last_provider: str = "sarvam" if settings.TTS_PROVIDER == "sarvam" else "neural_indic"
+        self.last_provider: str = settings.TTS_PROVIDER
         self.memory_cache = AudioLRUCache(maxsize=256)
 
     def _get_client(self) -> httpx.AsyncClient:
@@ -175,7 +241,7 @@ class IndicTTSEngine:
         try:
             import edge_tts
 
-            lang_key = "english" if language.lower() in ("en", "english") else "hindi"
+            lang_key = get_voice_lang_key(language)
             voice = INDIAN_VOICES.get(lang_key, {}).get(gender, "hi-IN-SwaraNeural")
             prosody = VOICE_PROSODY.get(voice, {"rate": "-8%", "pitch": "+1Hz", "volume": "+10%"})
 
@@ -249,6 +315,35 @@ class IndicTTSEngine:
 
         return chunks or [text[:max_chunk_len]]
 
+    async def _synthesize_bhashini(self, text: str, language: str = "hi", gender: str = "female") -> Optional[Tuple[bytes, str]]:
+        """
+        Synthesizes speech using Bhashini AI (MeitY / AI4Bharat) as the Primary Voice Engine.
+        Authentic Indian national speech models with native regional cadence.
+        """
+        if not bhashini_client.is_configured:
+            return None
+        try:
+            # Clean text: remove brackets, markdown, and excessive punctuation that trigger DHRUVA-101 errors
+            cleaned = re.sub(r"[\[\]\(\)\{\}\*\_#\~>`]", " ", text)
+            cleaned = re.sub(r"\s+", " ", cleaned).strip()
+            # If text is very long, clip to first 2 natural sentences (<= 380 chars) for optimal Coqui/FastPitch synthesis
+            if len(cleaned) > 380:
+                sentences = re.split(r'(?<=[।?!.\n])\s*', cleaned)
+                shortened = ""
+                for s in sentences:
+                    if len(shortened) + len(s) + 1 <= 380:
+                        shortened = f"{shortened} {s}".strip()
+                    else:
+                        break
+                cleaned = shortened or cleaned[:380]
+
+            wav_bytes, content_type = await bhashini_client.synthesize(text=cleaned, language=language, gender=gender)
+            if wav_bytes and len(wav_bytes) > 200:
+                return wav_bytes, content_type
+        except Exception as e:
+            logger.warning(f"[Bhashini TTS Primary Error]: {e}. Falling back to Sarvam AI.")
+        return None
+
     async def _synthesize_sarvam(self, text: str, language: str = "hi", gender: str = "female") -> Optional[Tuple[bytes, str]]:
         """
         Synthesizes speech using Sarvam AI's state-of-the-art Indic audio model (bulbul:v3).
@@ -259,13 +354,9 @@ class IndicTTSEngine:
             return None
 
         try:
-            lang_lower = language.lower()
-            if lang_lower in ("en", "english"):
-                target_lang = "en-IN"
-                speaker = "shreya" if gender == "female" else "rahul"
-            else:
-                target_lang = "hi-IN"
-                speaker = settings.SARVAM_FEMALE_SPEAKER if gender == "female" else settings.SARVAM_MALE_SPEAKER
+            from app.core.sarvam_translate import get_sarvam_language_code
+            target_lang = get_sarvam_language_code(language)
+            speaker = settings.SARVAM_FEMALE_SPEAKER if gender == "female" else settings.SARVAM_MALE_SPEAKER
 
             url = "https://api.sarvam.ai/text-to-speech"
             headers = {
@@ -273,8 +364,10 @@ class IndicTTSEngine:
                 "Content-Type": "application/json",
             }
             chunks = self._chunk_text_for_sarvam(text, max_chunk_len=450)
+            # Sarvam AI API enforces schema: List should have at most 3 items
+            valid_chunks = chunks[:3]
             payload = {
-                "inputs": chunks[:8],  # Safely up to 8 chunks (~3600 chars)
+                "inputs": valid_chunks,
                 "target_language_code": target_lang,
                 "speaker": speaker,
                 "pitch": 0,
@@ -290,10 +383,44 @@ class IndicTTSEngine:
             if res.status_code == 200:
                 data = res.json()
                 audios = data.get("audios", [])
-                if audios and len(audios[0]) > 0:
+                if audios:
                     import base64
-                    raw_wav = base64.b64decode(audios[0])
-                    return raw_wav, "audio/wav"
+                    import io
+                    import wave
+
+                    decoded_wavs = []
+                    for a in audios:
+                        if a and len(a) > 0:
+                            try:
+                                decoded_wavs.append(base64.b64decode(a))
+                            except Exception as b64_err:
+                                logger.debug(f"[Sarvam B64 Decode Error]: {b64_err}")
+
+                    if not decoded_wavs:
+                        return None
+                    if len(decoded_wavs) == 1:
+                        return decoded_wavs[0], "audio/wav"
+
+                    # Concatenate multiple WAV files into a single continuous buffer
+                    try:
+                        out_io = io.BytesIO()
+                        first_wav = wave.open(io.BytesIO(decoded_wavs[0]), "rb")
+                        params = first_wav.getparams()
+                        with wave.open(out_io, "wb") as out_wav:
+                            out_wav.setparams(params)
+                            out_wav.writeframes(first_wav.readframes(first_wav.getnframes()))
+                            first_wav.close()
+                            for next_wb in decoded_wavs[1:]:
+                                try:
+                                    w = wave.open(io.BytesIO(next_wb), "rb")
+                                    out_wav.writeframes(w.readframes(w.getnframes()))
+                                    w.close()
+                                except Exception as join_err:
+                                    logger.debug(f"[Sarvam Wave Concat Chunk Error]: {join_err}")
+                        return out_io.getvalue(), "audio/wav"
+                    except Exception as concat_err:
+                        logger.warning(f"[Sarvam Wave Concat Fallback to 1st]: {concat_err}")
+                        return decoded_wavs[0], "audio/wav"
             else:
                 logger.warning(f"[Sarvam AI TTS] API responded with {res.status_code}: {res.text}")
         except Exception as e:
@@ -395,9 +522,14 @@ class IndicTTSEngine:
         if mem_cached:
             return mem_cached[0], mem_cached[1]
 
-        lang_key = "english" if language.lower() in ("en", "english") else "hindi"
+        lang_key = get_voice_lang_key(language)
         voice_name = INDIAN_VOICES.get(lang_key, {}).get(gender, "hi-IN-SwaraNeural")
-        provider_tag = "sarvam" if (settings.TTS_PROVIDER == "sarvam" or os.getenv("SARVAM_API_KEY")) else "neural"
+        if settings.TTS_PROVIDER == "bhashini" or bhashini_client.is_configured:
+            provider_tag = "bhashini"
+        elif settings.TTS_PROVIDER == "sarvam" or os.getenv("SARVAM_API_KEY"):
+            provider_tag = "sarvam"
+        else:
+            provider_tag = "neural"
         
         # Check disk cache (either .wav or .mp3)
         cache_wav = self._get_cache_path(clean_text, f"{provider_tag}_{voice_name}", ext="wav")
@@ -419,14 +551,21 @@ class IndicTTSEngine:
         audio_data = None
         content_type = "audio/mpeg"
 
-        # 1. Prioritize Sarvam AI when configured
-        if settings.TTS_PROVIDER == "sarvam" or os.getenv("SARVAM_API_KEY"):
+        # 1. Primary: Bhashini AI (MeitY / AI4Bharat)
+        if settings.TTS_PROVIDER == "bhashini" or bhashini_client.is_configured:
+            bhashini_res = await self._synthesize_bhashini(clean_text, language=language, gender=gender)
+            if bhashini_res:
+                audio_data, content_type = bhashini_res
+                self.last_provider = "bhashini"
+
+        # 2. Fallback 1: Sarvam AI (bulbul:v3)
+        if not audio_data and (settings.TTS_PROVIDER in ("sarvam", "bhashini") or os.getenv("SARVAM_API_KEY")):
             sarvam_res = await self._synthesize_sarvam(clean_text, language=language, gender=gender)
             if sarvam_res:
                 audio_data, content_type = sarvam_res
                 self.last_provider = "sarvam"
 
-        # 2. Fallback to Neural Indian Accent engine (edge-tts) as sole fallback
+        # 3. Fallback 2: Neural Indian Accent engine (edge-tts)
         if not audio_data:
             audio_data = await self._synthesize_neural_indic(clean_text, language=language, gender=gender)
             if audio_data:

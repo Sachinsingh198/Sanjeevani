@@ -72,8 +72,8 @@ class BhashiniVoiceEngine:
 
     def _check_sarvam_lid(self, text: str) -> Optional[str]:
         """
-        Lightweight fallback call to Sarvam Text Language Identification API (/text-lid)
-        invoked ONLY when the local heuristic is borderline (garhwali_score == 1).
+        Calls Sarvam Text Language Identification API (/text-lid)
+        to identify Indian languages from Romanized or code-mixed input.
         """
         api_key = settings.SARVAM_API_KEY or os.getenv("SARVAM_API_KEY", "")
         if not api_key or not api_key.strip():
@@ -85,7 +85,7 @@ class BhashiniVoiceEngine:
                 "api-subscription-key": api_key.strip(),
                 "Content-Type": "application/json",
             }
-            with httpx.Client(timeout=1.5) as client:
+            with httpx.Client(timeout=2.0) as client:
                 res = client.post(
                     "https://api.sarvam.ai/text-lid",
                     headers=headers,
@@ -93,31 +93,87 @@ class BhashiniVoiceEngine:
                 )
                 if res.status_code == 200:
                     data = res.json()
-                    code = data.get("language_code", "")
-                    if code.startswith("en"):
+                    code = data.get("language_code", "").lower()
+                    if code.startswith("bn"):
+                        return "bengali"
+                    elif code.startswith("ta"):
+                        return "tamil"
+                    elif code.startswith("te"):
+                        return "telugu"
+                    elif code.startswith("mr"):
+                        return "marathi"
+                    elif code.startswith("gu"):
+                        return "gujarati"
+                    elif code.startswith("kn"):
+                        return "kannada"
+                    elif code.startswith("ml"):
+                        return "malayalam"
+                    elif code.startswith("pa"):
+                        return "punjabi"
+                    elif code.startswith("od") or code.startswith("or"):
+                        return "odia"
+                    elif code.startswith("en"):
                         return "english"
                     elif code.startswith("hi"):
                         return "hindi"
         except Exception:
-            # Graceful degrade if offline or network failure
             pass
         return None
 
-    def detect_language(self, text: str) -> str:
+    def detect_language(self, text: str, hint: Optional[str] = None) -> str:
         """
-        High-accuracy auto-detection of user language:
-        Returns 'garhwali', 'english', or 'hindi'.
-        First uses fast local heuristics; falls back to Sarvam LID when borderline.
+        High-accuracy auto-detection of user language across all Indian languages:
+        Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia,
+        Garhwali, Hindi, and English.
         """
+        # 0. Check explicit user language hint first
+        if hint:
+            h = hint.lower().strip()
+            hint_map = {
+                "bn": "bengali", "bengali": "bengali",
+                "ta": "tamil", "tamil": "tamil",
+                "te": "telugu", "telugu": "telugu",
+                "mr": "marathi", "marathi": "marathi",
+                "gu": "gujarati", "gujarati": "gujarati",
+                "kn": "kannada", "kannada": "kannada",
+                "ml": "malayalam", "malayalam": "malayalam",
+                "pa": "punjabi", "punjabi": "punjabi",
+                "or": "odia", "od": "odia", "odia": "odia",
+                "en": "english", "english": "english",
+                "garhwali": "garhwali",
+                "hi": "hindi", "hindi": "hindi",
+            }
+            if h in hint_map:
+                return hint_map[h]
+
         if not text or not text.strip():
             return "hindi"
 
         lower_text = text.lower().strip()
+
+        # 1. Unicode Script Range Detection for Indian Languages
+        if re.search(r"[\u0980-\u09FF]", text):
+            return "bengali"
+        if re.search(r"[\u0B80-\u0BFF]", text):
+            return "tamil"
+        if re.search(r"[\u0C00-\u0C7F]", text):
+            return "telugu"
+        if re.search(r"[\u0C80-\u0CFF]", text):
+            return "kannada"
+        if re.search(r"[\u0D00-\u0D7F]", text):
+            return "malayalam"
+        if re.search(r"[\u0A80-\u0AFF]", text):
+            return "gujarati"
+        if re.search(r"[\u0A00-\u0A7F]", text):
+            return "punjabi"
+        if re.search(r"[\u0B00-\u0B7F]", text):
+            return "odia"
+
         words = re.findall(r"[\w\u0900-\u097F]+", lower_text)
         if not words:
             return "hindi"
 
-        # 1. Check for distinct Garhwali tokens / phrases
+        # 2. Check for distinct Garhwali tokens / phrases
         garhwali_score = 0
         for token in GARHWALI_TOKENS:
             if " " in token:
@@ -127,7 +183,6 @@ class BhashiniVoiceEngine:
                 if token in words:
                     garhwali_score += 2
 
-        # Check lexicon keys
         for key in self.lexicon.keys():
             if key.lower() in lower_text:
                 garhwali_score += 3
@@ -135,21 +190,24 @@ class BhashiniVoiceEngine:
         if garhwali_score >= 2:
             return "garhwali"
 
-        # Fallback check for borderline garhwali score using Sarvam LID
-        if garhwali_score == 1:
+        # 3. Check for Marathi (Devanagari distinctive keywords)
+        marathi_markers = {"आहे", "नाही", "मला", "माझे", "होते", "त्रास", "कधीपासून", "डोकेदुखी", "ताप", "औषध", "डॉक्टर"}
+        if any(w in marathi_markers for w in words):
+            return "marathi"
+
+        # 4. Check for English (Latin alphabet dominated with common English words)
+        has_indic_script = any(re.search(r"[\u0900-\u0D7F]", w) for w in words)
+        if not has_indic_script:
+            english_hits = sum(1 for w in words if w in ENGLISH_COMMON_WORDS)
+            if english_hits >= 2 or (len(words) <= 3 and english_hits >= 1):
+                return "english"
+
+            # For Romanized Indian languages (e.g. Banglish, Tanglish, Hinglish), consult Sarvam LID
             lid_lang = self._check_sarvam_lid(lower_text)
             if lid_lang:
                 return lid_lang
 
-        # 2. Check for English (Latin alphabet dominated with common English words)
-        has_devanagari = any(re.search(r"[\u0900-\u097F]", w) for w in words)
-        if not has_devanagari:
-            english_hits = sum(1 for w in words if w in ENGLISH_COMMON_WORDS)
-            english_ratio = english_hits / len(words)
-            if english_hits >= 2 or (len(words) <= 3 and english_hits >= 1):
-                return "english"
-
-        # 3. Default to Hindi (includes Hinglish / Devanagari Hindi)
+        # 5. Default to Hindi (includes Devanagari Hindi and Hinglish)
         return "hindi"
 
     def get_garhwali_guidance(self, is_devanagari: bool = False) -> str:

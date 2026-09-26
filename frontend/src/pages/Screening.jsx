@@ -8,6 +8,8 @@ import {
 import toast from 'react-hot-toast';
 import { speakText } from '../api/voiceClient';
 import { runEdgeDiagnosticScreening, downloadAbdmFhirBundle } from '../api/screeningClient';
+import { runClientDiagnosticScreening } from '../lib/offlineScreeningEngine';
+import { queueOfflineScreening } from '../lib/offlineSyncManager';
 
 export default function Screening() {
   const [screeningType, setScreeningType] = useState('ANEMIA');
@@ -243,17 +245,32 @@ export default function Screening() {
         fileToSend = await res.blob();
       }
 
-      // Enforce client-side timeout (~20s) distinct from generic axios timeout
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('TIMEOUT: OpenCV Biomarker Jaanch mein 20 second se zyada samay laga. Server ya network slow ho sakta hai.'));
-        }, 20000);
-      });
+      let data = null;
 
-      const data = await Promise.race([
-        runEdgeDiagnosticScreening(screeningType, fileToSend),
-        timeoutPromise
-      ]);
+      // 1. If navigator is offline, directly use client-side canvas engine
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        console.warn('[Screening] Navigator offline — using client-side canvas engine');
+        data = await runClientDiagnosticScreening(screeningType, fileToSend || selectedImage);
+        toast('ऑफ़लाइन AI जांच (On-Device CV Engine)', { icon: '👁️' });
+      } else {
+        // 2. Online: Try backend first, gracefully fallback to on-device engine on error/timeout
+        try {
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+              reject(new Error('TIMEOUT: OpenCV Biomarker Jaanch mein samay laga.'));
+            }, 8000);
+          });
+
+          data = await Promise.race([
+            runEdgeDiagnosticScreening(screeningType, fileToSend),
+            timeoutPromise
+          ]);
+        } catch (serverErr) {
+          console.warn('[Screening] Backend server unavailable — gracefully falling back to on-device CV engine:', serverErr);
+          data = await runClientDiagnosticScreening(screeningType, fileToSend || selectedImage);
+          toast('सर्वर अनुपलब्ध: ऑन-डिवाइस AI जांच सक्रिय', { icon: '⚡' });
+        }
+      }
 
       setResult({
         type: data.screening_type === 'ANEMIA'
@@ -276,12 +293,12 @@ export default function Screening() {
         fhir_report: data.abdm_fhir_report,
         roi_localization_method: data.roi_localization_method || 'estimated',
         is_demo: isDemoSample,
-        source: 'backend_cv',
+        source: data.source || 'backend_cv',
       });
 
       setShowAnnotated(true);
       setActiveStep(3);
-      toast.success('OpenCV AI Jaanch safalta-purvak poori hui');
+      toast.success('AI Jaanch safalta-purvak poori hui');
     } catch (err) {
       console.error('Screening execution error:', err);
       const isTimeout = err?.message?.includes('TIMEOUT');

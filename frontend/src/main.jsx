@@ -5,6 +5,9 @@ import { Toaster } from 'react-hot-toast';
 import * as Sentry from '@sentry/react';
 import App from './App';
 import './index.css';
+import { initOfflineSyncListeners } from './lib/offlineSyncManager';
+
+initOfflineSyncListeners();
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
 if (sentryDsn) {

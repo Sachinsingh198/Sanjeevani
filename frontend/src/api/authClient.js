@@ -99,6 +99,60 @@ export const fetchCurrentUser = async () => {
   return res.data;
 };
 
+export const updateUserProfile = async (profileData) => {
+  const res = await authApi.put('/auth/profile', profileData);
+  return res.data;
+};
+
+export const changeUserPassword = async (oldPassword, newPassword) => {
+  const res = await authApi.post('/auth/change-password', {
+    old_password: oldPassword,
+    new_password: newPassword,
+  });
+  return res.data;
+};
+
+export const logoutUser = async () => {
+  try {
+    const res = await authApi.post('/auth/logout');
+    return res.data;
+  } catch (e) {
+    console.debug('Logout audit notification skipped', e);
+    return { success: true };
+  }
+};
+
+// ── Activity Audit Logging Endpoints ────────────────────────────────────
+
+export const fetchMyActivity = async (params = {}) => {
+  const res = await authApi.get('/activity/my', { params });
+  return res.data;
+};
+
+export const fetchAshaActivity = async (params = {}) => {
+  const res = await authApi.get('/activity/asha', { params });
+  return res.data;
+};
+
+export const fetchAdminActivity = async (params = {}) => {
+  const res = await authApi.get('/activity/admin', { params });
+  return res.data;
+};
+
+export const logClientActivity = async (action, description = '', metadata = null) => {
+  try {
+    const res = await authApi.post('/activity/log', {
+      action,
+      description,
+      metadata,
+    });
+    return res.data;
+  } catch (e) {
+    console.debug(`Activity logging failed for ${action}`, e);
+    return null;
+  }
+};
+
 // ── Admin Endpoints ─────────────────────────────────────────────────────
 
 export const fetchAllUsers = async () => {

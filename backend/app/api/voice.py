@@ -6,6 +6,8 @@ from app.schemas.voice_schemas import TTSRequest, TTSResponse, STTResponse
 from app.core.bhashini_engine import BhashiniVoiceEngine
 from app.core.tts_engine import IndicTTSEngine, get_shared_tts_engine
 from app.core.limiter import limiter
+from app.core.logger import logger
+from app.core.bhashini_client import bhashini_client
 from app.core.sarvam_stt import (
     sarvam_stt_client,
     SarvamNotConfiguredError,
@@ -31,7 +33,7 @@ async def _synthesize_fallback(clean_text: str, req: TTSRequest) -> TTSResponse:
         provider = getattr(
             _indic_tts_engine,
             "last_provider",
-            "sarvam" if settings.TTS_PROVIDER == "sarvam" else "neural_indic",
+            settings.TTS_PROVIDER,
         )
         return TTSResponse(
             audio_base64=base64.b64encode(audio_bytes).decode("utf-8"),
@@ -98,7 +100,9 @@ async def transcribe_speech(
     file: UploadFile = File(...),
 ):
     """
-    Transcribes spoken audio into text using Sarvam AI (Saaras v3).
+    Transcribes spoken audio into text.
+    Primary: Bhashini ASR (AI4Bharat Conformer model)
+    Fallback: Sarvam AI (Saaras v3)
     Handles code-mixed Hindi, Garhwali, and Indian-accented English.
     """
     try:
@@ -107,27 +111,60 @@ async def transcribe_speech(
             raise HTTPException(status_code=400, detail="Empty audio file received.")
 
         content_type = file.content_type or "audio/wav"
-        result = await sarvam_stt_client.transcribe_audio(
-            audio_bytes=audio_bytes,
-            content_type=content_type,
-            model="saaras:v3",
-            mode="codemix",
-        )
-        return STTResponse(
-            transcript=result.get("transcript", ""),
-            language_code=result.get("language_code", "hi-IN"),
-            confidence=result.get("language_probability"),
-            provider="sarvam",
-        )
-    except SarvamNotConfiguredError as cfg_err:
+
+        # 1. Primary: Bhashini ASR
+        if bhashini_client.is_configured:
+            try:
+                bhashini_res = await bhashini_client.transcribe(
+                    audio_bytes=audio_bytes,
+                    content_type=content_type,
+                    language="hi",
+                )
+                if bhashini_res.get("transcript"):
+                    return STTResponse(
+                        transcript=bhashini_res.get("transcript", ""),
+                        language_code=bhashini_res.get("language_code", "hi"),
+                        confidence=bhashini_res.get("confidence", 0.95),
+                        provider="bhashini",
+                    )
+            except Exception as bhashini_err:
+                logger.warning(f"[Bhashini ASR Primary Error]: {bhashini_err}. Falling back to Sarvam AI STT.")
+
+        # 2. Fallback: Sarvam AI STT
+        if sarvam_stt_client.is_configured:
+            try:
+                result = await sarvam_stt_client.transcribe_audio(
+                    audio_bytes=audio_bytes,
+                    content_type=content_type,
+                    model="saaras:v3",
+                    mode="codemix",
+                )
+                return STTResponse(
+                    transcript=result.get("transcript", ""),
+                    language_code=result.get("language_code", "hi-IN"),
+                    confidence=result.get("language_probability"),
+                    provider="sarvam",
+                )
+            except SarvamNotConfiguredError as cfg_err:
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Sarvam STT is not configured: {cfg_err}",
+                )
+            except SarvamSTTRequestError as req_err:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Sarvam STT request failed: {req_err}",
+                )
+            except Exception as sarvam_err:
+                logger.error(f"[Sarvam STT Fallback Error]: {sarvam_err}")
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Speech recognition fallback (Sarvam) also failed: {sarvam_err}",
+                )
+
         raise HTTPException(
             status_code=503,
-            detail=f"Sarvam STT is not configured: {cfg_err}",
-        )
-    except SarvamSTTRequestError as req_err:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Sarvam STT request failed: {req_err}",
+            detail="Neither Bhashini nor Sarvam STT is configured or available.",
         )
     except HTTPException:
         raise
@@ -144,5 +181,8 @@ async def tts_health():
     return {
         "status": "ready",
         "provider": settings.TTS_PROVIDER,
+        "primary": "bhashini",
+        "fallback": "sarvam",
+        "bhashini_configured": bhashini_client.is_configured,
         "sarvam_stt_configured": sarvam_stt_client.is_configured,
     }

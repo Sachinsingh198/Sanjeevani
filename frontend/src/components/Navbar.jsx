@@ -46,6 +46,7 @@ export default function Navbar() {
   }, [location.pathname]);
 
   const morePatientLinks = [
+    { name: 'प्रोफाइल व सेटिंग्स (Profile & Settings)', path: '/profile', icon: User, desc: 'Personal details, ABHA ID, comorbidity & activity logs' },
     { name: 'नेत्र जांच (Eye Screening)', path: '/mitra/screen', icon: Eye, desc: 'Non-invasive anemia & jaundice screening' },
     { name: 'संजीवनी के बारे में (About)', path: '/about', icon: Info, desc: 'Project mission, team & ethical AI' },
   ];
@@ -286,8 +287,12 @@ export default function Navbar() {
           {/* User Profile & Logout */}
           {isAuthenticated ? (
             <div className="hidden md:flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-sage/15 dark:bg-sage/25 px-3 py-1.5 rounded-xl text-xs font-semibold text-primary">
-                <User className="w-3.5 h-3.5 text-sage dark:text-booti-glow" />
+              <Link
+                to="/profile"
+                className="flex items-center gap-1.5 bg-sage/15 dark:bg-sage/25 hover:bg-sage/25 dark:hover:bg-sage/35 px-3 py-1.5 rounded-xl text-xs font-semibold text-primary transition-all group border border-transparent hover:border-sage/30"
+                title="Open Profile & Settings"
+              >
+                <User className="w-3.5 h-3.5 text-sage dark:text-booti-glow group-hover:scale-110 transition-transform" />
                 <span className="max-w-[110px] truncate">{user.name}</span>
                 <span className={`text-[9px] font-bold uppercase px-1.5 py-0.2 rounded-full ${
                   isAdmin ? 'bg-warm-indigo text-white' :
@@ -296,11 +301,11 @@ export default function Navbar() {
                 }`}>
                   {isAdmin ? 'Admin' : isAsha ? 'ASHA' : 'Mitra'}
                 </span>
-              </div>
+              </Link>
 
               <button
                 onClick={handleLogout}
-                className="p-2 text-muted dark:text-muted hover:text-rose-soft dark:hover:text-[#FF7878] hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-all"
+                className="p-2 text-muted dark:text-muted hover:text-rose-soft dark:hover:text-[#FF7878] hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-all cursor-pointer"
                 title="Sign Out"
                 aria-label="Sign Out"
               >
@@ -399,13 +404,21 @@ export default function Navbar() {
                 </>
               )}
 
-              <div className="pt-2 border-t border-gray-200 dark:border-gray-800">
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-800 space-y-1">
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-primary hover:bg-black/5 dark:hover:bg-white/5"
+                >
+                  <User className="w-4 h-4 text-sage" />
+                  <span>प्रोफाइल व सेटिंग्स (Profile & Settings)</span>
+                </Link>
+
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-bold text-rose-soft dark:text-rose-soft hover:bg-rose-soft/10"
+                  className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-bold text-rose-soft dark:text-rose-soft hover:bg-rose-soft/10 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  Sign Out ({user.name})
+                  <span>Sign Out ({user.name})</span>
                 </button>
               </div>
             </>

@@ -235,3 +235,57 @@ p, li {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--sage);
 }
+
+/* ── Streaming Typewriter Cursor ── */
+@keyframes streaming-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--sage);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: streaming-blink 0.8s ease-in-out infinite;
+}
+
+.dark .streaming-cursor {
+  background: var(--herb-glow);
+}
+
+/* ── Enhanced Accessibility for Low-Literacy Users ── */
+/* Larger default inputs on all form fields */
+input[type="text"],
+input[type="tel"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  font-size: max(16px, 1rem); /* Prevents iOS zoom on focus */
+}
+
+/* Make voice/audio buttons extra visible */
+.voice-hint-btn {
+  min-height: 44px;
+  min-width: 44px;
+  font-size: 14px;
+}
+
+/* Large accessible card for quick symptom selection */
+.symptom-tile {
+  min-height: 72px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.symptom-tile:active {
+  transform: scale(0.95);
+}
+
+/* High-contrast focus ring for keyboard/switch users */
+*:focus-visible {
+  outline: 3px solid var(--sage);
+  outline-offset: 2px;
+  border-radius: 8px;
+}

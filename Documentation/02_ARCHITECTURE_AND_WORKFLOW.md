@@ -82,43 +82,55 @@ graph TB
 
 ## 2. End-to-End Request Lifecycles
 
-### A. Conversational Voice Consultation (Sanjeevani Live)
+### A. Conversational Voice Consultation & Doctor Diagnostic Intake (Sanjeevani Live)
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User as Rural Elder / Citizen
     participant Mic as Client Browser (LiveVoiceRoom)
-    participant API as FastAPI Backend (/voice/stt)
-    participant STT as Sarvam AI (Saaras:v3)
-    participant Graph as LangGraph Engine (/chat/message)
-    participant Triage as Clinical Triage Engine
-    participant LLM as Primary LLM (Groq / Gemini)
-    participant RAG as Qdrant Vector Store
+    participant API as FastAPI Gateway (/chat/message)
+    participant Triage as Deterministic Triage Engine
+    participant Graph as LangGraph Engine (sessions.db)
+    participant Doctor as Doctor Consultation Node (LLM)
+    participant RAG as Hybrid AYUSH Vector Store (Qdrant)
     participant TTS as Sarvam Bulbul:v3 / Edge-TTS
 
-    User->>Mic: Speaks: "Mujhe 2 din se sar dard aur thakan hai"
-    Mic->>API: POST /voice/stt (multipart audio/wav)
-    API->>STT: Request audio transcription (mode="codemix")
-    STT-->>API: Returns transcript: "Mujhe 2 din se sar dard aur thakan hai"
-    API-->>Mic: Return JSON transcript
+    User->>Mic: Speaks: "Mera naak akshar band rehta hai"
+    Mic->>API: POST /voice/stt & /chat/message (voice_mode=true)
+    API->>Triage: Run MTS rules + Negation checking
+    Triage-->>API: Tier: Green (Safe for consultation)
+    API->>Graph: Advance turn_count = 1, phase = CONSULTATION
+    Graph->>Doctor: Evaluate history & chief complaint
+    Note over Doctor: Empathetic intake: Acknowledge + ask onset/duration (Under 18 words)
+    Doctor-->>API: "Samajh gayi beta, kitni der se naak band hai?"
+    API->>TTS: Stream audio synthesis
+    TTS-->>User: Plays audio (<1.5s total latency)
 
-    Mic->>Graph: POST /chat/message (transcript, voice_mode=true)
-    Graph->>Triage: Evaluate MTS discriminators + Negation
-    Triage-->>Graph: Severity = Green (Routine), Flags = []
+    User->>Mic: "2 saalon se"
+    Mic->>API: POST /chat/message (Turn 2)
+    API->>Graph: Advance turn_count = 2
+    Graph->>Doctor: Evaluate chronic duration -> probe character/discharge
+    Doctor-->>API: "Chinta na karein, kya naak se koi balgam aata hai?"
+    API-->>User: Plays audio
 
-    Graph->>LLM: Ingest context + prompt (Constrained: 1 question at a time)
-    LLM-->>Graph: Returns: "Namaste! Kya aapko bukhar ya ulti jaisa lag raha hai?"
+    User->>Mic: "Nahi"
+    Mic->>API: POST /chat/message (Turn 3)
+    API->>Graph: Advance turn_count = 3
+    Graph->>Doctor: Negative discharge -> probe allergic signs (itching/sneezing)
+    Doctor-->>API: "Theek hai, kya naak band ke alawa khujli ya chhink aati hai?"
+    API-->>User: Plays audio
 
-    alt Dialogue Concluded
-        Graph->>RAG: Fetch CCRAS headache remedies
-        RAG-->>Graph: Return Ayurvedic herbal tea / paste
-    end
-
-    Graph-->>Mic: Return final_reply_text & spoken_reply_text
-    Mic->>TTS: POST /voice/tts/stream (spoken_reply_text)
-    TTS-->>Mic: Stream chunked MP3 audio
-    Mic-->>User: Audio plays through speaker in <1.5s total
+    User->>Mic: "Haan chhink aati hai aur aankhon mein bhi khujli hoti hai"
+    Mic->>API: POST /chat/message (Turn 4)
+    API->>Graph: Advance turn_count = 4 (Sufficient diagnostic clarity achieved)
+    Graph->>Doctor: Formulate differential diagnosis (Vata-Kapha Pratishyaya) -> Emit ##CONCLUDE##
+    Graph->>RAG: Query active symptoms in CCRAS / Ministry of AYUSH compendiums
+    RAG-->>Graph: Return verified remedy (Anu Taila Pratimarsha Nasya & Haridra-Tulsi Bashpa)
+    Graph->>Doctor: Format clinical prescription strictly using verified AYUSH record
+    Doctor-->>API: Return prescription markdown + concise spoken summary
+    API->>TTS: Synthesize spoken advice
+    TTS-->>User: "Aapke bataye lakshano se Vata-Kapha Pratishyaya lag raha hai... Anu Taila ka nuskha screen par diya gaya hai."
 ```
 
 ---
@@ -130,25 +142,100 @@ sequenceDiagram
     autonumber
     actor Patient as Patient / Family Member
     participant Chat as Chat Interface (/chat)
-    participant Triage as Triage Engine
+    participant Triage as Deterministic Triage Engine
     participant EmerNode as Emergency Node
-    participant DB as SQLite DB
+    participant DB as SQLite DB (sanjeevani.db)
     participant ASHA as ASHA Worker Dashboard (/asha)
 
     Patient->>Chat: Enters: "Chhati me bahut tez dard ho raha hai aur saans phool rahi hai"
-    Chat->>Triage: Pattern match against red_patterns
-    Note over Triage: Matches "cardiac_chest_pain" & "acute_respiratory_distress"<br/>Negation check: FALSE
+    Chat->>Triage: Pattern match against MTS emergency keywords
+    Note over Triage: Matches "cardiac_chest_pain" & "acute_respiratory_distress"<br/>Negation check: FALSE (Active acute complaint)
     Triage-->>Chat: Detected Tier: RED, escalation_triggered: true
 
-    Chat->>EmerNode: Short-circuit directly to emergency handler
-    EmerNode-->>Chat: Render 108 Emergency Card + Nearby PHC + First Aid Steps
+    Chat->>EmerNode: Short-circuit directly to emergency handler (Bypasses LLM)
+    EmerNode-->>Chat: Render 108 Emergency Card + Nearby PHC + Vital First-Aid Guidance
     EmerNode->>DB: Log Emergency Escalation Record
     DB-->>ASHA: Real-time update in ASHA triage queue with high-priority pulse
 ```
 
 ---
 
-### C. Edge Vision Screening Lifecycle
+### C. Offline-First Resilience & Bi-Directional Synchronization
+
+```mermaid
+flowchart TD
+    subgraph Client ["Client Device (Browser / Mobile)"]
+        UI["User Chat Interface"]
+        SW["Service Worker (PWA Cache)"]
+        IDB[("Client IndexedDB\n(offline_consultations queue)")]
+        NetWatch{"Network Status\n(navigator.onLine)"}
+        OfflineEngine["Offline Diagnostic Fallback Engine\n(In-Browser Symptom Matcher)"]
+    end
+
+    subgraph Network ["Internet Connection"]
+        SyncRequest["POST /chat/offline-sync\n(Batch Queue Transmission)"]
+    end
+
+    subgraph Server ["FastAPI Backend"]
+        SyncEndpoint["Offline Sync Handler (/chat/offline-sync)"]
+        Checkpointer["ResilientCheckpointer\n(Dual Engine)"]
+        LocalSQLite[("sessions.db\n(WAL Mode SQLite)")]
+        CloudCluster[("PostgreSQL / Qdrant Cloud")]
+        Analytics["Analytics Logger"]
+    end
+
+    UI -->|Message Entered| NetWatch
+    NetWatch -->|Offline: No Connection| OfflineEngine
+    OfflineEngine -->|Instant Local Reply| UI
+    OfflineEngine -->|Store Pending Session| IDB
+
+    NetWatch -->|Online: Connection Restored| SyncRequest
+    IDB -->|Drain Pending Consultations| SyncRequest
+    SyncRequest --> SyncEndpoint
+
+    SyncEndpoint --> Checkpointer
+    Checkpointer -->|Immediate Local Write| LocalSQLite
+    Checkpointer -->|Async Upstream Mirror| CloudCluster
+    SyncEndpoint --> Analytics
+    SyncEndpoint -->>|200 OK: Synced Count| IDB
+    IDB -->|Mark Synced| UI
+```
+
+---
+
+### D. AYUSH Clinical Safety & Substance Exclusion Filter
+
+```mermaid
+flowchart TD
+    Query["Patient Symptom Intake\n(e.g., 'naak band, chheenk, khujli')"] --> Qdrant["Qdrant Vector RAG & Lexical Search"]
+    Qdrant --> Candidates["Raw Candidate Remedies"]
+
+    subgraph SafetyFilter ["Multi-Layer Clinical Safety Filter"]
+        ComorbidCheck{"SafetyKnowledgeGraph:\nPatient Comorbidity Contraindicated?"}
+        BannedCheck{"Banned Substances Screening:\nContains Tobacco, Opium, Syphilis, Toxic Minerals?"}
+        SourceCheck{"Source Verification:\nOfficial CCRAS / Ministry of AYUSH Record?"}
+    end
+
+    Candidates --> ComorbidCheck
+    ComorbidCheck -->|Yes: Unsafe for Patient| Reject["Discard Candidate"]
+    ComorbidCheck -->|No: Safe| BannedCheck
+
+    BannedCheck -->|Found Harmful Folk Text| Reject
+    BannedCheck -->|Pristine Formulation| SourceCheck
+
+    Reject --> CCRASFallback["Enforce Gold-Standard CCRAS Formulation\n(e.g., Anu Taila Pratimarsha Nasya)"]
+
+    SourceCheck -->|Verified CCRAS| Accept["Approved Prescription Candidate"]
+    SourceCheck -->|Unverified Folk Entry| CCRASFallback
+
+    CCRASFallback --> Accept
+    Accept --> LLM["Prescription Formatter Node\n(Strict Grounding: 0 Hallucinations)"]
+    LLM --> UI["Visual Prescription Card + Voice Guidance"]
+```
+
+---
+
+### E. Edge Computer Vision Screening Lifecycle
 
 ```mermaid
 sequenceDiagram
@@ -156,14 +243,14 @@ sequenceDiagram
     actor Worker as ASHA Worker / Citizen
     participant Client as Screening Page (/screen)
     participant Engine as DiagnosticScreeningEngine
-    participant Preproc as Preprocessor (CLAHE)
-    participant Calc as Color Space Evaluator
+    participant Preproc as Preprocessor (Bilateral Filter + Illumination Normalization)
+    participant Calc as Color Space Evaluator (CIELAB / HSV)
 
     Worker->>Client: Captures lower eyelid photo (conjunctiva)
     Client->>Engine: POST /screen/anemia (multipart image file)
-    Engine->>Preproc: Bilateral Filter & illumination balance
+    Engine->>Preproc: Illumination correction & noise reduction
     Preproc->>Calc: Segment palpebral conjunctiva ROI
-    Calc->>Calc: Convert RGB to CIELAB space
+    Calc->>Calc: Convert RGB to CIELAB color space
     Calc->>Calc: Calculate Erythema Index (EI = a* / L*)
     Calc->>Calc: Estimate Hemoglobin (Hb) = 13.5 * EI
     Calc-->>Engine: Results: Hb: 9.4 g/dL, Status: Moderate Pallor
@@ -179,7 +266,9 @@ sequenceDiagram
 |---|---|---|---|
 | **Users & Authentication** | Relational DB | SQLite3 (`sanjeevani.db`) with WAL mode | Permanent transactional storage |
 | **One-Time Passwords (OTPs)**| Relational DB | SQLite3 (`sanjeevani.db`) table `otps` | Auto-invalidated upon verification or expiry |
-| **LangGraph Checkpoints** | State DB | SQLite3 (`sessions.db`) via `SqliteSaver` | Permanent multi-turn conversation memory |
+| **LangGraph Checkpoints** | State DB | SQLite3 (`sessions.db`) via `ResilientCheckpointer` | Permanent zero-amnesia multi-turn conversation memory |
 | **AYUSH Remedies Vectors** | Vector Store | Qdrant Cloud / Local on-disk (`qdrant_data`) | Pre-seeded with CCRAS dataset & docx treaties |
-| **Garhwali Dialect Vectors** | Vector Store | Qdrant collection `sanjeevani_garhwali` | Pre-seeded with regional dialect phrases |
-| **Execution Telemetry** | Cloud Observability | LangSmith Cloud SaaS | 14-day retention for development traces |
+| **Garhwali Dialect Vectors** | Vector Store | Qdrant collection `sanjeevani_garhwali` | Pre-seeded with regional dialect phrases (1300+ points) |
+| **Offline Sync Queue** | Client Store | Browser IndexedDB (`offline_consultations`) | Persisted on client until acknowledged by backend sync |
+| **Execution Telemetry** | Cloud Observability | LangSmith Cloud SaaS | Distributed tracing for agent steps, tokens, and latency |
+

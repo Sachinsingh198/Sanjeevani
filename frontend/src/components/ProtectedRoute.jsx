@@ -47,7 +47,7 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
           </div>
           <h3 className="font-serif text-xl font-bold text-primary mb-2">Access Restricted</h3>
           <p className="text-sm text-muted mb-5">
-            This section is available to <strong>{allowedRoles.join(' / ')}</strong> accounts only.
+            This section is available to <strong>{allowedRoles.map(r => r === 'patient' ? 'User' : r === 'asha' ? 'ASHA Worker' : r === 'admin' ? 'Admin' : r).join(' / ')}</strong> accounts only.
           </p>
           <Link
             to="/"

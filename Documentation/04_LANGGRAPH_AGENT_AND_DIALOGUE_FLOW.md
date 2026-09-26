@@ -46,20 +46,23 @@ class AgentState(_AgentStateRequired, total=False):
 
 ---
 
-## 3. The LangGraph Execution Graph
+## 3. The LangGraph Execution Graph & Cyclic Routing
 
 ```mermaid
 graph TD
-    Start((● Start Turn)) --> TriageNode[1. triage_node]
+    Start((● Start Turn)) --> TriageNode[1. triage_node\nMTS Rule Engine & Negation]
     TriageNode --> Router{route_clinical_flow}
 
-    Router -->|detected_tier == Red| EmergencyNode[2. emergency_node]
-    Router -->|dialogue_phase == CONCLUDED| RetrieverNode[3. retriever_node]
-    Router -->|Default: In Progress| DoctorNode[4. doctor_consultation_node]
+    Router -->|detected_tier == Red| EmergencyNode[2. emergency_node\n108 Escalation Card]
+    Router -->|dialogue_phase == CONCLUDED| RetrieverNode[3. retriever_node\nQdrant Hybrid AYUSH RAG]
+    Router -->|Default: In Progress| DoctorNode[4. doctor_consultation_node\nClinical Intake & Differential Dx]
 
     RetrieverNode --> DoctorNode
     EmergencyNode --> EndTurn((◎ End Turn))
-    DoctorNode --> EndTurn
+    
+    DoctorNode --> PostDocRouter{route_after_consultation}
+    PostDocRouter -->|Just Concluded & Remedies Pending| RetrieverNode
+    PostDocRouter -->|Turn Completed| EndTurn
 ```
 
 ### The 4 Execution Nodes:
@@ -77,22 +80,54 @@ graph TD
 
 #### 3. `retriever_node` (`app/agents/nodes/retriever_node.py`)
 - Executed when `dialogue_phase == "CONCLUDED"`.
-- Uses the `HybridRemedyStore` to query **Qdrant Vector Database**.
-- Retrieves the top 2-3 most relevant, safe CCRAS Ayurvedic remedies and classical formulations.
-- Injects these formulations into `state["retrieved_remedies"]`.
+- Uses `extract_active_symptoms()` to generate a clean symptom query (filtering out doctor questions and negative patient responses like *"nahi/no"*).
+- Uses the `HybridRemedyStore` to query **Qdrant Vector Database** over 178 indexed CCRAS formulations.
+- Validates each candidate against `SafetyKnowledgeGraph` (comorbidities/pregnancy) and filters out any hazardous folk entries.
+- Injects validated formulations into `state["retrieved_remedies"]`.
 
 #### 4. `doctor_consultation_node` (`app/agents/nodes/responder_node.py`)
-- The clinical conversational brain powered by the LLM.
-- **Dynamic Persona**: Act as "Dr. Sanjeevani", a compassionate rural physician who listens patiently.
-- **Voice Mode Awareness**: If `voice_mode == True`, the prompt enforces:
-  - Keep response short (maximum 2 sentences).
-  - Ask **only one question at a time**.
-  - Omit all markdown headers, bold formatting, and bullet points.
-- **Conclusion Signaling**: When sufficient history is collected, the LLM emits the internal signal `##CONCLUDE##`, transitioning the graph to fetch home remedies in the next turn.
+- The clinical conversational brain operating as **Dr. Sanjeevani** — an experienced, empathetic rural physician.
+- **Adaptive Intake (Up to 5 Turns)**: Replaces rigid canned scripts with real clinical history taking:
+  - **Turn 1 (Chief Complaint & Duration)**: Identifies the primary symptom and inquires about onset/duration if missing.
+  - **Turn 2 (Associated Symptoms & Character)**: Probes key accompanying symptoms (e.g. wet vs. dry cough, burning/acidity, radiation of pain, digestive signs).
+  - **Turn 3 (Differential Exploration)**: Explores aggravating/relieving factors, severity, and subtle symptoms needed for Ayurvedic dosha determination.
+  - **Turn 4-5 (Conclusion & Prescription)**: Once differential diagnosis is clear, emits `##CONCLUDE##` and formats the prescription strictly using the verified AYUSH compendium.
+- **Voice-First Constraint**: Under 18 words per inquiry, strictly **one question at a time**, preceded by gentle reassuring empathy (`"Samajh gayi beta"`, `"Chinta na karein"`).
+- **Strict AYUSH Dataset Compliance**: Mandates 100% adherence to the retrieved CCRAS / AYUSH dataset formulation with zero modern pharmaceutical hallucination.
 
 ---
 
-## 4. State Checkpointing & Persistence (`SqliteSaver`)
+## 4. Multi-Turn Clinical Intake State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> GREETING: User Initiates Contact
+    GREETING --> CONSULTATION: Patient Reports Chief Complaint (Turn 1)
+
+    state CONSULTATION {
+        [*] --> EvaluateComplaint
+        EvaluateComplaint --> ProbeOnsetDuration: Duration Missing?
+        EvaluateComplaint --> ProbeAssociatedSymptoms: Duration Already Known?
+        
+        ProbeOnsetDuration --> CheckPatientResponse
+        ProbeAssociatedSymptoms --> CheckPatientResponse
+
+        CheckPatientResponse --> DifferentialDiagnosis: Sufficient Clinical Clarity?
+        CheckPatientResponse --> ProbeCharacterSeverity: Ambiguity Remains (Turn 2-3)
+        ProbeCharacterSeverity --> DifferentialDiagnosis: Turn >= 4 or Clarity Achieved
+
+        DifferentialDiagnosis --> EmitConcludeSignal: Emit ##CONCLUDE##
+    }
+
+    CONSULTATION --> CONCLUDED: dialogue_phase = CONCLUDED
+    CONCLUDED --> FetchVerifiedRemedies: Query HybridRemedyStore (Qdrant)
+    FetchVerifiedRemedies --> SynthesizePrescription: Format AYUSH Prescription Card
+    SynthesizePrescription --> [*]: Deliver Visual Card + Voice Advice
+```
+
+---
+
+## 5. State Checkpointing & Persistence (`ResilientCheckpointer`)
 
 LangGraph uses `SqliteSaver` connected to `sessions.db`:
 ```python

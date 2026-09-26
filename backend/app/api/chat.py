@@ -1,6 +1,7 @@
 import io
 import traceback
 from typing import Optional, Dict, Any, List
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, HTTPException, Response, Depends, Request
 from app.schemas.chat_schemas import ChatRequest, ChatResponse, RemedyItem, TTSRequest
 from app.agents.graph import sanjeevani_workflow
@@ -45,6 +46,7 @@ async def process_chat_message(
             "normalized_message": "",
             "patient_conditions": req.patient_context.known_conditions,
             "voice_mode": req.include_audio,
+            "language_hint": req.language_hint,
         }
 
         # Checkpointed execution — the same thread_id (conversation_id) is used
@@ -59,7 +61,55 @@ async def process_chat_message(
                 "language_hint": req.language_hint,
             },
         }
-        result = sanjeevani_workflow.invoke(initial_state, config=config)
+        try:
+            result = sanjeevani_workflow.invoke(initial_state, config=config)
+        except Exception as invoke_err:
+            logger.warning(f"[Chat] Workflow invoke with checkpointer failed ({invoke_err}). Retrying with in-memory execution.")
+            try:
+                # Fallback to local Sqlite checkpointer invocation so triage retains 100% memory during network dropouts
+                from app.agents.nodes.triage_node import triage_node
+                from app.agents.nodes.responder_node import doctor_consultation_node
+                from app.agents.nodes.retriever_node import retriever_node_sync
+                from app.agents.graph import get_sqlite_saver
+
+                sqlite_saver = get_sqlite_saver()
+                prior_cp = sqlite_saver.get_tuple(config)
+                prior_values = prior_cp.checkpoint.get("channel_values", {}) if prior_cp else {}
+
+                base_state = {**prior_values, **initial_state}
+                t_state = triage_node(base_state)
+                curr_state = {**base_state, **t_state}
+                d_state = doctor_consultation_node(curr_state)
+                curr_state = {**curr_state, **d_state}
+                if curr_state.get("dialogue_phase") == "CONCLUDED" or not curr_state.get("retrieved_remedies"):
+                    try:
+                        curr_state = retriever_node_sync(curr_state)
+                    except Exception as ret_err:
+                        logger.debug(f"[Chat] In-memory retriever skipped: {ret_err}")
+
+                # Save updated state to local SQLite checkpointer
+                try:
+                    import uuid
+                    import time
+                    cp_id = str(uuid.uuid4())
+                    checkpoint = {
+                        "v": 1,
+                        "id": cp_id,
+                        "ts": time.time(),
+                        "channel_values": curr_state,
+                        "channel_versions": {},
+                        "versions_seen": {},
+                        "updated_channels": list(curr_state.keys()),
+                    }
+                    sqlite_saver.put(config, checkpoint, {}, {})
+                except Exception as save_err:
+                    logger.debug(f"[Chat] Fallback save note: {save_err}")
+
+                result = curr_state
+            except Exception as fallback_err:
+                logger.error(f"[Chat] Fallback execution failed: {fallback_err}")
+                result = initial_state
+                result["final_reply_text"] = "Maine aapke lakshan note kar liye hain. Kripya batayein yeh takleef kab se hai aur kya koi anya pareshani bhi hai?"
 
         # Format remedies matching the API contract
         formatted_remedies = [
@@ -143,6 +193,25 @@ async def process_chat_message(
             log_analytics_event("emergency_escalated", tier="Red", language=detected_lang)
         if formatted_remedies:
             log_analytics_event("remedy_delivered", tier=tier, language=detected_lang)
+
+        # Audit trail logging for logged-in user
+        if user and (result.get("turn_count", 0) <= 1 or result.get("dialogue_phase") == "CONCLUDED" or tier == "Red"):
+            try:
+                from app.core.activity_logger import log_activity
+                client_ip = request.client.host if request.client else None
+                act_type = "EMERGENCY_SOS" if (tier == "Red" or result.get("escalation_triggered")) else "CONSULTATION"
+                log_activity(
+                    action=act_type,
+                    user_id=user["id"],
+                    user_name=user["name"],
+                    user_role=user["role"],
+                    description=f"Clinical triage ({tier} Tier) - {summary_clean[:100]}",
+                    village=user.get("village", ""),
+                    ip_address=client_ip,
+                    metadata={"tier": tier, "conversation_id": req.conversation_id, "phase": result.get("dialogue_phase")}
+                )
+            except Exception as act_err:
+                logger.debug(f"[Chat Activity Log Note]: {act_err}")
 
         return ChatResponse(
             conversation_id=result.get("conversation_id", req.conversation_id),
@@ -272,3 +341,97 @@ async def generate_speech(req: TTSRequest):
             status_code=500,
             detail=f"TTS Synthesis Failed: {str(e)}"
         )
+
+
+class OfflineConsultationItem(BaseModel):
+    conversation_id: str
+    summary: str
+    tier: str = "Green"
+    user_message: Optional[str] = ""
+    created_at: Optional[str] = None
+
+
+class SyncOfflineChatRequest(BaseModel):
+    consultations: List[OfflineConsultationItem] = Field(default_factory=list)
+
+
+class SyncOfflineChatResponse(BaseModel):
+    synced_count: int
+    synced_ids: List[str]
+
+
+@router.post("/sync-offline", response_model=SyncOfflineChatResponse)
+async def sync_offline_chat(
+    req: SyncOfflineChatRequest,
+    user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
+):
+    """
+    Synchronizes offline client consultations into the centralized database (conversation_index_table).
+    Enables zero-connectivity mountain triaging with seamless background database persistence.
+    """
+    if not req.consultations:
+        return SyncOfflineChatResponse(synced_count=0, synced_ids=[])
+
+    from app.db import get_db_connection, conversation_index_table
+    from sqlalchemy import select, insert, update, func
+
+    user_id = user["id"] if user else None
+    synced_ids: List[str] = []
+
+    try:
+        with get_db_connection() as conn:
+            for item in req.consultations:
+                cid = item.conversation_id.strip()
+                if not cid:
+                    continue
+
+                summary_clean = str(item.summary).strip()
+                if len(summary_clean) > 250:
+                    summary_clean = summary_clean[:247] + "..."
+
+                tier = item.tier if item.tier in ["Red", "Yellow", "Green"] else "Green"
+
+                existing = conn.execute(
+                    select(conversation_index_table.c.conversation_id, conversation_index_table.c.user_id)
+                    .where(conversation_index_table.c.conversation_id == cid)
+                ).fetchone()
+
+                if existing:
+                    upd = (
+                        update(conversation_index_table)
+                        .where(conversation_index_table.c.conversation_id == cid)
+                        .values(
+                            user_id=user_id if user_id is not None else existing.user_id,
+                            summary=summary_clean,
+                            tier=tier,
+                            updated_at=func.now(),
+                        )
+                    )
+                    conn.execute(upd)
+                else:
+                    ins = insert(conversation_index_table).values(
+                        conversation_id=cid,
+                        user_id=user_id,
+                        summary=summary_clean,
+                        tier=tier,
+                        created_at=func.now(),
+                        updated_at=func.now(),
+                    )
+                    conn.execute(ins)
+
+                synced_ids.append(cid)
+
+                # Log epidemiological analytics event reusing current transaction connection
+                log_analytics_event(
+                    "consultation_concluded",
+                    tier=tier,
+                    language="hindi",
+                    conn=conn,
+                )
+
+        logger.info(f"[OfflineSync] Successfully synced {len(synced_ids)} offline consultations to DB.")
+        return SyncOfflineChatResponse(synced_count=len(synced_ids), synced_ids=synced_ids)
+    except Exception as e:
+        logger.error(f"[OfflineSync Error]: {e}")
+        raise HTTPException(status_code=500, detail=f"Offline sync failed: {str(e)}")
+
