@@ -78,28 +78,33 @@ def test_post_voice_provider_invalid():
 @pytest.mark.asyncio
 async def test_symmetrical_failover_bhashini_to_sarvam():
     """When Bhashini fails, synthesize seamlessly falls back to Sarvam."""
+    from app.config import settings
     engine = IndicTTSEngine()
     engine.set_primary_provider("bhashini")
     assert engine.get_primary_provider() == "bhashini"
 
     fake_sarvam_audio = b"FAKE_FALLBACK_AUDIO_DATA"
-    with patch.object(engine, "_synthesize_bhashini", new=AsyncMock(side_effect=Exception("Bhashini 500 API timeout"))):
-        with patch.object(engine, "_synthesize_sarvam", new=AsyncMock(return_value=(fake_sarvam_audio, "audio/wav"))):
-            audio, ctype = await engine.synthesize("Namaste parikshan", language="hi")
-            assert audio == fake_sarvam_audio
-            assert engine.last_provider == "sarvam"
+    with patch.object(settings, "SARVAM_API_KEY", "mock-sarvam-key"):
+        with patch.object(engine, "_synthesize_bhashini", new=AsyncMock(side_effect=Exception("Bhashini 500 API timeout"))):
+            with patch.object(engine, "_synthesize_sarvam", new=AsyncMock(return_value=(fake_sarvam_audio, "audio/wav"))):
+                audio, ctype = await engine.synthesize("Namaste parikshan", language="hi")
+                assert audio == fake_sarvam_audio
+                assert engine.last_provider == "sarvam"
 
 
 @pytest.mark.asyncio
 async def test_symmetrical_failover_sarvam_to_bhashini():
     """When Sarvam fails, synthesize seamlessly falls back to Bhashini."""
+    from app.core.bhashini_client import bhashini_client
     engine = IndicTTSEngine()
     engine.set_primary_provider("sarvam")
     assert engine.get_primary_provider() == "sarvam"
 
     fake_bhashini_audio = b"FAKE_BHASHINI_FALLBACK_DATA"
-    with patch.object(engine, "_synthesize_sarvam", new=AsyncMock(side_effect=Exception("Sarvam rate limit 429"))):
-        with patch.object(engine, "_synthesize_bhashini", new=AsyncMock(return_value=(fake_bhashini_audio, "audio/wav"))):
-            audio, ctype = await engine.synthesize("Namaste parikshan", language="hi")
-            assert audio == fake_bhashini_audio
-            assert engine.last_provider == "bhashini"
+    from unittest.mock import PropertyMock
+    with patch("app.core.bhashini_client.BhashiniClient.is_configured", new_callable=PropertyMock, return_value=True):
+        with patch.object(engine, "_synthesize_sarvam", new=AsyncMock(side_effect=Exception("Sarvam rate limit 429"))):
+            with patch.object(engine, "_synthesize_bhashini", new=AsyncMock(return_value=(fake_bhashini_audio, "audio/wav"))):
+                audio, ctype = await engine.synthesize("Namaste parikshan", language="hi")
+                assert audio == fake_bhashini_audio
+                assert engine.last_provider == "bhashini"

@@ -7,6 +7,7 @@ JWT Lifecycle (Phase 1 Security Upgrade):
   - Refresh tokens: longer-lived (default 7 days), used to obtain new access tokens
   - token_version on users table: bumped on password change/logout to revoke all tokens
 """
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 import bcrypt
@@ -38,21 +39,33 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(data: Dict[str, Any], expires_minutes: Optional[int] = None) -> str:
     """Creates a signed JWT access token (short-lived, default 30 min)."""
+    now = datetime.now(timezone.utc)
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(
+    expire = now + timedelta(
         minutes=expires_minutes or settings.JWT_ACCESS_EXPIRE_MINUTES
     )
-    to_encode.update({"exp": expire, "type": "access"})
+    to_encode.update({
+        "exp": expire,
+        "iat": now,
+        "jti": uuid.uuid4().hex,
+        "type": "access",
+    })
     return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
 def create_refresh_token(data: Dict[str, Any], expires_days: Optional[int] = None) -> str:
     """Creates a signed JWT refresh token (longer-lived, default 7 days)."""
+    now = datetime.now(timezone.utc)
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(
+    expire = now + timedelta(
         days=expires_days or settings.JWT_REFRESH_EXPIRE_DAYS
     )
-    to_encode.update({"exp": expire, "type": "refresh"})
+    to_encode.update({
+        "exp": expire,
+        "iat": now,
+        "jti": uuid.uuid4().hex,
+        "type": "refresh",
+    })
     return jwt.encode(to_encode, settings.JWT_REFRESH_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 

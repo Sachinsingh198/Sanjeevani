@@ -233,8 +233,8 @@ class HybridRemedyStore:
         points_count = collection_info.points_count or 0
         all_remedies = self.load_all_remedies()
 
-        if points_count < len(all_remedies):
-            logger.info(f"[Qdrant] Collection '{self.collection_name}' has {points_count} points, but {len(all_remedies)} remedies available. Seeding/syncing remedies...")
+        if points_count != len(all_remedies):
+            logger.info(f"[Qdrant] Collection '{self.collection_name}' has {points_count} points, but {len(all_remedies)} remedies curated. Re-seeding clean remedies...")
             self.seed_dataset(force=True)
         else:
             logger.info(f"[Qdrant] Collection '{self.collection_name}' is fully up to date with {points_count} indexed points.")
@@ -245,6 +245,20 @@ class HybridRemedyStore:
         if not remedies:
             logger.error("[Qdrant Error] No remedies found to seed.")
             return
+
+        if force and self.client is not None:
+            try:
+                self.client.delete_collection(self.collection_name)
+                self.client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=models.VectorParams(
+                        size=self.vector_dim,
+                        distance=models.Distance.COSINE
+                    )
+                )
+                logger.info(f"[Qdrant] Re-created clean collection '{self.collection_name}' for fresh seeding.")
+            except Exception as e:
+                logger.warning(f"[Qdrant] Recreate collection note: {e}")
 
         search_texts: List[str] = []
         payloads: List[Dict[str, Any]] = []
@@ -338,6 +352,18 @@ class HybridRemedyStore:
 
         # Synonym expansion table for cross-lingual lexical matching (Hindi/Garhwali/English)
         SYNONYM_MAP = {
+            "naak": ["nasal", "nose", "rhinitis", "pratishyaya", "allergy", "cold", "sinus", "peenas", "sneezing", "congestion"],
+            "nak": ["nasal", "nose", "rhinitis", "pratishyaya", "allergy", "sneezing"],
+            "chheenk": ["sneezing", "chheekein", "chheken", "chhink", "chhik", "rhinitis", "pratishyaya", "allergy"],
+            "chhink": ["sneezing", "chheenk", "chhik", "rhinitis", "pratishyaya", "allergy"],
+            "allergy": ["allergic", "rhinitis", "pratishyaya", "itch", "khujli", "sneezing", "naak"],
+            "allergic": ["allergy", "rhinitis", "pratishyaya", "nasal", "naak", "sneezing"],
+            "rhinitis": ["allergic rhinitis", "pratishyaya", "nasal", "naak", "sneezing", "chheenk", "peenas", "congestion"],
+            "pratishyaya": ["rhinitis", "nasal", "naak", "sneezing", "chheenk", "sinus", "peenas"],
+            "aankh": ["eye", "watery eyes", "aankhon", "itchy eyes", "allergy", "khujli"],
+            "aankhon": ["eye", "eyes", "watery eyes", "aankh", "itchy eyes", "allergy", "khujli"],
+            "khujli": ["itching", "itch", "allergy", "kandu"],
+            "sinus": ["sinusitis", "pratishyaya", "rhinitis", "naak", "nasal"],
             "jod": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
             "jodo": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
             "jodon": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
@@ -418,7 +444,9 @@ class HybridRemedyStore:
         if not results and self._all_cached_remedies:
             q_lower = query_text.lower()
             category_target = None
-            if any(w in q_lower for w in ["jod", "ghutna", "jakdan", "sandhi", "joint", "arthritis"]):
+            if any(w in q_lower for w in ["naak", "nak", "chhink", "chheenk", "rhinitis", "pratishyaya", "allergy", "sinus"]):
+                category_target = "rhinitis"
+            elif any(w in q_lower for w in ["jod", "ghutna", "jakdan", "sandhi", "joint", "arthritis"]):
                 category_target = "joint"
             elif any(w in q_lower for w in ["pet", "gas", "apach", "marod", "stomach", "digest"]):
                 category_target = "digest"
@@ -477,11 +505,18 @@ class HybridRemedyStore:
                 limit=limit * 2,
                 timeout=int(timeout)
             )
+            BANNED_HOME_TERMS = (
+                "tobacco", "snuff", "tambaku", "opium", "afeem", "cannabis", "ganja", "bhang",
+                "syphilis", "upadansh", "gonorrhea", "flesh decay", "foul odor", "kshar oil"
+            )
             matched = []
             for point in search_result.points:
                 if not point.payload:
                     continue
                 if hasattr(point, "score") and point.score is not None and point.score < min_score:
+                    continue
+                payload_desc = f"{point.payload.get('remedy_name', '')} {point.payload.get('preparation', '')} {point.payload.get('remedy_text', '')} {point.payload.get('causes', '')}".lower()
+                if any(b in payload_desc for b in BANNED_HOME_TERMS):
                     continue
                 enriched = self._enrich_with_botanicals(point.payload)
                 if not enriched.get("remedy_text"):

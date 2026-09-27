@@ -21,29 +21,37 @@ def record_emergency_alert(
     symptoms: Optional[str] = None,
     clinical_flags: Optional[List[str]] = None,
     tier: str = "Red",
+    conn=None,
 ) -> Optional[int]:
     """Records an unhandled Red-tier emergency alert into the database."""
     flags_str = json.dumps(clinical_flags or [])
+
+    def _execute(target_conn) -> Optional[int]:
+        stmt = insert(emergency_alerts_table).values(
+            conversation_id=conversation_id,
+            user_id=user_id,
+            patient_name=patient_name or "Anonymous Patient",
+            village=village or "Unspecified Ward",
+            phone=phone or "--",
+            symptoms=symptoms or "Acute clinical distress",
+            clinical_flags=flags_str,
+            tier=tier,
+            acknowledged=False,
+            acknowledged_by=None,
+        )
+        res = target_conn.execute(stmt)
+        inserted_id = res.inserted_primary_key[0] if res.inserted_primary_key else None
+        logger.warning(
+            f"[ALERT DISPATCH] Critical Red alert recorded: ID={inserted_id} conv={conversation_id} village={village}"
+        )
+        return inserted_id
+
     try:
-        with get_db_connection() as conn:
-            stmt = insert(emergency_alerts_table).values(
-                conversation_id=conversation_id,
-                user_id=user_id,
-                patient_name=patient_name or "Anonymous Patient",
-                village=village or "Unspecified Ward",
-                phone=phone or "--",
-                symptoms=symptoms or "Acute clinical distress",
-                clinical_flags=flags_str,
-                tier=tier,
-                acknowledged=False,
-                acknowledged_by=None,
-            )
-            res = conn.execute(stmt)
-            inserted_id = res.inserted_primary_key[0] if res.inserted_primary_key else None
-            logger.warning(
-                f"[ALERT DISPATCH] Critical Red alert recorded: ID={inserted_id} conv={conversation_id} village={village}"
-            )
-            return inserted_id
+        if conn is not None:
+            return _execute(conn)
+        else:
+            with get_db_connection() as local_conn:
+                return _execute(local_conn)
     except Exception as e:
         logger.error(f"[ALERT ERROR] Failed to record emergency alert: {e}", exc_info=True)
         return None

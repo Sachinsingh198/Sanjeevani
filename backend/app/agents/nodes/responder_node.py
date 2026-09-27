@@ -15,6 +15,92 @@ bhashini_engine = BhashiniVoiceEngine()
 # Single source of truth keyed by symptom category; derived across languages.
 # ─────────────────────────────────────────────────────────────────────────────
 CLINICAL_SYMPTOM_REGISTRY: Dict[str, Dict[str, Any]] = {
+    "allergic_rhinitis": {
+        "keywords": (
+            "naak", "nak", "naak band", "band naak", "chheenk", "chheekein", "chheken",
+            "chhink", "chhik", "sneezing", "pratishyaya", "rhinitis", "allergic rhinitis",
+            "allergy", "allergic", "aankh", "aankhon", "aankhon me khujli", "aankhon main khujli",
+            "watery eyes", "sinus", "peenas", "running nose", "sugan", "balgam", "naak se balgam"
+        ),
+        "diagnosis_hin": "Allergic Rhinitis / Vata-Kaphaja Pratishyaya (एलर्जीक राइनाइटिस / वात-कफज प्रतिश्याय - Allergic Rhinitis)",
+        "diagnosis_eng": "Allergic Rhinitis / Chronic allergic nasal irritation (Vata-Kaphaja Pratishyaya)",
+        "diagnosis_garh_dev": "स्याल, धूल या मौसमी एलर्जी से नाक बंद, छींक और आंख्युं मा खुजली (Allergic Rhinitis / प्रतिश्याय)।",
+        "diagnosis_garh_rom": "Syal, dhool ya mausami allergy se naak band, chheenk aur aankhyu ma khujli (Allergic Rhinitis / Pratishyaya).",
+        "spoken_hin": "allergic rhinitis aur naak ki allergy",
+        "spoken_garh_dev": "एलर्जीक राइनाइटिस और नाक बंद की समस्या",
+        "spoken_garh_rom": "allergic rhinitis aur naak band ki samasya",
+        "t1_hin": "Maine aapki takleef sun li. Naak band hone ya chheenko ki samasya kab se hai?",
+        "t2_hin": "Theek hai. Kya naak ke sath aankhon mein khujli, paani aana ya sar bhari rehta hai?",
+        "t1_eng": "I understand. How long have you had this nasal blockage or sneezing?",
+        "t2_eng": "Understood. Are you having itchy/watery eyes or facial/head heaviness?",
+        "t1_garh_dev": "त्वरि बात सुणी ली। नाक बंद या छींक कतगा दिन बटि छन?",
+        "t1_garh_rom": "Twari baat suni li. Naak band ya chheenk katga din bati chhan?",
+        "t2_garh_dev": "ठीक छ। क्या नाक दगड़ आंख्युं मा खुजली या पाणी भी औणु छ?",
+        "t2_garh_rom": "Theek chha. Kya naak dagad aankhyu ma khujli ya paani bhi aunu chha?",
+    },
+    "joint_pain": {
+        "keywords": (
+            "jod", "jodo", "jodon", "ghutna", "ghutne", "ghutno", "kamar", "kamar dard",
+            "sandhi", "sandhivata", "gathiya", "joint", "joints", "arthritis", "stiffness", "jakdan", "amavata"
+        ),
+        "diagnosis_hin": "Jodon mein jakdan aur dard / Sandhivata (संधिवात / Osteoarthritis or Joint Inflammation)",
+        "diagnosis_eng": "Joint inflammation, stiffness and discomfort (Sandhivata)",
+        "diagnosis_garh_dev": "संधिवात या स्याल से गोड़ों (घुटनों) और जोड़ों मा पीर और जकड़न (Sandhivata)।",
+        "diagnosis_garh_rom": "Sandhivata ya syal se godo (ghutno) aur jodo ma peed aur jakdan (Sandhivata).",
+        "spoken_hin": "jodon mein dard aur sandhivata",
+        "spoken_garh_dev": "जोड़ों मा पीर और संधिवात",
+        "spoken_garh_rom": "jodo ma peed aur sandhivata",
+        "t1_hin": "Samajh gayi. Jodon ya ghutnon mein dard kab se ho raha hai?",
+        "t2_hin": "Theek hai. Kya subah uthne par jodon mein zyada jakdan ya soojan rehti hai?",
+        "t1_eng": "I understand. How long have you had this joint or knee pain?",
+        "t2_eng": "Understood. Do you experience morning stiffness or swelling in the joints?",
+        "t1_garh_dev": "गोड़ों या जोड़ों मा पीर कतगा दिन बटि छ?",
+        "t1_garh_rom": "Godo ya jodo ma peed katga din bati chha?",
+        "t2_garh_dev": "ठीक छ। क्या ब्याळ उठिक जोड़ों मा जकड़न या सूजण भी छ?",
+        "t2_garh_rom": "Theek chha. Kya byal uthik jodo ma jakdan ya soojan bhi chha?",
+    },
+    "acidity": {
+        "keywords": (
+            "acidity", "jalan", "seene mein jalan", "chhati mein jalan", "khatti dakar",
+            "amlapitta", "heartburn", "acid reflux", "pet mein jalan"
+        ),
+        "diagnosis_hin": "Pitta dosha aur khan-paan se acidity / amlapitta (अम्लपित्त - Hyperacidity / Acid Reflux)",
+        "diagnosis_eng": "Hyperacidity and acid reflux (Amlapitta)",
+        "diagnosis_garh_dev": "खान-पान और पित्त से छाती और पैट मा जलन (अम्लपित्त / Acidity)।",
+        "diagnosis_garh_rom": "Khan-paan aur pitta se chhati aur pet ma jalan (Amlapitta / Acidity).",
+        "spoken_hin": "acidity aur amlapitta ki samasya",
+        "spoken_garh_dev": "छाती मा जलन और अम्लपित्त",
+        "spoken_garh_rom": "chhati ma jalan aur amlapitta",
+        "t1_hin": "Samajh gayi. Seene ya pet mein jalan ki samasya kab se ho rahi hai?",
+        "t2_hin": "Theek hai. Kya khana khane ke baad khatti dakar ya matli hoti hai?",
+        "t1_eng": "I understand. How long have you been having this acidity or heartburn?",
+        "t2_eng": "Understood. Do you experience sour burps or nausea after meals?",
+        "t1_garh_dev": "पैट या छाती मा जलन कतगा दिन बटि छ?",
+        "t1_garh_rom": "Pet ya chhati ma jalan katga din bati chha?",
+        "t2_garh_dev": "ठीक छ। क्या खाना खाणा बाद खट्टी डकार भी औणी छन?",
+        "t2_garh_rom": "Theek chha. Kya khana khana baad khatti dakar bhi auni chhan?",
+    },
+    "skin_allergy": {
+        "keywords": (
+            "tvacha", "chamdi", "khujli", "daane", "dane", "rash", "rashes",
+            "charmarog", "hives", "sheeta pitta"
+        ),
+        "diagnosis_hin": "Tvacha ki allergy ya rakt-pitta asantulan (शीतपित्त / Allergic Urticaria)",
+        "diagnosis_eng": "Allergic skin irritation or urticaria (Sheeta-Pitta)",
+        "diagnosis_garh_dev": "त्वचा मा एलर्जी या पित्त से खाज-खुजली और दाने (शीतपित्त)।",
+        "diagnosis_garh_rom": "Tvacha ma allergy ya pitta se khaj-khujli aur daane (Sheeta-Pitta).",
+        "spoken_hin": "tvacha ki allergy aur khujli",
+        "spoken_garh_dev": "त्वचा मा एलर्जी और खुजली",
+        "spoken_garh_rom": "tvacha ma allergy aur khujli",
+        "t1_hin": "Samajh gayi. Tvacha par khujli ya daane kab se nikal rahe hain?",
+        "t2_hin": "Theek hai. Kya tvacha par laal dhabbe, soojan ya jalan bhi ho rahi hai?",
+        "t1_eng": "I understand. How long have you had this skin itching or rash?",
+        "t2_eng": "Understood. Are there red patches, swelling, or burning sensations?",
+        "t1_garh_dev": "खाळ (त्वचा) मा खुजली या दाणा कतगा दिन बटि छन?",
+        "t1_garh_rom": "Khaal (tvacha) ma khujli ya daana katga din bati chhan?",
+        "t2_garh_dev": "ठीक छ। क्या खाळ मा लाल चकता या सूजण भी छ?",
+        "t2_garh_rom": "Theek chha. Kya khaal ma laal chakata ya soojan bhi chha?",
+    },
     "headache": {
         "keywords": ("mund", "sar dard", "headache", "peed", "peer"),
         "diagnosis_hin": "Thakan, sardi ya mansik tanav se hone wala sadharan sar dard (Tension Headache)",
@@ -34,7 +120,7 @@ CLINICAL_SYMPTOM_REGISTRY: Dict[str, Dict[str, Any]] = {
         "t2_garh_rom": "Theek chha. Kya mund pid dagad ulti ya chakkar bhi chha?",
     },
     "stomach": {
-        "keywords": ("pet", "stomach", "tummy", "abdomen", "pait", "marod", "krodh", "gas", "jalan"),
+        "keywords": ("pet", "stomach", "tummy", "abdomen", "pait", "marod", "krodh", "gas"),
         "diagnosis_hin": "Khan-paan mein asantulan ya gas se pet dard (Indigestion / Gastritis)",
         "diagnosis_eng": "Mild gastritis or indigestion",
         "diagnosis_garh_dev": "खान-पान मा असंतुलन या अपच से पैट मा जलन और मरोड़ लगणु छ।",
@@ -89,7 +175,7 @@ CLINICAL_SYMPTOM_REGISTRY: Dict[str, Dict[str, Any]] = {
     },
     "general": {
         "keywords": (),
-        "diagnosis_hin": "Sharirik thakan aur aam asuvidha",
+        "diagnosis_hin": "Sharirik asuvidha aur thakan (Mild Fatigue / Discomfort)",
         "diagnosis_eng": "Physical fatigue and mild discomfort",
         "diagnosis_garh_dev": "शारीरिक थकावट और कमजोरी से सामान्य अस्वस्थता लगणी छ।",
         "diagnosis_garh_rom": "Sharirik thakawat aur kamzori se aam asuvidha lagnu chha.",
@@ -140,13 +226,35 @@ YELLOW_FLAG_EXPLANATIONS: Dict[str, Dict[str, str]] = {
 
 
 def get_symptom_data(text: str) -> Dict[str, Any]:
-    """Retrieves clinical diagnosis and follow-up templates matching patient complaints."""
+    """Retrieves clinical diagnosis and follow-up templates matching patient complaints using weighted keyword scoring."""
     text_lower = (text or "").lower()
+    
+    # Priority order for clinical scoring (specific categories first)
+    best_cat = None
+    best_score = 0
+
+    # Explicit multi-word phrases get extra weight
+    specific_phrase_weights = {
+        "naak band": 5, "band naak": 5, "allergic rhinitis": 6, "pratishyaya": 5,
+        "aankhon me khujli": 5, "aankhon main khujli": 5, "watery eyes": 4, "chheenk": 4,
+        "sar dard": 4, "kamar dard": 4, "jodon mein dard": 5, "seene mein jalan": 5,
+        "khatti dakar": 5, "pet dard": 4
+    }
+
     for cat, data in CLINICAL_SYMPTOM_REGISTRY.items():
         if cat == "general":
             continue
-        if any(k in text_lower for k in data["keywords"]):
-            return data
+        score = 0
+        for kw in data["keywords"]:
+            if kw in text_lower:
+                score += specific_phrase_weights.get(kw, 2)
+        if score > best_score:
+            best_score = score
+            best_cat = cat
+
+    if best_cat and best_score > 0:
+        return CLINICAL_SYMPTOM_REGISTRY[best_cat]
+
     return CLINICAL_SYMPTOM_REGISTRY["general"]
 
 
@@ -502,8 +610,29 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
     elif lang not in ("hindi", "garhwali"):
         precaution_str = localize_clinical_text("2 दिन में आराम न आए तो 104 पर कॉल करें या नजदीकी PHC जाएं।", lang, is_devanagari)
 
+    # Synthesize clean patient-reported complaint string from consultation notes
+    complaints = []
+    for line in (notes or "").splitlines():
+        if line.strip().lower().startswith("patient:"):
+            txt = line.split(":", 1)[1].strip()
+            # Exclude trivial conversational yes/no
+            if txt.lower() not in ("haan", "nahi", "nahin", "yes", "no", "theek", "theek hai"):
+                cleaned_txt = re.sub(r"^(?:haan|ji haan|haanji|yes)\s*(?:hoti hai|hota hai)?\s*,?\s*(?:aur\s+saath\s+m[ae]in\s+)?", "", txt, flags=re.I).strip()
+                if cleaned_txt:
+                    complaints.append(cleaned_txt)
+
+    if complaints:
+        if len(complaints) == 1:
+            condition_str = complaints[0]
+        elif len(complaints) == 2:
+            condition_str = f"{complaints[0]} — {complaints[1]}"
+        else:
+            condition_str = f"{complaints[0]} ({', '.join(complaints[1:])})"
+    else:
+        condition_str = user_msg or (sym_data.get('spoken_hin', '') if sym_data else 'Lakshan')
+
     state["consultation_summary"] = {
-        "condition": user_msg or (sym_data.get('spoken_hin', '') if sym_data else 'Lakshan'),
+        "condition": condition_str,
         "possible_cause": cause_str,
         "remedy_name": remedy.get('remedy_name', ''),
         "preparation_steps": prep_steps,
@@ -1160,5 +1289,19 @@ def doctor_consultation_node(state: AgentState) -> AgentState:
         out["spoken_reply_text"] = _limit_to_single_question(out["spoken_reply_text"])
         if out.get("voice_mode"):
             out["final_reply_text"] = _limit_to_single_question(out.get("final_reply_text", ""))
+
+    def _clean_unicode_chars(s: str) -> str:
+        return (
+            s.replace('\u202f', ' ')
+            .replace('\xa0', ' ')
+            .replace('\u2011', '-')
+            .replace('\u2013', '-')
+            .replace('\u2014', '-')
+        )
+
+    if "final_reply_text" in out and isinstance(out["final_reply_text"], str):
+        out["final_reply_text"] = _clean_unicode_chars(out["final_reply_text"])
+    if "spoken_reply_text" in out and isinstance(out["spoken_reply_text"], str):
+        out["spoken_reply_text"] = _clean_unicode_chars(out["spoken_reply_text"])
 
     return out

@@ -221,7 +221,7 @@ async def transcribe_speech(
 
         raise HTTPException(
             status_code=503,
-            detail="Neither primary nor fallback speech recognition service is available.",
+            detail="Speech recognition service is not configured: neither primary nor fallback service is available.",
         )
     except HTTPException:
         raise

@@ -52,21 +52,25 @@ async def test_sarvam_stt_client_transcribe_success():
 
 
 def test_api_voice_stt_endpoint():
-    with patch("app.api.voice.sarvam_stt_client.transcribe_audio", new=AsyncMock(return_value={
-        "transcript": "मुझे सर दर्द और बुखार है",
-        "language_code": "hi-IN",
-        "language_probability": 0.95,
-    })):
-        audio_file = io.BytesIO(b"RIFF....WAVEfmt ...." + b"0" * 200)
-        res = client.post(
-            "/voice/stt",
-            files={"file": ("test.wav", audio_file, "audio/wav")},
-        )
-        assert res.status_code == 200
-        body = res.json()
-        assert body["transcript"] == "मुझे सर दर्द और बुखार है"
-        assert body["language_code"] == "hi-IN"
-        assert body["provider"] == "sarvam"
+    from unittest.mock import PropertyMock
+    from app.api.voice import _indic_tts_engine
+    _indic_tts_engine.set_primary_provider("sarvam")
+    with patch("app.core.sarvam_stt.SarvamSTTClient.is_configured", new_callable=PropertyMock, return_value=True):
+        with patch("app.api.voice.sarvam_stt_client.transcribe_audio", new=AsyncMock(return_value={
+            "transcript": "मुझे सर दर्द और बुखार है",
+            "language_code": "hi-IN",
+            "language_probability": 0.95,
+        })):
+            audio_file = io.BytesIO(b"RIFF....WAVEfmt ...." + b"0" * 200)
+            res = client.post(
+                "/voice/stt",
+                files={"file": ("test.wav", audio_file, "audio/wav")},
+            )
+            assert res.status_code == 200
+            body = res.json()
+            assert body["transcript"] == "मुझे सर दर्द और बुखार है"
+            assert body["language_code"] == "hi-IN"
+            assert body["provider"] == "sarvam"
 
 
 def test_api_voice_stt_unconfigured():

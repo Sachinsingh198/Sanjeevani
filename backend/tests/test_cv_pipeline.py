@@ -103,6 +103,10 @@ def test_mediapipe_detected_eye_localization(engine):
     Verifies that an image with detectable facial and ocular geometry
     triggers real MediaPipe localization with roi_localization_method == 'detected'.
     """
+    from app.cv.face_landmarks import get_face_landmarker
+    if get_face_landmarker() is None:
+        pytest.skip("MediaPipe FaceLandmarker unavailable on this platform (e.g. missing libEGL in headless environment)")
+
     face_img = np.full((400, 400, 3), (180, 190, 220), dtype=np.uint8)  # background
     # Face head contour
     cv2.ellipse(face_img, (200, 200), (120, 160), 0, 0, 360, (130, 150, 200), -1)

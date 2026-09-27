@@ -249,8 +249,12 @@ class BhashiniClient:
         lang = normalize_bhashini_lang(language)
         gender_code = "female" if gender.lower() == "female" else "male"
 
+        VALID_TTS_SERVICES = {
+            "ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4",
+            "ai4bharat/indic-tts-coqui-dravidian-gpu--t4",
+        }
         resolved_service_id, callback_url = await self.get_service_config("tts", language=lang)
-        service_id = model or resolved_service_id
+        service_id = model if (model and model in VALID_TTS_SERVICES) else resolved_service_id
         if not service_id:
             raise BhashiniRequestError("Could not resolve Bhashini TTS service ID.")
 

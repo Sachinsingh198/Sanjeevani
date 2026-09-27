@@ -22,9 +22,10 @@ client = TestClient(app)
 @pytest.fixture
 def admin_token():
     with get_db_connection() as conn:
-        row = conn.execute(select(users_table.c.id).where(users_table.c.role == "admin")).fetchone()
+        row = conn.execute(select(users_table.c.id, users_table.c.token_version).where(users_table.c.role == "admin")).fetchone()
         admin_id = row[0] if row else 1
-    return create_access_token({"user_id": admin_id, "role": "admin"})
+        tv = (row[1] if row and len(row) > 1 and row[1] else 0)
+    return create_access_token({"user_id": admin_id, "role": "admin", "token_version": tv})
 
 
 def test_sqlalchemy_engine_wal_mode():
@@ -118,9 +119,10 @@ def test_asha_encounters_sync():
     """Verify ASHA batch sync persists encounters using SQLAlchemy Core."""
     enc_id = "enc_sqla_test_1"
     with get_db_connection() as conn:
-        row = conn.execute(select(users_table.c.id).where(users_table.c.role == "asha")).fetchone()
+        row = conn.execute(select(users_table.c.id, users_table.c.token_version).where(users_table.c.role == "asha")).fetchone()
         asha_id = row[0] if row else 2
-    asha_token = create_access_token({"user_id": asha_id, "role": "asha"})
+        asha_tv = (row[1] if row and len(row) > 1 and row[1] else 0)
+    asha_token = create_access_token({"user_id": asha_id, "role": "asha", "token_version": asha_tv})
     headers = {"Authorization": f"Bearer {asha_token}"}
     sync_resp = client.post("/asha/sync-batch", json={
         "encounters": [{

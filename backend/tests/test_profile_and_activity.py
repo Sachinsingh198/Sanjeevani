@@ -76,7 +76,15 @@ def test_activity_and_profile_flow():
     assert pw_res.status_code == 200
     assert pw_res.json()["success"] is True
 
-    # 7. Logout (/auth/logout)
-    logout_res = client.post("/auth/logout", headers=headers)
+    # 7. Login with new password and verify logout (/auth/logout)
+    new_login_res = client.post("/auth/login", json={
+        "identifier": reg_payload["phone"],
+        "password": "NewSecretPassword456!"
+    })
+    assert new_login_res.status_code == 200
+    new_token = new_login_res.json()["access_token"]
+    new_headers = {"Authorization": f"Bearer {new_token}"}
+
+    logout_res = client.post("/auth/logout", headers=new_headers)
     assert logout_res.status_code == 200
     assert logout_res.json()["success"] is True

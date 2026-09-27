@@ -197,9 +197,8 @@ SARVAM_SPEAKERS_BY_MODEL["bulbul:v2"] = SARVAM_SPEAKERS_BY_MODEL["bulbul:v3"]
 AVAILABLE_SARVAM_SPEAKERS = SARVAM_SPEAKERS_BY_MODEL["bulbul:v3"]
 
 AVAILABLE_BHASHINI_MODELS = [
-    {"id": "ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4", "name": "Indic-TTS Coqui (इंडो-आर्यन)", "desc": "AI4Bharat कोकी न्यूरल मॉडल — हिंदी व क्षेत्रीय लहजे के लिए अनुकूलित"},
-    {"id": "ai4bharat/indic-tts-fastpitch-gpu--t4", "name": "Indic-TTS FastPitch (फास्टपिच)", "desc": "तीव्र व स्पष्ट पिच नियंत्रण ध्वनि"},
-    {"id": "ai4bharat/indic-tts-vits-gpu--t4", "name": "Indic-TTS VITS (एंड-टू-एंड)", "desc": "एंड-टू-एंड न्यूरल सिंथेसिस मॉडल"},
+    {"id": "ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4", "name": "Coqui Indo-Aryan (इंडो-आर्यन न्यूरल)", "desc": "AI4Bharat राष्ट्रीय वाणी मॉडल — हिंदी, पहाड़ी (गढ़वाली/कुमाऊँनी) व उत्तर भारतीय भाषाएँ"},
+    {"id": "ai4bharat/indic-tts-coqui-dravidian-gpu--t4", "name": "Coqui Dravidian (द्रविड़ियन न्यूरल)", "desc": "AI4Bharat राष्ट्रीय वाणी मॉडल — दक्षिण भारतीय भाषाएँ (तमिल, तेलुगु, कन्नड़, मलयालम)"},
 ]
 
 AVAILABLE_BHASHINI_GENDERS = [
@@ -532,6 +531,13 @@ class IndicTTSEngine:
                 cleaned = shortened or cleaned[:380]
 
             chosen_model = model or self.bhashini_model
+            # Remap deprecated or invalid service IDs to the certified Indo-Aryan GPU cluster
+            if chosen_model in (
+                "ai4bharat/indic-tts-fastpitch-gpu--t4",
+                "ai4bharat/indic-tts-vits-gpu--t4",
+            ) or not chosen_model:
+                chosen_model = "ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4"
+
             wav_bytes, content_type = await bhashini_client.synthesize(
                 text=cleaned, language=language, gender=gender, model=chosen_model
             )
@@ -765,11 +771,19 @@ class IndicTTSEngine:
         effective_model = (model or (self.sarvam_model if primary == "sarvam" else self.bhashini_model) or "").strip()
         effective_speaker = (speaker or (self.sarvam_speaker if primary == "sarvam" else self.bhashini_gender) or "").strip()
 
+        # Deduce effective gender:
+        # If user explicitly requested gender (e.g. 'male' or 'female') in preview or request, honor it.
+        # Otherwise, if primary is bhashini, reflect configured self.bhashini_gender.
+        if primary == "bhashini":
+            effective_gender = "male" if (effective_speaker.lower() == "male" or (gender and gender.lower() == "male") or (self.bhashini_gender == "male")) else "female"
+        else:
+            effective_gender = "male" if (gender and gender.lower() == "male") else "female"
+
         # Differentiated cache key guarantees never serving audio from another provider or model
         cache_key = get_audio_cache_key(
             clean_text,
             language=language,
-            gender=gender,
+            gender=effective_gender,
             provider=primary,
             model=effective_model,
             speaker=effective_speaker,
@@ -782,7 +796,7 @@ class IndicTTSEngine:
 
         has_sarvam = bool(settings.SARVAM_API_KEY or os.getenv("SARVAM_API_KEY", ""))
         lang_key = get_voice_lang_key(language)
-        voice_name = INDIAN_VOICES.get(lang_key, {}).get(gender, "hi-IN-SwaraNeural")
+        voice_name = INDIAN_VOICES.get(lang_key, {}).get(effective_gender, "hi-IN-SwaraNeural")
 
         # Check disk cache (either .wav or .mp3)
         cache_wav = self._get_cache_path(
@@ -824,7 +838,7 @@ class IndicTTSEngine:
             if has_sarvam:
                 try:
                     sarvam_res = await self._synthesize_sarvam(
-                        clean_text, language=language, gender=gender, model=effective_model, speaker=effective_speaker
+                        clean_text, language=language, gender=effective_gender, model=effective_model, speaker=effective_speaker
                     )
                     if sarvam_res:
                         audio_data, content_type = sarvam_res
@@ -836,7 +850,7 @@ class IndicTTSEngine:
             if not audio_data and bhashini_client.is_configured:
                 try:
                     bhashini_res = await self._synthesize_bhashini(
-                        clean_text, language=language, gender=gender, model=self.bhashini_model
+                        clean_text, language=language, gender=effective_gender, model=self.bhashini_model
                     )
                     if bhashini_res:
                         audio_data, content_type = bhashini_res
@@ -847,7 +861,7 @@ class IndicTTSEngine:
             # 3. Automatic Fallback 2: Neural Indian Accent engine (edge-tts)
             if not audio_data:
                 try:
-                    audio_data = await self._synthesize_neural_indic(clean_text, language=language, gender=gender)
+                    audio_data = await self._synthesize_neural_indic(clean_text, language=language, gender=effective_gender)
                     if audio_data:
                         content_type = "audio/mpeg"
                         self.last_provider = "neural_indic"
@@ -860,7 +874,7 @@ class IndicTTSEngine:
             if bhashini_client.is_configured:
                 try:
                     bhashini_res = await self._synthesize_bhashini(
-                        clean_text, language=language, gender=gender, model=effective_model
+                        clean_text, language=language, gender=effective_gender, model=effective_model
                     )
                     if bhashini_res:
                         audio_data, content_type = bhashini_res
@@ -871,8 +885,13 @@ class IndicTTSEngine:
             # 2. Automatic Fallback 1: Sarvam AI
             if not audio_data and has_sarvam:
                 try:
+                    sarvam_fallback_speaker = self.sarvam_speaker
+                    if effective_gender == "male":
+                        valid_male_spks = ["shubh", "arjun", "rahul", "aditya", "amit", "dev"]
+                        if sarvam_fallback_speaker not in valid_male_spks:
+                            sarvam_fallback_speaker = "shubh"
                     sarvam_res = await self._synthesize_sarvam(
-                        clean_text, language=language, gender=gender, model=self.sarvam_model, speaker=self.sarvam_speaker
+                        clean_text, language=language, gender=effective_gender, model=self.sarvam_model, speaker=sarvam_fallback_speaker
                     )
                     if sarvam_res:
                         audio_data, content_type = sarvam_res
@@ -883,7 +902,7 @@ class IndicTTSEngine:
             # 3. Automatic Fallback 2: Neural Indian Accent engine (edge-tts)
             if not audio_data:
                 try:
-                    audio_data = await self._synthesize_neural_indic(clean_text, language=language, gender=gender)
+                    audio_data = await self._synthesize_neural_indic(clean_text, language=language, gender=effective_gender)
                     if audio_data:
                         content_type = "audio/mpeg"
                         self.last_provider = "neural_indic"
@@ -916,11 +935,42 @@ def seed_audio_cache(engine: Optional[IndicTTSEngine] = None) -> int:
         b"\x88X\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00"
     )
 
+    primary = eng.get_primary_provider().lower().strip()
+    eff_model = (eng.sarvam_model if primary == "sarvam" else eng.bhashini_model) or ""
+    eff_speaker = (eng.sarvam_speaker if primary == "sarvam" else eng.bhashini_gender) or ""
+
     for item in PRECACHED_SNIPPETS:
-        key = get_audio_cache_key(item["text"], language=item["language"], gender=item["gender"])
-        if key not in eng.memory_cache:
-            eng.memory_cache.set(key, (dummy_wav, "audio/wav"))
-            seeded += 1
+        clean = eng._clean_for_speech(item["text"], language=item["language"])
+        # 1. Base generic keys
+        for txt in (item["text"], clean):
+            k_gen = get_audio_cache_key(txt, language=item["language"], gender=item["gender"])
+            if k_gen not in eng.memory_cache:
+                eng.memory_cache.set(k_gen, (dummy_wav, "audio/wav"))
+                seeded += 1
+
+            # 2. Configured engine keys
+            k_cfg = get_audio_cache_key(
+                txt,
+                language=item["language"],
+                gender=item["gender"],
+                provider=primary,
+                model=eff_model,
+                speaker=eff_speaker,
+            )
+            if k_cfg not in eng.memory_cache:
+                eng.memory_cache.set(k_cfg, (dummy_wav, "audio/wav"))
+                seeded += 1
+
+            # Also seed for neutral/fallback provider
+            k_fb = get_audio_cache_key(
+                txt,
+                language=item["language"],
+                gender=item["gender"],
+                provider="sarvam" if primary == "bhashini" else "bhashini",
+            )
+            if k_fb not in eng.memory_cache:
+                eng.memory_cache.set(k_fb, (dummy_wav, "audio/wav"))
+                seeded += 1
 
     logger.info(f"[TTS Cache] Pre-cached {len(eng.memory_cache)} audio snippets (seeded {seeded} new).")
     return len(eng.memory_cache)

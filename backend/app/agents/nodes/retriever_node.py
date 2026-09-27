@@ -32,10 +32,28 @@ def get_remedy_store() -> HybridRemedyStore:
 def extract_active_symptoms(notes: str, normalized_msg: str, llm=None) -> str:
     """
     Extracts the patient's positive active complaints for accurate vector RAG search.
-    Primary: Uses LLM extraction to identify 3-6 positive active symptoms (Hindi & English).
-    Fallback: Scans CLINICAL_SYMPTOM_REGISTRY and SYMPTOM_KEYWORDS, filtering out negative statements ('nahi', 'no').
+    Anchors with canonical condition terms (e.g. allergic rhinitis / sandhivata) for exact formulation matching.
     """
     content_to_extract = (notes or "").strip() or (normalized_msg or "").strip()
+
+    # 1. Identify canonical condition anchor from clinical registry
+    canonical_anchor = ""
+    try:
+        from app.agents.nodes.responder_node import get_symptom_data
+        sym_data = get_symptom_data(content_to_extract)
+        spoken = (sym_data.get("spoken_hin") or "").lower()
+        if "allergic rhinitis" in spoken or "naak" in spoken:
+            canonical_anchor = "allergic rhinitis pratishyaya naak band sneezing chheenk"
+        elif "sandhivata" in spoken or "jod" in spoken:
+            canonical_anchor = "sandhivata joint pain arthritis gathiya"
+        elif "amlapitta" in spoken or "acidity" in spoken:
+            canonical_anchor = "amlapitta acidity acid reflux jalan"
+        elif "tvacha" in spoken or "sheeta" in spoken:
+            canonical_anchor = "sheeta pitta skin allergy khujli rash"
+    except Exception:
+        pass
+
+    extracted_keywords = ""
     if llm and content_to_extract:
         try:
             from app.agents.nodes.responder_node import _try_llm
@@ -49,9 +67,14 @@ def extract_active_symptoms(notes: str, normalized_msg: str, llm=None) -> str:
             )
             extracted = _try_llm(llm, [sys_msg, HumanMessage(content=content_to_extract)])
             if extracted and len(extracted.split()) <= 12 and not extracted.startswith("Error"):
-                return extracted.strip()
+                extracted_keywords = extracted.strip()
         except Exception:
             pass
+
+    if canonical_anchor:
+        if extracted_keywords:
+            return f"{canonical_anchor} {extracted_keywords}"
+        return canonical_anchor
 
     # Deterministic Fallback: Scan CLINICAL_SYMPTOM_REGISTRY and SYMPTOM_KEYWORDS
     try:
@@ -123,6 +146,12 @@ def retriever_node_sync(state: AgentState) -> AgentState:
             patient_conditions
         )
         if is_safe:
+            # If a top remedy is already selected, only accept candidate 2 if genuinely relevant
+            if verified_remedies:
+                top_score = verified_remedies[0].get("similarity_score") or 0.5
+                item_score = item.get("similarity_score") or 0.0
+                if item_score < 0.40 or item_score < (0.70 * top_score):
+                    continue
             verified_item = dict(item)
             verified_item["safety_check"] = reason
             verified_remedies.append(verified_item)
@@ -166,6 +195,11 @@ async def retriever_node(state: AgentState) -> AgentState:
             patient_conditions
         )
         if is_safe:
+            if verified_remedies:
+                top_score = verified_remedies[0].get("similarity_score") or 0.5
+                item_score = item.get("similarity_score") or 0.0
+                if item_score < 0.40 or item_score < (0.70 * top_score):
+                    continue
             verified_item = dict(item)
             verified_item["safety_check"] = reason
             verified_remedies.append(verified_item)

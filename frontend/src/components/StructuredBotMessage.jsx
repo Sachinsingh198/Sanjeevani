@@ -423,7 +423,7 @@ export default function StructuredBotMessage({
               <Stethoscope className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               Sambhavit Karan (Possible Reason)
             </div>
-            <p className="text-xs sm:text-sm font-semibold text-primary">
+            <p className="text-xs sm:text-sm font-semibold text-primary dark:text-[#E2E8F0]">
               {summary.possible_cause}
             </p>
           </div>
@@ -438,7 +438,7 @@ export default function StructuredBotMessage({
               <div className="text-xs font-extrabold uppercase tracking-wider text-gold-warm dark:text-gold-warm">
                 Nuskha (Verified Remedy)
               </div>
-              <div className="text-sm font-bold text-primary">
+              <div className="text-sm font-bold text-primary dark:text-[#F4F6F0]">
                 {summary.remedy_name}
               </div>
             </div>
@@ -468,7 +468,7 @@ export default function StructuredBotMessage({
           if (steps.length === 0) return null;
           return (
             <div className="p-3 rounded-xl bg-white dark:bg-[#15202E] border border-gray-200 dark:border-gray-700/80 shadow-xs space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-primary dark:text-[#E2E8F0]">
                 <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
                 <span>Kaise Banayein (How to Prepare)</span>
               </div>

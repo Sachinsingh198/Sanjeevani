@@ -1081,6 +1081,9 @@ function MessageBubble({
               Sarkari AYUSH Pramanit Parcha (Verified Clinical Records):
             </div>
             {msg.remedies.map((r, i) => <RemedyCard key={i} remedy={r} index={i} />)}
+            <div className="py-2 px-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-900 dark:text-amber-200 text-center font-medium italic">
+              Yeh AI ka anumaan hai, doctor ka nidaan nahi — This is an AI estimate, not a doctor's diagnosis
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
               <button
                 type="button"

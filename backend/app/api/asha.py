@@ -93,6 +93,7 @@ def sync_batch_encounters(
                         symptoms=enc.symptom or "Severe vitals / acute emergency reported by ASHA",
                         clinical_flags=[f"ASHA_VITALS: {vitals_str}"],
                         tier="Red",
+                        conn=conn,
                     )
                 except Exception as alert_err:
                     pass

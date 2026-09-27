@@ -28,14 +28,13 @@ const DEFAULT_SARVAM_SPEAKERS_BY_MODEL = {
 };
 
 const DEFAULT_BHASHINI_MODELS = [
-  { id: 'ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4', name: 'Coqui Indo-Aryan (कोकी न्यूरल)', desc: 'AI4Bharat कोकी मॉडल — हिंदी व क्षेत्रीय लहजे के लिए अनुकूलित' },
-  { id: 'ai4bharat/indic-tts-fastpitch-gpu--t4', name: 'FastPitch (फास्टपिच न्यूरल)', desc: 'तीव्र व स्पष्ट पिच नियंत्रण ध्वनि' },
-  { id: 'ai4bharat/indic-tts-vits-gpu--t4', name: 'VITS (एंड-टू-एंड मॉडल)', desc: 'एंड-टू-एंड न्यूरल सिंथेसिस मॉडल' },
+  { id: 'ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4', name: 'Coqui Indo-Aryan (इंडो-आर्यन न्यूरल)', desc: 'AI4Bharat राष्ट्रीय वाणी मॉडल — हिंदी, पहाड़ी (गढ़वाली/कुमाऊँनी) व उत्तर भारतीय भाषाएँ' },
+  { id: 'ai4bharat/indic-tts-coqui-dravidian-gpu--t4', name: 'Coqui Dravidian (द्रविड़ियन न्यूरल)', desc: 'AI4Bharat राष्ट्रीय वाणी मॉडल — दक्षिण भारतीय भाषाएँ (तमिल, तेलुगु, कन्नड़, मलयालम)' },
 ];
 
 const DEFAULT_BHASHINI_GENDERS = [
-  { id: 'female', name: 'महिला स्वर (Female Voice)', sample: 'नमस्ते! यह भाषिणी सरकारी वाणी मॉडल का पूर्वावलोकन है।' },
-  { id: 'male', name: 'पुरुष स्वर (Male Voice)', sample: 'नमस्कार! यह भाषिणी पुरुष वाणी मॉडल का पूर्वावलोकन है।' },
+  { id: 'female', name: 'महिला स्वर (Female Voice)', sample: 'नमस्ते! यह भाषिणी राष्ट्रीय महिला वाणी मॉडल का पूर्वावलोकन है।' },
+  { id: 'male', name: 'पुरुष स्वर (Male Voice)', sample: 'नमस्कार! यह भाषिणी राष्ट्रीय पुरुष वाणी मॉडल का पूर्वावलोकन है।' },
 ];
 
 /**
@@ -514,7 +513,7 @@ export default function VoiceProviderSwitcher({
                 </div>
 
                 {/* Bhashini Model Options */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {bhashiniModels.map((bm) => {
                     const isSelected = config.bhashini_model === bm.id;
                     return (
