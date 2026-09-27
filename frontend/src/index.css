@@ -91,8 +91,9 @@ p, li {
 }
 
 /* Sanjeevani Orb — Shared Breathing Identity */
-.sj-orb { display: inline-block; }
-.sj-orb-halo { transform-origin: center; }
+.sj-orb { display: inline-block; overflow: visible; }
+.sj-orb svg { overflow: visible; }
+.sj-orb-halo { transform-origin: 40px 40px; transform-box: fill-box; }
 
 .sj-orb-idle .sj-orb-halo {
   animation: sj-breathe 4.5s ease-in-out infinite;
@@ -288,4 +289,48 @@ select {
   outline: 3px solid var(--sage);
   outline-offset: 2px;
   border-radius: 8px;
+}
+
+/* ── Responsive & Interactive Studio Utilities ── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media (max-width: 768px) {
+  .safe-bottom-nav {
+    padding-bottom: 5.5rem !important;
+  }
+}
+
+@keyframes mandala-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-mandala-spin {
+  animation: mandala-spin 48s linear infinite;
+}
+
+@keyframes steam-rise {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  50% { opacity: 0.6; }
+  100% { transform: translateY(-24px) scale(1.3); opacity: 0; }
+}
+
+.animate-steam {
+  animation: steam-rise 2.2s ease-out infinite;
+}
+
+@keyframes ripple-pulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 0.3; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+.animate-ripple {
+  animation: ripple-pulse 2s ease-in-out infinite;
 }

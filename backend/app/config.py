@@ -33,7 +33,8 @@ class Settings(BaseSettings):
     # Hugging Face Token (for gated models like ai4bharat/indic-parler-tts)
     HF_TOKEN: Optional[str] = None
 
-    # Voice / Speech Settings: Primary "bhashini", Fallback "sarvam", Offline Fallback "neural" (Edge TTS)
+    # Voice / Speech Settings: Primary "bhashini" or "sarvam" with automatic mutual failover
+    PRIMARY_VOICE_PROVIDER: str = "bhashini"
     TTS_PROVIDER: str = "bhashini"
     STT_PROVIDER: str = "bhashini"
 

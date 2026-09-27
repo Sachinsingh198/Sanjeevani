@@ -8,6 +8,7 @@ import {
 import LiveVoiceRoom from '../components/LiveVoiceRoom';
 import SanjeevaniOrb from '../components/SanjeevaniOrb';
 import MountainRidge from '../components/MountainRidge';
+import PageVoiceGuide from '../components/PageVoiceGuide';
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
@@ -21,7 +22,7 @@ export default function Home() {
   const dashboardPath = user?.role === 'admin' ? '/admin' : user?.role === 'asha' ? '/asha' : '/mitra';
 
   return (
-    <div className="min-h-screen bg-mist text-primary transition-colors duration-300 selection:bg-sage/20 selection:text-primary relative overflow-hidden">
+    <div className="min-h-screen bg-mist text-primary transition-colors duration-300 selection:bg-sage/20 selection:text-primary relative overflow-hidden pb-12 safe-bottom-nav">
       
       {/* Live Continuous Voice Modal */}
       {showLiveRoom && <LiveVoiceRoom onClose={() => setShowLiveRoom(false)} />}
@@ -66,8 +67,13 @@ export default function Home() {
             Hindi ya Garhwali mein aaram se boliye — bina kisi jhijhak ke.
           </p>
 
+          {/* Voice Guide Audio Introduction */}
+          <div className="max-w-xl mx-auto mt-5 text-left">
+            <PageVoiceGuide pageKey="home" />
+          </div>
+
           {/* Primary 64px Tactile Voice Action */}
-          <div className="mt-8 flex flex-col items-center justify-center gap-4">
+          <div className="mt-6 flex flex-col items-center justify-center gap-4">
             
             <button
               onClick={handleVoiceAction}

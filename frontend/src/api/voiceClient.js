@@ -14,6 +14,19 @@ const voiceApi = axios.create({
 const audioBlobCache = new Map();
 
 /**
+ * Clears in-memory client audio cache to guarantee fresh voice playback
+ * when user switches provider, model, or speaker.
+ */
+export function clearAudioCache() {
+  for (const [key, url] of audioBlobCache.entries()) {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {}
+  }
+  audioBlobCache.clear();
+}
+
+/**
  * base64 -> Blob -> object URL, so it can be handed straight to <audio> / Audio().
  */
 export function base64ToAudioUrl(base64, format = 'mp3') {
@@ -56,11 +69,238 @@ export const transcribeAudio = async (blob) => {
 };
 
 /**
+ * Sanitizes text prior to speech synthesis to eliminate pronunciation artifacts.
+ * Crucially resolves:
+ * 1. Bhashini / Indic FastPitch pronouncing '!' or '！' as mathematical "factorial".
+ * 2. Pronouncing hyphens '7-10' as "minus" instead of "se".
+ * 3. Pronouncing '%' as "modulo" or raw symbol instead of "प्रतिशत" / "percent".
+ * 4. Markdown syntax (*, _, #, `, ~, etc.) read aloud as "asterisk", "hash", etc.
+ * 5. Math symbols (+, =, /) read as "plus", "equals", "slash".
+ * 6. Emoji pictographs read as English code names.
+ */
+export function cleanTextForTTS(text, language = 'hi') {
+  if (!text) return '';
+  let t = String(text);
+
+  // 1. Normalize unicode quotes and dashes
+  t = t.replace(/[\u2011\u2013\u2014]/g, '-');
+  t = t.replace(/[“”‘’"']/g, ' ');
+
+  // 2. CRITICAL: Replace exclamation marks - Bhashini expands '!' into mathematical "factorial"
+  t = t.replace(/[!！]+/g, '. ');
+
+  // 3. Remove URLs and emails
+  t = t.replace(/https?:\/\/\S+/g, '');
+  t = t.replace(/\b[\w.-]+@[\w.-]+\.\w+\b/g, '');
+  t = t.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
+  // 4. Handle percentage numbers: "95%" -> "95 प्रतिशत" (Hindi) or "95 percent" (English)
+  const isEnglish = language && String(language).toLowerCase().startsWith('en');
+  if (isEnglish) {
+    t = t.replace(/(\d+)\s*%/g, '$1 percent');
+  } else {
+    t = t.replace(/(\d+)\s*%/g, '$1 प्रतिशत');
+  }
+
+  // 5. Replace numeric ranges like "7-10" with "7 se 10" so TTS doesn't speak "minus"
+  t = t.replace(/(?<=\d)\s*[-–—]\s*(?=\d)/g, isEnglish ? ' to ' : ' se ');
+
+  // 6. Strip internal triage prefixes and status lines
+  t = t.replace(/Tier\s+(Green|Yellow|Red)[^\n]*/gi, '');
+  t = t.replace(/(\b\d{3}\b)\s*\([^)]*\)/g, '$1');
+  t = t.replace(
+    /(Aapki Takleef|Sambhavit Jaanch\s*\(Diagnosis\)|Nuskha|Kaise Banayein|Kab Tak Lein|Dhyan Rakhein|Safety Verified|Ayurvedic Rationale)[:\s]*/gi,
+    ''
+  );
+
+  // 7. Strip markdown syntax symbols and brackets
+  t = t.replace(/[*_#`~>\[\]{}|^@$\\]/g, ' ');
+
+  // 8. Strip standalone math operators like +, =, / that TTS speaks aloud as "plus", "slash", "equals"
+  t = t.replace(/\s+[+=/]\s+/g, ' ');
+  t = t.replace(/[+=/]/g, ' ');
+
+  // 9. Strip emojis and pictographs completely
+  t = t.replace(
+    /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g,
+    ''
+  );
+  try {
+    t = t.replace(/\p{Extended_Pictographic}/ug, '');
+  } catch {}
+
+  // 10. Clean up multiple dots, spaces, or leading dashes
+  t = t.replace(/\.{2,}/g, '.');
+  t = t.replace(/\s+/g, ' ').trim();
+
+  return t;
+}
+
+/**
+ * Fetches the currently configured primary voice provider, its automatic first fallback,
+ * and service readiness from the backend.
+ */
+export const getVoiceProviderConfig = async () => {
+  try {
+    const res = await voiceApi.get('/voice/provider');
+    return res.data;
+  } catch (err) {
+    console.warn('[Sanjeevani Voice] Failed to fetch provider config, using local default:', err);
+    return {
+      primary: 'bhashini',
+      fallback: 'sarvam',
+      offline_fallback: 'neural_indic',
+      bhashini_configured: true,
+      sarvam_configured: true,
+      status: 'ready',
+    };
+  }
+};
+
+/**
+ * Dynamically switches the primary voice provider between 'bhashini' and 'sarvam',
+ * and allows saving model and speaker choices.
+ * Automatically clears audio cache so new configuration is reflected immediately.
+ */
+export const setVoiceProviderConfig = async (payload) => {
+  clearAudioCache();
+  const req = typeof payload === 'string'
+    ? { provider: payload.toLowerCase().trim(), clear_cache: true }
+    : { ...payload, clear_cache: true };
+  const res = await voiceApi.post('/voice/provider', req);
+  clearAudioCache();
+  return res.data;
+};
+
+// Active audio elements and request tracking to strictly prevent overlapping voices
+let globalActiveAudio = null;
+let globalAbortController = null;
+
+/**
+ * Halts ALL voice audio currently playing and cancels any pending TTS requests.
+ * Guarantees that two voices can NEVER overlap or play at the same time.
+ */
+export function stopAllVoiceAudio() {
+  if (globalAbortController) {
+    try {
+      globalAbortController.abort();
+    } catch {}
+    globalAbortController = null;
+  }
+  if (globalActiveAudio) {
+    try {
+      globalActiveAudio.pause();
+      globalActiveAudio.currentTime = 0;
+      globalActiveAudio.src = '';
+    } catch {}
+    globalActiveAudio = null;
+  }
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {}
+  }
+}
+
+/**
+ * Live audio preview for any model or speaker before selecting it.
+ * Plays sample audio via backend /voice/tts or graceful fallback.
+ * Strictly mutually exclusive: cancels any previous preview immediately.
+ * Returns a cancel function.
+ */
+export const previewVoiceAudio = async ({
+  text,
+  language = 'hi',
+  gender = 'female',
+  provider = 'sarvam',
+  model,
+  speaker,
+  onStart,
+  onEnd,
+}) => {
+  // Immediately halt any previous voice before doing anything else
+  stopAllVoiceAudio();
+
+  const controller = new AbortController();
+  globalAbortController = controller;
+
+  const clean = cleanTextForTTS(text, language) || 'नमस्ते! यह संजीवनी आवाज़ का पूर्वावलोकन है।';
+
+  try {
+    const res = await voiceApi.post(
+      '/voice/tts',
+      {
+        text: clean,
+        language,
+        gender,
+        provider,
+        model,
+        speaker,
+      },
+      { signal: controller.signal }
+    );
+
+    if (controller.signal.aborted) {
+      onEnd?.();
+      return () => {};
+    }
+
+    const { audio_base64, format } = res.data;
+    const url = base64ToAudioUrl(audio_base64, format || 'wav');
+    const audio = new Audio(url);
+
+    if (controller.signal.aborted) {
+      URL.revokeObjectURL(url);
+      onEnd?.();
+      return () => {};
+    }
+
+    globalActiveAudio = audio;
+
+    let finished = false;
+    const cleanup = () => {
+      if (finished) return;
+      finished = true;
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = '';
+      } catch {}
+      URL.revokeObjectURL(url);
+      if (globalActiveAudio === audio) {
+        globalActiveAudio = null;
+      }
+      onEnd?.();
+    };
+
+    audio.onplay = () => {
+      if (!controller.signal.aborted) {
+        onStart?.();
+      }
+    };
+    audio.onended = cleanup;
+    audio.onerror = cleanup;
+
+    await audio.play();
+
+    return cleanup;
+  } catch (err) {
+    if (axios.isCancel(err) || controller.signal.aborted) {
+      onEnd?.();
+      return () => {};
+    }
+    console.warn('[Voice Preview] Backend preview error:', err);
+    onEnd?.();
+    return () => {};
+  }
+};
+
+/**
  * Calls the backend Neural Indic (/voice/tts) endpoint and returns a
  * playable object URL. Uses in-memory caching for zero-latency repeats.
  */
 export const synthesizeSpeech = async (text, language = 'hi', gender = 'female') => {
-  const cleanText = text.trim();
+  const cleanText = cleanTextForTTS(text, language);
   if (!cleanText) throw new Error('Empty text for speech synthesis');
 
   const cacheKey = `${cleanText}_${language}_${gender}`;
@@ -93,13 +333,14 @@ export const streamSpeech = (text, { language = 'hi', gender = 'female', onStart
   let cancelled = false;
   let audioEl = null;
   const abortController = new AbortController();
+  const cleanedText = cleanTextForTTS(text, language);
 
   (async () => {
     try {
       const response = await fetch(`${API_BASE}/voice/tts/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, language, gender }),
+        body: JSON.stringify({ text: cleanedText, language, gender }),
         signal: abortController.signal,
       });
 
@@ -275,8 +516,14 @@ function pickBestHindiVoice(voices, language) {
  * Returns a cleanup function you can call to stop playback early.
  */
 export const speakText = (text, { language = 'hi', gender = 'female', onStart, onEnd } = {}) => {
+  stopAllVoiceAudio();
   let audioEl = null;
   let cancelled = false;
+  const clean = cleanTextForTTS(text, language);
+  if (!clean) {
+    onEnd?.();
+    return () => {};
+  }
 
   const fallbackToBrowserTTS = () => {
     if (cancelled || !window.speechSynthesis) {
@@ -284,15 +531,6 @@ export const speakText = (text, { language = 'hi', gender = 'female', onStart, o
       return;
     }
     window.speechSynthesis.cancel();
-
-    // Strip markdown and bullet dashes to prevent robotic symbol-reading
-    const clean = text
-      .replace(/[*_#`~>\[\]]/g, '')
-      .replace(/(?<=\d)\s*-\s*(?=\d)/g, ' se ')
-      .replace(/\s+[-•*]\s+/g, '. ')
-      .replace(/^\s*[-•*]\s+/gm, '')
-      .replace(/\n+/g, '. ')
-      .trim();
 
     const utterance = new SpeechSynthesisUtterance(clean);
     const voices = window.speechSynthesis.getVoices();
@@ -330,11 +568,15 @@ export const speakText = (text, { language = 'hi', gender = 'female', onStart, o
     .then((url) => {
       if (cancelled) return;
       audioEl = new Audio(url);
+      globalActiveAudio = audioEl;
 
       audioEl.onplay = () => {
         if (!cancelled) onStart?.();
       };
-      audioEl.onended = () => onEnd?.();
+      audioEl.onended = () => {
+        if (globalActiveAudio === audioEl) globalActiveAudio = null;
+        onEnd?.();
+      };
       audioEl.onerror = () => fallbackToBrowserTTS();
 
       audioEl.play().catch((playErr) => {
@@ -359,6 +601,9 @@ export const speakText = (text, { language = 'hi', gender = 'female', onStart, o
     if (audioEl) {
       audioEl.pause();
       audioEl.src = '';
+      if (globalActiveAudio === audioEl) {
+        globalActiveAudio = null;
+      }
     }
     window.speechSynthesis?.cancel();
   };

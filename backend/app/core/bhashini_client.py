@@ -30,7 +30,7 @@ def normalize_bhashini_lang(language: str) -> str:
     if not language:
         return "hi"
     l = language.lower().strip()
-    if l in ("hi", "hindi", "garhwali"):
+    if l in ("hi", "hindi", "garhwali", "garh", "gadwali", "kumaoni", "ku"):
         return "hi"
     if l in ("en", "english"):
         return "en"
@@ -54,7 +54,29 @@ def normalize_bhashini_lang(language: str) -> str:
         return "or"
     if l in ("as", "assamese"):
         return "as"
-    return l[:2]
+    if l in ("ur", "urdu"):
+        return "ur"
+    if l in ("ne", "nepali"):
+        return "ne"
+    if l in ("sa", "sanskrit"):
+        return "sa"
+    if l in ("mai", "maithili"):
+        return "mai"
+    if l in ("kok", "konkani"):
+        return "kok"
+    if l in ("ks", "kashmiri"):
+        return "ks"
+    if l in ("sd", "sindhi"):
+        return "sd"
+    if l in ("sat", "santali"):
+        return "sat"
+    if l in ("doi", "dogri"):
+        return "doi"
+    if l in ("mni", "manipuri", "meitei"):
+        return "mni"
+    if l in ("brx", "bodo"):
+        return "brx"
+    return l[:3] if len(l) == 3 else l[:2]
 
 
 class BhashiniClient:
@@ -205,7 +227,8 @@ class BhashiniClient:
         self,
         text: str,
         language: str = "hi",
-        gender: str = "female"
+        gender: str = "female",
+        model: Optional[str] = None,
     ) -> Tuple[bytes, str]:
         """
         Synthesizes text into speech across all Indian languages using Bhashini TTS.
@@ -214,7 +237,11 @@ class BhashiniClient:
         if not self.is_configured:
             raise BhashiniNotConfiguredError("Bhashini is not configured.")
 
-        clean_text = re.sub(r"[\[\]\(\)\{\}\*\_#\~>`]", " ", text)
+        # Replace ! with . to prevent Bhashini from expanding ! into mathematical "factorial"
+        clean_text = re.sub(r"[!！]+", ". ", text)
+        clean_text = re.sub(r"[\[\]\(\)\{\}\*\_#\~>`+=/\\|^@$]", " ", clean_text)
+        # Strip emoji symbols
+        clean_text = re.sub(r"[\U00010000-\U0010ffff\u2600-\u27bf]", " ", clean_text)
         clean_text = re.sub(r"\s+", " ", clean_text).strip()
         if not clean_text:
             clean_text = "Namaste."
@@ -222,7 +249,8 @@ class BhashiniClient:
         lang = normalize_bhashini_lang(language)
         gender_code = "female" if gender.lower() == "female" else "male"
 
-        service_id, callback_url = await self.get_service_config("tts", language=lang)
+        resolved_service_id, callback_url = await self.get_service_config("tts", language=lang)
+        service_id = model or resolved_service_id
         if not service_id:
             raise BhashiniRequestError("Could not resolve Bhashini TTS service ID.")
 

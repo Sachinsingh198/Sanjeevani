@@ -106,7 +106,7 @@ export default function SanjeevaniOrb({
         style={{ width: size, height: size }}
       >
         <svg
-          viewBox="0 0 80 80"
+          viewBox="-16 -16 112 112"
           width="100%"
           height="100%"
           overflow="visible"
@@ -154,6 +154,7 @@ export default function SanjeevaniOrb({
             cx="40" cy="40" r="36"
             fill={`url(#${uid}-halo)`}
             className={`sj-orb-halo ${haloAnim}`}
+            style={{ transformOrigin: '40px 40px' }}
           />
 
           {/* ── Layer 2: Mid spinning ring (dashed, state-coloured) ── */}

@@ -47,10 +47,20 @@ class AudioLRUCache:
         self._cache.clear()
 
 
-def get_audio_cache_key(text: str, language: str = "hi", gender: str = "female") -> str:
-    """Generates a stable SHA-256 cache key for text, language, and gender."""
+def get_audio_cache_key(
+    text: str,
+    language: str = "hi",
+    gender: str = "female",
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+    speaker: Optional[str] = None,
+) -> str:
+    """Generates a stable SHA-256 cache key including provider, model, and speaker."""
     clean = re.sub(r"\s+", " ", (text or "").strip().lower())
-    raw = f"{clean}_{language.lower()}_{gender.lower()}"
+    p = (provider or "").strip().lower()
+    m = (model or "").strip().lower()
+    s = (speaker or "").strip().lower()
+    raw = f"{clean}_{language.lower()}_{gender.lower()}_{p}_{m}_{s}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -68,59 +78,33 @@ PRECACHED_SNIPPETS = [
 ]
 
 # Best-in-class Neural Indian Accent voices via edge-tts (Microsoft Neural Network)
-# hi-IN-SwaraNeural  → Natural, warm, rural-friendly Hindi female
-# hi-IN-MadhurNeural → Clear, professional Hindi male
-# en-IN-NeerjaExpressiveNeural → Expressive, authentic Indian-English female (premium)
-# en-IN-PrabhatNeural → Professional Indian-English male
+# Covers all 22 official 8th Schedule Indic languages + English + Garhwali + Kumaoni
 INDIAN_VOICES = {
-    "hindi": {
-        "female": "hi-IN-SwaraNeural",
-        "male":   "hi-IN-MadhurNeural",
-    },
-    "garhwali": {
-        "female": "hi-IN-SwaraNeural",
-        "male":   "hi-IN-MadhurNeural",
-    },
-    "english": {
-        "female": "en-IN-NeerjaExpressiveNeural",
-        "male":   "en-IN-PrabhatNeural",
-    },
-    "bengali": {
-        "female": "bn-IN-TanishaaNeural",
-        "male":   "bn-IN-BashkarNeural",
-    },
-    "tamil": {
-        "female": "ta-IN-PallaviNeural",
-        "male":   "ta-IN-ValluvarNeural",
-    },
-    "telugu": {
-        "female": "te-IN-ShrutiNeural",
-        "male":   "te-IN-MohanNeural",
-    },
-    "marathi": {
-        "female": "mr-IN-AarohiNeural",
-        "male":   "mr-IN-ManoharNeural",
-    },
-    "gujarati": {
-        "female": "gu-IN-DhwaniNeural",
-        "male":   "gu-IN-NiranjanNeural",
-    },
-    "kannada": {
-        "female": "kn-IN-SapnaNeural",
-        "male":   "kn-IN-GaganNeural",
-    },
-    "malayalam": {
-        "female": "ml-IN-SobhanaNeural",
-        "male":   "ml-IN-MidhunNeural",
-    },
-    "punjabi": {
-        "female": "hi-IN-SwaraNeural",
-        "male":   "hi-IN-MadhurNeural",
-    },
-    "odia": {
-        "female": "hi-IN-SwaraNeural",
-        "male":   "hi-IN-MadhurNeural",
-    },
+    "hindi":      {"female": "hi-IN-SwaraNeural", "male": "hi-IN-MadhurNeural"},
+    "garhwali":   {"female": "hi-IN-SwaraNeural", "male": "hi-IN-MadhurNeural"},
+    "kumaoni":    {"female": "hi-IN-SwaraNeural", "male": "hi-IN-MadhurNeural"},
+    "english":    {"female": "en-IN-NeerjaExpressiveNeural", "male": "en-IN-PrabhatNeural"},
+    "bengali":    {"female": "bn-IN-TanishaaNeural", "male": "bn-IN-BashkarNeural"},
+    "tamil":      {"female": "ta-IN-PallaviNeural", "male": "ta-IN-ValluvarNeural"},
+    "telugu":     {"female": "te-IN-ShrutiNeural", "male": "te-IN-MohanNeural"},
+    "marathi":    {"female": "mr-IN-AarohiNeural", "male": "mr-IN-ManoharNeural"},
+    "gujarati":   {"female": "gu-IN-DhwaniNeural", "male": "gu-IN-NiranjanNeural"},
+    "kannada":    {"female": "kn-IN-SapnaNeural", "male": "kn-IN-GaganNeural"},
+    "malayalam":  {"female": "ml-IN-SobhanaNeural", "male": "ml-IN-MidhunNeural"},
+    "punjabi":    {"female": "hi-IN-SwaraNeural", "male": "hi-IN-MadhurNeural"},
+    "odia":       {"female": "hi-IN-SwaraNeural", "male": "hi-IN-MadhurNeural"},
+    "assamese":   {"female": "bn-IN-TanishaaNeural", "male": "bn-IN-BashkarNeural"},
+    "urdu":       {"female": "ur-IN-GulNeural", "male": "ur-IN-SalmanNeural"},
+    "nepali":     {"female": "ne-NP-HemkalaNeural", "male": "ne-NP-SagarNeural"},
+    "sanskrit":   {"female": "hi-IN-SwaraNeural", "male": "hi-IN-MadhurNeural"},
+    "maithili":   {"female": "hi-IN-SwaraNeural", "male": "hi-IN-MadhurNeural"},
+    "dogri":      {"female": "hi-IN-SwaraNeural", "male": "hi-IN-MadhurNeural"},
+    "konkani":    {"female": "mr-IN-AarohiNeural", "male": "mr-IN-ManoharNeural"},
+    "kashmiri":   {"female": "ur-IN-GulNeural", "male": "ur-IN-SalmanNeural"},
+    "sindhi":     {"female": "ur-IN-GulNeural", "male": "ur-IN-SalmanNeural"},
+    "santali":    {"female": "hi-IN-SwaraNeural", "male": "hi-IN-MadhurNeural"},
+    "manipuri":   {"female": "bn-IN-TanishaaNeural", "male": "bn-IN-BashkarNeural"},
+    "bodo":       {"female": "bn-IN-TanishaaNeural", "male": "bn-IN-BashkarNeural"},
 }
 
 def get_voice_lang_key(lang: str) -> str:
@@ -148,8 +132,34 @@ def get_voice_lang_key(lang: str) -> str:
         return "punjabi"
     if l in ("od", "or", "odia", "oriya", "od-in"):
         return "odia"
-    if l == "garhwali":
+    if l in ("as", "assamese", "as-in"):
+        return "assamese"
+    if l in ("ur", "urdu", "ur-in"):
+        return "urdu"
+    if l in ("ne", "nepali", "ne-np"):
+        return "nepali"
+    if l in ("sa", "sanskrit"):
+        return "sanskrit"
+    if l in ("mai", "maithili"):
+        return "maithili"
+    if l in ("doi", "dogri"):
+        return "dogri"
+    if l in ("kok", "konkani"):
+        return "konkani"
+    if l in ("ks", "kashmiri"):
+        return "kashmiri"
+    if l in ("sd", "sindhi"):
+        return "sindhi"
+    if l in ("sat", "santali"):
+        return "santali"
+    if l in ("mni", "manipuri", "meitei"):
+        return "manipuri"
+    if l in ("brx", "bodo"):
+        return "bodo"
+    if l in ("garhwali", "garh", "gadwali"):
         return "garhwali"
+    if l in ("kumaoni", "ku"):
+        return "kumaoni"
     return "hindi"
 
 # SSML prosody settings per voice for warm, natural, human cadence
@@ -160,6 +170,42 @@ VOICE_PROSODY = {
     "en-IN-NeerjaExpressiveNeural":{"rate": "-2%",  "pitch": "+0Hz", "volume": "+8%"},
     "en-IN-PrabhatNeural":         {"rate": "-1%",  "pitch": "0Hz",  "volume": "+5%"},
 }
+
+
+AVAILABLE_SARVAM_MODELS = [
+    {"id": "bulbul:v3", "name": "Bulbul v3 (Ultra HD Neural)", "desc": "नवीनतम हाई-डेफिनिशन न्यूरल वाणी मॉडल — प्राकृतिक व स्पष्ट उच्चारण"},
+]
+
+SARVAM_SPEAKERS_BY_MODEL = {
+    "bulbul:v3": [
+        {"id": "meera", "name": "मीरा (Meera)", "gender": "female", "desc": "मधुर, स्वाभाविक डॉक्टर स्वर", "sample": "नमस्ते, मैं मीरा हूँ। संजीवनी स्वास्थ्य परामर्श में आपका स्वागत है।"},
+        {"id": "ananya", "name": "अनन्या (Ananya)", "gender": "female", "desc": "स्पष्ट, मैत्रीपूर्ण युवा स्वर", "sample": "नमस्कार, मैं अनन्या हूँ। आपके स्वास्थ्य से जुड़ी किसी भी समस्या के लिए मैं यहाँ हूँ।"},
+        {"id": "ritu", "name": "रितु (Ritu)", "gender": "female", "desc": "सौम्य, उपचारात्मक स्वर", "sample": "प्रणाम, मैं रितु हूँ। शांत मन और स्वस्थ जीवन के लिए परामर्श शुरू करें।"},
+        {"id": "priya", "name": "प्रिया (Priya)", "gender": "female", "desc": "आत्मीय, अनुभवी स्वर", "sample": "नमस्ते जी, मैं प्रिया हूँ। अपने लक्षण मुझे विस्तार से बताएं।"},
+        {"id": "kavya", "name": "काव्या (Kavya)", "gender": "female", "desc": "सहज, पहाड़ी लहजे के अनुकूल", "sample": "नमस्कार, मैं काव्या हूँ। संजीवनी सेवा में आपका हार्दिक स्वागत है।"},
+        {"id": "shreya", "name": "श्रेया (Shreya)", "gender": "female", "desc": "पेशेवर, स्पष्ट उच्चारण", "sample": "नमस्ते, मैं डॉ. श्रेया हूँ। स्वास्थ्य जांच में मैं आपकी सहायता करूँगी।"},
+        {"id": "shubh", "name": "शुभ (Shubh)", "gender": "male", "desc": "गंभीर, पेशेवर पुरुष चिकित्सक स्वर", "sample": "नमस्कार, मैं डॉ. शुभ हूँ। अपनी स्वास्थ्य समस्या मुझे बताएं।"},
+        {"id": "arjun", "name": "अर्जुन (Arjun)", "gender": "male", "desc": "गहरा व वजनदार स्पष्ट स्वर", "sample": "प्रणाम, मैं अर्जुन हूँ। संजीवनी एआई परामर्श सेवा में आपका स्वागत है।"},
+        {"id": "rahul", "name": "राहुल (Rahul)", "gender": "male", "desc": "मित्रवत पारिवारिक डॉक्टर स्वर", "sample": "नमस्कार जी, मैं राहुल डॉक्टर हूँ। पहाड़ों के मौसम और सेहत के लिए परामर्श लें।"},
+        {"id": "aditya", "name": "आदित्य (Aditya)", "gender": "male", "desc": "शांत, धीर चिकित्सक स्वर", "sample": "प्रणाम, मैं डॉ. आदित्य हूँ। आपकी हर समस्या का समाधान यहाँ मिलेगा।"},
+        {"id": "amit", "name": "अमित (Amit)", "gender": "male", "desc": "सटीक व स्पष्ट स्वर", "sample": "नमस्कार, मैं डॉ. अमित हूँ। आज आपकी सेहत कैसी है?"},
+        {"id": "dev", "name": "देव (Dev)", "gender": "male", "desc": "धीर व आत्मीय स्वर", "sample": "प्रणाम, मैं देव हूँ। संजीवनी स्वास्थ्य परामर्श में आपका स्वागत है।"},
+    ],
+}
+SARVAM_SPEAKERS_BY_MODEL["bulbul:v2"] = SARVAM_SPEAKERS_BY_MODEL["bulbul:v3"]
+
+AVAILABLE_SARVAM_SPEAKERS = SARVAM_SPEAKERS_BY_MODEL["bulbul:v3"]
+
+AVAILABLE_BHASHINI_MODELS = [
+    {"id": "ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4", "name": "Indic-TTS Coqui (इंडो-आर्यन)", "desc": "AI4Bharat कोकी न्यूरल मॉडल — हिंदी व क्षेत्रीय लहजे के लिए अनुकूलित"},
+    {"id": "ai4bharat/indic-tts-fastpitch-gpu--t4", "name": "Indic-TTS FastPitch (फास्टपिच)", "desc": "तीव्र व स्पष्ट पिच नियंत्रण ध्वनि"},
+    {"id": "ai4bharat/indic-tts-vits-gpu--t4", "name": "Indic-TTS VITS (एंड-टू-एंड)", "desc": "एंड-टू-एंड न्यूरल सिंथेसिस मॉडल"},
+]
+
+AVAILABLE_BHASHINI_GENDERS = [
+    {"id": "female", "name": "महिला स्वर (Female Voice)", "desc": "स्वाभाविक व सौम्य महिला स्वर"},
+    {"id": "male", "name": "पुरुष स्वर (Male Voice)", "desc": "स्पष्ट व धीर पुरुष स्वर"},
+]
 
 
 class IndicTTSEngine:
@@ -173,6 +219,10 @@ class IndicTTSEngine:
     def __init__(self):
         self._client: Optional[httpx.AsyncClient] = None
         self.last_provider: str = settings.TTS_PROVIDER
+        self.sarvam_model: str = getattr(settings, "SARVAM_TTS_MODEL", "bulbul:v3") or "bulbul:v3"
+        self.sarvam_speaker: str = getattr(settings, "SARVAM_FEMALE_SPEAKER", "meera") or "meera"
+        self.bhashini_model: str = "ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4"
+        self.bhashini_gender: str = "female"
         self.memory_cache = AudioLRUCache(maxsize=256)
 
     def _get_client(self) -> httpx.AsyncClient:
@@ -183,26 +233,146 @@ class IndicTTSEngine:
             )
         return self._client
 
-    def _get_cache_path(self, text: str, voice_name: str, ext: str = "mp3") -> str:
-        h = hashlib.md5(f"{text}_{voice_name}".encode("utf-8")).hexdigest()
+    def _get_cache_path(
+        self,
+        text: str,
+        provider: str = "",
+        model: str = "",
+        speaker: str = "",
+        lang_voice: str = "",
+        ext: str = "wav",
+    ) -> str:
+        clean = re.sub(r"\s+", " ", (text or "").strip().lower())
+        raw = f"{clean}_{provider}_{model}_{speaker}_{lang_voice}"
+        h = hashlib.md5(raw.encode("utf-8")).hexdigest()
         return os.path.join(AUDIO_CACHE_DIR, f"{h}.{ext}")
 
-    def _clean_for_speech(self, text: str) -> str:
+    def clear_all_cache(self):
+        """Clears memory cache and removes disk audio files to avoid stale playback when provider or model changes."""
+        self.memory_cache.clear()
+        try:
+            if os.path.exists(AUDIO_CACHE_DIR):
+                for fname in os.listdir(AUDIO_CACHE_DIR):
+                    fpath = os.path.join(AUDIO_CACHE_DIR, fname)
+                    if os.path.isfile(fpath):
+                        os.remove(fpath)
+            logger.info("[TTS Engine] Audio cache cleared successfully on configuration change.")
+        except Exception as e:
+            logger.warning(f"[TTS Engine Cache Clear]: {e}")
+
+    def get_primary_provider(self) -> str:
+        """Returns normalized active primary voice provider ('bhashini' or 'sarvam')."""
+        p = getattr(settings, "PRIMARY_VOICE_PROVIDER", None) or getattr(settings, "TTS_PROVIDER", "bhashini")
+        return (p or "bhashini").lower().strip()
+
+    def set_primary_provider(self, provider: str) -> str:
+        """Dynamically switches primary voice provider with automatic mutual fallback and clears stale audio cache."""
+        norm = (provider or "").lower().strip()
+        if norm not in ("bhashini", "sarvam"):
+            raise ValueError(f"Provider must be 'bhashini' or 'sarvam', received: {provider}")
+        settings.PRIMARY_VOICE_PROVIDER = norm
+        settings.TTS_PROVIDER = norm
+        self.last_provider = norm
+        self.clear_all_cache()
+        logger.info(f"[Voice Config] Primary voice provider switched to: '{norm}' (Automatic fallback: '{'sarvam' if norm == 'bhashini' else 'bhashini'}')")
+        return norm
+
+    def set_provider_config(
+        self,
+        provider: Optional[str] = None,
+        sarvam_model: Optional[str] = None,
+        sarvam_speaker: Optional[str] = None,
+        bhashini_model: Optional[str] = None,
+        bhashini_gender: Optional[str] = None,
+        clear_cache: Optional[bool] = False,
+    ) -> dict:
+        """Updates provider, model, and speaker configuration and purges stale audio cache."""
+        changed = False
+        if provider and provider != self.get_primary_provider():
+            self.set_primary_provider(provider)
+            changed = True
+        if sarvam_model and sarvam_model != self.sarvam_model:
+            self.sarvam_model = sarvam_model
+            changed = True
+            # Validate speaker for the newly selected model
+            valid_spk_ids = [s["id"] for s in SARVAM_SPEAKERS_BY_MODEL.get(sarvam_model, SARVAM_SPEAKERS_BY_MODEL["bulbul:v3"])]
+            if self.sarvam_speaker not in valid_spk_ids:
+                self.sarvam_speaker = valid_spk_ids[0]
+        if sarvam_speaker and sarvam_speaker != self.sarvam_speaker:
+            self.sarvam_speaker = sarvam_speaker
+            changed = True
+        if bhashini_model and bhashini_model != self.bhashini_model:
+            self.bhashini_model = bhashini_model
+            changed = True
+        if bhashini_gender and bhashini_gender != self.bhashini_gender:
+            self.bhashini_gender = bhashini_gender
+            changed = True
+
+        if changed or clear_cache:
+            self.clear_all_cache()
+
+        return self.get_provider_status()
+
+    def get_provider_status(self) -> dict:
+        """Returns complete status of primary, fallback, and backend credentials."""
+        primary = self.get_primary_provider()
+        fallback = "sarvam" if primary == "bhashini" else "bhashini"
+        has_sarvam = bool(settings.SARVAM_API_KEY or os.getenv("SARVAM_API_KEY", ""))
+        active_sarvam_speakers = SARVAM_SPEAKERS_BY_MODEL.get(self.sarvam_model, SARVAM_SPEAKERS_BY_MODEL["bulbul:v3"])
+        return {
+            "provider": primary,
+            "primary": primary,
+            "fallback": fallback,
+            "offline_fallback": "neural_indic",
+            "bhashini_configured": bhashini_client.is_configured,
+            "sarvam_configured": has_sarvam,
+            "sarvam_model": self.sarvam_model,
+            "sarvam_speaker": self.sarvam_speaker,
+            "bhashini_model": self.bhashini_model,
+            "bhashini_gender": self.bhashini_gender,
+            "available_sarvam_models": AVAILABLE_SARVAM_MODELS,
+            "available_sarvam_speakers": active_sarvam_speakers,
+            "available_sarvam_speakers_by_model": SARVAM_SPEAKERS_BY_MODEL,
+            "available_bhashini_models": AVAILABLE_BHASHINI_MODELS,
+            "available_bhashini_genders": AVAILABLE_BHASHINI_GENDERS,
+            "last_active_provider": self.last_provider,
+            "status": "ready"
+        }
+
+    def _clean_for_speech(self, text: str, language: str = "hi") -> str:
         """
         Cleans markdown, technical headers, citations, and bullet characters to produce
-        fluid, natural spoken prose without robotic artifacts (e.g. stops 'minus' or 'hash').
+        fluid, natural spoken prose without robotic artifacts.
+        Crucially prevents Bhashini from pronouncing '!' as mathematical 'factorial'.
         """
         if not text:
             return ""
 
-        # Normalize unicode non-breaking hyphens and dashes
-        t = text.replace('\u2011', '-').replace('\u2013', '-').replace('\u2014', '-')
+        t = text
 
-        # Remove markdown URLs and citations
+        # 1. Normalize unicode quotes and dashes
+        t = t.replace('\u2011', '-').replace('\u2013', '-').replace('\u2014', '-')
+        t = t.replace('“', ' ').replace('”', ' ').replace('‘', ' ').replace('’', ' ')
+        t = t.replace('"', ' ').replace("'", ' ')
+
+        # 2. CRITICAL: Remove exclamation marks - Bhashini expands '!' into mathematical "factorial"
+        t = re.sub(r"[!！]+", ". ", t)
+
+        # 3. Remove markdown URLs and citations
         t = re.sub(r"https?://\S+", "", t)
+        t = re.sub(r"\b[\w.-]+@[\w.-]+\.\w+\b", "", t)
         t = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", t)
 
-        # Strip internal triage prefixes and status lines
+        # 4. Handle percentage numbers: "95%" -> "95 प्रतिशत" (Hindi) or "95 percent" (English)
+        if language and str(language).lower().startswith("en"):
+            t = re.sub(r"(\d+)\s*%", r"\1 percent", t)
+        else:
+            t = re.sub(r"(\d+)\s*%", r"\1 प्रतिशत", t)
+
+        # 5. Replace numeric ranges like "7-10" with "7 se 10" so TTS doesn't speak "minus"
+        t = re.sub(r"(?<=\d)\s*[-–—]\s*(?=\d)", " se ", t)
+
+        # 6. Strip internal triage prefixes and status lines
         t = re.sub(r"Tier\s+(Green|Yellow|Red)[^\n]*", "", t, flags=re.I)
         t = re.sub(r"(\b\d{3}\b)\s*\([^)]*\)", r"\1", t)
         t = re.sub(
@@ -212,24 +382,46 @@ class IndicTTSEngine:
             flags=re.I
         )
 
-        # Strip markdown syntax symbols
-        t = re.sub(r"[*_#`~>\[\]]", "", t)
+        # 7. Strip markdown syntax symbols and brackets
+        t = re.sub(r"[*_#`~>\[\]\{\}\|\^@$\\]", " ", t)
 
-        # Replace numeric ranges like "7-10" with "7 se 10" so TTS doesn't speak "minus"
-        t = re.sub(r"(?<=\d)\s*-\s*(?=\d)", " se ", t)
+        # 8. Strip standalone math operators like +, =, / that TTS speaks aloud as "plus", "slash", "equals"
+        t = re.sub(r"\s+[+=/]\s+", " ", t)
+        t = re.sub(r"[+=/]", " ", t)
 
-        # Replace inline and leading bullet dashes
-        t = re.sub(r"\s+[-•*]\s+", ". ", t)
-        t = re.sub(r"^\s*[-•*]\s+", "", t, flags=re.M)
+        # 9. Strip emojis and pictographs completely
+        emoji_pattern = re.compile(
+            "["
+            "\U0001F600-\U0001F64F"  # emoticons
+            "\U0001F300-\U0001F5FF"  # symbols & pictographs
+            "\U0001F680-\U0001F6FF"  # transport & map
+            "\U0001F1E0-\U0001F1FF"  # flags
+            "\U00002702-\U000027B0"
+            "\U000024C2-\U0001F251"
+            "\U0001F900-\U0001F9FF"  # supplemental symbols
+            "\U0001FA00-\U0001FA6F"  # chess, symbols
+            "\U0001FA70-\U0001FAFF"
+            "\U00002600-\U000026FF"  # misc symbols
+            "]+",
+            flags=re.UNICODE
+        )
+        t = emoji_pattern.sub(" ", t)
 
-        # Clean multiple newlines and spaces
+        # 10. Replace inline and leading bullet dashes
+        t = re.sub(r"\s+[-•*▪▫◦]\s+", ". ", t)
+        t = re.sub(r"^\s*[-•*▪▫◦]\s+", "", t, flags=re.M)
+
+        # 11. Clean multiple newlines and spaces
         t = re.sub(r"\n+", ". ", t)
         t = re.sub(r"\s+", " ", t).strip()
 
-        # Remove trailing or leading stray dots/commas
+        # 12. Clean repeated punctuation: "..", "...", "??", "?."
+        t = re.sub(r"\.{2,}", ".", t)
+        t = re.sub(r"\?{2,}", "?", t)
+        t = re.sub(r"[.,;:\s]+$", ".", t)
         t = re.sub(r"^\s*[.,;:\s]+", "", t)
-        t = re.sub(r"\s*\.\s*\.", ".", t)
-        return t
+
+        return t.strip()
 
 
     async def _synthesize_neural_indic(self, text: str, language: str = "hi", gender: str = "female") -> Optional[bytes]:
@@ -315,7 +507,9 @@ class IndicTTSEngine:
 
         return chunks or [text[:max_chunk_len]]
 
-    async def _synthesize_bhashini(self, text: str, language: str = "hi", gender: str = "female") -> Optional[Tuple[bytes, str]]:
+    async def _synthesize_bhashini(
+        self, text: str, language: str = "hi", gender: str = "female", model: Optional[str] = None
+    ) -> Optional[Tuple[bytes, str]]:
         """
         Synthesizes speech using Bhashini AI (MeitY / AI4Bharat) as the Primary Voice Engine.
         Authentic Indian national speech models with native regional cadence.
@@ -337,14 +531,20 @@ class IndicTTSEngine:
                         break
                 cleaned = shortened or cleaned[:380]
 
-            wav_bytes, content_type = await bhashini_client.synthesize(text=cleaned, language=language, gender=gender)
+            chosen_model = model or self.bhashini_model
+            wav_bytes, content_type = await bhashini_client.synthesize(
+                text=cleaned, language=language, gender=gender, model=chosen_model
+            )
             if wav_bytes and len(wav_bytes) > 200:
                 return wav_bytes, content_type
         except Exception as e:
             logger.warning(f"[Bhashini TTS Primary Error]: {e}. Falling back to Sarvam AI.")
         return None
 
-    async def _synthesize_sarvam(self, text: str, language: str = "hi", gender: str = "female") -> Optional[Tuple[bytes, str]]:
+    async def _synthesize_sarvam(
+        self, text: str, language: str = "hi", gender: str = "female",
+        model: Optional[str] = None, speaker: Optional[str] = None
+    ) -> Optional[Tuple[bytes, str]]:
         """
         Synthesizes speech using Sarvam AI's state-of-the-art Indic audio model (bulbul:v3).
         Delivers unparalleled natural fluency, emotional cadence, and authentic Indian accent.
@@ -356,7 +556,32 @@ class IndicTTSEngine:
         try:
             from app.core.sarvam_translate import get_sarvam_language_code
             target_lang = get_sarvam_language_code(language)
-            speaker = settings.SARVAM_FEMALE_SPEAKER if gender == "female" else settings.SARVAM_MALE_SPEAKER
+            chosen_model = (model or self.sarvam_model or "bulbul:v3").strip()
+
+            # Sarvam AI has officially deprecated bulbul:v2; always route through active bulbul:v3
+            if chosen_model == "bulbul:v2":
+                logger.info("[Sarvam AI TTS] Automatically upgrading deprecated 'bulbul:v2' to 'bulbul:v3'")
+                chosen_model = "bulbul:v3"
+
+            # Speaker mapping from deprecated v2 names to active v3 names
+            v2_to_v3 = {
+                "anushka": "ananya",
+                "manisha": "meera",
+                "vidya": "ritu",
+                "arya": "priya",
+                "abhilash": "shubh",
+                "karun": "arjun",
+                "hitesh": "rahul",
+            }
+            req_spk = (speaker or self.sarvam_speaker or "").lower().strip()
+            if req_spk in v2_to_v3:
+                req_spk = v2_to_v3[req_spk]
+
+            valid_v3_speakers = [
+                "meera", "ananya", "ritu", "priya", "kavya", "shreya", "neha", "pooja", "simran", "ishita",
+                "shubh", "arjun", "rahul", "aditya", "amit", "dev", "rohan", "ratan", "varun"
+            ]
+            chosen_speaker = req_spk if req_spk in valid_v3_speakers else ("meera" if gender == "female" else "shubh")
 
             url = "https://api.sarvam.ai/text-to-speech"
             headers = {
@@ -369,13 +594,12 @@ class IndicTTSEngine:
             payload = {
                 "inputs": valid_chunks,
                 "target_language_code": target_lang,
-                "speaker": speaker,
-                "pitch": 0,
-                "pace": 1.0,
-                "loudness": 1.1,
+                "speaker": chosen_speaker,
                 "speech_sample_rate": 22050,
                 "enable_preprocessing": True,
-                "model": settings.SARVAM_TTS_MODEL or "bulbul:v3",
+                "model": "bulbul:v3",
+                "pace": 1.0,
+                "temperature": 0.6,
             }
 
             client = self._get_client()
@@ -499,8 +723,11 @@ class IndicTTSEngine:
         if not clean_text:
             clean_text = "Namaste."
 
+        primary = self.get_primary_provider()
         streamed = False
-        if settings.TTS_PROVIDER == "sarvam" or os.getenv("SARVAM_API_KEY"):
+        has_sarvam = bool(settings.SARVAM_API_KEY or os.getenv("SARVAM_API_KEY", ""))
+
+        if primary == "sarvam" and has_sarvam:
             try:
                 async for chunk in self._synthesize_sarvam_stream(clean_text, language=language, gender=gender):
                     streamed = True
@@ -513,44 +740,74 @@ class IndicTTSEngine:
             audio_bytes, _ = await self.synthesize(clean_text, language=language, gender=gender)
             yield audio_bytes
 
-    async def synthesize(self, text: str, language: str = "hi", gender: str = "female") -> Tuple[bytes, str]:
+    async def synthesize(
+        self,
+        text: str,
+        language: str = "hi",
+        gender: str = "female",
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        speaker: Optional[str] = None,
+    ) -> Tuple[bytes, str]:
         """
         Main TTS entry point:
         1. Checks disk cache for instant playback.
-        2. Tries Sarvam AI (bulbul:v3) for ultra-fluent native Indian speech (primary).
-        3. Seamlessly falls back to high-fidelity Neural Indian Accent engine (edge-tts, sole fallback).
+        2. Routes to active Primary Voice Engine (Bhashini or Sarvam), or explicitly requested provider.
+        3. If primary fails, automatically uses the other as Fallback 1.
+        4. If both fail, seamlessly uses Neural Indian Accent engine (edge-tts, Fallback 2).
         Returns: (audio_bytes, content_type)
         """
-        clean_text = self._clean_for_speech(text)
+        clean_text = self._clean_for_speech(text, language=language)
         if not clean_text:
             clean_text = "Namaste."
 
-        cache_key = get_audio_cache_key(clean_text, language=language, gender=gender)
+        primary = (provider or self.get_primary_provider()).lower().strip()
+        effective_model = (model or (self.sarvam_model if primary == "sarvam" else self.bhashini_model) or "").strip()
+        effective_speaker = (speaker or (self.sarvam_speaker if primary == "sarvam" else self.bhashini_gender) or "").strip()
+
+        # Differentiated cache key guarantees never serving audio from another provider or model
+        cache_key = get_audio_cache_key(
+            clean_text,
+            language=language,
+            gender=gender,
+            provider=primary,
+            model=effective_model,
+            speaker=effective_speaker,
+        )
 
         # 0. Check in-memory LRU cache (< 5ms response time)
         mem_cached = self.memory_cache.get(cache_key)
         if mem_cached:
             return mem_cached[0], mem_cached[1]
 
+        has_sarvam = bool(settings.SARVAM_API_KEY or os.getenv("SARVAM_API_KEY", ""))
         lang_key = get_voice_lang_key(language)
         voice_name = INDIAN_VOICES.get(lang_key, {}).get(gender, "hi-IN-SwaraNeural")
-        if settings.TTS_PROVIDER == "bhashini" or bhashini_client.is_configured:
-            provider_tag = "bhashini"
-        elif settings.TTS_PROVIDER == "sarvam" or os.getenv("SARVAM_API_KEY"):
-            provider_tag = "sarvam"
-        else:
-            provider_tag = "neural"
-        
+
         # Check disk cache (either .wav or .mp3)
-        cache_wav = self._get_cache_path(clean_text, f"{provider_tag}_{voice_name}", ext="wav")
+        cache_wav = self._get_cache_path(
+            clean_text,
+            provider=primary,
+            model=effective_model,
+            speaker=effective_speaker,
+            lang_voice=voice_name,
+            ext="wav",
+        )
         if os.path.exists(cache_wav) and os.path.getsize(cache_wav) > 100:
-            self.last_provider = provider_tag
+            self.last_provider = primary
             with open(cache_wav, "rb") as f:
                 data = f.read()
                 self.memory_cache.set(cache_key, (data, "audio/wav"))
                 return data, "audio/wav"
 
-        cache_mp3 = self._get_cache_path(clean_text, f"{provider_tag}_{voice_name}", ext="mp3")
+        cache_mp3 = self._get_cache_path(
+            clean_text,
+            provider=primary,
+            model=effective_model,
+            speaker=effective_speaker,
+            lang_voice=voice_name,
+            ext="mp3",
+        )
         if os.path.exists(cache_mp3) and os.path.getsize(cache_mp3) > 100:
             self.last_provider = "neural_indic"
             with open(cache_mp3, "rb") as f:
@@ -561,26 +818,77 @@ class IndicTTSEngine:
         audio_data = None
         content_type = "audio/mpeg"
 
-        # 1. Primary: Bhashini AI (MeitY / AI4Bharat)
-        if settings.TTS_PROVIDER == "bhashini" or bhashini_client.is_configured:
-            bhashini_res = await self._synthesize_bhashini(clean_text, language=language, gender=gender)
-            if bhashini_res:
-                audio_data, content_type = bhashini_res
-                self.last_provider = "bhashini"
+        if primary == "sarvam":
+            # ── ROUTE A: SARVAM PRIMARY ──
+            # 1. Primary: Sarvam AI
+            if has_sarvam:
+                try:
+                    sarvam_res = await self._synthesize_sarvam(
+                        clean_text, language=language, gender=gender, model=effective_model, speaker=effective_speaker
+                    )
+                    if sarvam_res:
+                        audio_data, content_type = sarvam_res
+                        self.last_provider = "sarvam"
+                except Exception as e:
+                    logger.warning(f"[TTS Failover] Sarvam primary synthesis error: {e}. Engaging Bhashini fallback.")
 
-        # 2. Fallback 1: Sarvam AI (bulbul:v3)
-        if not audio_data and (settings.TTS_PROVIDER in ("sarvam", "bhashini") or os.getenv("SARVAM_API_KEY")):
-            sarvam_res = await self._synthesize_sarvam(clean_text, language=language, gender=gender)
-            if sarvam_res:
-                audio_data, content_type = sarvam_res
-                self.last_provider = "sarvam"
+            # 2. Automatic Fallback 1: Bhashini AI (MeitY / AI4Bharat)
+            if not audio_data and bhashini_client.is_configured:
+                try:
+                    bhashini_res = await self._synthesize_bhashini(
+                        clean_text, language=language, gender=gender, model=self.bhashini_model
+                    )
+                    if bhashini_res:
+                        audio_data, content_type = bhashini_res
+                        self.last_provider = "bhashini"
+                except Exception as e:
+                    logger.warning(f"[TTS Failover] Bhashini fallback error: {e}. Engaging Neural Indic fallback.")
 
-        # 3. Fallback 2: Neural Indian Accent engine (edge-tts)
-        if not audio_data:
-            audio_data = await self._synthesize_neural_indic(clean_text, language=language, gender=gender)
-            if audio_data:
-                content_type = "audio/mpeg"
-                self.last_provider = "neural_indic"
+            # 3. Automatic Fallback 2: Neural Indian Accent engine (edge-tts)
+            if not audio_data:
+                try:
+                    audio_data = await self._synthesize_neural_indic(clean_text, language=language, gender=gender)
+                    if audio_data:
+                        content_type = "audio/mpeg"
+                        self.last_provider = "neural_indic"
+                except Exception as e:
+                    logger.error(f"[TTS Failover] Neural Indic secondary fallback error: {e}")
+
+        else:
+            # ── ROUTE B: BHASHINI PRIMARY ──
+            # 1. Primary: Bhashini AI (MeitY / AI4Bharat)
+            if bhashini_client.is_configured:
+                try:
+                    bhashini_res = await self._synthesize_bhashini(
+                        clean_text, language=language, gender=gender, model=effective_model
+                    )
+                    if bhashini_res:
+                        audio_data, content_type = bhashini_res
+                        self.last_provider = "bhashini"
+                except Exception as e:
+                    logger.warning(f"[TTS Failover] Bhashini primary synthesis error: {e}. Engaging Sarvam fallback.")
+
+            # 2. Automatic Fallback 1: Sarvam AI
+            if not audio_data and has_sarvam:
+                try:
+                    sarvam_res = await self._synthesize_sarvam(
+                        clean_text, language=language, gender=gender, model=self.sarvam_model, speaker=self.sarvam_speaker
+                    )
+                    if sarvam_res:
+                        audio_data, content_type = sarvam_res
+                        self.last_provider = "sarvam"
+                except Exception as e:
+                    logger.warning(f"[TTS Failover] Sarvam fallback error: {e}. Engaging Neural Indic fallback.")
+
+            # 3. Automatic Fallback 2: Neural Indian Accent engine (edge-tts)
+            if not audio_data:
+                try:
+                    audio_data = await self._synthesize_neural_indic(clean_text, language=language, gender=gender)
+                    if audio_data:
+                        content_type = "audio/mpeg"
+                        self.last_provider = "neural_indic"
+                except Exception as e:
+                    logger.error(f"[TTS Failover] Neural Indic secondary fallback error: {e}")
 
         if audio_data:
             self.memory_cache.set(cache_key, (audio_data, content_type))
@@ -627,4 +935,14 @@ def get_shared_tts_engine() -> IndicTTSEngine:
     if _shared_tts_engine is None:
         _shared_tts_engine = IndicTTSEngine()
     return _shared_tts_engine
+
+
+def clean_text_for_speech(text: str, language: str = "hi") -> str:
+    """
+    Cleans markdown, technical headers, citations, emojis, and math operators
+    to produce fluid spoken prose.
+    Specifically prevents Bhashini from expanding '!' into mathematical 'factorial'.
+    """
+    engine = get_shared_tts_engine()
+    return engine._clean_for_speech(text, language=language)
 

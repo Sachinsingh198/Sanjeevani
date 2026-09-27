@@ -17,6 +17,7 @@ import SkeletonLoader from '../components/SkeletonLoader';
 import { listSessions } from '../lib/sessionStore';
 import { getChatHistory } from '../api/client';
 import { speakCue } from '../lib/audioSynthesizer';
+import PageVoiceGuide from '../components/PageVoiceGuide';
 import toast from 'react-hot-toast';
 
 const REMEDIES_STORAGE_KEY = 'sanjeevani_patient_remedies_v1';
@@ -174,7 +175,7 @@ export default function PatientDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-mist text-primary transition-colors duration-300 relative overflow-hidden pb-20">
+    <div className="min-h-screen bg-mist text-primary transition-colors duration-300 relative overflow-hidden pb-20 safe-bottom-nav">
       
       {/* Live Voice Room Modal */}
       {showLiveRoom && <LiveVoiceRoom onClose={() => setShowLiveRoom(false)} />}
@@ -187,7 +188,7 @@ export default function PatientDashboard() {
       <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 relative z-10">
 
         {/* ── TOP ICONIC NAVIGATION BAR (PAGE-INSIDE-PAGE TABS) ─────── */}
-        <div className="bg-white/95 dark:bg-card backdrop-blur-md rounded-2xl sm:rounded-3xl p-1.5 sm:p-2.5 border border-sage/20 dark:border-gray-800 shadow-xs flex items-center justify-between gap-1 overflow-x-auto">
+        <div className="bg-white/95 dark:bg-card backdrop-blur-md rounded-2xl sm:rounded-3xl p-1.5 sm:p-2.5 border border-sage/20 dark:border-gray-800 shadow-xs flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -226,6 +227,9 @@ export default function PatientDashboard() {
         {/* ── TAB 1: MAIN HUB (ICONIC & AUDIO-FIRST CENTERPIECE) ───── */}
         {activeTab === 'hub' && (
           <div className="space-y-4 sm:space-y-6 animate-fadeIn">
+
+            {/* ── Page Voice Guide Banner ── */}
+            <PageVoiceGuide pageKey="mitra" />
             
             {/* Welcoming Centerpiece Banner */}
             <div className="relative overflow-hidden bg-white/95 dark:bg-card backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-sage/20 dark:border-gray-800 shadow-sm text-center">

@@ -17,6 +17,8 @@ import {
   LogOut, Calendar, Layers, ShieldCheck, HeartPulse
 } from 'lucide-react';
 import SanjeevaniOrb from '../components/SanjeevaniOrb';
+import BackButton from '../components/BackButton';
+import VoiceProviderSwitcher from '../components/VoiceProviderSwitcher';
 
 const COMMON_CONDITIONS = [
   'Hypertension (हाई बीपी)',
@@ -25,6 +27,37 @@ const COMMON_CONDITIONS = [
   'Joint Pain / Arthritis (जोड़ों का दर्द)',
   'Thyroid (थायराइड)',
   'Acidity / GERD (गैस / पित्त)',
+];
+
+export const ALL_SUPPORTED_LANGUAGES = [
+  // Hill & Core Languages
+  { code: 'hi', name: 'हिन्दी (Hindi)', native: 'हिन्दी', category: 'उत्तराखंड व मुख्य' },
+  { code: 'garh', name: 'गढ़वाली (Garhwali)', native: 'गढ़वाळी', category: 'उत्तराखंड व मुख्य' },
+  { code: 'ku', name: 'कुमाऊँनी (Kumaoni)', native: 'कुमाऊँनी', category: 'उत्तराखंड व मुख्य' },
+  { code: 'en', name: 'English (English)', native: 'English', category: 'उत्तराखंड व मुख्य' },
+
+  // All 22 Scheduled Indic Languages (Bhashini & Sarvam)
+  { code: 'as', name: 'असमिया (Assamese)', native: 'অসমীয়া', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'bn', name: 'बांग्ला (Bengali)', native: 'বাংলা', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'brx', name: 'बोडो (Bodo)', native: 'बड़ो', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'doi', name: 'डोगरी (Dogri)', native: 'डोगरी', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'gu', name: 'गुजराती (Gujarati)', native: 'ગુજરાતી', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'kn', name: 'कन्नड़ (Kannada)', native: 'ಕನ್ನಡ', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'ks', name: 'कश्मीरी (Kashmiri)', native: 'कॉशुर / كٲشُر', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'kok', name: 'कोंकणी (Konkani)', native: 'कोंकणी', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'mai', name: 'मैथिली (Maithili)', native: 'मैथिली', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'ml', name: 'मलयालम (Malayalam)', native: 'മലയാളം', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'mni', name: 'मणिपुरी / मैतेई (Manipuri)', native: 'মৈতৈলোন্', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'mr', name: 'मराठी (Marathi)', native: 'मराठी', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'ne', name: 'नेपाली (Nepali)', native: 'नेपाली', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'or', name: 'ओड़िया (Odia)', native: 'ଓଡ଼ିଆ', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'pa', name: 'पंजाबी (Punjabi)', native: 'ਪੰਜਾਬੀ', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'sa', name: 'संस्कृत (Sanskrit)', native: 'संस्कृतम्', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'sat', name: 'संथाली (Santali)', native: 'संताली / ᱥᱟᱱᱛᱟᱲᱤ', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'sd', name: 'सिंधी (Sindhi)', native: 'सिन्धी / سنڌي', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'ta', name: 'तमिल (Tamil)', native: 'தமிழ்', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'te', name: 'तेलुगु (Telugu)', native: 'తెలుగు', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'ur', name: 'उर्दू (Urdu)', native: 'اردو', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
 ];
 
 export default function Profile() {
@@ -308,7 +341,13 @@ export default function Profile() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8 animate-fadeIn">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-8 animate-fadeIn">
+      {/* ── Universal Back Button for Mobile & Desktop ─────────────────── */}
+      <div className="flex items-center justify-between pb-1">
+        <BackButton fallback="/mitra" label="वापस जाएं (Back)" />
+        <span className="text-xs text-muted font-medium hidden sm:inline">खाता सेटिंग्स • Profile & Preferences</span>
+      </div>
+
       {/* ── 1. Hero Header & Identity Card ──────────────────────────────── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-warm-indigo via-warm-indigo/95 to-primary p-6 sm:p-8 text-white shadow-xl border border-white/10">
         <div className="absolute -right-12 -top-12 opacity-15 pointer-events-none">
@@ -395,54 +434,54 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* ── 2. Navigation Tabs ────────────────────────────────────────────── */}
-      <div className="flex overflow-x-auto no-scrollbar gap-2 p-1.5 bg-gray-100 dark:bg-warm-indigo/30 rounded-2xl border border-gray-200 dark:border-white/10">
+      {/* ── 2. Navigation Tabs (Responsive grid on mobile, no horizontal scrolling!) ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-1.5 bg-gray-100 dark:bg-warm-indigo/30 rounded-2xl border border-gray-200 dark:border-white/10">
         <button
           onClick={() => setActiveTab('personal')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+          className={`flex items-center justify-center sm:justify-start gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             activeTab === 'personal'
               ? 'bg-sage text-white shadow-xs'
               : 'text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5'
           }`}
         >
-          <User className="w-4 h-4" />
-          <span>व्यक्तिगत प्रोफाइल (Personal)</span>
+          <User className="w-4 h-4 shrink-0" />
+          <span className="truncate">व्यक्तिगत (Personal)</span>
         </button>
 
         <button
           onClick={() => setActiveTab('health_or_role')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+          className={`flex items-center justify-center sm:justify-start gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             activeTab === 'health_or_role'
               ? 'bg-sage text-white shadow-xs'
               : 'text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5'
           }`}
         >
-          {isAsha ? <Building2 className="w-4 h-4" /> : <HeartPulse className="w-4 h-4" />}
-          <span>{isAsha ? 'ASHA कार्य क्षेत्र (Field Info)' : 'स्वास्थ्य विवरण (Health & ABHA)'}</span>
+          {isAsha ? <Building2 className="w-4 h-4 shrink-0" /> : <HeartPulse className="w-4 h-4 shrink-0" />}
+          <span className="truncate">{isAsha ? 'कार्य क्षेत्र (Field)' : 'स्वास्थ्य (Health)'}</span>
         </button>
 
         <button
           onClick={() => setActiveTab('activity')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+          className={`flex items-center justify-center sm:justify-start gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             activeTab === 'activity'
               ? 'bg-sage text-white shadow-xs'
               : 'text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5'
           }`}
         >
-          <Activity className="w-4 h-4" />
-          <span>गतिविधि इतिहास (Activity Logs)</span>
+          <Activity className="w-4 h-4 shrink-0" />
+          <span className="truncate">गतिविधि (Activity)</span>
         </button>
 
         <button
           onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+          className={`flex items-center justify-center sm:justify-start gap-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             activeTab === 'settings'
               ? 'bg-sage text-white shadow-xs'
               : 'text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5'
           }`}
         >
-          <KeyRound className="w-4 h-4" />
-          <span>सुरक्षा व सेटिंग्स (Security & Preferences)</span>
+          <KeyRound className="w-4 h-4 shrink-0" />
+          <span className="truncate">सेटिंग्स (Settings)</span>
         </button>
       </div>
 
@@ -938,7 +977,12 @@ export default function Profile() {
 
       {/* ── TAB 4: Security & Preferences ── */}
       {activeTab === 'settings' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          {/* 1. Primary AI Voice Engine (Bhashini MeitY vs Sarvam AI) */}
+          <VoiceProviderSwitcher mode="settings-card" />
+
+          {/* 2. Security & Preferences Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Change Password Card */}
           <form onSubmit={handlePasswordChange} className="bg-white dark:bg-warm-indigo/40 rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-white/10 shadow-sm space-y-5">
             <div className="border-b border-gray-200 dark:border-white/10 pb-3">
@@ -1027,10 +1071,20 @@ export default function Profile() {
                 }}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/15 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage"
               >
-                <option value="hi">हिन्दी (Hindi)</option>
-                <option value="garh">गढ़वाली (Garhwali)</option>
-                <option value="ku">कुमाऊँनी (Kumaoni)</option>
-                <option value="en">English (English)</option>
+                <optgroup label="उत्तराखंड क्षेत्रीय व मुख्य भाषाएँ (Hill & Regional)">
+                  {ALL_SUPPORTED_LANGUAGES.filter((l) => l.category.includes('उत्तराखंड')).map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="संविधान की 22 आधिकारिक भाषाएँ (All 22 Official Languages — Sarvam & Bhashini)">
+                  {ALL_SUPPORTED_LANGUAGES.filter((l) => l.category.includes('संविधान')).map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.native} — {l.name}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
 
@@ -1096,6 +1150,7 @@ export default function Profile() {
             </div>
           </div>
         </div>
+      </div>
       )}
     </div>
   );

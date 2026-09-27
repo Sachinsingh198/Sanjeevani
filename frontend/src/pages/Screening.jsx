@@ -10,6 +10,8 @@ import { speakText } from '../api/voiceClient';
 import { runEdgeDiagnosticScreening, downloadAbdmFhirBundle } from '../api/screeningClient';
 import { runClientDiagnosticScreening } from '../lib/offlineScreeningEngine';
 import { queueOfflineScreening } from '../lib/offlineSyncManager';
+import PageVoiceGuide from '../components/PageVoiceGuide';
+import BackButton from '../components/BackButton';
 
 export default function Screening() {
   const [screeningType, setScreeningType] = useState('ANEMIA');
@@ -342,8 +344,14 @@ export default function Screening() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-primary">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-primary pb-20 safe-bottom-nav">
       
+      {/* ── Universal Back Button for Mobile & Desktop ─────────────────── */}
+      <div className="flex items-center justify-between pb-3 max-w-4xl mx-auto">
+        <BackButton fallback="/mitra" label="वापस जाएं (Back)" />
+        <span className="text-xs text-muted font-medium hidden sm:inline">डिजिटल स्वास्थ्य जांच • AI Screening</span>
+      </div>
+
       {/* ── Header ────────────────────────────────────────────── */}
       <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
         <div className="inline-flex items-center gap-2 bg-sage/10 dark:bg-sage/20 text-sage dark:text-booti-glow px-4 py-1.5 rounded-full text-xs font-bold mb-3 border border-sage/20">
@@ -357,6 +365,9 @@ export default function Screening() {
           Bina suee chubhaaye, camera photo se Khoon Ki Kami (Anemia), Peeliya (Jaundice), Mukh Rog (Leukoplakia) aur Twacha ke lakshan pehchanein.
         </p>
       </div>
+
+      {/* ── Page Voice Guide Banner ───────────────────────────────── */}
+      <PageVoiceGuide pageKey="screening" className="mb-6 max-w-4xl mx-auto" />
 
       {/* ── 4-Modality Tab Bar ──────────────────────────────────── */}
       <div className="max-w-4xl mx-auto mb-6 grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">

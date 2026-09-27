@@ -10,7 +10,7 @@ def test_tts_health_reports_status():
     res = client.get("/voice/tts/health")
     assert res.status_code == 200
     body = res.json()
-    assert body["provider"] in ("sarvam", "neural")
+    assert body["provider"] in ("sarvam", "bhashini", "neural", "neural_indic")
     assert body["status"] == "ready"
 
 

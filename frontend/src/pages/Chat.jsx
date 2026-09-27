@@ -16,6 +16,7 @@ import SanjeevaniOrb from '../components/SanjeevaniOrb';
 import SymptomChips from '../components/SymptomChips';
 import AccessibilityBar from '../components/AccessibilityBar';
 import StructuredBotMessage from '../components/StructuredBotMessage';
+import BackButton from '../components/BackButton';
 import {
   sendChatMessage, streamChatMessage, getOrCreateConversationId, resetConversationId, setStoredConversationId, getConversationDetails, checkBackendHealth,
 } from '../api/client';
@@ -665,19 +666,23 @@ export default function Chat() {
       <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden">
 
         {/* ── Top Bar (permanently pinned) ──────────────────── */}
-        <div className="shrink-0 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-white/95 dark:bg-[#131E2B]/95 backdrop-blur-md border-b border-sage/12 dark:border-gray-800 z-10">
+        <div className="shrink-0 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 bg-white/95 dark:bg-[#131E2B]/95 backdrop-blur-md border-b border-sage/12 dark:border-gray-800 z-10 overflow-visible">
+
+          {/* Universal Back Button */}
+          <BackButton fallback="/mitra" showLabel={false} className="shrink-0" />
 
           {/* Sidebar toggle */}
           <button onClick={() => setSidebarOpen(o => !o)}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-sage hover:bg-sage/8 transition-all shrink-0">
+            className="p-1.5 rounded-lg text-gray-400 hover:text-sage hover:bg-sage/8 transition-all shrink-0"
+            title={sidebarOpen ? 'Hide history' : 'Show history'}>
             {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
 
           {/* ── Orb + Identity — centred like Gemini ──── */}
           <div className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group" onClick={toggleListening} title={isListening ? 'Sunna band karein' : 'Mic — tap to speak'}>
-            <div className="relative shrink-0">
-              <div className="hidden sm:block"><SanjeevaniOrb state={orbState} size={38} /></div>
-              <div className="sm:hidden"><SanjeevaniOrb state={orbState} size={30} /></div>
+            <div className="relative shrink-0 overflow-visible py-0.5">
+              <div className="hidden sm:block overflow-visible"><SanjeevaniOrb state={orbState} size={38} /></div>
+              <div className="sm:hidden overflow-visible"><SanjeevaniOrb state={orbState} size={32} /></div>
               {/* Mic badge */}
               <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 border-white dark:border-[#131E2B] flex items-center justify-center transition-all ${
                 isListening ? 'bg-rose-soft animate-pulse' : 'bg-sage group-hover:bg-gold-warm'
@@ -863,17 +868,17 @@ export default function Chat() {
               <span className="text-[9px] sm:text-[10px] text-gray-400 truncate">Sthitiyan: {knownConditions.join(', ')}</span>
             </div>
           )}
-          <form onSubmit={handleSend} className="max-w-2xl mx-auto flex items-end gap-1.5 sm:gap-2 p-2 sm:p-3">
+          <form onSubmit={handleSend} className="max-w-2xl mx-auto flex items-end gap-1.5 sm:gap-2 px-2 py-1.5 sm:p-2.5">
             {/* Mic */}
             <button type="button" onClick={toggleListening}
-              className={`shrink-0 w-11 h-11 sm:w-12 sm:h-12 mb-0.5 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all ${
+              className={`shrink-0 w-9 h-9 sm:w-11 sm:h-11 mb-0.5 rounded-xl flex items-center justify-center transition-all ${
                 isListening
-                  ? 'bg-rose-soft text-white animate-pulse ring-4 ring-[#B85042]/20 shadow-md'
-                  : 'bg-sage/10 border-2 border-sage/30 text-sage dark:text-booti-glow hover:bg-sage/15'
+                  ? 'bg-rose-soft text-white animate-pulse ring-3 ring-[#B85042]/20 shadow-md'
+                  : 'bg-sage/10 border border-sage/30 text-sage dark:text-booti-glow hover:bg-sage/15'
               }`}
               aria-label="Voice input"
             >
-              {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              {isListening ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
 
             {/* Manual EN/HI STT Voice Toggle */}
@@ -885,30 +890,30 @@ export default function Chat() {
                 setSttLangOverride(next);
                 toast.success(`Voice language: ${next === 'en-IN' ? 'English (en-IN)' : 'Hindi (hi-IN)'}`);
               }}
-              className="shrink-0 h-9 sm:h-10 mb-0.5 px-2 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1A2538] text-[10px] sm:text-[11px] font-bold text-sage dark:text-booti-glow hover:bg-sage/10 transition-all flex items-center justify-center"
+              className="shrink-0 h-9 sm:h-11 mb-0.5 px-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1A2538] text-[10px] sm:text-xs font-bold text-sage dark:text-booti-glow hover:bg-sage/10 transition-all flex items-center justify-center"
               title="Voice Language Toggle (EN/HI)"
             >
               {(sttLangOverride || (detectedLanguage === 'english' ? 'en-IN' : 'hi-IN')) === 'en-IN' ? 'EN' : 'HI'}
             </button>
 
-            {/* Expandable Textarea */}
+            {/* Compact Responsive Textarea */}
             <textarea
               ref={inputRef}
               rows={1}
               value={inputText}
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isListening ? 'Sun raha hoon… 🎙️' : 'Apne lakshan batayein ya likhein… (Shift+Enter for new line)'}
+              placeholder={isListening ? 'सुन रहा हूँ… 🎙️' : 'लक्षण लिखें या बोलें...'}
               disabled={loading}
-              className="flex-1 min-w-0 bg-mist dark:bg-[#0F1521] border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base text-primary focus:outline-none focus:ring-2 focus:ring-sage/50 disabled:opacity-60 placeholder-gray-400 dark:placeholder-gray-600 resize-none overflow-y-auto leading-relaxed transition-[height] duration-75 ease-out"
+              className="flex-1 min-w-0 bg-mist dark:bg-[#0F1521] border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage/50 disabled:opacity-60 placeholder-gray-400 dark:placeholder-gray-500 resize-none overflow-y-auto leading-normal min-h-[36px] max-h-[110px] transition-[height] duration-75 ease-out"
             />
 
             {/* Send */}
             <button type="submit" disabled={!inputText.trim() || loading}
-              className="shrink-0 w-11 h-11 sm:w-12 sm:h-12 mb-0.5 bg-sage hover:bg-sage/90 text-white rounded-xl sm:rounded-2xl flex items-center justify-center transition-all disabled:opacity-40 shadow-sm"
+              className="shrink-0 w-9 h-9 sm:w-11 sm:h-11 mb-0.5 bg-sage hover:bg-sage/90 text-white rounded-xl flex items-center justify-center transition-all disabled:opacity-40 shadow-sm"
               aria-label="Send"
             >
-              {loading ? <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <Send className="w-4 h-4 sm:w-5 sm:h-5" />}
+              {loading ? <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </button>
           </form>
         </div>

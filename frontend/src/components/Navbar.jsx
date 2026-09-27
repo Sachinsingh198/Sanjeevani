@@ -60,13 +60,13 @@ export default function Navbar() {
     : '/mitra';
 
   return (
-    <header className="sticky top-0 z-40 bg-mist/95 dark:bg-mist/95 backdrop-blur-md border-b border-warm-indigo/10 dark:border-white/10 px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 transition-all select-none">
+    <header className="sticky top-0 z-40 bg-mist/95 dark:bg-mist/95 backdrop-blur-md border-b border-warm-indigo/10 dark:border-white/10 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 transition-all select-none">
       <div className="max-w-6xl mx-auto flex items-center justify-between">
 
         {/* Brand */}
-        <Link to={brandHomePath} className="flex items-center gap-2 sm:gap-3 group focus:outline-none focus:ring-2 focus:ring-sage rounded-xl p-0.5 sm:p-1">
-          <div className="hidden sm:block"><SanjeevaniOrb state="idle" size={38} /></div>
-          <div className="sm:hidden"><SanjeevaniOrb state="idle" size={30} /></div>
+        <Link to={brandHomePath} className="flex items-center gap-2 sm:gap-3 group focus:outline-none focus:ring-2 focus:ring-sage rounded-xl p-1 sm:p-1.5 overflow-visible">
+          <div className="hidden sm:block overflow-visible py-0.5"><SanjeevaniOrb state="idle" size={38} /></div>
+          <div className="sm:hidden overflow-visible py-0.5"><SanjeevaniOrb state="idle" size={32} /></div>
           <div>
             <div className="font-serif text-lg sm:text-xl font-bold tracking-tight text-primary flex items-center gap-1 sm:gap-1.5">
               <span>Sanjeevani</span>
@@ -336,6 +336,11 @@ export default function Navbar() {
       {/* Mobile Drawer */}
       {mobileOpen && (
         <div className="md:hidden mt-3 pt-3 border-t border-gray-200 dark:border-gray-800 space-y-2 animate-fadeIn">
+          {/* Mobile Accessibility & Language Bar */}
+          <div className="bg-sage/10 dark:bg-card/60 p-2.5 rounded-2xl flex items-center justify-between gap-2 mb-2 border border-sage/20">
+            <span className="text-[11px] font-bold text-primary">भाषा व फॉन्ट (Lang & Size):</span>
+            <AccessibilityBar />
+          </div>
           {!isAuthenticated ? (
             <>
               <Link to="/" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-primary hover:bg-black/5">

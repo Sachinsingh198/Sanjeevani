@@ -8,6 +8,7 @@ import Navbar from './components/Navbar';
 import OfflineBanner from './components/OfflineBanner';
 import SanjeevaniOrb from './components/SanjeevaniOrb';
 import ErrorBoundary from './components/ErrorBoundary';
+import MobileBottomNav from './components/MobileBottomNav';
 
 // Public pages (lazy loaded)
 const Home = React.lazy(() => import('./pages/Home'));
@@ -43,11 +44,11 @@ export default function App() {
       <LanguageProvider>
         <AuthProvider>
         <div className={`flex flex-col bg-mist text-primary transition-colors duration-300 ${
-          isChatPage ? 'h-screen overflow-hidden' : 'min-h-screen'
+          isChatPage ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'
         }`}>
           <OfflineBanner />
           <Navbar />
-          <main className={isChatPage ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 animate-fadeIn'}>
+          <main className={isChatPage ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 animate-fadeIn safe-bottom-nav'}>
             <ErrorBoundary>
               <React.Suspense fallback={<RouteLoadingFallback />}>
                 <Routes>
@@ -70,13 +71,23 @@ export default function App() {
                 </ProtectedRoute>
               } />
 
-              {/* Unified Wellness Studio (आरोग्यशाला) */}
+              {/* Unified Wellness Studio (आरोग्यशाला) & Dedicated Sub-Pages */}
               <Route path="/mitra/wellness" element={
                 <ProtectedRoute allowedRoles={['patient']}>
                   <WellnessStudio />
                 </ProtectedRoute>
               } />
+              <Route path="/mitra/wellness/:section" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <WellnessStudio />
+                </ProtectedRoute>
+              } />
               <Route path="/patient/wellness" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <WellnessStudio />
+                </ProtectedRoute>
+              } />
+              <Route path="/patient/wellness/:section" element={
                 <ProtectedRoute allowedRoles={['patient']}>
                   <WellnessStudio />
                 </ProtectedRoute>
@@ -104,8 +115,13 @@ export default function App() {
                 </ProtectedRoute>
               } />
 
-              {/* Village Companion (Sanjeevani Saathi) */}
+              {/* Village Companion (Sanjeevani Saathi) & Dedicated Sub-Pages */}
               <Route path="/mitra/saathi" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <Companion />
+                </ProtectedRoute>
+              } />
+              <Route path="/mitra/saathi/:subpage" element={
                 <ProtectedRoute allowedRoles={['patient']}>
                   <Companion />
                 </ProtectedRoute>
@@ -115,12 +131,27 @@ export default function App() {
                   <Companion />
                 </ProtectedRoute>
               } />
+              <Route path="/patient/saathi/:subpage" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <Companion />
+                </ProtectedRoute>
+              } />
               <Route path="/mitra/companion" element={
                 <ProtectedRoute allowedRoles={['patient']}>
                   <Companion />
                 </ProtectedRoute>
               } />
+              <Route path="/mitra/companion/:subpage" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <Companion />
+                </ProtectedRoute>
+              } />
               <Route path="/patient/companion" element={
+                <ProtectedRoute allowedRoles={['patient']}>
+                  <Companion />
+                </ProtectedRoute>
+              } />
+              <Route path="/patient/companion/:subpage" element={
                 <ProtectedRoute allowedRoles={['patient']}>
                   <Companion />
                 </ProtectedRoute>
@@ -175,8 +206,9 @@ export default function App() {
           </React.Suspense>
         </ErrorBoundary>
       </main>
+      <MobileBottomNav />
 
-          {!isChatPage && (
+      {!isChatPage && (
             <footer className="bg-warm-indigo text-white/70 text-xs py-6 px-4 text-center border-t border-white/10 mt-auto">
               <p>© 2026 Project Sanjeevani • Institute of Technology, Gopeshwar (Chamoli) • VMSB UTU</p>
             </footer>

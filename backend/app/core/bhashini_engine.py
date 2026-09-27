@@ -295,14 +295,111 @@ class BhashiniVoiceEngine:
 
         return "\n\n".join(matched_exemplars[:2])
 
+    def clean_text_for_speech(self, text: str, target_lang: str = "hi") -> str:
+        """
+        Sanitizes text for TTS engines (Bhashini / Sarvam / Neural Indic).
+        Crucially prevents Bhashini from pronouncing '!' as 'factorial',
+        '*' as 'asterisk', '#' as 'hash', '@' as 'at the rate', etc.
+        Strips emojis, markdown syntax, URLs, bullet points, brackets, and arithmetic symbols.
+        """
+        if not text:
+            return ""
+
+        t = text
+
+        # 1. Normalize unicode hyphens and quotes
+        t = t.replace('\u2011', ' ').replace('\u2013', ' ').replace('\u2014', ' ')
+        t = t.replace('“', ' ').replace('”', ' ').replace('‘', ' ').replace('’', ' ')
+        t = t.replace('"', ' ').replace("'", ' ')
+
+        # 2. CRITICAL: Remove exclamation marks - Bhashini expands '!' into mathematical "factorial"
+        t = re.sub(r"[!！]+", ". ", t)
+
+        # 3. Strip URLs, links and email addresses
+        t = re.sub(r"https?://\S+", "", t)
+        t = re.sub(r"\b[\w.-]+@[\w.-]+\.\w+\b", "", t)
+        t = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", t)
+
+        # 4. Handle percentage numbers: "95%" -> "95 प्रतिशत" (Hindi) or "95 percent" (English)
+        if target_lang and str(target_lang).lower().startswith("en"):
+            t = re.sub(r"(\d+)\s*%", r"\1 percent", t)
+        else:
+            t = re.sub(r"(\d+)\s*%", r"\1 प्रतिशत", t)
+
+        # 5. Handle numeric ranges: "7-10" -> "7 se 10" so TTS does not pronounce "minus"
+        t = re.sub(r"(?<=\d)\s*[-–—]\s*(?=\d)", " se ", t)
+
+        # 6. Remove internal clinical triage tags and headers
+        t = re.sub(r"Tier\s+(Green|Yellow|Red)[^\n]*", "", t, flags=re.I)
+        t = re.sub(r"(\b\d{3}\b)\s*\([^)]*\)", r"\1", t)
+        t = re.sub(
+            r"(Aapki Takleef|Sambhavit Jaanch\s*\(Diagnosis\)|Nuskha|Kaise Banayein|Kab Tak Lein|Dhyan Rakhein|Safety Verified|Ayurvedic Rationale)[:\s]*",
+            "",
+            t,
+            flags=re.I
+        )
+
+        # 7. Strip Markdown syntax symbols (*, _, #, ~, `, >, [, ], {, }, |, \, ^, @, $)
+        t = re.sub(r"[*_#`~>\[\]\{\}\|\^@$\\]", " ", t)
+
+        # 8. Strip standalone math operators like +, =, / that TTS speaks aloud as "plus", "slash", "equals"
+        t = re.sub(r"\s+[+=/]\s+", " ", t)
+        t = re.sub(r"[+=/]", " ", t)
+
+        # 9. Strip emojis and pictographs completely
+        emoji_pattern = re.compile(
+            "["
+            "\U0001F600-\U0001F64F"  # emoticons
+            "\U0001F300-\U0001F5FF"  # symbols & pictographs
+            "\U0001F680-\U0001F6FF"  # transport & map
+            "\U0001F1E0-\U0001F1FF"  # flags
+            "\U00002702-\U000027B0"
+            "\U000024C2-\U0001F251"
+            "\U0001F900-\U0001F9FF"  # supplemental symbols
+            "\U0001FA00-\U0001FA6F"  # chess, symbols
+            "\U0001FA70-\U0001FAFF"
+            "\U00002600-\U000026FF"  # misc symbols like ⚠️, ☕, ⚡
+            "]+",
+            flags=re.UNICODE
+        )
+        t = emoji_pattern.sub(" ", t)
+
+        # 10. Replace bullet markers
+        t = re.sub(r"\s+[-•*▪▫◦]\s+", ". ", t)
+        t = re.sub(r"^\s*[-•*▪▫◦]\s+", "", t, flags=re.M)
+
+        # 11. Normalize sentence boundaries and whitespace
+        t = re.sub(r"\n+", ". ", t)
+        t = re.sub(r"\s+", " ", t).strip()
+
+        # 12. Clean repeated punctuation: "..", "...", "??", "?."
+        t = re.sub(r"\.{2,}", ".", t)
+        t = re.sub(r"\?{2,}", "?", t)
+        t = re.sub(r"[.,;:\s]+$", ".", t)
+        t = re.sub(r"^\s*[.,;:\s]+", "", t)
+
+        return t.strip()
+
     def format_tts_payload(self, text: str, target_lang: str = "hi") -> Dict[str, str]:
         """
-        Cleans markdown syntax (*, #, _, `) from LLM output to prevent TTS synthesis artifacts.
+        Cleans markdown syntax, exclamation marks, and artifacts from LLM output for fluid speech.
         """
-        clean_text = re.sub(r"[*_#`]", "", text).strip()
-        clean_text = re.sub(r"\n+", " ", clean_text)
+        clean_text = self.clean_text_for_speech(text, target_lang=target_lang)
         return {
             "clean_text": clean_text,
             "language": target_lang,
             "sample_rate": "16000"
         }
+
+
+_default_voice_engine: Optional[BhashiniVoiceEngine] = None
+
+def get_default_voice_engine() -> BhashiniVoiceEngine:
+    global _default_voice_engine
+    if _default_voice_engine is None:
+        _default_voice_engine = BhashiniVoiceEngine()
+    return _default_voice_engine
+
+def clean_text_for_speech(text: str, language: str = "hi") -> str:
+    """Module-level function to sanitize text for TTS to eliminate factorial and emoji artifacts."""
+    return get_default_voice_engine().clean_text_for_speech(text, target_lang=language)

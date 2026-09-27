@@ -2,7 +2,10 @@ import base64
 from fastapi import APIRouter, HTTPException, UploadFile, File, Request
 from fastapi.responses import StreamingResponse
 from app.config import settings
-from app.schemas.voice_schemas import TTSRequest, TTSResponse, STTResponse
+from app.schemas.voice_schemas import (
+    TTSRequest, TTSResponse, STTResponse,
+    VoiceProviderConfigRequest, VoiceProviderConfigResponse
+)
 from app.core.bhashini_engine import BhashiniVoiceEngine
 from app.core.tts_engine import IndicTTSEngine, get_shared_tts_engine
 from app.core.limiter import limiter
@@ -28,12 +31,15 @@ async def _synthesize_fallback(clean_text: str, req: TTSRequest) -> TTSResponse:
             text=clean_text,
             language=req.language,
             gender=req.gender,
+            provider=req.provider,
+            model=req.model,
+            speaker=req.speaker,
         )
         fmt = "wav" if "wav" in content_type else "mp3"
         provider = getattr(
             _indic_tts_engine,
             "last_provider",
-            settings.TTS_PROVIDER,
+            req.provider or _indic_tts_engine.get_primary_provider(),
         )
         return TTSResponse(
             audio_base64=base64.b64encode(audio_bytes).decode("utf-8"),
@@ -48,14 +54,42 @@ async def _synthesize_fallback(clean_text: str, req: TTSRequest) -> TTSResponse:
         )
 
 
+@router.get("/provider", response_model=VoiceProviderConfigResponse)
+async def get_voice_provider():
+    """
+    Returns the currently active primary voice provider,
+    its automatic first fallback, model/speaker selections, and backend readiness.
+    """
+    return _indic_tts_engine.get_provider_status()
+
+
+@router.post("/provider", response_model=VoiceProviderConfigResponse)
+async def set_voice_provider(req: VoiceProviderConfigRequest):
+    """
+    Switches the primary voice provider between 'bhashini' and 'sarvam',
+    and allows customizing models and speakers for each provider.
+    """
+    try:
+        return _indic_tts_engine.set_provider_config(
+            provider=req.provider,
+            sarvam_model=req.sarvam_model,
+            sarvam_speaker=req.sarvam_speaker,
+            bhashini_model=req.bhashini_model,
+            bhashini_gender=req.bhashini_gender,
+            clear_cache=req.clear_cache,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/tts", response_model=TTSResponse)
 @limiter.limit("60/minute")
 async def synthesize_speech(request: Request, req: TTSRequest):
     """
-    Converts text to natural speech using Sarvam AI (bulbul:v3)
-    with Neural Indic (Edge TTS) fallback.
+    Converts text to natural speech using active Primary Voice Provider (Bhashini / Sarvam)
+    with automatic mutual fallback and Neural Indic (Edge TTS) offline fallback.
     """
-    clean = _voice_engine.format_tts_payload(req.text)["clean_text"]
+    clean = _voice_engine.format_tts_payload(req.text, target_lang=req.language)["clean_text"]
     return await _synthesize_fallback(clean, req)
 
 
@@ -63,10 +97,9 @@ async def synthesize_speech(request: Request, req: TTSRequest):
 @limiter.limit("60/minute")
 async def synthesize_speech_stream(request: Request, req: TTSRequest):
     """
-    Streams synthesized audio chunks directly from Sarvam AI for low-latency playback.
-    Falls back seamlessly to neural Indic synthesis if unconfigured.
+    Streams synthesized audio chunks directly from active provider for low-latency playback.
     """
-    clean = _voice_engine.format_tts_payload(req.text)["clean_text"]
+    clean = _voice_engine.format_tts_payload(req.text, target_lang=req.language)["clean_text"]
     if not clean:
         clean = "Namaste."
 
@@ -79,7 +112,7 @@ async def synthesize_speech_stream(request: Request, req: TTSRequest):
         media_type="audio/mpeg",
         headers={
             "Cache-Control": "no-cache",
-            "X-TTS-Provider": getattr(_indic_tts_engine, "last_provider", "sarvam_stream"),
+            "X-TTS-Provider": getattr(_indic_tts_engine, "last_provider", _indic_tts_engine.get_primary_provider()),
         },
     )
 
@@ -100,9 +133,8 @@ async def transcribe_speech(
     file: UploadFile = File(...),
 ):
     """
-    Transcribes spoken audio into text.
-    Primary: Bhashini ASR (AI4Bharat Conformer model)
-    Fallback: Sarvam AI (Saaras v3)
+    Transcribes spoken audio into text using active Primary Voice Provider
+    with automatic mutual fallback.
     Handles code-mixed Hindi, Garhwali, and Indian-accented English.
     """
     try:
@@ -111,60 +143,85 @@ async def transcribe_speech(
             raise HTTPException(status_code=400, detail="Empty audio file received.")
 
         content_type = file.content_type or "audio/wav"
+        primary = _indic_tts_engine.get_primary_provider()
 
-        # 1. Primary: Bhashini ASR
-        if bhashini_client.is_configured:
-            try:
-                bhashini_res = await bhashini_client.transcribe(
-                    audio_bytes=audio_bytes,
-                    content_type=content_type,
-                    language="hi",
-                )
-                if bhashini_res.get("transcript"):
-                    return STTResponse(
-                        transcript=bhashini_res.get("transcript", ""),
-                        language_code=bhashini_res.get("language_code", "hi"),
-                        confidence=bhashini_res.get("confidence", 0.95),
-                        provider="bhashini",
+        if primary == "sarvam":
+            # 1. Primary: Sarvam STT
+            if sarvam_stt_client.is_configured:
+                try:
+                    result = await sarvam_stt_client.transcribe_audio(
+                        audio_bytes=audio_bytes,
+                        content_type=content_type,
+                        model="saaras:v3",
+                        mode="codemix",
                     )
-            except Exception as bhashini_err:
-                logger.warning(f"[Bhashini ASR Primary Error]: {bhashini_err}. Falling back to Sarvam AI STT.")
+                    return STTResponse(
+                        transcript=result.get("transcript", ""),
+                        language_code=result.get("language_code", "hi-IN"),
+                        confidence=result.get("language_probability"),
+                        provider="sarvam",
+                    )
+                except Exception as sarvam_err:
+                    logger.warning(f"[Sarvam STT Primary Error]: {sarvam_err}. Falling back to Bhashini ASR.")
 
-        # 2. Fallback: Sarvam AI STT
-        if sarvam_stt_client.is_configured:
-            try:
-                result = await sarvam_stt_client.transcribe_audio(
-                    audio_bytes=audio_bytes,
-                    content_type=content_type,
-                    model="saaras:v3",
-                    mode="codemix",
-                )
-                return STTResponse(
-                    transcript=result.get("transcript", ""),
-                    language_code=result.get("language_code", "hi-IN"),
-                    confidence=result.get("language_probability"),
-                    provider="sarvam",
-                )
-            except SarvamNotConfiguredError as cfg_err:
-                raise HTTPException(
-                    status_code=503,
-                    detail=f"Sarvam STT is not configured: {cfg_err}",
-                )
-            except SarvamSTTRequestError as req_err:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Sarvam STT request failed: {req_err}",
-                )
-            except Exception as sarvam_err:
-                logger.error(f"[Sarvam STT Fallback Error]: {sarvam_err}")
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Speech recognition fallback (Sarvam) also failed: {sarvam_err}",
-                )
+            # 2. Automatic Fallback 1: Bhashini ASR
+            if bhashini_client.is_configured:
+                try:
+                    bhashini_res = await bhashini_client.transcribe(
+                        audio_bytes=audio_bytes,
+                        content_type=content_type,
+                        language="hi",
+                    )
+                    if bhashini_res.get("transcript"):
+                        return STTResponse(
+                            transcript=bhashini_res.get("transcript", ""),
+                            language_code=bhashini_res.get("language_code", "hi"),
+                            confidence=bhashini_res.get("confidence", 0.95),
+                            provider="bhashini",
+                        )
+                except Exception as bhashini_err:
+                    logger.error(f"[Bhashini ASR Fallback Error]: {bhashini_err}")
+
+        else:
+            # 1. Primary: Bhashini ASR
+            if bhashini_client.is_configured:
+                try:
+                    bhashini_res = await bhashini_client.transcribe(
+                        audio_bytes=audio_bytes,
+                        content_type=content_type,
+                        language="hi",
+                    )
+                    if bhashini_res.get("transcript"):
+                        return STTResponse(
+                            transcript=bhashini_res.get("transcript", ""),
+                            language_code=bhashini_res.get("language_code", "hi"),
+                            confidence=bhashini_res.get("confidence", 0.95),
+                            provider="bhashini",
+                        )
+                except Exception as bhashini_err:
+                    logger.warning(f"[Bhashini ASR Primary Error]: {bhashini_err}. Falling back to Sarvam AI STT.")
+
+            # 2. Automatic Fallback 1: Sarvam AI STT
+            if sarvam_stt_client.is_configured:
+                try:
+                    result = await sarvam_stt_client.transcribe_audio(
+                        audio_bytes=audio_bytes,
+                        content_type=content_type,
+                        model="saaras:v3",
+                        mode="codemix",
+                    )
+                    return STTResponse(
+                        transcript=result.get("transcript", ""),
+                        language_code=result.get("language_code", "hi-IN"),
+                        confidence=result.get("language_probability"),
+                        provider="sarvam",
+                    )
+                except Exception as sarvam_err:
+                    logger.error(f"[Sarvam STT Fallback Error]: {sarvam_err}")
 
         raise HTTPException(
             status_code=503,
-            detail="Neither Bhashini nor Sarvam STT is configured or available.",
+            detail="Neither primary nor fallback speech recognition service is available.",
         )
     except HTTPException:
         raise
@@ -178,11 +235,4 @@ async def transcribe_speech(
 @router.get("/tts/health")
 async def tts_health():
     """Lets the frontend (or health checks) verify TTS provider readiness."""
-    return {
-        "status": "ready",
-        "provider": settings.TTS_PROVIDER,
-        "primary": "bhashini",
-        "fallback": "sarvam",
-        "bhashini_configured": bhashini_client.is_configured,
-        "sarvam_stt_configured": sarvam_stt_client.is_configured,
-    }
+    return _indic_tts_engine.get_provider_status()

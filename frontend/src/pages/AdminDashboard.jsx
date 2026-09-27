@@ -10,6 +10,8 @@ import {
   Download, Radio, MapPin, AlertTriangle, CheckCircle2, Megaphone, KeyRound, Server, Eye, Bell
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PageVoiceGuide from '../components/PageVoiceGuide';
+import BackButton from '../components/BackButton';
 
 const ADVISORY_STORAGE_KEY = 'sanjeevani_district_advisory';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -251,8 +253,13 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-mist dark:bg-card text-primary transition-colors duration-300">
+    <div className="min-h-screen bg-mist dark:bg-card text-primary transition-colors duration-300 pb-20 safe-bottom-nav">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        {/* ── Universal Back Button for Mobile & Desktop ─────────────────── */}
+        <div className="flex items-center justify-between pb-1">
+          <BackButton fallback="/mitra" label="वापस जाएं (Back)" />
+          <span className="text-xs text-muted font-medium hidden sm:inline">प्रशासक डैशबोर्ड • Governance</span>
+        </div>
 
         {/* ── Mode C Admin Header ───────────────────────────────────── */}
         <div className="bg-warm-indigo dark:bg-warm-indigo text-white p-6 sm:p-8 rounded-3xl shadow-md border border-gray-800">
@@ -288,6 +295,9 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* ── Page Voice Guide Banner ───────────────────────────────── */}
+        <PageVoiceGuide pageKey="admin" />
 
         {/* ── Real-Time Red-Tier Emergency Alerts ─────────────────── */}
         {alerts.filter(a => !a.acknowledged).length > 0 && (

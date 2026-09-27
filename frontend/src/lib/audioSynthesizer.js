@@ -1,14 +1,14 @@
 /**
  * Web Audio API Synthesizer for Himalayan Soundscapes, Tibetan Singing Bowls,
- * Meditation Chimes, and Ambient Nature Drones.
+ * Temple Bells, Meditation Chimes, and Ambient Nature Drones.
  * 100% client-side, zero external MP3 dependencies, works completely offline.
  */
 
-import { speakText } from '../api/voiceClient';
+import { speakText, cleanTextForTTS } from '../api/voiceClient';
 
 let audioCtx = null;
 
-function getAudioContext() {
+export function getAudioContext() {
   if (!audioCtx) {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (AudioContextClass) {
@@ -74,6 +74,41 @@ export function playSingingBowl(freq = 216, duration = 4.5) {
 }
 
 /**
+ * Play a resonant Himalayan brass temple bell
+ */
+export function playTempleBell(freq = 852, duration = 4.0) {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.001, now);
+    masterGain.gain.exponentialRampToValueAtTime(0.32, now + 0.02);
+    masterGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    masterGain.connect(ctx.destination);
+
+    // High clarity metallic bell frequencies
+    [freq, freq * 1.5, freq * 2.05, freq * 3.12].forEach((f, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = idx === 0 ? 'sine' : 'triangle';
+      osc.frequency.setValueAtTime(f, now);
+
+      gain.gain.setValueAtTime(0.5 / (idx + 1), now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration * (0.8 / (idx + 1)));
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start(now);
+      osc.stop(now + duration);
+    });
+  } catch (err) {
+    console.warn('Temple bell audio error:', err);
+  }
+}
+
+/**
  * Play a peaceful Meditation Chime (Ding-sha bell)
  */
 export function playMeditationChime(type = 'start') {
@@ -103,12 +138,72 @@ export function playMeditationChime(type = 'start') {
 }
 
 /**
- * Ambient Himalayan Nature Stream & Flute Generator
+ * Gentle water droplet sound for water tracking & tea brewing
+ */
+export function playWaterDrop() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    // Frequency sweeps upward rapidly like a physical droplet
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(1400, now + 0.08);
+
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.12);
+  } catch (err) {
+    console.warn('Water drop audio error:', err);
+  }
+}
+
+/**
+ * Gentle haptic bass pulse for marma stimulation and breath transitions
+ */
+export function playHapticPulse() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(110, now);
+    osc.frequency.exponentialRampToValueAtTime(55, now + 0.18);
+
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.22);
+  } catch (err) {
+    console.warn('Pulse audio error:', err);
+  }
+}
+
+/**
+ * Multi-layer Ambient Himalayan Soundscape Engine
  */
 class AmbientSoundscapeEngine {
   constructor() {
     this.activeTrack = null;
     this.nodes = [];
+    this.layers = {};
     this.isPlaying = false;
   }
 
@@ -126,11 +221,14 @@ class AmbientSoundscapeEngine {
       this._startOmDrone(ctx);
     } else if (trackName === 'bowls') {
       this._startSingingBowlLoop(ctx);
+    } else if (trackName === 'bells') {
+      this._startTempleBellLoop(ctx);
+    } else if (trackName === 'wind') {
+      this._startWind(ctx);
     }
   }
 
-  _startRiver(ctx) {
-    // Pink noise buffer with gentle filtering for mountain stream sound
+  _startRiver(ctx, vol = 0.18) {
     const bufferSize = ctx.sampleRate * 2;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -157,7 +255,7 @@ class AmbientSoundscapeEngine {
     filter.frequency.value = 650;
 
     const gain = ctx.createGain();
-    gain.gain.value = 0.18;
+    gain.gain.value = vol;
 
     noise.connect(filter);
     filter.connect(gain);
@@ -167,12 +265,38 @@ class AmbientSoundscapeEngine {
     this.nodes.push(noise, gain);
   }
 
-  _startOmDrone(ctx) {
-    // 136.1 Hz (Cosmic Om frequency) with subharmonic warmth
+  _startWind(ctx, vol = 0.14) {
+    const bufferSize = ctx.sampleRate * 2;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.03;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 350;
+    filter.Q.value = 1.2;
+
+    const gain = ctx.createGain();
+    gain.gain.value = vol;
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    noise.start();
+    this.nodes.push(noise, gain);
+  }
+
+  _startOmDrone(ctx, vol = 0.12) {
     const baseFreq = 136.1;
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 1.5);
+    gain.gain.exponentialRampToValueAtTime(vol, ctx.currentTime + 1.5);
     gain.connect(ctx.destination);
 
     [1, 2, 3].forEach((mult) => {
@@ -188,7 +312,6 @@ class AmbientSoundscapeEngine {
   }
 
   _startSingingBowlLoop(ctx) {
-    // Plays periodic singing bowls
     this.bowlInterval = setInterval(() => {
       if (this.isPlaying) {
         const freqs = [192, 216, 256, 288];
@@ -200,6 +323,16 @@ class AmbientSoundscapeEngine {
     playSingingBowl(216, 6.0);
   }
 
+  _startTempleBellLoop(ctx) {
+    this.bellInterval = setInterval(() => {
+      if (this.isPlaying) {
+        playTempleBell(852, 4.5);
+      }
+    }, 6000);
+
+    playTempleBell(852, 4.5);
+  }
+
   stop() {
     this.isPlaying = false;
     this.activeTrack = null;
@@ -207,13 +340,15 @@ class AmbientSoundscapeEngine {
       clearInterval(this.bowlInterval);
       this.bowlInterval = null;
     }
+    if (this.bellInterval) {
+      clearInterval(this.bellInterval);
+      this.bellInterval = null;
+    }
     this.nodes.forEach((node) => {
       try {
         if (node.stop) node.stop();
         if (node.disconnect) node.disconnect();
-      } catch {
-        // ignore
-      }
+      } catch {}
     });
     this.nodes = [];
   }
@@ -222,25 +357,57 @@ class AmbientSoundscapeEngine {
 export const ambientSoundscape = new AmbientSoundscapeEngine();
 
 let currentCueStop = null;
+let cueEndListeners = new Set();
 
 /**
- * Speech synthesis helper in Hindi or English using authentic Indian Neural voice
+ * Stop any currently playing audio cue or voice guide.
  */
-export function speakCue(text, lang = 'hi-IN') {
-  if (!text) return;
+export function stopCue() {
   if (currentCueStop) {
     try { currentCueStop(); } catch {}
     currentCueStop = null;
   }
-  const clean = text.replace(/[*_#`~>\[\]]/g, '').trim();
-  if (!clean) return;
+  cueEndListeners.forEach((fn) => {
+    try { fn(); } catch {}
+  });
+  cueEndListeners.clear();
+}
+
+export function isCueSpeaking() {
+  return currentCueStop !== null;
+}
+
+/**
+ * Speech synthesis helper in Hindi or English using authentic Indian Neural voice.
+ * Cleans exclamation marks, emojis, math symbols, and markdown to prevent
+ * Bhashini or FastPitch from pronouncing 'factorial' or robotic artifacts.
+ */
+export function speakCue(text, lang = 'hi-IN', { onStart, onEnd } = {}) {
+  if (!text) return () => {};
+  stopCue();
 
   const isHindi = lang.startsWith('hi') || lang.includes('hi') || lang === 'garhwali';
+  const clean = cleanTextForTTS(text, isHindi ? 'hi' : 'en');
+  if (!clean) return () => {};
+
+  if (onEnd) {
+    cueEndListeners.add(onEnd);
+  }
+
   currentCueStop = speakText(clean, {
     language: isHindi ? 'hi' : 'en',
     gender: 'female',
+    onStart: () => {
+      onStart?.();
+    },
     onEnd: () => {
       currentCueStop = null;
+      if (onEnd) {
+        cueEndListeners.delete(onEnd);
+        onEnd();
+      }
     },
   });
+
+  return stopCue;
 }
