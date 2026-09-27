@@ -142,7 +142,11 @@ async def transcribe_speech(
         if not audio_bytes:
             raise HTTPException(status_code=400, detail="Empty audio file received.")
 
-        content_type = file.content_type or "audio/wav"
+        raw_ct = file.content_type or "audio/wav"
+        clean_content_type = raw_ct.split(";")[0].strip().lower()
+        if not clean_content_type or clean_content_type == "application/octet-stream":
+            clean_content_type = "audio/webm" if (file.filename and file.filename.endswith(".webm")) else "audio/wav"
+
         primary = _indic_tts_engine.get_primary_provider()
 
         if primary == "sarvam":
@@ -151,7 +155,7 @@ async def transcribe_speech(
                 try:
                     result = await sarvam_stt_client.transcribe_audio(
                         audio_bytes=audio_bytes,
-                        content_type=content_type,
+                        content_type=clean_content_type,
                         model="saaras:v3",
                         mode="codemix",
                     )
@@ -169,7 +173,7 @@ async def transcribe_speech(
                 try:
                     bhashini_res = await bhashini_client.transcribe(
                         audio_bytes=audio_bytes,
-                        content_type=content_type,
+                        content_type=clean_content_type,
                         language="hi",
                     )
                     if bhashini_res.get("transcript"):
@@ -188,7 +192,7 @@ async def transcribe_speech(
                 try:
                     bhashini_res = await bhashini_client.transcribe(
                         audio_bytes=audio_bytes,
-                        content_type=content_type,
+                        content_type=clean_content_type,
                         language="hi",
                     )
                     if bhashini_res.get("transcript"):
@@ -206,7 +210,7 @@ async def transcribe_speech(
                 try:
                     result = await sarvam_stt_client.transcribe_audio(
                         audio_bytes=audio_bytes,
-                        content_type=content_type,
+                        content_type=clean_content_type,
                         model="saaras:v3",
                         mode="codemix",
                     )

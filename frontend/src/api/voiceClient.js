@@ -48,16 +48,19 @@ export const transcribeAudio = async (blob) => {
   }
 
   const formData = new FormData();
-  const mimeType = blob.type || 'audio/webm';
-  const ext = mimeType.includes('webm')
+  const rawMime = blob.type || 'audio/webm';
+  const cleanMime = rawMime.split(';')[0].trim().toLowerCase() || 'audio/webm';
+  const ext = cleanMime.includes('webm')
     ? 'webm'
-    : mimeType.includes('mp4') || mimeType.includes('m4a')
+    : cleanMime.includes('mp4') || cleanMime.includes('m4a')
     ? 'm4a'
-    : mimeType.includes('ogg')
+    : cleanMime.includes('ogg')
     ? 'ogg'
     : 'wav';
 
-  formData.append('file', blob, `voice_input.${ext}`);
+  // Ensure blob has clean mime type without codec parameters
+  const cleanBlob = blob.type === cleanMime ? blob : blob.slice(0, blob.size, cleanMime);
+  formData.append('file', cleanBlob, `voice_input.${ext}`);
 
   const res = await voiceApi.post('/voice/stt', formData, {
     headers: {

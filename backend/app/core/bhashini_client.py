@@ -171,12 +171,13 @@ class BhashiniClient:
         if not service_id:
             raise BhashiniRequestError("Could not resolve Bhashini ASR service ID.")
 
+        clean_ct = (content_type or "audio/wav").split(";")[0].strip().lower()
         audio_format = "wav"
-        if "webm" in content_type:
+        if "webm" in clean_ct:
             audio_format = "webm"
-        elif "mp4" in content_type or "m4a" in content_type:
+        elif "mp4" in clean_ct or "m4a" in clean_ct:
             audio_format = "m4a"
-        elif "mp3" in content_type:
+        elif "mp3" in clean_ct:
             audio_format = "mp3"
 
         audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
