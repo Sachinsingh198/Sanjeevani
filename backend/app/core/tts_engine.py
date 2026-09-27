@@ -379,7 +379,17 @@ class IndicTTSEngine:
             }
 
             client = self._get_client()
-            res = await client.post(url, json=payload, headers=headers)
+            from app.core.resilience import retry_async
+            res = await retry_async(
+                client.post,
+                url,
+                json=payload,
+                headers=headers,
+                max_retries=2,
+                base_delay=0.4,
+                max_delay=2.5,
+                caller_name="Sarvam_TTS",
+            )
             if res.status_code == 200:
                 data = res.json()
                 audios = data.get("audios", [])

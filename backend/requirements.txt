@@ -53,4 +53,7 @@ httpx
 sentry-sdk[fastapi]
 
 # Rate Limiting & Protection
-slowapi
+slowapi
+
+# PDF Generation
+reportlab

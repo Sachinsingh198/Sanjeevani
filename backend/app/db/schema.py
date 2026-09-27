@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    MetaData, Table, Column, Integer, String, Text, DateTime, func, Index, text
+    MetaData, Table, Column, Integer, String, Text, DateTime, Boolean, func, Index, text
 )
 from app.core.logger import logger
 
@@ -32,6 +32,7 @@ users_table = Table(
     Column("abha_id", String(100), nullable=True),
     Column("avatar_url", String(500), nullable=True),
     Column("settings_json", Text, nullable=True),
+    Column("token_version", Integer, nullable=False, server_default="0"),
     Column("created_at", DateTime, nullable=False, server_default=func.now()),
 )
 
@@ -107,6 +108,69 @@ activity_logs_table = Table(
     Column("created_at", DateTime, nullable=False, server_default=func.now(), index=True),
 )
 
+# 7. Consultations Table (Full Clinical Triage Turn & Encounter Log)
+consultations_table = Table(
+    "consultations",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", Integer, nullable=True, index=True),
+    Column("conversation_id", String(255), nullable=False, index=True),
+    Column("tier", String(50), nullable=True, index=True),
+    Column("flags", Text, nullable=True),
+    Column("remedies_served", Text, nullable=True),
+    Column("detected_language", String(50), nullable=True),
+    Column("turn_count", Integer, nullable=True, default=1),
+    Column("dialogue_phase", String(50), nullable=True),
+    Column("raw_user_message", Text, nullable=True),
+    Column("final_reply_text", Text, nullable=True),
+    Column("created_at", DateTime, nullable=False, server_default=func.now(), index=True),
+)
+
+# 8. Patient Data Access Audit Logs Table (Compliance & Privacy Governance)
+access_logs_table = Table(
+    "access_logs",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", Integer, nullable=True, index=True),
+    Column("user_role", String(50), nullable=True, index=True),
+    Column("resource_type", String(100), nullable=False, index=True),
+    Column("resource_id", String(255), nullable=True),
+    Column("action", String(50), nullable=False, default="READ"),
+    Column("ip_address", String(100), nullable=True),
+    Column("created_at", DateTime, nullable=False, server_default=func.now(), index=True),
+)
+
+# 9. Consultation Feedback Table (Phase 3 Intelligence Loop)
+consultation_feedback_table = Table(
+    "consultation_feedback",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("conversation_id", String(255), nullable=False, index=True),
+    Column("user_id", Integer, nullable=True, index=True),
+    Column("turn_index", Integer, nullable=True, default=1),
+    Column("helpful", Boolean, nullable=False),
+    Column("note", Text, nullable=True),
+    Column("created_at", DateTime, nullable=False, server_default=func.now(), index=True),
+)
+
+# 10. Emergency Alerts Table (Phase 4 Real-time Red-Tier Dispatch to ASHA & Admin)
+emergency_alerts_table = Table(
+    "emergency_alerts",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("conversation_id", String(255), nullable=False, index=True),
+    Column("user_id", Integer, nullable=True, index=True),
+    Column("patient_name", String(255), nullable=True),
+    Column("village", String(255), nullable=True, index=True),
+    Column("phone", String(50), nullable=True),
+    Column("symptoms", Text, nullable=True),
+    Column("clinical_flags", Text, nullable=True),
+    Column("tier", String(50), nullable=False, default="Red"),
+    Column("acknowledged", Boolean, nullable=False, default=False),
+    Column("acknowledged_by", String(255), nullable=True),
+    Column("created_at", DateTime, nullable=False, server_default=func.now(), index=True),
+)
+
 
 def _migrate_columns_safely(engine):
     """
@@ -129,6 +193,7 @@ def _migrate_columns_safely(engine):
         ("abha_id", "VARCHAR(100)"),
         ("avatar_url", "VARCHAR(500)"),
         ("settings_json", "TEXT"),
+        ("token_version", "INTEGER DEFAULT 0"),
     ]
 
     try:
@@ -163,7 +228,7 @@ def create_all_tables(engine):
     if engine.dialect.name == "postgresql":
         try:
             with engine.begin() as conn:
-                for table_name in ["users", "otps", "analytics_events", "activity_logs"]:
+                for table_name in ["users", "otps", "analytics_events", "activity_logs", "consultations", "access_logs", "consultation_feedback"]:
                     conn.execute(text(f"""
                         SELECT setval(
                             pg_get_serial_sequence('{table_name}', 'id'),

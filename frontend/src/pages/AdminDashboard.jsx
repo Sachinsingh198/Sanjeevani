@@ -3,10 +3,11 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { fetchAllUsers, createUser, deleteUser, fetchAdminStats, resetPassword, fetchAnalyticsSummary, fetchAdminActivity } from '../api/authClient';
 import TierDistributionChart from '../components/TierDistributionChart';
+import SkeletonLoader from '../components/SkeletonLoader';
 import {
   Users, UserPlus, Trash2, Activity, BarChart3, Shield,
   RefreshCw, Search, ChevronDown, HeartPulse, Leaf,
-  Download, Radio, MapPin, AlertTriangle, CheckCircle2, Megaphone, KeyRound, Server, Eye
+  Download, Radio, MapPin, AlertTriangle, CheckCircle2, Megaphone, KeyRound, Server, Eye, Bell
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -22,6 +23,7 @@ export default function AdminDashboard() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [alerts, setAlerts] = useState([]);
 
   // District Health Advisory Broadcast
   const [advisory, setAdvisory] = useState(() => {
@@ -66,9 +68,38 @@ export default function AdminDashboard() {
     }
   }, [auditActionFilter, auditRoleFilter, auditSearch]);
 
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('sanjeevani_token') || localStorage.getItem('sanjeevani_access_token');
+      const res = await axios.get(`${API_BASE}/admin/alerts`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        timeout: 5000,
+      });
+      setAlerts(res.data || []);
+    } catch {}
+  }, []);
+
+  const handleAcknowledgeAlert = async (alertId) => {
+    const prev = [...alerts];
+    setAlerts(cur => cur.map(a => a.id === alertId ? { ...a, acknowledged: true } : a));
+    try {
+      const token = localStorage.getItem('sanjeevani_token') || localStorage.getItem('sanjeevani_access_token');
+      await axios.post(`${API_BASE}/admin/alerts/${alertId}/acknowledge`, {}, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      toast.success('Emergency alert marked as handled. 🚑');
+    } catch (e) {
+      setAlerts(prev);
+      toast.error('Could not update alert status. Please check connection.');
+    }
+  };
+
   useEffect(() => {
     loadData();
-  }, []);
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 15000);
+    return () => clearInterval(interval);
+  }, [fetchAlerts]);
 
   useEffect(() => {
     loadAuditTrail();
@@ -258,6 +289,55 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* ── Real-Time Red-Tier Emergency Alerts ─────────────────── */}
+        {alerts.filter(a => !a.acknowledged).length > 0 && (
+          <div className="bg-rose-500/10 border-2 border-rose-500/40 rounded-3xl p-5 sm:p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center font-bold text-sm shadow-md animate-bounce">
+                  🚨
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-serif font-bold text-base text-rose-600 dark:text-rose-400">
+                      Live Red-Tier Emergency Dispatch ({alerts.filter(a => !a.acknowledged).length})
+                    </h3>
+                    <span className="text-[10px] bg-rose-500 text-white font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                      Urgent Action
+                    </span>
+                  </div>
+                  <p className="text-xs text-rose-700/80 dark:text-rose-300/80 mt-0.5">
+                    Critical clinical distress reported across Himalayan sectors. 108 EMS coordination required.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {alerts.filter(a => !a.acknowledged).slice(0, 5).map((alert) => (
+                <div key={alert.id} className="bg-white/80 dark:bg-card/80 p-4 rounded-2xl border border-rose-200 dark:border-rose-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-primary">{alert.patient_name || 'Citizen Patient'}</span>
+                      <span className="text-xs text-muted dark:text-muted">• {alert.village || 'Chamoli Ward'}</span>
+                      {alert.phone && <span className="text-xs font-mono text-muted dark:text-muted">• 📞 {alert.phone}</span>}
+                    </div>
+                    <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+                      Lakshan: {alert.symptoms}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleAcknowledgeAlert(alert.id)}
+                    className="touch-target bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs self-start sm:self-auto cursor-pointer"
+                  >
+                    Acknowledge / संभाल लिया ✓
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── District Health Advisory Broadcast Banner ───────────── */}
         <div className="bg-white dark:bg-warm-indigo rounded-3xl p-5 sm:p-6 border border-gold-warm/30 shadow-xs">
           <div className="flex items-start justify-between gap-4">
@@ -316,13 +396,15 @@ export default function AdminDashboard() {
         </div>
 
         {/* ── Stats Grid ───────────────────────────────────────────── */}
-        {stats && (
+        {stats ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard icon={Users} label="Total Registered Users" value={stats.total_users} colorClass="bg-sage/15 text-sage" />
             <StatCard icon={HeartPulse} label="Patients / Mitra" value={stats.patients} colorClass="bg-sage/15 text-sage" />
             <StatCard icon={Users} label="ASHA Workers" value={stats.asha_workers} colorClass="bg-gold-warm/15 text-gold-warm" />
             <StatCard icon={Activity} label="New Ingest (7 Days)" value={stats.recent_registrations_7d} colorClass="bg-warm-indigo/15 text-warm-indigo" />
           </div>
+        ) : (
+          <SkeletonLoader variant="card" count={4} />
         )}
 
         {/* ── 30-Day Aggregate Triage Analytics Card (Additive, Zero PII) ── */}
@@ -498,7 +580,7 @@ export default function AdminDashboard() {
 
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {loadingUsers ? (
-              <div className="p-8 text-center text-sm text-gray-400 animate-pulse">Loading users...</div>
+              <SkeletonLoader variant="table-row" count={5} />
             ) : filteredUsers.length === 0 ? (
               <div className="p-8 text-center text-sm text-gray-400">No users found</div>
             ) : (
@@ -612,10 +694,7 @@ export default function AdminDashboard() {
 
           <div className="divide-y divide-gray-100 dark:divide-gray-800 max-h-[420px] overflow-y-auto">
             {loadingAudit ? (
-              <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted text-xs">
-                <RefreshCw className="w-5 h-5 animate-spin text-sage" />
-                <span>Loading system audit logs...</span>
-              </div>
+              <SkeletonLoader variant="table-row" count={4} />
             ) : auditActivities.length === 0 ? (
               <div className="py-12 text-center text-muted text-xs">
                 <Activity className="w-6 h-6 mx-auto mb-1 text-muted/40" />

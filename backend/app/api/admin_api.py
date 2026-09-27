@@ -3,21 +3,38 @@ Admin API routes: user management, analytics, and ASHA worker oversight.
 All endpoints require the 'admin' role.
 Migrated to SQLAlchemy Core abstraction layer.
 """
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy import select, insert, delete, func
 from app.schemas.auth_schemas import RegisterRequest, UserProfile
 from app.core.auth import hash_password, require_role
-from app.db import get_db_connection, users_table, conversation_index_table, row_to_dict, rows_to_dicts
+from app.db import (
+    get_db_connection,
+    users_table,
+    conversation_index_table,
+    consultations_table,
+    row_to_dict,
+    rows_to_dicts,
+)
 from app.core.analytics import get_analytics_summary
+from app.core.access_logger import log_access
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 @router.get("/users", response_model=List[UserProfile])
-async def list_all_users(admin: Dict[str, Any] = Depends(require_role("admin"))):
+async def list_all_users(request: Request, admin: Dict[str, Any] = Depends(require_role("admin"))):
     """List all registered users across all roles."""
+    client_ip = request.client.host if request and request.client else None
+    log_access(
+        resource_type="user_list",
+        user=admin,
+        resource_id=None,
+        action="READ",
+        ip_address=client_ip,
+    )
+
     with get_db_connection() as conn:
         stmt = select(users_table).order_by(users_table.c.created_at.desc())
         rows = conn.execute(stmt).fetchall()
@@ -73,8 +90,17 @@ async def delete_user(user_id: int, admin: Dict[str, Any] = Depends(require_role
 
 
 @router.get("/stats")
-async def get_system_stats(admin: Dict[str, Any] = Depends(require_role("admin"))):
+async def get_system_stats(request: Request, admin: Dict[str, Any] = Depends(require_role("admin"))):
     """Admin-only: Returns platform analytics and system health overview."""
+    client_ip = request.client.host if request and request.client else None
+    log_access(
+        resource_type="admin_stats",
+        user=admin,
+        resource_id=None,
+        action="READ",
+        ip_address=client_ip,
+    )
+
     cutoff_7d = datetime.now(timezone.utc) - timedelta(days=7)
 
     with get_db_connection() as conn:
@@ -106,13 +132,21 @@ async def get_system_stats(admin: Dict[str, Any] = Depends(require_role("admin")
         village_rows = conn.execute(stmt_villages).fetchall()
         village_distribution = [{"village": row.village, "count": row.count} for row in village_rows]
 
-        # Real triage distribution aggregate query from conversation_index_table
+        # Real triage distribution aggregate query from consultations_table (falling back to conversation_index_table)
         stmt_tiers = (
-            select(conversation_index_table.c.tier, func.count().label("count"))
-            .where(conversation_index_table.c.tier.is_not(None))
-            .group_by(conversation_index_table.c.tier)
+            select(consultations_table.c.tier, func.count().label("count"))
+            .where(consultations_table.c.tier.is_not(None))
+            .group_by(consultations_table.c.tier)
         )
         tier_rows = conn.execute(stmt_tiers).fetchall()
+        if not tier_rows:
+            stmt_tiers = (
+                select(conversation_index_table.c.tier, func.count().label("count"))
+                .where(conversation_index_table.c.tier.is_not(None))
+                .group_by(conversation_index_table.c.tier)
+            )
+            tier_rows = conn.execute(stmt_tiers).fetchall()
+
         tier_map = {str(row.tier).lower(): row.count for row in tier_rows}
         triage_dist = {
             "red": tier_map.get("red", 0),
@@ -120,11 +154,21 @@ async def get_system_stats(admin: Dict[str, Any] = Depends(require_role("admin")
             "green": tier_map.get("green", 0),
         }
 
+        # Real total consultations count
+        total_consultations = conn.execute(
+            select(func.count(func.distinct(consultations_table.c.conversation_id)))
+        ).scalar() or 0
+        if total_consultations == 0:
+            total_consultations = conn.execute(
+                select(func.count()).select_from(conversation_index_table)
+            ).scalar() or 0
+
         return {
             "total_users": total_users,
             "patients": patients,
             "asha_workers": asha_workers,
             "admins": admins,
+            "total_consultations": total_consultations,
             "recent_registrations_7d": recent,
             "village_distribution": village_distribution,
             "triage_distribution": triage_dist,
@@ -132,6 +176,7 @@ async def get_system_stats(admin: Dict[str, Any] = Depends(require_role("admin")
             "qdrant_status": "active",
             "llm_provider": "groq",
         }
+
 
 
 @router.get("/analytics/summary")
@@ -144,3 +189,28 @@ async def get_admin_analytics_summary(
     Returns consultation lifecycle events (started, concluded, emergencies, remedies) grouped by day, tier, and language.
     """
     return get_analytics_summary(days=days)
+
+
+@router.get("/alerts")
+async def get_admin_alerts(
+    village: Optional[str] = None,
+    only_unacknowledged: bool = False,
+    limit: int = 100,
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """Admin-only: Returns system-wide Red-tier emergency triage alerts."""
+    from app.core.alerts_service import get_emergency_alerts
+    return get_emergency_alerts(village=village, only_unacknowledged=only_unacknowledged, limit=limit)
+
+
+@router.post("/alerts/{alert_id}/acknowledge")
+async def acknowledge_admin_alert(
+    alert_id: int,
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """Admin-only: Acknowledges emergency alert."""
+    from app.core.alerts_service import acknowledge_emergency_alert
+    success = acknowledge_emergency_alert(alert_id, acknowledged_by=f"Admin: {admin.get('name', 'Admin')}")
+    if not success:
+        raise HTTPException(status_code=404, detail="Alert not found or already acknowledged.")
+    return {"success": True, "alert_id": alert_id, "acknowledged": True}

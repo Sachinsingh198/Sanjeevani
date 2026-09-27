@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Clock, Trash2 } from 'lucide-react';
-import { listSessions, clearSessionHistory } from '../lib/sessionStore';
+import SkeletonLoader from './SkeletonLoader';
+import { listSessions, fetchServerSessions, clearSessionHistory } from '../lib/sessionStore';
 
 /**
  * SessionHistoryDrawer — new feature.
@@ -10,9 +11,23 @@ import { listSessions, clearSessionHistory } from '../lib/sessionStore';
  */
 export default function SessionHistoryDrawer({ open, onClose }) {
   const [sessions, setSessions] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    if (open) setSessions(listSessions());
+    if (open) {
+      setLoading(true);
+      // Immediately render local cached sessions
+      const local = listSessions();
+      setSessions(local);
+      if (local && local.length > 0) setLoading(false);
+      // Reconcile with server-side history asynchronously
+      fetchServerSessions().then((remoteSessions) => {
+        if (remoteSessions && remoteSessions.length > 0) {
+          setSessions(remoteSessions);
+        }
+        setLoading(false);
+      }).catch(() => setLoading(false));
+    }
   }, [open]);
 
   if (!open) return null;
@@ -30,7 +45,9 @@ export default function SessionHistoryDrawer({ open, onClose }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
-          {sessions.length === 0 ? (
+          {loading && sessions.length === 0 ? (
+            <SkeletonLoader variant="list-item" count={3} />
+          ) : sessions.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-10">
               Abhi tak koi consultation record nahi hai.
             </p>

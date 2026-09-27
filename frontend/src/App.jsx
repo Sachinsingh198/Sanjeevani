@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import OfflineBanner from './components/OfflineBanner';
 import SanjeevaniOrb from './components/SanjeevaniOrb';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Public pages (lazy loaded)
 const Home = React.lazy(() => import('./pages/Home'));
@@ -47,8 +48,9 @@ export default function App() {
           <OfflineBanner />
           <Navbar />
           <main className={isChatPage ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 animate-fadeIn'}>
-            <React.Suspense fallback={<RouteLoadingFallback />}>
-              <Routes>
+            <ErrorBoundary>
+              <React.Suspense fallback={<RouteLoadingFallback />}>
+                <Routes>
               {/* ── Public Routes ──────────────────────────────────── */}
               <Route path="/" element={<Home />} />
               <Route path="/about" element={<About />} />
@@ -171,7 +173,8 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </React.Suspense>
-        </main>
+        </ErrorBoundary>
+      </main>
 
           {!isChatPage && (
             <footer className="bg-warm-indigo text-white/70 text-xs py-6 px-4 text-center border-t border-white/10 mt-auto">

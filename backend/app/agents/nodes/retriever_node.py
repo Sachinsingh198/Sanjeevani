@@ -32,29 +32,59 @@ def get_remedy_store() -> HybridRemedyStore:
 def extract_active_symptoms(notes: str, normalized_msg: str, llm=None) -> str:
     """
     Extracts the patient's positive active complaints for accurate vector RAG search.
-    Filters out doctor questions, negative patient statements ('nahi', 'nahin', 'no'),
-    and irrelevant comorbidities so that remedies accurately match the primary illness.
+    Primary: Uses LLM extraction to identify 3-6 positive active symptoms (Hindi & English).
+    Fallback: Scans CLINICAL_SYMPTOM_REGISTRY and SYMPTOM_KEYWORDS, filtering out negative statements ('nahi', 'no').
     """
-    if llm and notes:
+    content_to_extract = (notes or "").strip() or (normalized_msg or "").strip()
+    if llm and content_to_extract:
         try:
             from app.agents.nodes.responder_node import _try_llm
             sys_msg = SystemMessage(
                 content=(
                     "You are a clinical query generator for an Ayurvedic remedy database. "
                     "From the consultation notes below, extract ONLY 3-6 space-separated keywords "
-                    "describing the patient's ACTIVE symptoms in Hindi and English (ignore negative answers like no/nahi, and ignore questions). "
+                    "describing the patient's ACTIVE positive symptoms in Hindi and English (ignore negative answers like no/nahi, and ignore questions). "
                     "Example: 'fever bukhar body ache badan dard fatigue thakan'. Output ONLY keywords."
                 )
             )
-            extracted = _try_llm(llm, [sys_msg, HumanMessage(content=notes)])
-            if extracted and len(extracted.split()) <= 10 and not extracted.startswith("Error"):
+            extracted = _try_llm(llm, [sys_msg, HumanMessage(content=content_to_extract)])
+            if extracted and len(extracted.split()) <= 12 and not extracted.startswith("Error"):
                 return extracted.strip()
         except Exception:
             pass
 
-    # Fallback heuristic: collect positive patient statements
+    # Deterministic Fallback: Scan CLINICAL_SYMPTOM_REGISTRY and SYMPTOM_KEYWORDS
+    try:
+        from app.agents.nodes.responder_node import CLINICAL_SYMPTOM_REGISTRY
+        from app.core.clinical_lexicon import SYMPTOM_KEYWORDS
+
+        text_to_scan = f"{notes} {normalized_msg}".lower()
+        matched_terms = []
+
+        # 1. Match against canonical symptom registry categories and their keywords
+        for cat, data in CLINICAL_SYMPTOM_REGISTRY.items():
+            if cat == "general":
+                continue
+            for kw in data.get("keywords", ()):
+                if kw in text_to_scan:
+                    if kw not in matched_terms:
+                        matched_terms.append(kw)
+                    if cat not in matched_terms:
+                        matched_terms.append(cat)
+
+        # 2. Match against clinical lexicon
+        for kw in SYMPTOM_KEYWORDS:
+            if kw in text_to_scan and kw not in matched_terms:
+                matched_terms.append(kw)
+
+        if matched_terms:
+            return " ".join(matched_terms[:6])
+    except Exception:
+        pass
+
+    # Heuristic fallback: collect positive patient statements
     positive_parts = []
-    for line in notes.split("\n"):
+    for line in (notes or "").split("\n"):
         line_clean = line.strip().lower()
         if line_clean.startswith("doctor:"):
             continue

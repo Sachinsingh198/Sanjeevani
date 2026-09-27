@@ -17,7 +17,7 @@ import SymptomChips from '../components/SymptomChips';
 import AccessibilityBar from '../components/AccessibilityBar';
 import StructuredBotMessage from '../components/StructuredBotMessage';
 import {
-  sendChatMessage, getOrCreateConversationId, resetConversationId, setStoredConversationId, getConversationDetails, checkBackendHealth,
+  sendChatMessage, streamChatMessage, getOrCreateConversationId, resetConversationId, setStoredConversationId, getConversationDetails, checkBackendHealth,
 } from '../api/client';
 import { speakText, transcribeAudio } from '../api/voiceClient';
 import { downloadConsultationReport } from '../api/reportsClient';
@@ -80,6 +80,23 @@ export default function Chat() {
   });
   const [detectedLanguage, setDetectedLanguage] = useState('hindi');
   const [sttLangOverride, setSttLangOverride]   = useState(null);
+
+  /* Persist accessibility & language settings to localStorage and DOM */
+  useEffect(() => {
+    try {
+      localStorage.setItem('sanjeevani_text_scale', textScale.toString());
+      localStorage.setItem('app_text_scale', textScale.toString());
+      const pct = Math.round(textScale * 100);
+      document.documentElement.style.fontSize = `${pct}%`;
+    } catch {}
+  }, [textScale]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sanjeevani_ui_lang', uiLang);
+      localStorage.setItem('app_lang', uiLang);
+    } catch {}
+  }, [uiLang]);
   const [correctingIdx, setCorrectingIdx]       = useState(null);
   const [correctionText, setCorrectionText]     = useState('');
   const [backendOnline, setBackendOnline]   = useState(null);
@@ -367,7 +384,11 @@ export default function Chat() {
     setInputText(''); setError(null);
     setMessages(p => [...p, { sender: 'user', text: trimmed }]);
     setLoading(true);
+
     try {
+      let streamedText = '';
+      let placeholderAdded = false;
+
       // Enforce client-side timeout (~45s) aligned with axios timeout
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
@@ -375,15 +396,58 @@ export default function Chat() {
         }, 45000);
       });
 
-      const res = await Promise.race([
-        sendChatMessage(conversationIdRef.current, trimmed, knownConditions, 'auto', false, 'female', messages),
-        timeoutPromise
-      ]);
+      const streamingPromise = streamChatMessage(
+        conversationIdRef.current,
+        trimmed,
+        knownConditions,
+        'auto',
+        false,
+        'female',
+        {
+          onToken: (chunk) => {
+            streamedText += chunk;
+            setMessages(p => {
+              const last = p[p.length - 1];
+              if (last && last.sender === 'bot' && last.isLiveStreaming) {
+                const updated = [...p];
+                updated[updated.length - 1] = {
+                  ...last,
+                  text: streamedText,
+                };
+                return updated;
+              } else if (!placeholderAdded) {
+                placeholderAdded = true;
+                return [
+                  ...p,
+                  {
+                    sender: 'bot',
+                    text: streamedText,
+                    isLiveStreaming: true,
+                    tier: 'Green',
+                    phase: 'CONSULTATION',
+                    remedies: [],
+                  }
+                ];
+              }
+              return p;
+            });
+          },
+          onComplete: () => {
+            // handled below when Promise resolves
+          },
+          onError: (streamErr) => {
+            console.warn('[ChatStream fallback note]:', streamErr);
+          },
+        }
+      );
+
+      const res = await Promise.race([streamingPromise, timeoutPromise]);
 
       if (res.detected_language) setDetectedLanguage(res.detected_language);
       const phase = (res.phase !== undefined && res.phase !== null && res.phase !== '') ? res.phase : inferPhase(res);
       setCurrentPhase(phase);
-      setMessages(p => [...p, {
+
+      const finalBotMsg = {
         sender: 'bot',
         text: res.reply_text,
         spoken_text: res.spoken_reply_text || res.reply_text,
@@ -394,7 +458,19 @@ export default function Chat() {
         phase,
         consultation_summary: res.consultation_summary,
         is_offline_fallback: Boolean(res.is_offline_fallback),
-      }]);
+        isLiveStreaming: false,
+      };
+
+      setMessages(p => {
+        const last = p[p.length - 1];
+        if (last && last.sender === 'bot' && last.isLiveStreaming) {
+          const updated = [...p];
+          updated[updated.length - 1] = finalBotMsg;
+          return updated;
+        }
+        return [...p, finalBotMsg];
+      });
+
       recordSessionTurn({ conversationId: conversationIdRef.current, summary: trimmed, tier: res.tier });
       refreshSessions();
     } catch (err) {
@@ -403,31 +479,37 @@ export default function Chat() {
       const fallbackCheck = evaluateLocalRedFlags(trimmed);
       if (fallbackCheck.isRed) {
         setCurrentPhase('EMERGENCY');
-        setMessages(p => [...p, {
-          sender: 'bot',
-          text: 'चेतावनी: आपातकालीन लक्षण पहचाने गए हैं। नेटवर्क उपलब्ध न होने के कारण कृपया तुरंत 108 एम्बुलेंस को कॉल करें। (Emergency symptoms detected — network unavailable, call 108 immediately.)',
-          tier: 'Red',
-          flags: [fallbackCheck.flag || 'CLIENT_FALLBACK_FLAG: possible emergency — network unavailable, please call 108'],
-          remedies: [],
-          escalation: true,
-          phase: 'EMERGENCY',
-          is_offline_fallback: true,
-        }]);
+        setMessages(p => {
+          const filtered = p.filter(m => !m.isLiveStreaming);
+          return [...filtered, {
+            sender: 'bot',
+            text: 'चेतावनी: आपातकालीन लक्षण पहचाने गए हैं। नेटवर्क उपलब्ध न होने के कारण कृपया तुरंत 108 एम्बुलेंस को कॉल करें। (Emergency symptoms detected — network unavailable, call 108 immediately.)',
+            tier: 'Red',
+            flags: [fallbackCheck.flag || 'CLIENT_FALLBACK_FLAG: possible emergency — network unavailable, please call 108'],
+            remedies: [],
+            escalation: true,
+            phase: 'EMERGENCY',
+            is_offline_fallback: true,
+          }];
+        });
       } else {
         const offlineRes = processOfflineConsultation(trimmed, knownConditions, conversationIdRef.current, messages);
         const resolvedPhase = offlineRes.phase || 'CONCLUDED';
         setCurrentPhase(resolvedPhase);
-        setMessages(p => [...p, {
-          sender: 'bot',
-          text: offlineRes.reply_text,
-          tier: offlineRes.tier,
-          flags: offlineRes.flags || [],
-          remedies: offlineRes.remedies || [],
-          escalation: offlineRes.escalation_triggered,
-          phase: resolvedPhase,
-          consultation_summary: offlineRes.consultation_summary,
-          is_offline_fallback: true,
-        }]);
+        setMessages(p => {
+          const filtered = p.filter(m => !m.isLiveStreaming);
+          return [...filtered, {
+            sender: 'bot',
+            text: offlineRes.reply_text,
+            tier: offlineRes.tier,
+            flags: offlineRes.flags || [],
+            remedies: offlineRes.remedies || [],
+            escalation: offlineRes.escalation_triggered,
+            phase: resolvedPhase,
+            consultation_summary: offlineRes.consultation_summary,
+            is_offline_fallback: true,
+          }];
+        });
         recordSessionTurn({ conversationId: conversationIdRef.current, summary: trimmed, tier: offlineRes.tier });
         refreshSessions();
         try {
@@ -438,7 +520,7 @@ export default function Chat() {
       }
     } finally { setLoading(false); inputRef.current?.focus(); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, knownConditions, currentPhase, refreshSessions]);
+  }, [loading, knownConditions, currentPhase, refreshSessions, messages]);
 
   const handleCorrectionSubmit = useCallback((e) => {
     e?.preventDefault();
@@ -746,6 +828,8 @@ export default function Chat() {
                 <MessageBubble
                   key={idx}
                   msg={msg}
+                  conversationId={conversationIdRef.current}
+                  turnIndex={idx}
                   isSpeaking={speakingMsgIdx === idx}
                   isDownloading={downloadingIdx?.startsWith(`${idx}-`)}
                   downloadingFormat={downloadingIdx?.replace(`${idx}-`, '')}
@@ -837,6 +921,8 @@ export default function Chat() {
 /* ── MessageBubble ─────────────────────────────────────────────────────── */
 function MessageBubble({
   msg,
+  conversationId,
+  turnIndex,
   onReadAloud,
   isSpeaking,
   onDownloadReport,
@@ -852,8 +938,8 @@ function MessageBubble({
   onSubmitCorrection,
 }) {
   const isUser = msg.sender === 'user';
-  // Typewriter streaming: only the latest bot message animates
-  const shouldStream = !isUser && isLatestBot && !msg.is_offline_fallback;
+  // Typewriter streaming: only the latest bot message animates if not already streamed live
+  const shouldStream = !isUser && isLatestBot && !msg.is_offline_fallback && !msg.isLiveStreaming;
   const { displayText, isStreaming, skipToEnd } = useTypewriter(
     msg.text || '',
     shouldStream,
@@ -866,8 +952,8 @@ function MessageBubble({
     <div className={`flex gap-1.5 sm:gap-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
       {!isUser && (
         <div className="shrink-0 mt-0.5">
-          <div className="hidden sm:block"><SanjeevaniOrb state={isSpeaking ? 'speaking' : (isStreaming ? 'thinking' : 'idle')} size={28} /></div>
-          <div className="sm:hidden"><SanjeevaniOrb state={isSpeaking ? 'speaking' : (isStreaming ? 'thinking' : 'idle')} size={22} /></div>
+          <div className="hidden sm:block"><SanjeevaniOrb state={isSpeaking ? 'speaking' : (isStreaming || msg.isLiveStreaming ? 'thinking' : 'idle')} size={28} /></div>
+          <div className="sm:hidden"><SanjeevaniOrb state={isSpeaking ? 'speaking' : (isStreaming || msg.isLiveStreaming ? 'thinking' : 'idle')} size={22} /></div>
         </div>
       )}
       <div className={`max-w-[88%] sm:max-w-[75%] rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm shadow-xs ${
@@ -909,17 +995,27 @@ function MessageBubble({
             <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
           ) : (
             <>
-              <StructuredBotMessage text={visibleText} tier={msg.tier} summary={isStreaming ? null : msg.consultation_summary} />
+              <StructuredBotMessage
+                text={visibleText}
+                tier={msg.tier}
+                summary={isStreaming || msg.isLiveStreaming ? null : msg.consultation_summary}
+                conversationId={conversationId}
+                turnIndex={turnIndex}
+                isConcluded={msg.phase === 'CONCLUDED' || (msg.remedies && msg.remedies.length > 0)}
+                remedies={msg.remedies}
+              />
               {/* Streaming cursor & skip button */}
-              {isStreaming && (
+              {(isStreaming || msg.isLiveStreaming) && (
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className="inline-block w-1.5 h-4 bg-sage dark:bg-booti-glow rounded-full animate-pulse" />
-                  <button
-                    onClick={skipToEnd}
-                    className="text-[10px] text-muted dark:text-muted hover:text-primary transition-colors cursor-pointer opacity-70 hover:opacity-100"
-                  >
-                    Pura dikhayein ↓
-                  </button>
+                  {isStreaming && (
+                    <button
+                      onClick={skipToEnd}
+                      className="text-[10px] text-muted dark:text-muted hover:text-primary transition-colors cursor-pointer opacity-70 hover:opacity-100"
+                    >
+                      Pura dikhayein ↓
+                    </button>
+                  )}
                 </div>
               )}
             </>

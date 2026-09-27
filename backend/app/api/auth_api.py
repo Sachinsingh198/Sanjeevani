@@ -7,6 +7,7 @@ import random
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from pydantic import BaseModel
 from sqlalchemy import select, insert, update, or_, and_, func
 
 from app.config import settings
@@ -24,8 +25,15 @@ from app.schemas.auth_schemas import (
     VerifyOtpRequest,
     ResetPasswordWithOtpRequest,
     OtpResponse,
+    RefreshTokenRequest,
+    TokenRefreshResponse,
 )
-from app.core.auth import hash_password, verify_password, create_access_token, get_current_user, require_role
+from app.core.auth import (
+    hash_password, verify_password,
+    create_access_token, create_refresh_token,
+    decode_refresh_token, bump_token_version,
+    get_current_user, require_role,
+)
 from app.core.notification_service import send_email_otp, send_sms_otp
 from app.models import normalize_phone
 from app.db import get_db_connection, users_table, otps_table, row_to_dict
@@ -152,7 +160,8 @@ async def check_username(
 
 
 @router.post("/register", response_model=LoginResponse)
-async def register_user(req: RegisterRequest, request: Request = None):
+@limiter.limit("5/minute")
+async def register_user(request: Request, req: RegisterRequest):
     """
     Register a new user account.
     - Strictly validates 10-digit mobile number.
@@ -240,16 +249,19 @@ async def register_user(req: RegisterRequest, request: Request = None):
             conn=conn
         )
 
-        token = create_access_token({"user_id": user_id, "role": req.role})
+        token_version = 0
+        token = create_access_token({"user_id": user_id, "role": req.role, "token_version": token_version})
+        refresh_token = create_refresh_token({"user_id": user_id, "token_version": token_version})
 
         return LoginResponse(
             access_token=token,
+            refresh_token=refresh_token,
             user=UserProfile(**user_dict)
         )
 
 
 @router.post("/login", response_model=LoginResponse)
-@limiter.limit("20/hour")
+@limiter.limit("5/minute")
 async def login_user(request: Request, req: LoginRequest):
     """
     Authenticate a user via Username, Gmail/Email, OR Mobile Number and return a JWT access token.
@@ -285,7 +297,9 @@ async def login_user(request: Request, req: LoginRequest):
                 detail="Galat password. Kripya sahi password darz karein."
             )
 
-        token = create_access_token({"user_id": user_dict["id"], "role": user_dict["role"]})
+        token_ver = user_dict.get("token_version", 0) or 0
+        token = create_access_token({"user_id": user_dict["id"], "role": user_dict["role"], "token_version": token_ver})
+        refresh_token = create_refresh_token({"user_id": user_dict["id"], "token_version": token_ver})
 
         client_ip = request.client.host if (request and request.client) else None
         ua = request.headers.get("user-agent", "Unknown") if request else "Unknown"
@@ -303,8 +317,54 @@ async def login_user(request: Request, req: LoginRequest):
 
         return LoginResponse(
             access_token=token,
+            refresh_token=refresh_token,
             user=UserProfile(**user_dict)
         )
+
+
+@router.post("/refresh", response_model=TokenRefreshResponse)
+@limiter.limit("20/minute")
+async def refresh_access_token(request: Request, req: RefreshTokenRequest):
+    """
+    Validates a JWT refresh token and returns a newly rotated access token + refresh token.
+    Enforces revocation via token_version check.
+    """
+    payload = decode_refresh_token(req.refresh_token)
+    user_id = payload.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    with get_db_connection() as conn:
+        stmt = select(users_table).where(users_table.c.id == user_id)
+        row = conn.execute(stmt).fetchone()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user_dict = row_to_dict(row)
+        token_ver = payload.get("token_version", 0)
+        db_ver = user_dict.get("token_version", 0) or 0
+        if token_ver < db_ver:
+            raise HTTPException(
+                status_code=401,
+                detail="Refresh token has been revoked. Please log in again."
+            )
+
+        new_access_token = create_access_token({
+            "user_id": user_dict["id"],
+            "role": user_dict["role"],
+            "token_version": db_ver,
+        })
+        new_refresh_token = create_refresh_token({
+            "user_id": user_dict["id"],
+            "token_version": db_ver,
+        })
+
+    return TokenRefreshResponse(
+        access_token=new_access_token,
+        refresh_token=new_refresh_token,
+        token_type="bearer",
+    )
 
 
 @router.post("/reset-password")
@@ -341,8 +401,12 @@ async def reset_password(
             )
 
         hashed = hash_password(req.new_password.strip())
+        new_tv = ((row.token_version or 0) if hasattr(row, 'token_version') and row.token_version else 0) + 1
         conn.execute(
-            update(users_table).where(users_table.c.id == row.id).values(hashed_password=hashed)
+            update(users_table).where(users_table.c.id == row.id).values(
+                hashed_password=hashed,
+                token_version=new_tv
+            )
         )
         return {"message": f"{row.name} ke liye password safaltapoorvak reset ho gaya hai. Ab aap login kar sakte hain."}
 
@@ -355,7 +419,13 @@ async def get_me(user: Dict[str, Any] = Depends(get_current_user)):
 
 @router.post("/logout")
 async def logout_user(request: Request, user: Dict[str, Any] = Depends(get_current_user)):
-    """Logs out the user and records audit trail event."""
+    """Logs out the user, bumps token_version to revoke all tokens, and records audit trail event."""
+    # Bump token_version to invalidate all existing access & refresh tokens for this user
+    try:
+        bump_token_version(user["id"])
+    except Exception:
+        pass  # Non-critical: logout should succeed even if version bump fails
+
     client_ip = request.client.host if (request and request.client) else None
     log_activity(
         action="LOGOUT",
@@ -485,10 +555,12 @@ async def change_password(
             raise HTTPException(status_code=400, detail="Vartamaan (purana) password galat hai.")
 
         new_hashed = hash_password(req.new_password.strip())
+        # Bump token_version to revoke all existing tokens after password change
+        new_tv = (user_dict.get("token_version", 0) or 0) + 1
         conn.execute(
             update(users_table)
             .where(users_table.c.id == user["id"])
-            .values(hashed_password=new_hashed)
+            .values(hashed_password=new_hashed, token_version=new_tv)
         )
 
     client_ip = request.client.host if (request and request.client) else None
@@ -506,7 +578,7 @@ async def change_password(
 
 
 @router.post("/otp/send", response_model=OtpResponse)
-@limiter.limit("5/hour", key_func=get_otp_key)
+@limiter.limit("5/minute", key_func=get_otp_key)
 async def send_otp(request: Request, req: SendOtpRequest):
     """
     Generates and sends a 6-digit OTP via Email/Gmail or SMS using SQLAlchemy Core storage.
@@ -587,7 +659,9 @@ async def send_otp(request: Request, req: SendOtpRequest):
     else:
         notif_res = send_sms_otp(to_phone=actual_target, otp=otp_code, purpose=req.purpose)
 
-    dev_otp = otp_code if settings.ENABLE_DEV_OTP_HINT else None
+    # Hard-block dev_otp in production regardless of ENABLE_DEV_OTP_HINT
+    is_production = settings.APP_ENV.lower() == "production"
+    dev_otp = otp_code if (settings.ENABLE_DEV_OTP_HINT and not is_production) else None
 
     return OtpResponse(
         success=True,
@@ -598,7 +672,8 @@ async def send_otp(request: Request, req: SendOtpRequest):
 
 
 @router.post("/otp/verify", response_model=OtpResponse)
-async def verify_otp(req: VerifyOtpRequest):
+@limiter.limit("10/minute")
+async def verify_otp(request: Request, req: VerifyOtpRequest):
     """
     Validates a submitted 6-digit OTP code against the database.
     """
@@ -648,7 +723,8 @@ async def verify_otp(req: VerifyOtpRequest):
 
 
 @router.post("/reset-password-with-otp")
-async def reset_password_with_otp(req: ResetPasswordWithOtpRequest):
+@limiter.limit("5/minute")
+async def reset_password_with_otp(request: Request, req: ResetPasswordWithOtpRequest):
     """
     Resets the user's password using a verified OTP.
     """
@@ -709,8 +785,13 @@ async def reset_password_with_otp(req: ResetPasswordWithOtpRequest):
             )
 
         hashed = hash_password(req.new_password.strip())
+        # Bump token_version to revoke all existing tokens after password reset
+        new_tv = (user_row.token_version if hasattr(user_row, 'token_version') and user_row.token_version else 0) + 1
         conn.execute(
-            update(users_table).where(users_table.c.id == user_row.id).values(hashed_password=hashed)
+            update(users_table).where(users_table.c.id == user_row.id).values(
+                hashed_password=hashed,
+                token_version=new_tv,
+            )
         )
         conn.execute(
             update(otps_table).where(otps_table.c.id == row.id).values(verified=1)
@@ -720,3 +801,55 @@ async def reset_password_with_otp(req: ResetPasswordWithOtpRequest):
             "success": True,
             "message": f"{user_row.name} ke liye password safaltapoorvak badal diya gaya hai. Ab aap naye password se login kar sakte hain."
         }
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+@router.post("/refresh")
+@limiter.limit("10/minute")
+async def refresh_access_token(request: Request, req: RefreshTokenRequest):
+    """
+    Issues a new short-lived access token using a valid refresh token.
+    Validates token_version to ensure the refresh token hasn't been revoked.
+    """
+    payload = decode_refresh_token(req.refresh_token)
+    user_id = payload.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid refresh token payload")
+
+    with get_db_connection() as conn:
+        row = conn.execute(
+            select(users_table).where(users_table.c.id == user_id)
+        ).fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user_dict = row_to_dict(row)
+
+    # Validate token_version: reject refresh tokens issued before a password change or logout
+    token_ver = payload.get("token_version", 0)
+    db_ver = user_dict.get("token_version", 0) or 0
+    if token_ver < db_ver:
+        raise HTTPException(status_code=401, detail="Refresh token has been revoked. Please log in again.")
+
+    # Issue new access + refresh tokens
+    new_access = create_access_token({
+        "user_id": user_dict["id"],
+        "role": user_dict["role"],
+        "token_version": db_ver,
+    })
+    new_refresh = create_refresh_token({
+        "user_id": user_dict["id"],
+        "token_version": db_ver,
+    })
+
+    return {
+        "access_token": new_access,
+        "refresh_token": new_refresh,
+        "token_type": "bearer",
+    }
+
+

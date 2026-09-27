@@ -1,8 +1,12 @@
 import io
+import json
+import re
+import asyncio
 import traceback
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, HTTPException, Response, Depends, Request
+from fastapi import APIRouter, HTTPException, Response, Depends, Request, Query
+from fastapi.responses import StreamingResponse
 from app.schemas.chat_schemas import ChatRequest, ChatResponse, RemedyItem, TTSRequest
 from app.agents.graph import sanjeevani_workflow
 from app.core.tts_engine import IndicTTSEngine
@@ -11,24 +15,28 @@ from app.models import get_db
 from app.core.logger import logger
 from app.core.limiter import limiter
 from app.core.analytics import log_analytics_event
+from app.core.access_logger import log_access
 
 router = APIRouter(prefix="/chat", tags=["Triage & Dialogue"])
 tts_engine = IndicTTSEngine()
 
 
-@router.post("/message", response_model=ChatResponse)
-@limiter.limit("60/hour")
-async def process_chat_message(
-    request: Request,
-    req: ChatRequest,
-    user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
-):
-    """
-    Receives user symptoms, executes the LangGraph persistent triage state machine,
-    and returns a deterministic safety tier, verified remedies, or emergency escalation.
+class ChatFeedbackRequest(BaseModel):
+    conversation_id: str
+    turn_index: Optional[int] = 1
+    helpful: bool
+    note: Optional[str] = None
 
-    The conversation_id MUST remain stable across turns for the multi-turn
-    GREETING → INTAKE → PROBING → CONCLUDED dialogue flow to function correctly.
+
+async def _execute_chat_pipeline(
+    req: ChatRequest,
+    user: Optional[Dict[str, Any]] = None,
+    client_ip: Optional[str] = None,
+) -> ChatResponse:
+    """
+    Executes the LangGraph persistent triage state machine,
+    persists encounter records to consultations_table, updates conversation index,
+    and returns a fully structured ChatResponse.
     """
     try:
         # All required AND optional AgentState fields must be initialized here.
@@ -143,6 +151,7 @@ async def process_chat_message(
                 logger.warning(f"[ProcessChatMessage Voice Error]: {tts_err}")
 
         # Upsert lightweight consultation summary into conversation_index
+        summary_clean = ""
         try:
             from app.db import get_db_connection, conversation_index_table, row_to_dict, rows_to_dicts
             from sqlalchemy import select, insert, update, or_, func
@@ -184,6 +193,36 @@ async def process_chat_message(
         except Exception as idx_err:
             logger.error(f"[ConversationIndex Upsert Error]: {idx_err}")
 
+        # Write rich consultation encounter to consultations_table (Phase 2 Data Layer)
+        try:
+            from app.db import get_db_connection, consultations_table
+            from sqlalchemy import insert
+
+            flags_json = json.dumps(result.get("clinical_flags", []), ensure_ascii=False)
+            remedies_data = [
+                r.model_dump() if hasattr(r, "model_dump") else (r.dict() if hasattr(r, "dict") else r)
+                for r in formatted_remedies
+            ]
+            remedies_json = json.dumps(remedies_data, ensure_ascii=False)
+
+            with get_db_connection() as conn:
+                conn.execute(
+                    insert(consultations_table).values(
+                        user_id=user["id"] if user else None,
+                        conversation_id=req.conversation_id,
+                        tier=tier,
+                        flags=flags_json,
+                        remedies_served=remedies_json,
+                        detected_language=detected_lang,
+                        turn_count=result.get("turn_count", 1),
+                        dialogue_phase=result.get("dialogue_phase", "INTAKE"),
+                        raw_user_message=req.message,
+                        final_reply_text=result.get("final_reply_text", ""),
+                    )
+                )
+        except Exception as consult_err:
+            logger.error(f"[Consultation Persistence Error]: {consult_err}")
+
         # Aggregate analytics logging (fire-and-forget, zero PII)
         if result.get("turn_count", 0) <= 1:
             log_analytics_event("consultation_started", tier=None, language=detected_lang)
@@ -191,6 +230,20 @@ async def process_chat_message(
             log_analytics_event("consultation_concluded", tier=tier, language=detected_lang)
         if result.get("escalation_triggered", False) or tier == "Red":
             log_analytics_event("emergency_escalated", tier="Red", language=detected_lang)
+            try:
+                from app.core.alerts_service import record_emergency_alert
+                record_emergency_alert(
+                    conversation_id=result.get("conversation_id", req.conversation_id),
+                    user_id=user["id"] if user else None,
+                    patient_name=user.get("name") if user else "Citizen Patient",
+                    village=user.get("village", "") if user else "Chamoli Valley",
+                    phone=user.get("phone", "") if user else "",
+                    symptoms=req.message,
+                    clinical_flags=result.get("clinical_flags", []),
+                    tier="Red",
+                )
+            except Exception as alert_err:
+                logger.warning(f"Could not record emergency alert: {alert_err}")
         if formatted_remedies:
             log_analytics_event("remedy_delivered", tier=tier, language=detected_lang)
 
@@ -198,7 +251,6 @@ async def process_chat_message(
         if user and (result.get("turn_count", 0) <= 1 or result.get("dialogue_phase") == "CONCLUDED" or tier == "Red"):
             try:
                 from app.core.activity_logger import log_activity
-                client_ip = request.client.host if request.client else None
                 act_type = "EMERGENCY_SOS" if (tier == "Red" or result.get("escalation_triggered")) else "CONSULTATION"
                 log_activity(
                     action=act_type,
@@ -237,50 +289,292 @@ async def process_chat_message(
         )
 
 
-@router.get("/history")
-def list_consultations(
+@router.post("/message", response_model=ChatResponse)
+@limiter.limit("20/minute")
+async def process_chat_message(
+    request: Request,
+    req: ChatRequest,
     user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
-    limit: int = 50,
 ):
     """
-    Returns past consultations list for the authenticated user or all active sessions.
+    Receives user symptoms, executes the LangGraph persistent triage state machine,
+    and returns a deterministic safety tier, verified remedies, or emergency escalation.
     """
-    from app.db import get_db_connection, conversation_index_table, rows_to_dicts
-    from sqlalchemy import select, or_
+    client_ip = request.client.host if request.client else None
+    return await _execute_chat_pipeline(req, user, client_ip)
+
+
+@router.post("/message/stream")
+@limiter.limit("20/minute")
+async def stream_chat_message(
+    request: Request,
+    req: ChatRequest,
+    user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
+):
+    """
+    Streaming endpoint returning Server-Sent Events (SSE).
+    Emits token events as the clinical response is generated and delivered,
+    followed by a final 'complete' event containing the rich ChatResponse structure.
+    """
+    client_ip = request.client.host if request.client else None
+
+    async def event_generator():
+        try:
+            # First notify client that triage analysis has begun
+            yield f"data: {json.dumps({'type': 'start', 'conversation_id': req.conversation_id})}\n\n"
+
+            chat_response = await _execute_chat_pipeline(req, user, client_ip)
+            full_text = chat_response.reply_text or ""
+
+            # Stream words/tokens smoothly
+            tokens = re.findall(r"\S+|\s+", full_text)
+            for i, chunk in enumerate(tokens):
+                payload = json.dumps({"type": "token", "token": chunk}, ensure_ascii=False)
+                yield f"data: {payload}\n\n"
+                if i % 3 == 0:
+                    await asyncio.sleep(0.015)
+
+            # Emit final complete payload with all remedies, flags, and tier
+            complete_dict = chat_response.model_dump() if hasattr(chat_response, "model_dump") else chat_response.dict()
+            complete_payload = json.dumps({"type": "complete", "response": complete_dict}, ensure_ascii=False)
+            yield f"data: {complete_payload}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            logger.error(f"[ChatStream Error]: {e}", exc_info=True)
+            err_payload = json.dumps({"type": "error", "error": str(e)})
+            yield f"data: {err_payload}\n\n"
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
+@router.post("/feedback")
+@limiter.limit("30/minute")
+async def record_chat_feedback(
+    request: Request,
+    req: ChatFeedbackRequest,
+    user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
+):
+    """
+    Records patient feedback (helpful thumbs up/down and optional note)
+    for a completed clinical consultation turn.
+    """
+    try:
+        from app.db import get_db_connection, consultation_feedback_table
+        from sqlalchemy import insert
+
+        user_id = user["id"] if user else None
+        with get_db_connection() as conn:
+            conn.execute(
+                insert(consultation_feedback_table).values(
+                    conversation_id=req.conversation_id,
+                    user_id=user_id,
+                    turn_index=req.turn_index or 1,
+                    helpful=req.helpful,
+                    note=req.note,
+                )
+            )
+
+        log_analytics_event(
+            "consultation_feedback_received",
+            tier=None,
+            language=None,
+        )
+
+        return {"status": "success", "message": "Feedback recorded successfully."}
+    except Exception as e:
+        logger.error(f"[ChatFeedback Error]: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save feedback.")
+
+
+@router.get("/history")
+@limiter.limit("30/minute")
+async def list_consultations(
+    request: Request,
+    conversation_id: Optional[str] = Query(None, description="Optional conversation ID to fetch specific turns for"),
+    limit: int = Query(50, ge=1, le=100),
+    user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
+):
+    """
+    Returns server-side consultation history from consultations_table.
+    - If conversation_id is provided: returns all turns and summary for that conversation.
+    - If conversation_id is omitted: returns the list of distinct consultations for the authenticated user.
+    Records an access audit log in access_logs_table.
+    """
+    from app.db import get_db_connection, consultations_table, conversation_index_table, rows_to_dicts, row_to_dict
+    from sqlalchemy import select, desc
+    import json
+
+    client_ip = request.client.host if request and request.client else None
+
+    # Record patient data access audit log
+    log_access(
+        resource_type="chat_history",
+        user=user,
+        resource_id=conversation_id,
+        action="READ",
+        ip_address=client_ip,
+    )
 
     with get_db_connection() as conn:
-        stmt = (
-            select(conversation_index_table)
-            .order_by(conversation_index_table.c.updated_at.desc())
-            .limit(limit)
-        )
-        if user:
-            stmt = stmt.where(conversation_index_table.c.user_id == user["id"])
-        else:
-            # Unauthenticated callers should not list anyone's conversations
+        if conversation_id:
+            # Query all turns for this conversation from consultations_table
+            stmt = (
+                select(consultations_table)
+                .where(consultations_table.c.conversation_id == conversation_id)
+                .order_by(consultations_table.c.id.asc())
+            )
+            rows = conn.execute(stmt).fetchall()
+            turns = []
+            for r in rows:
+                d = row_to_dict(r)
+                try:
+                    d["flags"] = json.loads(d["flags"]) if d.get("flags") else []
+                except Exception:
+                    pass
+                try:
+                    d["remedies_served"] = json.loads(d["remedies_served"]) if d.get("remedies_served") else []
+                except Exception:
+                    pass
+                turns.append(d)
+
+            # If no turns found in consultations_table, fallback to conversation_index_table
+            if not turns:
+                idx_row = conn.execute(
+                    select(conversation_index_table).where(conversation_index_table.c.conversation_id == conversation_id)
+                ).fetchone()
+                if not idx_row:
+                    raise HTTPException(status_code=404, detail="Consultation session not found")
+                d_idx = row_to_dict(idx_row)
+                return {
+                    "conversation_id": conversation_id,
+                    "tier": d_idx.get("tier", "Green"),
+                    "summary": d_idx.get("summary", ""),
+                    "turns": [],
+                    "timestamp": d_idx.get("updated_at") or d_idx.get("created_at"),
+                }
+
+            latest_turn = turns[-1]
+            return {
+                "conversation_id": conversation_id,
+                "tier": latest_turn.get("tier", "Green"),
+                "summary": latest_turn.get("raw_user_message") or latest_turn.get("final_reply_text") or "Consultation",
+                "final_recommendation": latest_turn.get("final_reply_text", ""),
+                "turns": turns,
+                "count": len(turns),
+                "timestamp": latest_turn.get("created_at"),
+            }
+
+        # Listing past consultations
+        if not user:
             return []
+
+        # Query consultations from consultations_table
+        if user.get("role") in ("admin", "asha"):
+            stmt = (
+                select(consultations_table)
+                .order_by(consultations_table.c.id.desc())
+                .limit(limit * 3)
+            )
+        else:
+            stmt = (
+                select(consultations_table)
+                .where(consultations_table.c.user_id == user["id"])
+                .order_by(consultations_table.c.id.desc())
+                .limit(limit * 3)
+            )
         rows = conn.execute(stmt).fetchall()
-        return rows_to_dicts(rows)
+
+        seen = set()
+        results = []
+        for r in rows:
+            cid = r.conversation_id
+            if cid not in seen:
+                seen.add(cid)
+                summary_text = (r.raw_user_message or r.final_reply_text or "Consultation")[:80]
+                iso_time = r.created_at.isoformat() if hasattr(r.created_at, "isoformat") else str(r.created_at)
+                results.append({
+                    "conversation_id": cid,
+                    "conversationId": cid,
+                    "user_id": r.user_id,
+                    "tier": r.tier or "Green",
+                    "summary": summary_text,
+                    "detected_language": r.detected_language,
+                    "created_at": iso_time,
+                    "updatedAt": iso_time,
+                })
+                if len(results) >= limit:
+                    break
+
+        # Fallback to conversation_index_table if consultations_table is empty
+        if not results:
+            stmt_idx = (
+                select(conversation_index_table)
+                .where(conversation_index_table.c.user_id == user["id"])
+                .order_by(conversation_index_table.c.updated_at.desc())
+                .limit(limit)
+            )
+            idx_rows = conn.execute(stmt_idx).fetchall()
+            for r in idx_rows:
+                iso_time = (r.updated_at or r.created_at).isoformat() if hasattr((r.updated_at or r.created_at), "isoformat") else str(r.updated_at or r.created_at)
+                results.append({
+                    "conversation_id": r.conversation_id,
+                    "conversationId": r.conversation_id,
+                    "user_id": r.user_id,
+                    "tier": r.tier or "Green",
+                    "summary": r.summary or "Consultation",
+                    "created_at": iso_time,
+                    "updatedAt": iso_time,
+                })
+
+        return results
 
 
 @router.get("/history/{conversation_id}")
-def get_consultation_history_detail(
+async def get_consultation_history_detail(
+    request: Request,
     conversation_id: str,
     user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
 ):
     """
     Returns the summarized consultation record (tier, flags, final recommendation, timestamp, turn count).
-    Extracts fields from the LangGraph thread checkpoint state with fallback to conversation_index.
+    Extracts fields from the LangGraph thread checkpoint state with fallback to consultations and conversation_index.
     """
-    from app.db import get_db_connection, conversation_index_table, row_to_dict
+    client_ip = request.client.host if request and request.client else None
+    log_access(
+        resource_type="chat_history_detail",
+        user=user,
+        resource_id=conversation_id,
+        action="READ",
+        ip_address=client_ip,
+    )
+
+    from app.db import get_db_connection, consultations_table, conversation_index_table, row_to_dict
     from sqlalchemy import select
+    import json
 
     with get_db_connection() as conn:
-        stmt = select(conversation_index_table).where(
-            conversation_index_table.c.conversation_id == conversation_id
-        )
-        row = conn.execute(stmt).fetchone()
-        index_row = row_to_dict(row)
+        # Check consultations_table first
+        consult_row = conn.execute(
+            select(consultations_table)
+            .where(consultations_table.c.conversation_id == conversation_id)
+            .order_by(consultations_table.c.id.desc())
+        ).fetchone()
+
+        idx_row = conn.execute(
+            select(conversation_index_table).where(conversation_index_table.c.conversation_id == conversation_id)
+        ).fetchone()
+
+    consult_dict = row_to_dict(consult_row) if consult_row else {}
+    index_row = row_to_dict(idx_row) if idx_row else {}
 
     state_values = {}
     turn_count = 0
@@ -292,15 +586,22 @@ def get_consultation_history_detail(
     except Exception as e:
         logger.error(f"[History State Fetch Error]: {e}")
 
-    if not index_row and not state_values:
+    if not consult_dict and not index_row and not state_values:
         raise HTTPException(status_code=404, detail="Consultation session not found")
 
-    tier = state_values.get("detected_tier") or (index_row["tier"] if index_row else "Green")
-    flags = state_values.get("clinical_flags", [])
-    final_reply = state_values.get("final_reply_text", "")
-    phase = state_values.get("dialogue_phase", "CONCLUDED")
-    summary = (index_row["summary"] if index_row else None) or state_values.get("consultation_notes", "") or final_reply
-    timestamp = (index_row["updated_at"] if index_row else None) or (index_row["created_at"] if index_row else None)
+    tier = state_values.get("detected_tier") or consult_dict.get("tier") or index_row.get("tier") or "Green"
+    flags = state_values.get("clinical_flags")
+    if flags is None and consult_dict.get("flags"):
+        try:
+            flags = json.loads(consult_dict["flags"])
+        except Exception:
+            flags = []
+    flags = flags or []
+
+    final_reply = state_values.get("final_reply_text") or consult_dict.get("final_reply_text") or ""
+    phase = state_values.get("dialogue_phase") or consult_dict.get("dialogue_phase") or "CONCLUDED"
+    summary = consult_dict.get("raw_user_message") or index_row.get("summary") or state_values.get("consultation_notes") or final_reply
+    timestamp = consult_dict.get("created_at") or index_row.get("updated_at") or index_row.get("created_at")
 
     return {
         "conversation_id": conversation_id,
@@ -310,7 +611,7 @@ def get_consultation_history_detail(
         "final_reply_text": final_reply,
         "summary": summary,
         "phase": phase,
-        "turn_count": turn_count,
+        "turn_count": turn_count or consult_dict.get("turn_count", 1),
         "timestamp": timestamp,
     }
 
@@ -336,7 +637,7 @@ async def generate_speech(req: TTSRequest):
             }
         )
     except Exception as e:
-        traceback.print_exc()
+        logger.exception("TTS Synthesis Failed: %s", str(e))
         raise HTTPException(
             status_code=500,
             detail=f"TTS Synthesis Failed: {str(e)}"

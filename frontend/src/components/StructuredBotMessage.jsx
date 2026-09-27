@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Stethoscope,
   Leaf,
@@ -7,7 +7,10 @@ import {
   Sparkles,
   PhoneCall,
   ShieldAlert,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
+import { sendChatFeedback } from '../api/client';
 
 /**
  * Parses inline formatting like **bold** and *italic* and highlights phone numbers (104, 108)
@@ -315,8 +318,89 @@ function parseMessageBlocks(rawText) {
   return blocks;
 }
 
-export default function StructuredBotMessage({ text, tier, summary }) {
+export default function StructuredBotMessage({
+  text,
+  tier,
+  summary,
+  conversationId,
+  turnIndex = 1,
+  isConcluded = false,
+  remedies = [],
+  onFeedback,
+}) {
+  const [feedbackStatus, setFeedbackStatus] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
   if (!text && !summary) return null;
+
+  const isRemedyConclusion =
+    isConcluded ||
+    Boolean(summary?.remedy_name) ||
+    Boolean(remedies?.length > 0) ||
+    /(?:नुस्खा|remedy|kashaya|kadha|churna|vati|swarasa|dhyan rakhein|104 par call)/i.test(text || '');
+
+  const handleFeedback = async (isHelpful) => {
+    if (submitting || feedbackStatus !== null) return;
+    setSubmitting(true);
+    try {
+      if (onFeedback) {
+        await onFeedback(isHelpful);
+      } else if (conversationId) {
+        await sendChatFeedback({
+          conversationId,
+          turnIndex: turnIndex || 1,
+          helpful: isHelpful,
+        });
+      }
+      setFeedbackStatus(isHelpful ? 'helpful' : 'not_helpful');
+    } catch (err) {
+      console.warn('[Feedback error]:', err);
+      setFeedbackStatus(isHelpful ? 'helpful' : 'not_helpful');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const renderFeedbackWidget = () => {
+    if (!isRemedyConclusion) return null;
+    return (
+      <div className="mt-3 pt-2.5 border-t border-sage/15 dark:border-gray-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-fadeIn">
+        <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+          {feedbackStatus ? (
+            <span className="text-sage dark:text-booti-glow font-bold flex items-center gap-1">
+              ✓ Dhanyawad! Feedback darj ho gaya.
+            </span>
+          ) : (
+            <span>Kya yeh nuskha aur salah upyogi rahi? (Was this helpful?)</span>
+          )}
+        </div>
+        {!feedbackStatus && (
+          <div className="flex items-center gap-1.5 self-end sm:self-center">
+            <button
+              type="button"
+              onClick={() => handleFeedback(true)}
+              disabled={submitting}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-sage/10 hover:bg-sage/20 text-sage dark:text-booti-glow transition-all cursor-pointer disabled:opacity-50"
+              title="Haan, upyogi raha"
+            >
+              <ThumbsUp className="w-3.5 h-3.5" />
+              <span>Haan (Yes)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFeedback(false)}
+              disabled={submitting}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-soft/10 hover:bg-rose-soft/20 text-rose-soft dark:text-red-300 transition-all cursor-pointer disabled:opacity-50"
+              title="Nahi, aaram nahi aaya"
+            >
+              <ThumbsDown className="w-3.5 h-3.5" />
+              <span>Nahi (No)</span>
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   if (summary && (summary.remedy_name || summary.possible_cause || summary.condition)) {
     return (
@@ -437,6 +521,7 @@ export default function StructuredBotMessage({ text, tier, summary }) {
             </div>
           </div>
         )}
+        {renderFeedbackWidget()}
       </div>
     );
   }
@@ -727,6 +812,7 @@ export default function StructuredBotMessage({ text, tier, summary }) {
           </p>
         );
       })}
+      {renderFeedbackWidget()}
     </div>
   );
 }

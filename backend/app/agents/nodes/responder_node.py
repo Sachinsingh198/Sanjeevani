@@ -1,4 +1,5 @@
 import re
+import json
 from typing import Dict, Any, Optional
 from app.agents.state import AgentState
 from app.config import settings
@@ -256,22 +257,37 @@ def get_llm():
 
 
 def _try_llm(llm, messages) -> Optional[str]:
-    """Calls the LLM and returns content string, or None on failure."""
+    """Calls the LLM with exponential backoff retry and returns content string, or None on failure."""
     try:
-        res = llm.invoke(messages)
+        from app.core.resilience import retry_sync
+        res = retry_sync(
+            llm.invoke,
+            messages,
+            max_retries=2,
+            base_delay=0.4,
+            max_delay=2.5,
+            caller_name="LLM_Inference"
+        )
         return str(res.content).strip()
     except Exception as e:
         logger.error(f"[LLM] Inference error: {type(e).__name__}: {e}")
         if "sarvam" in str(e).lower() and ("deprecated" in str(e).lower() or "not found" in str(e).lower()):
             try:
                 from langchain_openai import ChatOpenAI
+                from app.core.resilience import retry_sync
                 retry_sarvam = ChatOpenAI(
                     model="sarvam-105b",
                     api_key=settings.SARVAM_API_KEY,
                     base_url="https://api.sarvam.ai/v1",
                     temperature=0.3,
                 )
-                res = retry_sarvam.invoke(messages)
+                res = retry_sync(
+                    retry_sarvam.invoke,
+                    messages,
+                    max_retries=1,
+                    base_delay=0.4,
+                    caller_name="Sarvam_Fallback_Retry"
+                )
                 return str(res.content).strip()
             except Exception as retry_err:
                 logger.error(f"[LLM] Sarvam retry error: {retry_err}")
@@ -680,6 +696,46 @@ def _has_sufficient_info(notes: str) -> bool:
     return bool(has_duration and has_associated_or_severity)
 
 
+def compress_consultation_notes(notes: str, llm=None) -> str:
+    """
+    Compresses long consultation notes (>1500 characters) to keep LLM context bounded
+    and focused on clinically vital symptoms and timelines.
+    """
+    if not notes or len(notes) <= 1500:
+        return notes
+
+    if llm:
+        try:
+            summary_prompt = (
+                "You are an expert clinical summarizer. Condense the following doctor-patient consultation "
+                "notes into a concise clinical briefing (under 400 characters). "
+                "Preserve: 1) Chief complaint, 2) Duration & onset, 3) Reported/denied symptoms, 4) Known conditions. "
+                "Output ONLY the concise briefing in Hindi/English."
+            )
+            res = _try_llm(llm, [
+                SystemMessage(content=summary_prompt),
+                HumanMessage(content=f"Consultation Notes to condense:\n{notes}")
+            ])
+            if res and len(res.strip()) > 20 and not res.startswith("Error"):
+                lines = [l.strip() for l in notes.splitlines() if l.strip()]
+                recent_lines = lines[-4:] if len(lines) >= 4 else lines
+                recent_context = "\n".join(recent_lines)
+                return f"[Clinical Summary of earlier turns: {res.strip()}]\n{recent_context}"
+        except Exception as e:
+            logger.warning(f"[responder_node] LLM context summarization note: {e}")
+
+    # Deterministic fallback compression:
+    # Retain the chief complaint and the last 4 dialogue lines
+    lines = [l.strip() for l in notes.splitlines() if l.strip()]
+    first_patient = next((l for l in lines if l.startswith("Patient:")), lines[0] if lines else "")
+    recent_lines = lines[-4:] if len(lines) >= 4 else lines
+    distilled = [f"[Chief Complaint: {first_patient}]"]
+    for l in recent_lines:
+        if l not in distilled and l != first_patient:
+            distilled.append(l)
+    return "\n".join(distilled)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Doctor Consultation Dialogue Inner Flow
 # ─────────────────────────────────────────────────────────────────────────────
@@ -888,6 +944,10 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
         else:
             updated_notes = f"{notes}\n{new_entry}" if notes else new_entry
 
+        # Compress context if notes exceed ~1500 characters
+        if len(updated_notes) > 1500:
+            updated_notes = compress_consultation_notes(updated_notes, llm)
+
         state["consultation_notes"] = updated_notes
 
         from app.core.dialogue_manager import has_symptom_mention
@@ -895,7 +955,7 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
 
         has_sufficient = _has_sufficient_info(updated_notes)
         can_conclude = ((turn_count >= 2) or has_sufficient) and has_actual_symptoms
-        force_conclude = ((turn_count >= 3) or has_sufficient) and has_actual_symptoms
+        force_conclude = ((turn_count >= 5) or has_sufficient) and has_actual_symptoms
 
         sym_data = get_symptom_data(updated_notes)
 
@@ -905,23 +965,26 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
         if llm:
             canonical_consultation_prompt = (
                 "Tu Dr. Sanjeevani hai — Uttarakhand ki samajhdaar, anubhavi aur mamtamayi gaon ki doctor.\n\n"
-                "VOICE CONSULTATION GUIDELINES (EK BAAR MEIN SIRF EK SAWAAL):\n"
+                "VOICE CONSULTATION & CLINICAL INFORMATION SUFFICIENCY GUIDELINES:\n"
                 "1. SABSE ZAROORI NIYAM: Ek baar mein SIRF AUR SIRF EK CHHOTA SAWAAL poocho (Under 15 words). Ek sath 2 ya 3 sawaal KABHI MAT POOCHO!\n"
-                "2. Aawaz se sunte waqt mariz ek sath kayi sawaal yaad nahi rakh sakta. Isliye ek-ek karke dhyan se poocho:\n"
-                "   - Turn 1 (Duration/Kab se): Halka sa acknowledge karo aur SIRF ye poocho ki yeh takleef kab se shuru hui. (Turn 1 par KABHI ##CONCLUDE## mat likho).\n"
-                "   - Turn 2 (Key Warning Sign / Associated Symptom): Acknowledge karo aur SIRF EK zaroori follow-up poocho.\n"
-                "   - Turn 3: Ab koi naya sawaal MAT poocho. Jaanch conclude karo aur aakhir mein ##CONCLUDE## likho.\n"
-                "3. Kabhi bhi koi aisa sawaal dubara na poochna jo patient pehle hi bata chuka ho."
+                "2. ADAPTIVE CLINICAL PROBING (INFORMATION SUFFICIENCY):\n"
+                "   - Agar patient ne apni mukhya takleef, samay/aavdhi (duration), aur lakshan saaf bata diye hain, toh information sufficient samjhein (has_enough_info: true, conclude: true).\n"
+                "   - Agar mukhya jankari abhi adhoori hai (aur Turn Count 5 se kam hai), toh SIRF EK ahem follow-up sawaal poocho (has_enough_info: false, conclude: false).\n"
+                "   - Hard Cap: Turn 5 par jaanch zaroor samapt karein (conclude: true).\n"
+                "3. Kabhi bhi koi aisa sawaal dubara na poochna jo patient pehle hi bata chuka ho.\n"
+                "4. OUTPUT FORMAT: Respond strictly in valid JSON format:\n"
+                '{\n  "has_enough_info": true/false,\n  "reply": "Doctor ka agla chhota sawaal (Under 15 words) ya samapti sandesh",\n  "conclude": true/false\n}\n'
+                "Do NOT output markdown code blocks or text outside the JSON."
             )
             if lang == "garhwali":
                 canonical_consultation_prompt += f"\n\n{bhashini_engine.get_garhwali_guidance(is_devanagari)}"
 
             human_content = (
                 f"Conversation History:\n{updated_notes}\n\n"
-                f"Turn Count: {turn_count}/3\n"
+                f"Turn Count: {turn_count}/5\n"
                 f"Patient just said: \"{patient_text}\"\n\n"
-                "Respond as Dr. Sanjeevani. Ask strictly ONE short question (under 15 words) suited for this turn. "
-                "Do NOT ask multiple questions. On Turn 3 or when enough info is gathered, output ##CONCLUDE## at the end."
+                "Evaluate clinical information sufficiency. Respond as Dr. Sanjeevani with valid JSON: "
+                '{"has_enough_info": true/false, "reply": "...", "conclude": true/false}'
             )
             reply = _try_llm(llm, [
                 SystemMessage(content=canonical_consultation_prompt),
@@ -929,15 +992,34 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
             ])
 
             if reply:
-                if can_conclude and ("##CONCLUDE##" in reply or force_conclude):
+                parsed_json = None
+                json_match = re.search(r"\{[\s\S]*\}", reply)
+                if json_match:
+                    try:
+                        parsed_json = json.loads(json_match.group(0))
+                    except Exception:
+                        parsed_json = None
+
+                if parsed_json:
+                    llm_has_info = bool(parsed_json.get("has_enough_info", False))
+                    llm_conclude = bool(parsed_json.get("conclude", False))
+                    reply_content = str(parsed_json.get("reply", "")).strip()
+                else:
+                    llm_has_info = ("##CONCLUDE##" in reply) or has_sufficient
+                    llm_conclude = ("##CONCLUDE##" in reply) or force_conclude
+                    reply_content = reply.replace("##CONCLUDE##", "").strip()
+
+                if (llm_conclude or llm_has_info or force_conclude) and (can_conclude or turn_count >= 5):
                     should_conclude = True
                     conclude_llm = llm
                 else:
-                    clean_reply = reply.replace("##CONCLUDE##", "").strip()
+                    clean_reply = re.sub(r"^\{.*\"reply\":\s*\"([^\"]+)\".*\}$", r"\1", reply_content).strip()
+                    clean_reply = clean_reply.replace("##CONCLUDE##", "").strip()
+                    if not clean_reply:
+                        clean_reply = "Aapko yeh takleef kab se hai?"
                     if lang == "english":
                         translated_reply = sarvam_translate_client.translate_text_sync(clean_reply, "hi-IN", "en-IN")
                     elif lang == "garhwali":
-                        # Native Garhwali LLM generation; avoid regex double-adaptation
                         translated_reply = clean_reply
                     elif lang == "hindi":
                         translated_reply = clean_reply
@@ -961,7 +1043,7 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                     else:
                         base_intake = "आपको क्या तकलीफ या लक्षण महसूस हो रहे हैं? कृपया बताएं (जैसे बुखार, सर्दी, सिर दर्द, या पेट दर्द) ताकि मैं सही जांच कर सकूं।"
                         reply = localize_clinical_text(base_intake, lang, is_devanagari)
-                else:
+                elif turn_count == 1:
                     # Turn 1 duration question from registry
                     if lang == "garhwali":
                         reply = sym_data["t1_garh_dev"] if is_devanagari else sym_data["t1_garh_rom"]
@@ -971,31 +1053,86 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                         reply = sym_data["t1_hin"]
                     else:
                         reply = localize_clinical_text(sym_data["t1_hin"], lang, is_devanagari)
-
-                state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"
-                state["final_reply_text"] = reply
-                return state
-            elif turn_count < 3 and not has_sufficient:
-                # Turn 2 warning question from registry
-                if lang == "garhwali":
-                    reply = sym_data["t2_garh_dev"] if is_devanagari else sym_data["t2_garh_rom"]
-                elif lang == "english":
-                    reply = sym_data["t2_eng"]
-                elif lang == "hindi":
-                    reply = sym_data["t2_hin"]
+                elif turn_count == 2:
+                    # Turn 2 warning question from registry
+                    if lang == "garhwali":
+                        reply = sym_data["t2_garh_dev"] if is_devanagari else sym_data["t2_garh_rom"]
+                    elif lang == "english":
+                        reply = sym_data["t2_eng"]
+                    elif lang == "hindi":
+                        reply = sym_data["t2_hin"]
+                    else:
+                        reply = localize_clinical_text(sym_data["t2_hin"], lang, is_devanagari)
+                elif turn_count == 3:
+                    if lang == "garhwali":
+                        reply = "क्या ये तकलीफ लगातार बणी छ या बीच-बीच मा कम होन्दी?" if is_devanagari else "Kya ye takleef lagatar bani chha ya beech-beech ma kam gondi?"
+                    elif lang == "english":
+                        reply = "Is this discomfort continuous or does it come and go?"
+                    elif lang == "hindi":
+                        reply = "Kya yeh takleef lagatar bani rehti hai ya beech-beech mein kam hoti hai?"
+                    else:
+                        reply = localize_clinical_text("क्या यह तकलीफ लगातार बनी रहती है या बीच-बीच में कम होती है?", lang, is_devanagari)
+                elif turn_count == 4:
+                    if lang == "garhwali":
+                        reply = "क्या दगड़ मा कमजोरी या भूख नी लगणी छ?" if is_devanagari else "Kya dagad ma kamzori ya bhookh ni lagni chha?"
+                    elif lang == "english":
+                        reply = "Are you also experiencing weakness or loss of appetite?"
+                    elif lang == "hindi":
+                        reply = "Kya iske sath kamzori ya khane-peene mein man nahi lag raha?"
+                    else:
+                        reply = localize_clinical_text("क्या इसके साथ कमजोरी या खाने-पीने में अरुचि महसूस हो रही है?", lang, is_devanagari)
                 else:
-                    reply = localize_clinical_text(sym_data["t2_hin"], lang, is_devanagari)
+                    should_conclude = True
+                    conclude_llm = None
 
-                state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"
-                state["final_reply_text"] = reply
-                return state
+                if not should_conclude:
+                    state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"
+                    state["final_reply_text"] = reply
+                    return state
+            elif turn_count < 5 and not has_sufficient:
+                # If can_conclude (>=2 turns) but not yet sufficient, continue probing up to turn 5
+                if turn_count == 2:
+                    if lang == "garhwali":
+                        reply = sym_data["t2_garh_dev"] if is_devanagari else sym_data["t2_garh_rom"]
+                    elif lang == "english":
+                        reply = sym_data["t2_eng"]
+                    elif lang == "hindi":
+                        reply = sym_data["t2_hin"]
+                    else:
+                        reply = localize_clinical_text(sym_data["t2_hin"], lang, is_devanagari)
+                elif turn_count == 3:
+                    if lang == "garhwali":
+                        reply = "क्या ये तकलीफ लगातार बणी छ या बीच-बीच मा कम होन्दी?" if is_devanagari else "Kya ye takleef lagatar bani chha ya beech-beech ma kam gondi?"
+                    elif lang == "english":
+                        reply = "Is this discomfort continuous or does it come and go?"
+                    elif lang == "hindi":
+                        reply = "Kya yeh takleef lagatar bani rehti hai ya beech-beech mein kam hoti hai?"
+                    else:
+                        reply = localize_clinical_text("क्या यह तकलीफ लगातार बनी रहती है या बीच-बीच में कम होती है?", lang, is_devanagari)
+                elif turn_count == 4:
+                    if lang == "garhwali":
+                        reply = "क्या दगड़ मा कमजोरी या भूख नी लगणी छ?" if is_devanagari else "Kya dagad ma kamzori ya bhookh ni lagni chha?"
+                    elif lang == "english":
+                        reply = "Are you also experiencing weakness or loss of appetite?"
+                    elif lang == "hindi":
+                        reply = "Kya iske sath kamzori ya khane-peene mein man nahi lag raha?"
+                    else:
+                        reply = localize_clinical_text("क्या इसके साथ कमजोरी या खाने-पीने में अरुचि महसूस हो रही है?", lang, is_devanagari)
+                else:
+                    should_conclude = True
+                    conclude_llm = None
+
+                if not should_conclude:
+                    state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"
+                    state["final_reply_text"] = reply
+                    return state
             else:
                 should_conclude = True
                 conclude_llm = None
 
         if should_conclude:
             # DESIGN EXCEPTION (Task 9): responder_node owns exactly ONE phase transition:
-            # CONSULTATION -> CONCLUDED when the consultation reaches Turn 3 or LLM signals conclusion.
+            # CONSULTATION -> CONCLUDED when information is sufficient or hard cap reached.
             # This is the sole phase mutation in this module, allowing LangGraph's route_after_consultation edge
             # to retrieve verified remedies and format the prescription.
             state["dialogue_phase"] = "CONCLUDED"

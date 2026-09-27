@@ -80,6 +80,23 @@ def sync_batch_encounters(
                 )
                 conn.execute(ins)
 
+            # If encounter is Red-tier emergency, trigger real-time alert dispatch
+            if (enc.tier or "").lower() == "red":
+                try:
+                    from app.core.alerts_service import record_emergency_alert
+                    record_emergency_alert(
+                        conversation_id=f"asha-{enc.id}",
+                        user_id=user.get("id"),
+                        patient_name=enc.name,
+                        village=enc.village or user.get("village", ""),
+                        phone=user.get("phone", ""),
+                        symptoms=enc.symptom or "Severe vitals / acute emergency reported by ASHA",
+                        clinical_flags=[f"ASHA_VITALS: {vitals_str}"],
+                        tier="Red",
+                    )
+                except Exception as alert_err:
+                    pass
+
             synced_ids.append(enc.id)
 
     if synced_ids:
@@ -95,6 +112,40 @@ def sync_batch_encounters(
         )
 
     return SyncBatchResponse(synced_count=len(synced_ids), ids=synced_ids)
+
+
+@router.post("/encounters/sync", response_model=SyncBatchResponse)
+def sync_encounters_direct(
+    req: SyncBatchRequest,
+    user: Dict[str, Any] = Depends(require_role("asha", "admin")),
+):
+    """Alias for syncing batch encounters from ASHA workers."""
+    return sync_batch_encounters(req, user)
+
+
+@router.get("/alerts")
+def get_asha_alerts(
+    village: Optional[str] = None,
+    only_unacknowledged: bool = True,
+    user: Dict[str, Any] = Depends(require_role("asha", "admin")),
+):
+    """Returns active real-time Red-tier alerts for ASHA workers in their region."""
+    from app.core.alerts_service import get_emergency_alerts
+    v = village.strip() if (village and village.strip()) else None
+    return get_emergency_alerts(village=v, only_unacknowledged=only_unacknowledged, limit=50)
+
+
+@router.post("/alerts/{alert_id}/acknowledge")
+def acknowledge_asha_alert(
+    alert_id: int,
+    user: Dict[str, Any] = Depends(require_role("asha", "admin")),
+):
+    """Marks an emergency alert as acknowledged by ASHA worker."""
+    from app.core.alerts_service import acknowledge_emergency_alert
+    success = acknowledge_emergency_alert(alert_id, acknowledged_by=f"ASHA: {user.get('name', 'Worker')}")
+    if not success:
+        raise HTTPException(status_code=404, detail="Alert not found or already acknowledged.")
+    return {"success": True, "alert_id": alert_id, "acknowledged": True}
 
 
 @router.get("/encounters")

@@ -9,6 +9,10 @@ from app.db.schema import (
     asha_encounters_table,
     analytics_events_table,
     activity_logs_table,
+    consultations_table,
+    access_logs_table,
+    consultation_feedback_table,
+    emergency_alerts_table,
     create_all_tables,
 )
 from app.db.session import (
@@ -31,6 +35,10 @@ __all__ = [
     "asha_encounters_table",
     "analytics_events_table",
     "activity_logs_table",
+    "consultations_table",
+    "access_logs_table",
+    "consultation_feedback_table",
+    "emergency_alerts_table",
     "create_all_tables",
     "get_db_connection",
     "get_db_conn",

@@ -13,7 +13,8 @@ authApi.interceptors.request.use((config) => {
                        config.url?.includes('/auth/register') ||
                        config.url?.includes('/auth/check-username') ||
                        config.url?.includes('/auth/otp') ||
-                       config.url?.includes('/auth/reset-password-with-otp');
+                       config.url?.includes('/auth/reset-password-with-otp') ||
+                       config.url?.includes('/auth/refresh');
   if (!isPublicAuth) {
     const token = localStorage.getItem('sanjeevani_token');
     if (token) {
@@ -22,6 +23,73 @@ authApi.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// ── Transparent Token Refresh on 401 ────────────────────────────────────
+let _isRefreshing = false;
+let _failedQueue = [];
+
+function _processQueue(error, token = null) {
+  _failedQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error);
+    else resolve(token);
+  });
+  _failedQueue = [];
+}
+
+authApi.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    // Only attempt refresh on 401 for non-auth endpoints
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/login') &&
+      !originalRequest.url?.includes('/auth/register') &&
+      !originalRequest.url?.includes('/auth/refresh')
+    ) {
+      const refreshToken = localStorage.getItem('sanjeevani_refresh_token');
+      if (!refreshToken) return Promise.reject(error);
+
+      if (_isRefreshing) {
+        // Queue this request until refresh completes
+        return new Promise((resolve, reject) => {
+          _failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return authApi(originalRequest);
+        });
+      }
+
+      originalRequest._retry = true;
+      _isRefreshing = true;
+
+      try {
+        const res = await axios.post(`${API_BASE}/auth/refresh`, {
+          refresh_token: refreshToken,
+        });
+        const { access_token, refresh_token: newRefresh } = res.data;
+        localStorage.setItem('sanjeevani_token', access_token);
+        if (newRefresh) {
+          localStorage.setItem('sanjeevani_refresh_token', newRefresh);
+        }
+        _processQueue(null, access_token);
+        originalRequest.headers.Authorization = `Bearer ${access_token}`;
+        return authApi(originalRequest);
+      } catch (refreshErr) {
+        _processQueue(refreshErr, null);
+        // Refresh failed — clear session, user must re-login
+        localStorage.removeItem('sanjeevani_token');
+        localStorage.removeItem('sanjeevani_refresh_token');
+        localStorage.removeItem('sanjeevani_user_role');
+        return Promise.reject(refreshErr);
+      } finally {
+        _isRefreshing = false;
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // ── Auth Endpoints ──────────────────────────────────────────────────────
 
@@ -57,6 +125,10 @@ export const loginUser = async (identifier, password) => {
     phone: identifier,
     password,
   });
+  // Store refresh token if returned
+  if (res.data.refresh_token) {
+    localStorage.setItem('sanjeevani_refresh_token', res.data.refresh_token);
+  }
   return res.data;
 };
 
@@ -91,6 +163,10 @@ export const registerUser = async (registrationData, ...legacyArgs) => {
       };
 
   const res = await authApi.post('/auth/register', payload);
+  // Store refresh token if returned
+  if (res.data.refresh_token) {
+    localStorage.setItem('sanjeevani_refresh_token', res.data.refresh_token);
+  }
   return res.data;
 };
 
@@ -119,6 +195,9 @@ export const logoutUser = async () => {
   } catch (e) {
     console.debug('Logout audit notification skipped', e);
     return { success: true };
+  } finally {
+    // Always clear refresh token on logout
+    localStorage.removeItem('sanjeevani_refresh_token');
   }
 };
 

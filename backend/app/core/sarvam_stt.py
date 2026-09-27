@@ -101,11 +101,17 @@ class SarvamSTTClient:
             data["language_code"] = language_code
 
         try:
-            response = await client.post(
+            from app.core.resilience import retry_async
+            response = await retry_async(
+                client.post,
                 self.endpoint,
                 headers=headers,
                 files=files,
                 data=data,
+                max_retries=2,
+                base_delay=0.5,
+                max_delay=3.0,
+                caller_name="Sarvam_STT",
             )
         except Exception as net_err:
             raise SarvamSTTRequestError(f"Network error connecting to Sarvam STT: {net_err}") from net_err

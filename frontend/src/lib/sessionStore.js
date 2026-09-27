@@ -19,6 +19,34 @@ export function listSessions() {
   }
 }
 
+/**
+ * Fetches server-side consultations from GET /chat/history,
+ * caching the results in localStorage for offline availability.
+ */
+export async function fetchServerSessions() {
+  try {
+    const { getChatHistory } = await import('../api/client');
+    const data = await getChatHistory();
+    if (Array.isArray(data) && data.length > 0) {
+      const formatted = data.map((item) => ({
+        conversationId: item.conversation_id || item.conversationId,
+        summary: item.summary || 'Consultation',
+        tier: item.tier || 'Green',
+        updatedAt: item.updatedAt || item.created_at || new Date().toISOString(),
+      }));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(formatted.slice(0, MAX_ENTRIES)));
+      } catch {
+        /* storage full or unavailable */
+      }
+      return formatted;
+    }
+  } catch (err) {
+    console.warn('[SessionStore] Server sessions unavailable, using local cache:', err);
+  }
+  return listSessions();
+}
+
 export function recordSessionTurn({ conversationId, summary, tier }) {
   try {
     const all = listSessions();

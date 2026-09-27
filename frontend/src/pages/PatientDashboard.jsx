@@ -13,6 +13,7 @@ import NearbyFacilityFinder from '../components/NearbyFacilityFinder';
 import SanjeevaniOrb from '../components/SanjeevaniOrb';
 import MountainRidge from '../components/MountainRidge';
 import SessionHistoryDrawer from '../components/SessionHistoryDrawer';
+import SkeletonLoader from '../components/SkeletonLoader';
 import { listSessions } from '../lib/sessionStore';
 import { getChatHistory } from '../api/client';
 import { speakCue } from '../lib/audioSynthesizer';
@@ -36,6 +37,7 @@ export default function PatientDashboard() {
 
   // Dynamic Consultation History
   const [consultations, setConsultations] = useState([]);
+  const [loadingConsultations, setLoadingConsultations] = useState(true);
 
   // District Health Advisory
   const [advisory, setAdvisory] = useState('');
@@ -44,9 +46,9 @@ export default function PatientDashboard() {
   const [remedies, setRemedies] = useState(() => {
     try {
       const saved = localStorage.getItem(REMEDIES_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : DEFAULT_REMEDIES;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return DEFAULT_REMEDIES;
+      return [];
     }
   });
 
@@ -54,10 +56,27 @@ export default function PatientDashboard() {
   const [newRemedyTiming, setNewRemedyTiming] = useState('Subah (Morning)');
   const [showAddRemedy, setShowAddRemedy] = useState(false);
 
+  const handleLoadSampleRemedies = () => {
+    setRemedies(DEFAULT_REMEDIES);
+    try {
+      localStorage.setItem(REMEDIES_STORAGE_KEY, JSON.stringify(DEFAULT_REMEDIES));
+    } catch {}
+    toast.success('Sample remedies schedule loaded! 🌿');
+  };
+
+  const handleLoadSampleConsultations = () => {
+    setConsultations([
+      { conversationId: 'demo-1', updatedAt: '2026-09-15T09:30:00.000Z', summary: 'Gale me kharash aur sookhi khasi (Dry Cough)', tier: 'Green' },
+      { conversationId: 'demo-2', updatedAt: '2026-09-12T14:15:00.000Z', summary: 'Do din se bukhar aur thakan (Mild Fever)', tier: 'Yellow' },
+    ]);
+    toast.success('Sample consultation records loaded.');
+  };
+
   useEffect(() => {
     let active = true;
 
     async function loadConsultations() {
+      setLoadingConsultations(true);
       try {
         const historyData = await getChatHistory();
         if (active && Array.isArray(historyData) && historyData.length > 0) {
@@ -67,6 +86,7 @@ export default function PatientDashboard() {
             tier: item.tier,
             updatedAt: item.updated_at || item.created_at,
           })));
+          setLoadingConsultations(false);
           return;
         }
       } catch (err) {
@@ -78,11 +98,9 @@ export default function PatientDashboard() {
         if (stored.length > 0) {
           setConsultations(stored);
         } else {
-          setConsultations([
-            { conversationId: 'demo-1', updatedAt: '2026-09-15T09:30:00.000Z', summary: 'Gale me kharash aur sookhi khasi (Dry Cough)', tier: 'Green' },
-            { conversationId: 'demo-2', updatedAt: '2026-09-12T14:15:00.000Z', summary: 'Do din se bukhar aur thakan (Mild Fever)', tier: 'Yellow' },
-          ]);
+          setConsultations([]);
         }
+        setLoadingConsultations(false);
       }
     }
 
@@ -531,36 +549,64 @@ export default function PatientDashboard() {
 
             {/* Remedies Checklist */}
             <div className="space-y-3">
-              {remedies.map((remedy) => (
-                <div
-                  key={remedy.id}
-                  onClick={() => handleToggleRemedy(remedy.id)}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                    remedy.completed
-                      ? 'bg-sage/10 dark:bg-sage/15 border-sage/30'
-                      : 'bg-mist/60 dark:bg-card border-gray-200 dark:border-gray-700 hover:border-sage/40'
-                  }`}
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
-                      remedy.completed ? 'bg-sage text-white' : 'border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-warm-indigo'
-                    }`}>
-                      {remedy.completed && <CheckCircle2 className="w-5 h-5" />}
-                    </div>
-                    <div>
-                      <p className={`text-sm font-bold ${remedy.completed ? 'line-through text-muted dark:text-muted' : 'text-primary'}`}>
-                        {remedy.name}
-                      </p>
-                      <p className="text-xs text-muted dark:text-muted mt-0.5">{remedy.timing} • {remedy.note}</p>
-                    </div>
+              {remedies.length === 0 ? (
+                <div className="py-12 px-4 text-center flex flex-col items-center justify-center bg-mist/40 dark:bg-card/40 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
+                  <div className="w-12 h-12 rounded-2xl bg-sage/10 text-sage flex items-center justify-center mb-3">
+                    <Leaf className="w-6 h-6" />
                   </div>
-                  <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${
-                    remedy.completed ? 'bg-sage text-white' : 'bg-gray-200 dark:bg-gray-700 text-muted dark:text-gray-300'
-                  }`}>
-                    {remedy.completed ? 'Poora Hua ✓' : 'Lena Baqi Hai'}
-                  </span>
+                  <h4 className="font-serif font-bold text-sm text-primary mb-1">
+                    कोई दवा या काढ़ा शेड्यूल नहीं है • No Active Remedy Schedule
+                  </h4>
+                  <p className="text-xs text-muted max-w-sm mb-4 leading-relaxed">
+                    दैनिक स्वास्थ्य दिनचर्या के लिए नया नुस्खा जोड़ें या परीक्षण हेतु नमूना शेड्यूल लोड करें।
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2.5">
+                    <button
+                      onClick={() => setShowAddRemedy(true)}
+                      className="touch-target bg-sage hover:bg-sage/90 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Nuskha Jodein
+                    </button>
+                    <button
+                      onClick={handleLoadSampleRemedies}
+                      className="touch-target bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-primary font-bold text-xs px-3.5 py-2 rounded-xl transition-all border border-gray-200 dark:border-gray-700 cursor-pointer"
+                    >
+                      Load Sample Remedies
+                    </button>
+                  </div>
                 </div>
-              ))}
+              ) : (
+                remedies.map((remedy) => (
+                  <div
+                    key={remedy.id}
+                    onClick={() => handleToggleRemedy(remedy.id)}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                      remedy.completed
+                        ? 'bg-sage/10 dark:bg-sage/15 border-sage/30'
+                        : 'bg-mist/60 dark:bg-card border-gray-200 dark:border-gray-700 hover:border-sage/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                        remedy.completed ? 'bg-sage text-white' : 'border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-warm-indigo'
+                      }`}>
+                        {remedy.completed && <CheckCircle2 className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <p className={`text-sm font-bold ${remedy.completed ? 'line-through text-muted dark:text-muted' : 'text-primary'}`}>
+                          {remedy.name}
+                        </p>
+                        <p className="text-xs text-muted dark:text-muted mt-0.5">{remedy.timing} • {remedy.note}</p>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${
+                      remedy.completed ? 'bg-sage text-white' : 'bg-gray-200 dark:bg-gray-700 text-muted dark:text-gray-300'
+                    }`}>
+                      {remedy.completed ? 'Poora Hua ✓' : 'Lena Baqi Hai'}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -608,12 +654,42 @@ export default function PatientDashboard() {
             </div>
 
             <div className="space-y-3">
-              {consultations.map((item, idx) => (
-                <Link
-                  key={idx}
-                  to="/mitra/chat"
-                  className="p-4 rounded-2xl bg-mist/60 dark:bg-card border border-gray-200/80 dark:border-gray-800 hover:border-sage/40 transition-all flex items-center justify-between gap-3 block"
-                >
+              {loadingConsultations ? (
+                <SkeletonLoader variant="card" count={2} />
+              ) : consultations.length === 0 ? (
+                <div className="py-12 px-6 text-center flex flex-col items-center justify-center bg-mist/40 dark:bg-card/40 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
+                  <div className="w-14 h-14 rounded-3xl bg-sage/10 text-sage flex items-center justify-center mb-3">
+                    <FileText className="w-7 h-7" />
+                  </div>
+                  <h4 className="font-serif font-bold text-base text-primary mb-1">
+                    कोई पुराना पर्चा नहीं है • No Consultation History
+                  </h4>
+                  <p className="text-xs text-muted max-w-sm mb-5 leading-relaxed">
+                    AI डॉक्टर से अपने लक्षणों पर सलाह लें, या इंटरफेस देखने के लिए नमूना परामर्श लोड करें।
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <Link
+                      to="/mitra/chat"
+                      className="touch-target bg-sage hover:bg-sage/90 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+                    >
+                      <span>नया परामर्श शुरू करें / Start Chat</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                    <button
+                      onClick={handleLoadSampleConsultations}
+                      className="touch-target bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-primary font-bold text-xs px-4 py-2.5 rounded-xl transition-all border border-gray-200 dark:border-gray-700 cursor-pointer"
+                    >
+                      Load Sample Consultations
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                consultations.map((item, idx) => (
+                  <Link
+                    key={idx}
+                    to="/mitra/chat"
+                    className="p-4 rounded-2xl bg-mist/60 dark:bg-card border border-gray-200/80 dark:border-gray-800 hover:border-sage/40 transition-all flex items-center justify-between gap-3 block"
+                  >
                   <div className="flex items-center gap-3.5">
                     <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white text-xs font-bold shadow-xs ${
                       item.tier === 'Red' ? 'bg-rose-soft' :
@@ -647,7 +723,7 @@ export default function PatientDashboard() {
                     Tier {item.tier || 'Green'}
                   </span>
                 </Link>
-              ))}
+              )))}
             </div>
           </div>
         )}

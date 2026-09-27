@@ -83,12 +83,17 @@ def send_email_otp(to_email: str, otp: str, purpose: str = "register") -> Dict[s
             msg.attach(MIMEText(plain_text, "plain", "utf-8"))
             msg.attach(MIMEText(html_content, "html", "utf-8"))
 
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=12.0) as server:
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                server.login(smtp_user, smtp_pass)
-                server.send_message(msg)
+            from app.core.resilience import retry_sync
+
+            def _send_smtp():
+                with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=12.0) as server:
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+
+            retry_sync(_send_smtp, max_retries=2, base_delay=0.5, max_delay=3.0, caller_name="SMTP_Send")
 
             logger.info(f"[NotificationService] Successfully delivered OTP email to {to_email} via Gmail SMTP.")
             return {"success": True, "message": f"OTP email successfully sent to {to_email}.", "status": "sent"}
@@ -117,6 +122,7 @@ def send_sms_otp(to_phone: str, otp: str, purpose: str = "register") -> Dict[str
             import urllib.request
             import urllib.parse
             import base64
+            from app.core.resilience import retry_sync
 
             auth_str = f"{settings.TWILIO_ACCOUNT_SID}:{settings.TWILIO_AUTH_TOKEN}"
             b64_auth = base64.b64encode(auth_str.encode()).decode()
@@ -131,10 +137,14 @@ def send_sms_otp(to_phone: str, otp: str, purpose: str = "register") -> Dict[str
             req = urllib.request.Request(url, data=data, method="POST")
             req.add_header("Authorization", f"Basic {b64_auth}")
 
-            with urllib.request.urlopen(req, timeout=10.0) as resp:
-                if resp.status in (200, 201):
-                    logger.info(f"[NotificationService] SMS delivered to +91{to_phone} via Twilio.")
-                    return {"success": True, "message": f"OTP SMS sent to +91{to_phone}.", "status": "sent"}
+            def _dispatch_twilio():
+                with urllib.request.urlopen(req, timeout=10.0) as resp:
+                    return resp.status in (200, 201)
+
+            delivered = retry_sync(_dispatch_twilio, max_retries=2, base_delay=0.5, caller_name="Twilio_SMS")
+            if delivered:
+                logger.info(f"[NotificationService] SMS delivered to +91{to_phone} via Twilio.")
+                return {"success": True, "message": f"OTP SMS sent to +91{to_phone}.", "status": "sent"}
         except Exception as e:
             logger.error(f"[NotificationService Error] Twilio SMS failed: {e}")
 
@@ -143,6 +153,7 @@ def send_sms_otp(to_phone: str, otp: str, purpose: str = "register") -> Dict[str
         try:
             import urllib.request
             import json
+            from app.core.resilience import retry_sync
 
             clean_phone = to_phone.replace("+91", "").strip()
             url = "https://www.fast2sms.com/dev/bulkV2"
@@ -156,10 +167,14 @@ def send_sms_otp(to_phone: str, otp: str, purpose: str = "register") -> Dict[str
             req.add_header("authorization", settings.FAST2SMS_API_KEY.strip())
             req.add_header("Content-Type", "application/json")
 
-            with urllib.request.urlopen(req, timeout=10.0) as resp:
-                if resp.status in (200, 201):
-                    logger.info(f"[NotificationService] SMS delivered to +91{clean_phone} via Fast2SMS.")
-                    return {"success": True, "message": f"OTP SMS sent to +91{clean_phone}.", "status": "sent"}
+            def _dispatch_fast2sms():
+                with urllib.request.urlopen(req, timeout=10.0) as resp:
+                    return resp.status in (200, 201)
+
+            delivered = retry_sync(_dispatch_fast2sms, max_retries=2, base_delay=0.5, caller_name="Fast2SMS")
+            if delivered:
+                logger.info(f"[NotificationService] SMS delivered to +91{clean_phone} via Fast2SMS.")
+                return {"success": True, "message": f"OTP SMS sent to +91{clean_phone}.", "status": "sent"}
         except Exception as e:
             logger.error(f"[NotificationService Error] Fast2SMS failed: {e}")
 

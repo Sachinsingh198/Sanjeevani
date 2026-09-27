@@ -1,17 +1,20 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import FollowUpPanel from '../components/FollowUpPanel';
+import SkeletonLoader from '../components/SkeletonLoader';
 import {
   Users, WifiOff, RefreshCw, Plus, CheckCircle, Clock, MapPin,
   UserPlus, Leaf, PhoneCall, AlertTriangle, Search, Filter,
   Activity, Thermometer, Heart, ShieldAlert, Copy, Check, ChevronDown, CheckCircle2,
-  User
+  User, Bell
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { checkBackendHealth, syncAshaBatch } from '../api/client';
 
 const QUEUE_STORAGE_KEY = 'sanjeevani_asha_queue_v2';
+const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL)) || 'http://localhost:8000';
 
 const DEFAULT_PATIENTS = [
   { id: 'REC-101', name: 'Sunita Devi', village: 'Mandal, Chamoli', tier: 'Green', symptom: 'Dry Cough (Hill Cold)', vitals: { spo2: '97', temp: '98.6', pulse: '74' }, synced: true, followedUp: true },
@@ -26,12 +29,13 @@ export default function AshaDashboard() {
   const [offlineQueue, setOfflineQueue] = useState(() => {
     try {
       const saved = localStorage.getItem(QUEUE_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : DEFAULT_PATIENTS;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return DEFAULT_PATIENTS;
+      return [];
     }
   });
 
+  const [alerts, setAlerts] = useState([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showSosCard, setShowSosCard] = useState(false);
@@ -70,6 +74,44 @@ export default function AshaDashboard() {
     window.addEventListener('online', handleOnlineAutoSync);
     return () => window.removeEventListener('online', handleOnlineAutoSync);
   }, [offlineQueue]);
+
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('sanjeevani_token') || localStorage.getItem('sanjeevani_access_token');
+      if (!token) return;
+      const res = await axios.get(`${API_BASE}/asha/alerts`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 5000,
+      });
+      setAlerts(res.data || []);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 15000);
+    return () => clearInterval(interval);
+  }, [fetchAlerts]);
+
+  const handleAcknowledgeAlert = async (alertId) => {
+    const prev = [...alerts];
+    setAlerts(cur => cur.map(a => a.id === alertId ? { ...a, acknowledged: true } : a));
+    try {
+      const token = localStorage.getItem('sanjeevani_token') || localStorage.getItem('sanjeevani_access_token');
+      await axios.post(`${API_BASE}/asha/alerts/${alertId}/acknowledge`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Emergency alert marked as handled. 108 dispatch noted. 🚑');
+    } catch (err) {
+      setAlerts(prev);
+      toast.error('Could not acknowledge alert. State restored.');
+    }
+  };
+
+  const handleLoadSamplePatients = () => {
+    setOfflineQueue(DEFAULT_PATIENTS);
+    toast.success('Sample patient records loaded for demonstration.');
+  };
 
   const handleSyncAll = async () => {
     if (!navigator.onLine) {
@@ -250,6 +292,55 @@ export default function AshaDashboard() {
             </div>
           </div>
         </div>
+
+        {/* ── Real-Time Red-Tier Emergency Alerts (Live Field Dispatch) ── */}
+        {alerts.filter(a => !a.acknowledged).length > 0 && (
+          <div className="bg-rose-500/10 border-2 border-rose-500/50 rounded-3xl p-5 sm:p-6 shadow-sm animate-pulse-gentle">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center font-bold text-sm shadow-md animate-bounce">
+                  🚨
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-serif font-bold text-base text-rose-600 dark:text-rose-400">
+                      आपातकालीन अलर्ट • Active Red-Tier Emergency ({alerts.filter(a => !a.acknowledged).length})
+                    </h3>
+                    <span className="text-[10px] bg-rose-500 text-white font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                      Action Required
+                    </span>
+                  </div>
+                  <p className="text-xs text-rose-700/80 dark:text-rose-300/80 mt-0.5">
+                    Critical hypoxia or severe symptoms reported in your sector. Coordinate 108 ambulance dispatch.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {alerts.filter(a => !a.acknowledged).slice(0, 4).map((alert) => (
+                <div key={alert.id} className="bg-white dark:bg-warm-indigo p-4 rounded-2xl border border-rose-200 dark:border-rose-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-primary">{alert.patient_name || 'Citizen Patient'}</span>
+                      <span className="text-xs text-muted dark:text-muted">• {alert.village || user?.village || 'Local Sector'}</span>
+                      {alert.phone && <span className="text-xs font-mono text-muted dark:text-muted">• 📞 {alert.phone}</span>}
+                    </div>
+                    <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
+                      लक्षण / Lakshan: {alert.symptoms}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleAcknowledgeAlert(alert.id)}
+                    className="touch-target bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs self-start sm:self-auto cursor-pointer"
+                  >
+                    108 Dispatch / संभाल लिया ✓
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── Emergency SOS Dispatcher Card (Collapsible) ──────────── */}
         {showSosCard && (
@@ -492,8 +583,34 @@ export default function AshaDashboard() {
 
               {/* Patient List */}
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {filteredPatients.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-gray-400">Koi record nahi mila.</div>
+                {offlineQueue.length === 0 ? (
+                  <div className="py-12 px-6 text-center flex flex-col items-center justify-center">
+                    <div className="w-14 h-14 rounded-3xl bg-sage/10 text-sage flex items-center justify-center mb-3">
+                      <Users className="w-7 h-7" />
+                    </div>
+                    <h4 className="font-serif font-bold text-base text-primary mb-1">
+                      कोई मरीज़ रिकॉर्ड नहीं है • No Patient Records Yet
+                    </h4>
+                    <p className="text-xs text-muted max-w-sm mb-5 leading-relaxed">
+                      गाँव के भ्रमण के दौरान नए मरीज़ का विवरण दर्ज करें, या परीक्षण के लिए नमूना डेटा लोड करें।
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                      <button
+                        onClick={() => setShowAddForm(true)}
+                        className="touch-target bg-sage hover:bg-sage/90 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+                      >
+                        <Plus className="w-4 h-4" /> नया मरीज़ जोड़ें / + Record Patient
+                      </button>
+                      <button
+                        onClick={handleLoadSamplePatients}
+                        className="touch-target bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-primary font-bold text-xs px-4 py-2.5 rounded-xl transition-all border border-gray-200 dark:border-gray-700"
+                      >
+                        Load Sample Data / नमूना डेटा
+                      </button>
+                    </div>
+                  </div>
+                ) : filteredPatients.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-gray-400">फ़िल्टर के अनुसार कोई रिकॉर्ड नहीं मिला। / No matching records found.</div>
                 ) : (
                   filteredPatients.map((patient) => (
                     <div key={patient.id} className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors">

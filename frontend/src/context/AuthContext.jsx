@@ -30,6 +30,7 @@ export function AuthProvider({ children }) {
           // never on temporary network drops or backend 5xx/timeout errors
           if (err?.response?.status === 401) {
             localStorage.removeItem('sanjeevani_token');
+            localStorage.removeItem('sanjeevani_refresh_token');
             localStorage.removeItem('sanjeevani_user_role');
             setToken(null);
             setUser(null);
@@ -44,6 +45,9 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (identifier, password) => {
     const data = await loginUser(identifier, password);
     localStorage.setItem('sanjeevani_token', data.access_token);
+    if (data.refresh_token) {
+      localStorage.setItem('sanjeevani_refresh_token', data.refresh_token);
+    }
     if (data.user?.role) {
       localStorage.setItem('sanjeevani_user_role', data.user.role);
     }
@@ -65,6 +69,9 @@ export function AuthProvider({ children }) {
     }
     const data = await registerUser(payload);
     localStorage.setItem('sanjeevani_token', data.access_token);
+    if (data.refresh_token) {
+      localStorage.setItem('sanjeevani_refresh_token', data.refresh_token);
+    }
     if (data.user?.role) {
       localStorage.setItem('sanjeevani_user_role', data.user.role);
     }
@@ -81,6 +88,7 @@ export function AuthProvider({ children }) {
     // Send audit log to backend asynchronously
     logoutUser().catch(() => {});
     localStorage.removeItem('sanjeevani_token');
+    localStorage.removeItem('sanjeevani_refresh_token');
     localStorage.removeItem('sanjeevani_user_role');
     setToken(null);
     setUser(null);

@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     DEFAULT_LANGUAGE: str = "hi"
     ENABLE_DEV_OTP_HINT: bool = False
+    ENABLE_RATE_LIMITING: bool = True
+    LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "text"  # "text" or "json" (auto-switches to "json" when APP_ENV == "production")
+
+    # CORS: comma-separated list of allowed origins (env-driven for production)
+    ALLOWED_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,http://localhost:4173,http://127.0.0.1:4173"
 
     # LLM Settings
     PRIMARY_LLM_PROVIDER: str = "groq"
@@ -73,7 +79,10 @@ class Settings(BaseSettings):
     DEFAULT_JWT_SECRET_KEY: str = "sanjeevani-2026-gopeshwar-secret"
     JWT_SECRET_KEY: str = "sanjeevani-2026-gopeshwar-secret"
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 1440  # 24 hours
+    JWT_EXPIRE_MINUTES: int = 1440  # 24 hours (legacy, kept for compat)
+    JWT_ACCESS_EXPIRE_MINUTES: int = 30  # Short-lived access token
+    JWT_REFRESH_EXPIRE_DAYS: int = 7  # Longer-lived refresh token
+    JWT_REFRESH_SECRET_KEY: str = "sanjeevani-2026-refresh-gopeshwar-secret"
 
     # Relational Database & LangGraph State Persistence
     DATABASE_URL: str = "sqlite:///./sanjeevani.db"

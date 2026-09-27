@@ -12,6 +12,15 @@ const api = axios.create({
   timeout: 45000,
 });
 
+// Automatically pass Bearer token for authenticated patients/staff
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('sanjeevani_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 /**
  * Returns a stable conversation ID for this browser session.
  * Stored in sessionStorage so it resets on tab close but persists across
@@ -134,6 +143,152 @@ export const sendChatMessage = async (
 };
 
 /**
+ * Streams chat responses from the backend via Server-Sent Events (SSE).
+ * Calls onToken(chunk) for real-time text emission and onComplete(fullResponse)
+ * once the complete clinical triage payload is received.
+ */
+export const streamChatMessage = async (
+  arg1,
+  arg2,
+  arg3 = [],
+  arg4 = 'auto',
+  arg5 = false,
+  arg6 = 'female',
+  callbacks = {}
+) => {
+  let conversationId;
+  let message;
+  let patientConditions;
+  let languageHint;
+  let includeAudio;
+  let voiceGender;
+
+  let onToken = callbacks?.onToken || (() => {});
+  let onComplete = callbacks?.onComplete || (() => {});
+  let onError = callbacks?.onError || (() => {});
+
+  if (typeof arg1 === 'object' && arg1 !== null) {
+    conversationId = arg1.conversation_id || arg1.conversationId;
+    message = arg1.message || arg1.text || '';
+    patientConditions = arg1.patient_context?.known_conditions || arg1.patientConditions || [];
+    languageHint = arg1.language_hint || arg1.languageHint || 'auto';
+    includeAudio = arg1.include_audio ?? arg1.includeAudio ?? false;
+    voiceGender = arg1.voice_gender || arg1.voiceGender || 'female';
+    if (arg2 && typeof arg2 === 'object') {
+      onToken = arg2.onToken || onToken;
+      onComplete = arg2.onComplete || onComplete;
+      onError = arg2.onError || onError;
+    }
+  } else {
+    conversationId = arg1;
+    message = arg2;
+    patientConditions = arg3 || [];
+    languageHint = arg4 || 'auto';
+    includeAudio = arg5 || false;
+    voiceGender = arg6 || 'female';
+    if (callbacks && typeof callbacks === 'object') {
+      onToken = callbacks.onToken || onToken;
+      onComplete = callbacks.onComplete || onComplete;
+      onError = callbacks.onError || onError;
+    }
+  }
+
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('sanjeevani_token') : null;
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const requestBody = {
+    conversation_id: conversationId,
+    message: message,
+    language_hint: languageHint,
+    patient_context: { known_conditions: patientConditions },
+    include_audio: includeAudio,
+    voice_gender: voiceGender,
+  };
+
+  try {
+    const response = await fetch(`${API_BASE}/chat/message/stream`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Streaming failed with status ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let completedResponse = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const rawData = trimmed.replace(/^data:\s*/, '').trim();
+        if (rawData === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(rawData);
+          if (parsed.type === 'token' && parsed.token) {
+            onToken(parsed.token);
+          } else if (parsed.type === 'complete' && parsed.response) {
+            completedResponse = parsed.response;
+          } else if (parsed.type === 'error') {
+            throw new Error(parsed.error || 'Streaming error');
+          }
+        } catch {
+          // ignore chunk parse note
+        }
+      }
+    }
+
+    if (completedResponse) {
+      onComplete(completedResponse);
+      return completedResponse;
+    }
+
+    return await sendChatMessage(conversationId, message, patientConditions, languageHint, includeAudio, voiceGender);
+  } catch (err) {
+    console.warn('[streamChatMessage] Stream error, falling back to standard sendChatMessage:', err);
+    onError(err);
+    const fallbackRes = await sendChatMessage(conversationId, message, patientConditions, languageHint, includeAudio, voiceGender);
+    onComplete(fallbackRes);
+    return fallbackRes;
+  }
+};
+
+/**
+ * Submits patient feedback (thumbs up / thumbs down + optional note) for a consultation turn.
+ */
+export const sendChatFeedback = async ({ conversationId, turnIndex = 1, helpful = true, note = null }) => {
+  try {
+    const res = await api.post('/chat/feedback', {
+      conversation_id: conversationId,
+      turn_index: turnIndex,
+      helpful: Boolean(helpful),
+      note: note || null,
+    });
+    return res.data;
+  } catch (err) {
+    console.warn('[sendChatFeedback Error]:', err);
+    throw err;
+  }
+};
+
+/**
  * Calls backend Neural Indian Accent TTS (Bhashini / AI4Bharat / Neural Indic).
  * Returns an audio object URL for seamless HTML5 Audio playback.
  */
@@ -178,9 +333,15 @@ export const getConversationDetails = async (conversationId, token = null) => {
  * Synchronizes batch encounters from ASHA workers to the health center backend.
  */
 export const syncAshaBatch = async (encounters, token = null) => {
-  const authToken = token || (typeof localStorage !== 'undefined' ? localStorage.getItem('sanjeevani_token') : null);
+  const authToken = token || (typeof localStorage !== 'undefined' ? (localStorage.getItem('sanjeevani_token') || localStorage.getItem('sanjeevani_access_token')) : null);
   const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
-  const res = await api.post('/asha/sync-batch', { encounters }, { headers, timeout: 15000 });
-  return res.data;
+  try {
+    const res = await api.post('/asha/encounters/sync', { encounters }, { headers, timeout: 15000 });
+    return res.data;
+  } catch (err) {
+    // Fallback to legacy route if proxy or server uses sync-batch
+    const res = await api.post('/asha/sync-batch', { encounters }, { headers, timeout: 15000 });
+    return res.data;
+  }
 };
 

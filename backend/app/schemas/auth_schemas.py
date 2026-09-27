@@ -74,8 +74,19 @@ class ChangePasswordRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     access_token: str
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
     user: UserProfile
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(..., description="Valid JWT refresh token")
+
+
+class TokenRefreshResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
 
 
 class ResetPasswordRequest(BaseModel):

@@ -119,23 +119,20 @@ async def extract_rate_limit_targets(request: Request, call_next):
         request._body = body
     return await call_next(request)
 
-# Enable CORS for the React frontend (Vite port 5173 and preview/production ports)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:4173",
-        "http://127.0.0.1:4173",
-    ],
-    # Matches localhost, 127.0.0.1, 192.168.x.x, 10.x.x.x, or 172.16-31.x.x on any port
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:[0-9]+)?$",
+# Enable CORS for the React frontend — origins driven by ALLOWED_ORIGINS env var
+_cors_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
+_cors_kwargs = dict(
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Private-IP regex only for non-production (local dev / village LAN testing)
+if settings.APP_ENV.lower() != "production":
+    _cors_kwargs["allow_origin_regex"] = (
+        r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:[0-9]+)?$"
+    )
+app.add_middleware(CORSMiddleware, **_cors_kwargs)
 
 # Mount Routers
 app.include_router(auth_api.router)
@@ -161,18 +158,24 @@ def root():
 
 @app.get("/health")
 def health_check():
+    import time
+    from datetime import datetime, timezone
+
     # 1. Probe database (critical)
     db_status = "ok"
+    db_latency_ms = None
+    t0 = time.perf_counter()
     try:
         from app.db import get_db_connection
         from sqlalchemy import text
         with get_db_connection() as conn:
             conn.execute(text("SELECT 1"))
+        db_latency_ms = round((time.perf_counter() - t0) * 1000, 2)
     except Exception as e:
         logger.error(f"[HealthCheck] Database probe failed: {e}")
         db_status = "error"
 
-    # 2. Probe Qdrant (non-critical, degrades gracefully)
+    # 2. Probe Qdrant / Remedy Store (non-critical, degrades gracefully)
     qdrant_status = "unreachable"
     try:
         from app.core.hybrid_rag import get_shared_remedy_store
@@ -187,20 +190,24 @@ def health_check():
         logger.warning(f"[HealthCheck] Qdrant probe error: {e}")
         qdrant_status = "unreachable"
 
-    # 3. Probe LLM provider resolution (cheap inspect without external call)
-    llm_provider = "none"
-    if settings.PRIMARY_LLM_PROVIDER == "groq" and settings.GROQ_API_KEY:
-        llm_provider = "groq"
-    elif settings.GEMINI_API_KEY:
-        llm_provider = "gemini"
-    elif settings.SARVAM_API_KEY:
-        llm_provider = "sarvam"
+    # 3. Probe configured LLM providers
+    available_llms = []
+    if settings.GROQ_API_KEY and settings.GROQ_API_KEY.strip():
+        available_llms.append("groq")
+    if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip():
+        available_llms.append("gemini")
+    if settings.SARVAM_API_KEY and settings.SARVAM_API_KEY.strip():
+        available_llms.append("sarvam")
+
+    primary = settings.PRIMARY_LLM_PROVIDER
+    llm_provider = primary if primary in available_llms else (available_llms[0] if available_llms else "none")
 
     critical_ok = (db_status == "ok")
-    degraded = (qdrant_status != "ok" or llm_provider == "none")
+    degraded = (qdrant_status != "ok" or not available_llms)
 
     payload = {
         "status": "healthy" if (critical_ok and not degraded) else ("degraded" if critical_ok else "unhealthy"),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "database": db_status,
         "qdrant": qdrant_status,
         "llm_provider": llm_provider,
@@ -209,6 +216,29 @@ def health_check():
         "default_language": settings.DEFAULT_LANGUAGE,
         "primary_llm_provider": settings.PRIMARY_LLM_PROVIDER,
         "collection_name": settings.QDRANT_COLLECTION_NAME,
+        "dependencies": {
+            "database": {
+                "status": db_status,
+                "latency_ms": db_latency_ms,
+                "engine": "sqlite" if "sqlite" in settings.DATABASE_URL else "postgresql"
+            },
+            "vector_store": {
+                "status": qdrant_status,
+                "collection": settings.QDRANT_COLLECTION_NAME,
+                "mode": "hybrid_rag"
+            },
+            "llm_providers": {
+                "status": "ok" if available_llms else "none_configured",
+                "available": available_llms,
+                "primary": settings.PRIMARY_LLM_PROVIDER
+            },
+            "voice": {
+                "tts_provider": settings.TTS_PROVIDER,
+                "stt_provider": settings.STT_PROVIDER,
+                "edge_tts_fallback": True,
+                "sarvam_configured": bool(settings.SARVAM_API_KEY)
+            }
+        }
     }
 
     status_code = 200 if critical_ok else 503
