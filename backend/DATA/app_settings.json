@@ -1,0 +1,6 @@
+{
+  "tts_speed": 1.0,
+  "dialect_assistance": true,
+  "health_alerts": false,
+  "language_preference": "hi"
+}

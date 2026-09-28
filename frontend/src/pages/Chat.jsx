@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Send, Mic, MicOff, RefreshCw, User, AlertTriangle, AlertCircle, RotateCcw,
-  Volume2, Settings2, Wifi, WifiOff, FileDown, PhoneCall,
+  Volume2, VolumeX, Settings2, Wifi, WifiOff, FileDown, PhoneCall,
   Sparkles, Stethoscope, X, ChevronLeft, ChevronRight,
   MessageSquare, Plus, Clock, Trash2, Leaf, Edit3,
 } from 'lucide-react';
@@ -60,7 +60,13 @@ export default function Chat() {
   const [inputText, setInputText]           = useState('');
   const [isListening, setIsListening]       = useState(false);
   const [loading, setLoading]               = useState(false);
-  const [knownConditions, setKnownConditions] = useState([]);
+  const [knownConditions, setKnownConditions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sanjeevani_known_conditions');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
   const [currentPhase, setCurrentPhase]     = useState('GREETING');
   const [error, setError]                   = useState(null);
   const [sidebarOpen, setSidebarOpen]       = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
@@ -98,6 +104,12 @@ export default function Chat() {
       localStorage.setItem('app_lang', uiLang);
     } catch {}
   }, [uiLang]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sanjeevani_known_conditions', JSON.stringify(knownConditions));
+    } catch {}
+  }, [knownConditions]);
   const [correctingIdx, setCorrectingIdx]       = useState(null);
   const [correctionText, setCorrectionText]     = useState('');
   const [backendOnline, setBackendOnline]   = useState(null);
@@ -850,6 +862,10 @@ export default function Chat() {
                   onCorrectionChange={setCorrectionText}
                   onSubmitCorrection={handleCorrectionSubmit}
                   onReadAloud={() => readAloud(msg.text, idx, msg.spoken_text || msg.spoken_reply_text)}
+                  onStopSpeaking={() => {
+                    stopSpeakingRef.current?.();
+                    setSpeakingMsgIdx(null);
+                  }}
                   onDownloadReport={(format) => handleDownloadReport(msg, idx, format)}
                 />
               ))}
@@ -930,6 +946,7 @@ function MessageBubble({
   turnIndex,
   onReadAloud,
   isSpeaking,
+  onStopSpeaking,
   onDownloadReport,
   isDownloading,
   downloadingFormat,
@@ -982,11 +999,24 @@ function MessageBubble({
                 Dr. Sanjeevani
               </span>
             )}
-            <button onClick={onReadAloud}
-              className={`p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${isSpeaking ? 'text-booti-glow animate-pulse' : 'text-gray-400 hover:text-sage'}`}
-              aria-label="Read aloud">
-              <Volume2 className="w-3.5 h-3.5" />
-            </button>
+            {isSpeaking ? (
+              <button
+                type="button"
+                onClick={onStopSpeaking}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 text-[10px] font-bold border border-amber-500/30 transition-all cursor-pointer shadow-2xs"
+                title="Awaaz rokein aur screen par padhein"
+              >
+                <VolumeX className="w-3 h-3 text-amber-500" />
+                <span>पढ़ना चाहते हैं? आवाज़ रोकें</span>
+              </button>
+            ) : (
+              <button onClick={onReadAloud}
+                className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-gray-400 hover:text-sage"
+                aria-label="Read aloud"
+                title="आवाज़ में सुनें">
+                <Volume2 className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         )}
         {!isUser && msg.is_offline_fallback && (
@@ -1008,6 +1038,9 @@ function MessageBubble({
                 turnIndex={turnIndex}
                 isConcluded={msg.phase === 'CONCLUDED' || (msg.remedies && msg.remedies.length > 0)}
                 remedies={msg.remedies}
+                onReadAloud={onReadAloud}
+                isSpeaking={isSpeaking}
+                onStopSpeaking={onStopSpeaking}
               />
               {/* Streaming cursor & skip button */}
               {(isStreaming || msg.isLiveStreaming) && (

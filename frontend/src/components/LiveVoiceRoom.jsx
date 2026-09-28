@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { PhoneOff, Volume2, Mic, X, AlertCircle, Sparkles, PhoneCall, CheckCircle2 } from 'lucide-react';
+import { PhoneOff, Volume2, VolumeX, Mic, X, AlertCircle, Sparkles, PhoneCall, CheckCircle2, BookOpen } from 'lucide-react';
 import { sendChatMessage, getOrCreateConversationId } from '../api/client';
-import { speakText, preloadSpeech, base64ToAudioUrl, transcribeAudio } from '../api/voiceClient';
+import { speakText, preloadSpeech, base64ToAudioUrl, transcribeAudio, applyPlaybackRate } from '../api/voiceClient';
 import SanjeevaniOrb from './SanjeevaniOrb';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -27,6 +27,10 @@ export default function LiveVoiceRoom({ onClose }) {
   const [micNotice, setMicNotice]             = useState('');
   const [detectedLanguage, setDetectedLanguage] = useState('hindi');
   const [sttLangOverride, setSttLangOverride]   = useState(null);
+  const [isTextExpanded, setIsTextExpanded]   = useState(false);
+
+  const latestAudioRef     = useRef(null);
+  const latestVoiceTextRef = useRef('');
 
   const effectiveLang = sttLangOverride || (detectedLanguage === 'english' ? 'en-IN' : 'hi-IN');
   const effectiveLangRef   = useRef(effectiveLang);
@@ -121,6 +125,7 @@ export default function LiveVoiceRoom({ onClose }) {
       try {
         const audioUrl = base64ToAudioUrl(audioBase64, audioFormat || 'wav');
         const audio = new Audio(audioUrl);
+        applyPlaybackRate(audio);
         currentAudioRef.current = audio;
 
         audio.onplay = () => {
@@ -155,6 +160,7 @@ export default function LiveVoiceRoom({ onClose }) {
     try {
       const streamUrl = `${API_BASE}/voice/tts/stream?text=${encodeURIComponent(fallbackText)}&language=hi&gender=female`;
       const streamAudio = new Audio(streamUrl);
+      applyPlaybackRate(streamAudio);
       currentAudioRef.current = streamAudio;
 
       streamAudio.onplay = () => {
@@ -214,6 +220,8 @@ export default function LiveVoiceRoom({ onClose }) {
       setTranscript(prev => [...prev, { role: 'ai', text: res.reply_text }]);
 
       const voiceText = res.spoken_reply_text || res.reply_text;
+      latestAudioRef.current = { base64: res.audio_base64, format: res.audio_format };
+      latestVoiceTextRef.current = voiceText;
       playVoiceAudio(res.audio_base64, res.audio_format, voiceText);
     } catch (err) {
       console.error('[Sanjeevani Live] Pipeline Error:', err);
@@ -669,19 +677,62 @@ export default function LiveVoiceRoom({ onClose }) {
               </div>
             )}
 
-            {/* Sanjeevani Reply Text */}
+            {/* Sanjeevani Reply Text & Audio Accessibility Controls */}
             <div className="px-4 py-2.5 sm:py-3.5">
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-2">
                 <span className={`text-xs font-bold uppercase tracking-wider ${tc.text}`}>
-                  Sanjeevani
+                  Dr. Sanjeevani
                 </span>
-                <span className="text-xs text-white/50 font-mono">
-                  {convState === 'thinking' ? 'Generating Voice…' : 'Real-time Voice'}
-                </span>
+
+                {/* Option to stop listening / read instead */}
+                {convState === 'speaking' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopCurrentAudio();
+                      updateConvState('idle');
+                      setIsTextExpanded(true);
+                    }}
+                    className="px-2.5 py-1 rounded-full bg-amber-500/25 hover:bg-amber-500/40 text-amber-200 text-[11px] font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer border border-amber-500/40"
+                    title="Awaaz rokein aur screen par padhein"
+                  >
+                    <VolumeX className="w-3.5 h-3.5 text-amber-400" />
+                    <span>पढ़ना चाहते हैं? आवाज़ रोकें (Read Instead)</span>
+                  </button>
+                ) : (latestReply && latestReply !== INITIAL_GREETING) ? (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const voiceText = latestVoiceTextRef.current || latestReply;
+                        playVoiceAudio(latestAudioRef.current?.base64, latestAudioRef.current?.format, voiceText);
+                      }}
+                      className="px-2.5 py-0.5 rounded-full bg-white/10 hover:bg-white/20 text-[#8ED14C] text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                      title="Awaaz me sunein"
+                    >
+                      <Volume2 className="w-3 h-3" />
+                      <span>सुनें (Listen)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsTextExpanded(p => !p)}
+                      className="px-2.5 py-0.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                      title="Pura nuskha padhein"
+                    >
+                      <BookOpen className="w-3 h-3" />
+                      <span>{isTextExpanded ? 'संक्षिप्त ▴' : 'पूरा पढ़ें ▾'}</span>
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-white/50 font-mono">
+                    {convState === 'thinking' ? 'Generating Voice…' : 'Real-time Voice'}
+                  </span>
+                )}
               </div>
-              <p className="font-serif text-white/95 text-xs sm:text-sm md:text-base leading-relaxed line-clamp-2 sm:line-clamp-3">
+
+              <div className={`font-serif text-white/95 text-xs sm:text-sm md:text-base leading-relaxed ${isTextExpanded ? 'max-h-64 sm:max-h-80 overflow-y-auto pr-1 whitespace-pre-wrap' : 'line-clamp-3'}`}>
                 {latestReply}
-              </p>
+              </div>
             </div>
           </div>
 

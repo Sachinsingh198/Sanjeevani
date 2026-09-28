@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, VolumeX, ArrowLeftRight, Check, Sparkles, RefreshCw, User, Play, Square, Radio, ChevronDown, ChevronUp } from 'lucide-react';
-import { getVoiceProviderConfig, setVoiceProviderConfig, previewVoiceAudio, stopAllVoiceAudio } from '../api/voiceClient';
+import { getVoiceProviderConfig, setVoiceProviderConfig, previewVoiceAudio, stopAllVoiceAudio, getCachedVoiceConfig } from '../api/voiceClient';
 import toast from 'react-hot-toast';
 
 const DEFAULT_SARVAM_MODELS = [
@@ -49,19 +49,25 @@ export default function VoiceProviderSwitcher({
   mode = 'dropdown', // 'dropdown' | 'compact' | 'settings-card'
   className = '',
 }) {
-  const [config, setConfig] = useState({
-    primary: 'bhashini',
-    fallback: 'sarvam',
-    offline_fallback: 'neural_indic',
-    sarvam_model: 'bulbul:v3',
-    sarvam_speaker: 'meera',
-    bhashini_model: 'ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4',
-    bhashini_gender: 'female',
-    available_sarvam_models: DEFAULT_SARVAM_MODELS,
-    available_sarvam_speakers: DEFAULT_SARVAM_SPEAKERS,
-    available_sarvam_speakers_by_model: DEFAULT_SARVAM_SPEAKERS_BY_MODEL,
-    available_bhashini_models: DEFAULT_BHASHINI_MODELS,
-    available_bhashini_genders: DEFAULT_BHASHINI_GENDERS,
+  const [config, setConfig] = useState(() => {
+    const cached = getCachedVoiceConfig();
+    const currentModel = cached?.sarvam_model || 'bulbul:v3';
+    const speakersByModel = cached?.available_sarvam_speakers_by_model || DEFAULT_SARVAM_SPEAKERS_BY_MODEL;
+    return {
+      primary: cached?.primary || cached?.provider || 'bhashini',
+      fallback: cached?.fallback || 'sarvam',
+      offline_fallback: 'neural_indic',
+      sarvam_model: currentModel,
+      sarvam_speaker: cached?.sarvam_speaker || 'meera',
+      bhashini_model: cached?.bhashini_model || 'ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4',
+      bhashini_gender: cached?.bhashini_gender || 'female',
+      tts_speed: cached?.tts_speed || 1.0,
+      available_sarvam_models: cached?.available_sarvam_models?.length ? cached.available_sarvam_models : DEFAULT_SARVAM_MODELS,
+      available_sarvam_speakers: speakersByModel[currentModel] || DEFAULT_SARVAM_SPEAKERS,
+      available_sarvam_speakers_by_model: speakersByModel,
+      available_bhashini_models: cached?.available_bhashini_models?.length ? cached.available_bhashini_models : DEFAULT_BHASHINI_MODELS,
+      available_bhashini_genders: cached?.available_bhashini_genders?.length ? cached.available_bhashini_genders : DEFAULT_BHASHINI_GENDERS,
+    };
   });
 
   const [loading, setLoading] = useState(false);
@@ -108,6 +114,7 @@ export default function VoiceProviderSwitcher({
         sarvam_speaker: patch.sarvam_speaker ?? config.sarvam_speaker,
         bhashini_model: patch.bhashini_model ?? config.bhashini_model,
         bhashini_gender: patch.bhashini_gender ?? config.bhashini_gender,
+        tts_speed: patch.tts_speed ?? config.tts_speed,
         clear_cache: true,
       };
       const res = await setVoiceProviderConfig(updated);

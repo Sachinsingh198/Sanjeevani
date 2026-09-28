@@ -28,13 +28,13 @@ def test_cough_remedy_retrieval(remedy_store):
     assert any("Tulsi" in name or "Vasa" in name or "Kashaya" in name for name in matched_names)
 
 def test_indigestion_remedy_retrieval(remedy_store):
-    """Querying bloating/gas should retrieve Jeera-Ajwain infusion."""
+    """Querying bloating/gas should retrieve Jeera-Ajwain infusion or classical Panchakola formulations."""
     query = "Pet me bahut gas aur bhari pan lag raha hai"
     results = remedy_store.search_remedies(query, limit=2)
     
     assert len(results) > 0
     matched_names = [r["remedy_name"] for r in results]
-    assert any("Jeera" in name or "Ajwain" in name for name in matched_names)
+    assert any("Jeera" in name or "Ajwain" in name or "Panchakola" in name for name in matched_names)
 
 def test_docx_classical_remedy_retrieval(remedy_store):
     """Querying high thirst / burning sensation fever should retrieve classical docx formulations."""

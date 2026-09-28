@@ -1,6 +1,6 @@
 import re
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from app.agents.state import AgentState
 from app.config import settings
 from app.core.logger import logger
@@ -513,6 +513,107 @@ def generate_structured_preparation_steps(remedy_text: str, remedy_name: str = "
     return steps
 
 
+def _clean_text_for_speech(text: str) -> str:
+    """Produces clean, natural spoken speech from dialogue replies without formatting artifacts."""
+    if not text:
+        return ""
+    t = text.replace('\u2011', '-').replace('\u2013', '-').replace('\u2014', '-')
+    t = re.sub(r"https?://\S+", "", t)
+    t = re.sub(r"[*_#`~>\[\]]", "", t)
+    t = re.sub(r"Tier\s+(Green|Yellow|Red)[^\n]*", "", t, flags=re.I)
+    t = re.sub(r"(\b\d{3}\b)\s*\([^)]*\)", r"\1", t)
+    t = re.sub(
+        r"(?:^|\n)\s*(?:Aapki Takleef|Sambhavit Jaanch\s*\(Diagnosis\)|Sambhavit Karan\s*\(Possible Reason\)|Possible Cause|Clinical Assessment|Nuskha|Kaise Banayein|Kab Tak Lein|Dhyan Rakhein|Safety Verified|Ayurvedic Rationale)\s*:\s*",
+        "",
+        t,
+        flags=re.I,
+    )
+    t = re.sub(r"(?<=\d)\s*-\s*(?=\d)", " se ", t)
+    t = re.sub(r"\s+[-•*]\s+", ". ", t)
+    t = re.sub(r"^\s*[-•*]\s+", "", t, flags=re.M)
+    t = re.sub(r"\n+", ". ", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
+
+
+def _build_complete_spoken_remedy(
+    r_name: str,
+    diagnosis: str,
+    prep_steps: List[str],
+    dosage_str: str,
+    precaution_str: str,
+    lang: str = "hindi",
+    is_devanagari: bool = False
+) -> str:
+    """
+    Constructs a complete, accessible spoken audio explanation of the remedy for
+    illiterate patients or audio-first users. Pronounces diagnosis, remedy name,
+    step-by-step preparation instructions, dosage timing, and precautions.
+    """
+    clean_r_name = re.sub(r'[*_#`~]', '', r_name).strip()
+    clean_diagnosis = re.sub(r'[*_#`~]', '', diagnosis).strip()
+
+    speech_steps = []
+    ordinals_hin = ["Pehla", "Doosra", "Teesra", "Chautha", "Paanchva"]
+    ordinals_eng = ["First", "Second", "Third", "Fourth", "Fifth"]
+
+    for idx, step in enumerate(prep_steps):
+        s = re.sub(r'^\s*(?:\d+[\.\)]|\-|\*)\s*', '', step)
+        s = re.sub(r'^\*\*(?:[^*]+):\*\*\s*', '', s)
+        s = re.sub(r'[*_#`~]', '', s).strip()
+        if not s or len(s) < 8:
+            continue
+        if lang == "english":
+            ord_prefix = ordinals_eng[idx] if idx < len(ordinals_eng) else f"Step {idx+1}"
+            speech_steps.append(f"{ord_prefix}: {s}")
+        elif lang == "garhwali":
+            ord_prefix = ordinals_hin[idx] if idx < len(ordinals_hin) else f"Kram {idx+1}"
+            speech_steps.append(f"{ord_prefix}: {s}")
+        else:
+            ord_prefix = ordinals_hin[idx] if idx < len(ordinals_hin) else f"Kram {idx+1}"
+            speech_steps.append(f"{ord_prefix}: {s}")
+
+    steps_speech = ". ".join(speech_steps)
+    if steps_speech and not steps_speech.endswith('.'):
+        steps_speech += "."
+
+    if lang == "garhwali":
+        spoken_text = (
+            f"Twara lakshano bati {clean_diagnosis} lagnu chha. "
+            f"Yaikhatir pramanit nuskha chha: {clean_r_name}. "
+            f"Yaiku pura tarika dhyan se suna. {steps_speech} "
+            f"Ise {dosage_str}. "
+            f"2 din ma aaram ni aala ta 104 par phone kara ya PHC jaawa."
+        )
+    elif lang == "english":
+        spoken_text = (
+            f"Based on your symptoms, this appears to be {clean_diagnosis}. "
+            f"The verified remedy is {clean_r_name}. "
+            f"Please listen carefully to the instructions. {steps_speech} "
+            f"Dosage: {dosage_str}. "
+            f"If symptoms do not improve in two days, please call 104 or visit your nearest Primary Health Centre."
+        )
+    elif lang == "hindi":
+        spoken_text = (
+            f"Aapke bataye lakshano ke aadhar par {clean_diagnosis} lag raha hai. "
+            f"Iske liye pramanit nuskha hai: {clean_r_name}. "
+            f"Ise taiyar karne aur lene ka pura tarika dhyan se sunein. {steps_speech} "
+            f"Ise {dosage_str}. "
+            f"Dhyan rakhein, agar do din mein aaram na aaye toh 104 par call karein ya najdeeki PHC jaayein."
+        )
+    else:
+        base_hin = (
+            f"आपके बताए लक्षणों के आधार पर {clean_diagnosis} लग रहा है। "
+            f"इसके लिए प्रमाणित नुस्खा है: {clean_r_name}। "
+            f"इसे तैयार करने और लेने का पूरा तरीका ध्यान से सुनें। {steps_speech} "
+            f"इसे {dosage_str}। "
+            f"ध्यान रखें, अगर 2 दिन में आराम न आए तो 104 पर कॉल करें या नजदीकी PHC जाएं।"
+        )
+        spoken_text = localize_clinical_text(base_hin, lang, is_devanagari)
+
+    return _clean_text_for_speech(spoken_text)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Concluded Remedy Delivery Node
 # ─────────────────────────────────────────────────────────────────────────────
@@ -557,29 +658,6 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
 
     remedy = remedies[0]
     r_name = remedy.get('remedy_name', 'घरेलू नुस्खा')
-
-    # Spoken voice summary (concise, 2-3 sentences max)
-    if lang == "garhwali":
-        spoken_part = sym_data["spoken_garh_dev"] if is_devanagari else sym_data["spoken_garh_rom"]
-        spoken_voice_summary = (
-            f"त्वरा लक्ष्णों से {spoken_part} लगणु छ। यै खातिर तुम {r_name} ले सकदा। तरीक स्क्रीन पर छ। 2 दिन मा आराम नी आला त 104 पर फोन करा।"
-            if is_devanagari else
-            f"Twara lakshano bati {spoken_part} lagnu chha. Yaikhatir tum {r_name} istemal kari sakda. Tarika screen par chha. 2 din ma aaram ni aala ta 104 par call kara."
-        )
-    elif lang == "english":
-        spoken_voice_summary = (
-            f"Based on your symptoms, this appears to be {sym_data['diagnosis_eng']}. You can safely try {r_name}. Detailed instructions are shown on screen. If not improved in two days, please call 104 or visit the nearest PHC."
-        )
-    elif lang == "hindi":
-        spoken_voice_summary = (
-            f"Aapke bataye lakshano ke aadhar par {sym_data['spoken_hin']} lag raha hai. Iske liye aap {r_name} le sakte hain. Iska pura tarika screen par diya gaya hai. Agar do din mein aaram na aaye toh 104 par call karein ya PHC jaayein."
-        )
-    else:
-        base_hin_spoken = (
-            f"आपके बताए लक्षणों के आधार पर {sym_data['spoken_hin']} लग रहा है। इसके लिए आप {r_name} ले सकते हैं। इसका पूरा तरीका स्क्रीन पर दिया गया है। अगर दो दिन में आराम न आए तो 104 पर कॉल करें या नजदीकी PHC जाएं।"
-        )
-        spoken_voice_summary = localize_clinical_text(base_hin_spoken, lang, is_devanagari)
-    state["spoken_reply_text"] = spoken_voice_summary
 
     # Structured multi-step preparation steps
     prep_steps = generate_structured_preparation_steps(
@@ -644,30 +722,35 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
     # 2. LLM synthesis of prescription using ONE Canonical Hindi Template
     if llm:
         canonical_system_prompt = (
-            "Tu Dr. Sanjeevani hai. Patient ki poori jaanch aur clinical diagnosis ke baad ek "
-            "safe Ayurvedic nuskha batana hai. Sirf HINDI ya HINGLISH mein likh.\n\n"
+            "Tu Dr. Sanjeevani hai — Uttarakhand ki samajhdaar, anubhavi aur mamtamayi gaon ki doctor.\n"
+            "Patient ki poori clinical jaanch ke baad ek safe, CCRAS-pramanit Ayurvedic nuskha spasht aur poora batana hai.\n"
+            "Sirf HINDI ya HINGLISH mein likh.\n\n"
             "CRITICAL FORMATTING RULES:\n"
             "1. Har section se pehle aur baad mein ek blank line chhodhein.\n"
-            "2. '**Kaise Banayein:**' ke andar har step ko ALAG nayi line par numbered list (1. ..., 2. ..., 3. ...) mein likhein. Har point mein vistar se samjhayein.\n"
-            "3. '**Kab Tak Lein:**' ke andar khuraak aur timing likhein (har point nayi line par '- ' se shuru karein).\n"
-            "4. '**Dhyan Rakhein:**' ke andar har savdhani ko ALAG nayi line par '- ' se likhein. Kabhi bhi multiple bullets ko ek hi line mein mat milana!\n\n"
+            "2. '**Kaise Banayein:**' ke andar diye gaye Verified Remedy Instructions ke steps ko numbered list (1. ..., 2. ..., 3. ...) mein saaf aur poora likhein.\n"
+            "   Har step aam bolchal mein poora aur spasht ho. KABHI BHI koi adhoora ya truncated sentence mat likhna!\n"
+            "3. '**Kab Tak Lein:**' ke andar khuraak aur lene ka samay likhein ('- ' bullet list).\n"
+            "4. '**Dhyan Rakhein:**' ke andar mukhya savdhani aur 104 helpline referral likhein ('- ' bullet list).\n\n"
             "Bilkul is format mein likho:\n\n"
             "**Aapki Takleef:** [ek line mein mukhya lakshan]\n\n"
-            "**Sambhavit Karan (Possible Reason):** [possible cause: kya samasya lagti hai aur kyu, e.g. thakan ya sardi se hone wala sadharan sar dard]\n\n"
+            "**Sambhavit Karan (Possible Reason):** [kya samasya lagti hai aur kyu, e.g. thakan ya sardi se hone wala sadharan sar dard]\n\n"
             "**Nuskha:** [nuskhe ka naam]\n\n"
-            "**Kaise Banayein:**\n1. [Step 1: Samagri]\n2. [Step 2: Banane ki Vidhi]\n3. [Step 3: Chhanne aur Peene ka Tarika]\n\n"
-            "**Kab Tak Lein:**\n- [khuraak aur samay]\n\n"
-            "**Dhyan Rakhein:**\n- [savdhani 1]\n- [savdhani 2]\n\n"
-            "2 din mein aaram na aaye toh **104** par call karein ya **PHC** jaayein."
+            "**Kaise Banayein:**\n"
+            "1. [Pehla step - poora instruction]\n"
+            "2. [Doosra step - poora instruction]\n\n"
+            "**Kab Tak Lein:**\n"
+            "- [khuraak aur samay]\n\n"
+            "**Dhyan Rakhein:**\n"
+            "- 2 din mein aaram na aaye toh **104** par call karein ya **PHC** jaayein."
         )
         if lang == "garhwali":
             canonical_system_prompt += f"\n\n{bhashini_engine.get_garhwali_guidance(is_devanagari)}"
 
         user_prompt = (
-            f"Patient Details:\n{notes}\n\n"
+            f"Patient Consultation Details:\n{notes}\n\n"
             f"Verified Remedy:\n"
             f"Name: {remedy.get('remedy_name', '')}\n"
-            f"Instructions:\n" + "\n".join(prep_steps) + "\n\n"
+            f"Verified Remedy Instructions:\n" + "\n".join([f"{i+1}. {s}" for i, s in enumerate(prep_steps)]) + "\n\n"
             f"Ayurvedic Benefit: {remedy.get('ayurvedic_note', '')}\n"
             f"Safety: {remedy.get('safety_check', 'Verified safe')}"
         )
@@ -680,7 +763,14 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             prep_match = re.search(r"\*\*(?:Kaise Banayein|How to Prepare|बनाने का तरीका)[^*:]*:\*\*\s*\n([\s\S]*?)(?=\n\s*\*\*|$)", reply, re.IGNORECASE)
             if prep_match:
                 extracted_steps = re.findall(r"(?:^|\n)\s*(?:\d+[\.\)]|\-|\*)\s*(.+)", prep_match.group(1))
-                valid_steps = [s.strip() for s in extracted_steps if s.strip() and len(s.strip()) > 3]
+                valid_steps = []
+                for s in extracted_steps:
+                    cl = re.sub(r"^\*\*(?:[^*]+):\*\*\s*", "", s).strip()
+                    cl = cl.strip("*").strip()
+                    # Keep clean, non-truncated steps
+                    if len(cl) >= 15 and not cl.endswith("**"):
+                        valid_steps.append(cl)
+
                 if len(valid_steps) >= 2:
                     if lang == "english":
                         state["consultation_summary"]["preparation_steps"] = [
@@ -692,6 +782,11 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
                         ]
                     else:
                         state["consultation_summary"]["preparation_steps"] = valid_steps
+                else:
+                    # Fall back to pristine verified steps if extracted steps are incomplete
+                    state["consultation_summary"]["preparation_steps"] = prep_steps
+            else:
+                state["consultation_summary"]["preparation_steps"] = prep_steps
 
             if lang == "english":
                 state["final_reply_text"] = sarvam_translate_client.translate_text_sync(reply, "hi-IN", "en-IN")
@@ -701,6 +796,15 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
                 state["final_reply_text"] = reply
             else:
                 state["final_reply_text"] = localize_clinical_text(reply, lang, is_devanagari)
+            state["spoken_reply_text"] = _build_complete_spoken_remedy(
+                r_name=r_name,
+                diagnosis=cause_str,
+                prep_steps=state["consultation_summary"].get("preparation_steps") or prep_steps,
+                dosage_str=dosage_str,
+                precaution_str=precaution_str,
+                lang=lang,
+                is_devanagari=is_devanagari
+            )
             return state
 
     # 3. Deterministic prescription card fallback with explicit numbered steps
@@ -754,30 +858,17 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             "**ध्यान रखें:** 2 दिन में आराम न आए तो **104** पर कॉल करें या नजदीकी **PHC** जाएं।"
         )
         state["final_reply_text"] = localize_clinical_text(hin_card, lang, is_devanagari)
-    return state
 
-
-def _clean_text_for_speech(text: str) -> str:
-    """Produces clean, natural spoken speech from dialogue replies without formatting artifacts."""
-    if not text:
-        return ""
-    t = text.replace('\u2011', '-').replace('\u2013', '-').replace('\u2014', '-')
-    t = re.sub(r"https?://\S+", "", t)
-    t = re.sub(r"[*_#`~>\[\]]", "", t)
-    t = re.sub(r"Tier\s+(Green|Yellow|Red)[^\n]*", "", t, flags=re.I)
-    t = re.sub(r"(\b\d{3}\b)\s*\([^)]*\)", r"\1", t)
-    t = re.sub(
-        r"(Aapki Takleef|Sambhavit Jaanch\s*\(Diagnosis\)|Sambhavit Karan\s*\(Possible Reason\)|Possible Cause|Clinical Assessment|Nuskha|Kaise Banayein|Kab Tak Lein|Dhyan Rakhein|Safety Verified|Ayurvedic Rationale)[:\s]*",
-        "",
-        t,
-        flags=re.I,
+    state["spoken_reply_text"] = _build_complete_spoken_remedy(
+        r_name=r_name,
+        diagnosis=cause_str,
+        prep_steps=prep_steps,
+        dosage_str=dosage_str,
+        precaution_str=precaution_str,
+        lang=lang,
+        is_devanagari=is_devanagari
     )
-    t = re.sub(r"(?<=\d)\s*-\s*(?=\d)", " se ", t)
-    t = re.sub(r"\s+[-•*]\s+", ". ", t)
-    t = re.sub(r"^\s*[-•*]\s+", "", t, flags=re.M)
-    t = re.sub(r"\n+", ". ", t)
-    t = re.sub(r"\s+", " ", t).strip()
-    return t
+    return state
 
 
 def _limit_to_single_question(text: str) -> str:
@@ -1083,8 +1174,12 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
         has_actual_symptoms = has_symptom_mention(updated_notes) or has_symptom_mention(patient_text)
 
         has_sufficient = _has_sufficient_info(updated_notes)
-        can_conclude = ((turn_count >= 2) or has_sufficient) and has_actual_symptoms
-        force_conclude = ((turn_count >= 5) or has_sufficient) and has_actual_symptoms
+        # Can only conclude if:
+        # 1. At least 3 interactive clinical turns completed, OR
+        # 2. At least 2 turns completed AND multi-dimensional info is sufficient AND LLM explicitly determines conclusion is ready
+        can_conclude = ((turn_count >= 3) or (turn_count >= 2 and has_sufficient)) and has_actual_symptoms
+        # Hard safety cap strictly at turn 5 to guarantee timely remedy delivery
+        force_conclude = (turn_count >= 5) and has_actual_symptoms
 
         sym_data = get_symptom_data(updated_notes)
 
@@ -1093,16 +1188,27 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
 
         if llm:
             canonical_consultation_prompt = (
-                "Tu Dr. Sanjeevani hai — Uttarakhand ki samajhdaar, anubhavi aur mamtamayi gaon ki doctor.\n\n"
-                "VOICE CONSULTATION & CLINICAL INFORMATION SUFFICIENCY GUIDELINES:\n"
-                "1. SABSE ZAROORI NIYAM: Ek baar mein SIRF AUR SIRF EK CHHOTA SAWAAL poocho (Under 15 words). Ek sath 2 ya 3 sawaal KABHI MAT POOCHO!\n"
-                "2. ADAPTIVE CLINICAL PROBING (INFORMATION SUFFICIENCY):\n"
-                "   - Agar patient ne apni mukhya takleef, samay/aavdhi (duration), aur lakshan saaf bata diye hain, toh information sufficient samjhein (has_enough_info: true, conclude: true).\n"
-                "   - Agar mukhya jankari abhi adhoori hai (aur Turn Count 5 se kam hai), toh SIRF EK ahem follow-up sawaal poocho (has_enough_info: false, conclude: false).\n"
+                "Tu Dr. Sanjeevani hai — Uttarakhand ki anubhavi, samajhdaar aur mamtamayi gaon ki doctor.\n"
+                "Ek asali, chatur doctor ki tarah clinical jaanch (differential diagnosis) kar.\n\n"
+                "CLINICAL DOCTOR CONSULTATION GUIDELINES:\n"
+                "1. ASALI DOCTOR KI TARAH SOCHO: Sirf samay/ghante pooch kar turant nuskha mat de dena! "
+                "Takleef ki gehrai aur differential lakshan jaano:\n"
+                "   - Agar Sar Dard / Chakkar hai: Dard ka sthaan (kanpatti, maatha ya poora sar) aur nature pata karo; "
+                "kya ulti/matli, aankhon mein dhundhlapan, neend ki kami ya tanav hai.\n"
+                "   - Agar Naak Band / Allergy / Chhink hai: Pata karo kya subah uthne par chhinkon ki jhad lagti hai, "
+                "aankhon mein khujli/paani ya dhool/mausam badlav se badhta hai.\n"
+                "   - Agar Jodon ka Dard hai: Pata karo kya subah jakdan rehti hai, soojan hai ya chalne-phirne mein takleef hoti hai.\n"
+                "   - Agar Pet Dard / Acidity hai: Pata karo kya khatti dakar, seene mein jalan khane ke baad hoti hai ya pet mein marod hai.\n"
+                "2. EK BAAR MEIN SIRF EK SATEEK SAWAAL (Under 18 words) poocho, bilkul aam bolchal aur apnepan ke sath.\n"
+                "3. CLINICAL SUFFICIENCY (Kab Jaanch Puri Maanein):\n"
+                "   - Kam se kam 3 se 4 turns tak lakshano, triggers aur warning signs ki jaanch karo.\n"
+                "   - Sirf tab conclude: true karein jab aapko takleef ki aavdhi (duration), sthaan/swaroop (nature), "
+                "aur sath ke lakshan (associated symptoms) achhi tarah samajh aa gaye hon.\n"
+                "   - Agar jaanch adhoori hai (aur Turn Count 5 se kam hai), toh conclude: false rakhein aur agla clinical sawaal poochein.\n"
                 "   - Hard Cap: Turn 5 par jaanch zaroor samapt karein (conclude: true).\n"
-                "3. Kabhi bhi koi aisa sawaal dubara na poochna jo patient pehle hi bata chuka ho.\n"
-                "4. OUTPUT FORMAT: Respond strictly in valid JSON format:\n"
-                '{\n  "has_enough_info": true/false,\n  "reply": "Doctor ka agla chhota sawaal (Under 15 words) ya samapti sandesh",\n  "conclude": true/false\n}\n'
+                "4. Jo baat patient pehle bata chuka hai, use dobara kabhi mat poochna.\n"
+                "5. OUTPUT FORMAT: Respond strictly in valid JSON format:\n"
+                '{\n  "has_enough_info": true/false,\n  "reply": "Doctor ka agla sateek clinical sawaal (Under 18 words) ya samapti sandesh",\n  "conclude": true/false\n}\n'
                 "Do NOT output markdown code blocks or text outside the JSON."
             )
             if lang == "garhwali":
@@ -1134,11 +1240,11 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                     llm_conclude = bool(parsed_json.get("conclude", False))
                     reply_content = str(parsed_json.get("reply", "")).strip()
                 else:
-                    llm_has_info = ("##CONCLUDE##" in reply) or has_sufficient
+                    llm_has_info = ("##CONCLUDE##" in reply) or (has_sufficient and turn_count >= 3)
                     llm_conclude = ("##CONCLUDE##" in reply) or force_conclude
                     reply_content = reply.replace("##CONCLUDE##", "").strip()
 
-                if (llm_conclude or llm_has_info or force_conclude) and (can_conclude or turn_count >= 5):
+                if (llm_conclude or force_conclude) and (can_conclude or turn_count >= 5):
                     should_conclude = True
                     conclude_llm = llm
                 else:

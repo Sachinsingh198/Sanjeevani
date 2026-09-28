@@ -84,11 +84,13 @@ flowchart TD
         Emergency["Emergency Node\n(108 Escalation + Local PHC Referral)"]
     end
 
-    subgraph SpeechSubsystem ["Speech & Language Services"]
+    subgraph SpeechSubsystem ["Dual-Engine Speech Subsystem & Failover"]
         SarvamSTT["Sarvam Saaras:v3 (Code-mixed STT)"]
         SarvamTTS["Sarvam Bulbul:v3 (Expressive TTS Stream)"]
-        EdgeTTS["Neural Indic Edge-TTS (Fallback)"]
-        AI4Bharat["AI4Bharat Indic-TTS (Offline Local Model)"]
+        BhashiniASR["Bhashini Conformer ASR (MeitY Govt AI)"]
+        BhashiniTTS["Bhashini Indic TTS (AI4Bharat / Coqui)"]
+        EdgeTTS["Neural Indic Edge-TTS (Cloud Fallback)"]
+        VoiceSwitcher["Dynamic Voice Provider Switcher\n(/voice/provider)"]
     end
 
     subgraph VisionSubsystem ["Computer Vision Pipeline"]
@@ -110,7 +112,7 @@ flowchart TD
     CVUI -->|Image Uploads| Router
     CORS --> Router
 
-    Router -->|1. Transcribe Audio| SarvamSTT
+    Router -->|1. Transcribe Audio (MIME Sanitized)| SarvamSTT & BhashiniASR
     Router -->|2. Dispatch Consultation| LangGraph
     Router -->|3. Image Bytes| VisionSubsystem
 
@@ -120,9 +122,11 @@ flowchart TD
     Responder -->|Fetch Remedies| Retriever
     Retriever --> Qdrant
 
-    Responder -->|Synthesize Speech| SarvamTTS
-    SarvamTTS -.->|Fallback| EdgeTTS
-    EdgeTTS -.->|Offline Fallback| AI4Bharat
+    Responder -->|Synthesize Speech| VoiceSwitcher
+    VoiceSwitcher --> SarvamTTS & BhashiniTTS
+    SarvamTTS -.->|Mutual Failover| BhashiniTTS
+    BhashiniTTS -.->|Mutual Failover| SarvamTTS
+    SarvamTTS & BhashiniTTS -.->|Cloud Fallback| EdgeTTS
 
     LangGraph -.->|Traces & Spans| LangSmith
     LangGraph -.->|State Checkpoint| Sessions
@@ -289,12 +293,14 @@ sequenceDiagram
     Mic-->>User: Plays warm, natural voice response (<1.5s total)
 ```
 
-- **Voice Mode Detection**: When activated via the interactive **Sanjeevani Orb**, responses are automatically optimized for audio delivery (markdown symbols, bullet points, and citations are stripped before synthesis).
-- **Streaming Audio**: The `/voice/tts/stream` endpoint delivers chunked MP3 audio directly to native HTML5 `<audio>` elements for progressive playback without waiting for complete generation.
-- **Tri-Layer Fallback Architecture**:
-  1. **Primary**: Sarvam AI (High-fidelity Indian accents, Garhwali & Hindi phoneme support).
-  2. **Secondary**: Neural Indic Edge-TTS (Zero-cost cloud streaming).
-  3. **Tertiary**: AI4Bharat Indic-TTS (Fully offline PyTorch neural synthesis).
+- **Voice Mode Detection**: When activated via the interactive **Sanjeevani Orb**, responses are automatically optimized for audio delivery (markdown symbols, bullet points, citations, and non-standard mathematical punctuation like trailing exclamation marks are stripped before synthesis).
+- **Dynamic Engine Switching & Voice Personas**: The interactive `VoiceProviderSwitcher.jsx` and `/voice/provider` API let patients and clinicians switch live between **Sarvam AI**, **Bhashini**, and **Edge-TTS**, with customizable personas (Male / Female, speech rate, and pitch).
+- **MediaRecorder Opus MIME Normalization**: Incoming browser audio streams (`audio/webm;codecs=opus`) are automatically normalized to canonical `audio/webm` and `audio/wav`, preventing 400 rejection errors on downstream Indic speech APIs.
+- **Ultra-Low Latency Pre-Caching**: Frequently used clinical greetings and emergency guidance audio chunks are pre-cached with provider-aware MD5 keys, delivering instant (<50ms) speech playback.
+- **Dual-Engine Mutual Failover Hierarchy**:
+  1. **Primary Dual Engines**: **Sarvam AI** (`bulbul:v3` / `saaras:v3`) and **Bhashini** (Govt of India MeitY Conformer ASR / Indic-TTS) operate as mutual primary/fallback providers. If one experiences an API error (e.g. 500/503), the engine automatically fails over to the other.
+  2. **Secondary Cloud Fallback**: **Neural Indic Edge-TTS** (High-availability zero-cost cloud streaming).
+  3. **Tertiary Offline Fallback**: **AI4Bharat Indic-TTS** (Fully offline PyTorch neural synthesis on local edge compute).
 
 ---
 

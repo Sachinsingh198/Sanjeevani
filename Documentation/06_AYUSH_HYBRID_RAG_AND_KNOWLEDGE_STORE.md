@@ -87,34 +87,45 @@ else:
 ```
 
 ### Vector Collections:
-1. **`sanjeevani_remedies`**: Contains vectorized chunks of CCRAS home remedies and classical treatises with metadata payloads:
-   - `remedy_name`: e.g., *"Adrak-Tulsi Kadha"*
-   - `category`: e.g., *"Respiratory & Cold"*
-   - `ingredients`: List of herbs and household spices
-   - `preparation`: Step-by-step instructions
-   - `dosage`: Safe quantity (e.g., *"50ml twice daily after meals"*)
-   - `safety_precaution`: Caution notes (e.g., *"Avoid in severe hyperacidity"*)
+1. **`sanjeevani_remedies`**: Contains 147 validated, curated CCRAS and classical Ayurvedic formulations with dense 384-dimensional vector embeddings and rich metadata payloads:
+   - `remedy_name`: e.g., *"Anu Taila Pratimarsha Nasya & Haridra-Tulsi Bashpa"*, *"Adrak-Tulsi Kadha"*
+   - `category`: e.g., *"Allergic Rhinitis / Pratishyaya"*, *"Respiratory & Cold"*, *"Digestive Disorders"*
+   - `ingredients`: Precise classical botanical and kitchen items (e.g., *Vitex negundo*, *Anu Taila*, *Haridra*, *Tulsi*)
+   - `preparation`: Step-by-step preparation, filtration, and application methods
+   - `dosage`: Safe clinical frequency (e.g., *"2 drops in each nostril morning/evening"*)
+   - `safety_precaution`: Critical warnings, contraindications, and 108/PHC referral advisories
 2. **`sanjeevani_garhwali`**: Contains dialect-to-Hindi mapping vectors used by `triage_node` to normalize regional complaints.
 
 ---
 
-## 5. Retrieval & Reranking Workflow
+## 5. Clinical Diagnosis & Retrieval Workflow
 
 When the consultation state machine reaches the `CONCLUDED` phase:
-1. `retriever_node` extracts the patient's chief complaint from `AgentState["consultation_notes"]`.
-2. FastEmbed computes the dense vector representation of the complaint.
-3. Qdrant executes a Cosine Similarity search with score threshold:
-   $$\text{sim}(u, v) = \frac{u \cdot v}{\|u\| \|v\|}$$
-4. The top $k=2$ remedies exceeding a threshold score ($\ge 0.65$) are packaged into `state["retrieved_remedies"]`.
-5. The LLM presents the remedy formatted inside structured markdown tags:
-   ```markdown
-   :::remedy
-   {"name": "Tulsi-Adrak Kadha", "ingredients": "Tulsi leaves, fresh ginger, black pepper, jaggery", "dosage": "Half cup lukewarm twice daily", "caution": "Do not consume on empty stomach if suffering from ulcers."}
-   :::
-   ```
-6. The frontend's `StructuredBotMessage.jsx` renders this tag as an interactive visual **Remedy Card**.
 
----
+### 1. Weighted Clinical Symptom Classification:
+[`backend/app/agents/nodes/responder_node.py`](file:///d:/Sanjeevani/backend/app/agents/nodes/responder_node.py) runs weighted phrase matching against `CLINICAL_SYMPTOM_REGISTRY` to determine the precise diagnosis rather than defaulting to generic fatigue:
+- **`allergic_rhinitis`** (weight 1.5–2.0): Congestion (`naak band`, `band naak`), sneezing (`chheenk`, `chhink`), itchy/watery eyes (`aankhon me khujli`), sinus, Pratishyaya.
+- **`joint_pain`**: Arthritis, stiffness, sandhivata, gathiya (`jod dard`, `ghutna dard`).
+- **`acidity`**: Hyperacidity, acid reflux, heartburn, amlapitta (`seene mein jalan`, `khatti dakar`).
+- **`skin_allergy`**: Rashes, urticaria, itching, sheeta pitta, charmarog (`tvacha khujli`, `daane`).
+- **`headache` / `fever` / `cough` / `stomach`**: Core primary care categories.
+
+### 2. Multi-Turn Patient History Synthesis:
+Rather than extracting conversational filler from the user's last turn (e.g., *"haan hoti hai, aur saath main..."*), `_format_concluded_remedy()` synthesizes the patient's entire chief complaint trajectory across turns:
+> *"mera naak akshar band rehta hai (lagbhag 3 saalon se naak band rehta hai, aankhon main khujli aur paani kaa aana bhi.)"*
+
+### 3. Dual-Stream Retrieval & Strict Gating:
+1. FastEmbed computes dense embeddings anchored with canonical clinical terms.
+2. Qdrant executes Cosine Similarity search with banned historical substance filtering (blocking tobacco, snuff, toxic mercury).
+3. **Strict Candidate Gating**: Secondary alternative remedies are only included if their similarity score satisfies:
+   $$\text{Score}_{\text{secondary}} \ge 0.40 \quad \text{and} \quad \text{Score}_{\text{secondary}} \ge 0.70 \times \text{Score}_{\text{primary}}$$
+   This strictly prevents irrelevant or orphaned recommendations (e.g., Ashwagandha Ksheerapaka during rhinitis consultations).
+
+### 4. Interactive Frontend Card Rendering:
+The frontend renders concluded guidance using structured components:
+- **`Mukhya Nuskha` (Primary Remedy)**: Full preparation steps, ingredients, and dosage.
+- **`Vaikalpik Nuskha` (Alternative Option)**: Optional secondary choice if gated and verified.
+- **Consolidated Disclaimer**: Replaced duplicate per-card warnings with a single, centered advisory banner (`Yeh AI ka anumaan hai, doctor ka nidaan nahi`) positioned directly above the clinical record export buttons.
 
 ## 6. End-to-End AYUSH RAG & Knowledge Graph Safety Pipeline
 

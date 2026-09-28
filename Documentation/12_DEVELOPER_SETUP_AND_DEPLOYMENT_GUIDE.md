@@ -4,13 +4,20 @@
 
 Before configuring Project Sanjeevani locally, ensure the following software is installed:
 
-| Component | Minimum Version | Recommended Tool / Distribution |
-|---|---|---|
-| **Python** | `>= 3.11` | Managed via [`uv`](https://docs.astral.sh/uv/) (or standard `python.org`) |
-| **Node.js** | `>= 20.x` | LTS Release (`node -v`) |
-| **npm** | `>= 10.x` | Bundled with Node.js (`npm -v`) |
-| **Git** | Any modern version | Git CLI |
-| **Operating System** | Any | Tested on Windows 11, Ubuntu 22.04 LTS, macOS Sonoma |
+| Component | Minimum Version | Recommended Tool / Distribution | Notes |
+|---|---|---|---|
+| **Python** | `>= 3.11` | Managed via [`uv`](https://docs.astral.sh/uv/) (or standard `python.org`) | Fast virtual environment & dependency management |
+| **Node.js** | `>= 20.x` | LTS Release (`node -v`) | Required for React 19 + Vite |
+| **npm** | `>= 10.x` | Bundled with Node.js (`npm -v`) | |
+| **Git** | Any modern version | Git CLI | |
+| **Operating System** | Any | Tested on Windows 11, Ubuntu 22.04/24.04 LTS, macOS Sonoma | On Linux/Docker, requires OpenGL & GLib packages |
+
+> [!IMPORTANT]
+> **Headless Linux / Docker / CI Environment Dependencies**:
+> On Linux distributions (including Ubuntu runners and Debian-based Docker containers), MediaPipe and OpenCV require headless OpenGL and GLib libraries:
+> ```bash
+> sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libglib2.0-0
+> ```
 
 ---
 
@@ -42,15 +49,22 @@ cd Sanjeevani
    GROQ_API_KEY=your_groq_api_key
    GROQ_MODEL=llama-3.1-8b-instant
 
-   # Secondary Fallback
+   # Secondary Fallback LLM
    GEMINI_API_KEY=your_gemini_api_key
    GEMINI_MODEL=gemini-1.5-flash
 
-   # Speech & Voice (Sarvam AI)
-   SARVAM_API_KEY=your_sarvam_api_key
+   # Speech & Voice Subsystem
+   # Providers: sarvam | bhashini | edge
    TTS_PROVIDER=sarvam
+   SARVAM_API_KEY=your_sarvam_api_key
 
-   # LangSmith Observability
+   # Bhashini Government Indic AI Credentials (Optional / Mutual Failover)
+   BHASHINI_USER_ID=your_bhashini_user_id
+   BHASHINI_API_KEY=your_bhashini_api_key
+   BHASHINI_INFERENCE_KEY=your_bhashini_inference_key
+   BHASHINI_PIPELINE_ENDPOINT=https://dhruva-api.bhashini.gov.in/services/inference/pipeline
+
+   # LangSmith Observability & Tracing
    LANGCHAIN_TRACING_V2=true
    LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
    LANGCHAIN_API_KEY=your_langsmith_api_key
@@ -114,7 +128,7 @@ The database automatically initializes three pre-configured accounts:
 |---|---|---|---|---|
 | **Citizen / Patient** | `patient` | `sanjeevani2026` | `sachin.patient@gmail.com` | Test clinical chat, voice room, yoga & companion |
 | **ASHA Worker** | `asha` | `sanjeevani2026` | `sunita.asha@sanjeevani.gov.in` | Test emergency escalation queue & referral slips |
-| **District Admin** | `admin` | `sanjeevani2026` | `admin@sanjeevani.gov.in` | Test system metrics & LLM provider switching |
+| **District Admin** | `admin` | `sanjeevani2026` | `admin@sanjeevani.gov.in` | Test system metrics, live voice provider switching & SOS alerts |
 
 ---
 
@@ -123,7 +137,7 @@ The database automatically initializes three pre-configured accounts:
 From the `backend/` folder:
 
 ```bash
-# Run the entire test suite
+# Run the entire test suite (45+ deterministic and integration tests)
 uv run pytest -v
 
 # Run deterministic triage safety tests
@@ -132,8 +146,11 @@ uv run pytest tests/test_clinical_triage.py -v
 # Run LangGraph multi-turn agent tests
 uv run pytest tests/test_agent_workflow.py -v
 
-# Run Sarvam STT & TTS integration tests
-uv run pytest tests/test_sarvam_integrations.py -v
+# Run Sarvam & Bhashini Voice integrations (STT, TTS, Provider Switching)
+uv run pytest tests/test_sarvam_integrations.py tests/test_voice_provider.py -v
+
+# Run Security, Refresh Token Rotation & Auth tests
+uv run pytest tests/test_security.py -v
 
 # Run Edge Vision Diagnostic pipeline tests
 uv run pytest tests/test_cv_pipeline.py -v
@@ -142,14 +159,38 @@ uv run pytest tests/test_cv_pipeline.py -v
 uv run pytest tests/test_hybrid_rag.py -v
 ```
 
+> [!TIP]
+> **Mocking Read-Only Engine Properties in Unit Tests**:
+> When writing tests that mock voice service availability, note that `bhashini_client.is_configured` and `sarvam_stt_client.is_configured` are implemented as read-only class properties. Use `unittest.mock.patch("app.core.bhashini_client.bhashini_client.is_configured", new_callable=PropertyMock, return_value=True)` rather than assigning to the instance attribute to prevent `AttributeError: property of object has no setter`.
+
 ---
 
-## 5. Production Deployment Guidelines
+## 5. Database Architecture & Concurrency Safeguards
+
+Project Sanjeevani uses an embedded SQLite database (`sanjeevani.db`) with Write-Ahead Logging (WAL) for rapid local execution and offline tolerance.
+
+### SQLite Connection Sharing in Transactions
+To prevent SQLite thread deadlocks (`database is locked`) during bulk batch processing:
+- When a parent service opens a write transaction (such as `sync_batch_encounters()`), all child operations (e.g., `record_emergency_alert()`) must reuse the active database connection via `conn=conn`.
+- Never open a second, independent `with get_db_connection():` context within an uncommitted transaction context on SQLite.
+
+---
+
+## 6. Production Deployment Guidelines
 
 ### Containerized Deployment (Docker)
 ```dockerfile
 # Dockerfile for Backend
 FROM python:3.11-slim
+
+# Install system dependencies for OpenCV and MediaPipe headless execution
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libegl1 \
+    libgl1 \
+    libglib2.0-0 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

@@ -139,20 +139,79 @@ export function cleanTextForTTS(text, language = 'hi') {
   return t;
 }
 
+export const VOICE_CONFIG_STORAGE_KEY = 'sanjeevani_voice_provider_config';
+export const APP_SETTINGS_STORAGE_KEY = 'sanjeevani_app_settings';
+export const TTS_SPEED_STORAGE_KEY = 'sanjeevani_tts_speed';
+
 /**
- * Fetches the currently configured primary voice provider, its automatic first fallback,
- * and service readiness from the backend.
+ * Returns user's preferred speech speed (0.8x to 1.5x) from localStorage.
+ */
+export function getPlaybackRate() {
+  try {
+    const saved = localStorage.getItem(TTS_SPEED_STORAGE_KEY);
+    if (saved) {
+      const parsed = parseFloat(saved);
+      if (!isNaN(parsed) && parsed >= 0.5 && parsed <= 2.5) {
+        return parsed;
+      }
+    }
+  } catch {}
+  return 1.0;
+}
+
+/**
+ * Applies the user-configured playback rate to an HTML5 Audio instance.
+ */
+export function applyPlaybackRate(audio) {
+  if (!audio) return;
+  try {
+    const rate = getPlaybackRate();
+    audio.playbackRate = rate;
+    audio.defaultPlaybackRate = rate;
+  } catch {}
+}
+
+/**
+ * Reads voice configuration cached in localStorage to prevent reset on restart/reload.
+ */
+export const getCachedVoiceConfig = () => {
+  try {
+    const raw = localStorage.getItem(VOICE_CONFIG_STORAGE_KEY);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch {}
+  return null;
+};
+
+/**
+ * Fetches the currently configured primary voice provider, models, and speakers.
+ * Always synchronizes with localStorage so user choices survive app restarts.
  */
 export const getVoiceProviderConfig = async () => {
+  const cached = getCachedVoiceConfig();
   try {
     const res = await voiceApi.get('/voice/provider');
-    return res.data;
+    const backendData = res.data;
+    try {
+      localStorage.setItem(VOICE_CONFIG_STORAGE_KEY, JSON.stringify(backendData));
+      if (backendData.tts_speed) {
+        localStorage.setItem(TTS_SPEED_STORAGE_KEY, backendData.tts_speed.toString());
+      }
+    } catch {}
+    return backendData;
   } catch (err) {
-    console.warn('[Sanjeevani Voice] Failed to fetch provider config, using local default:', err);
+    console.warn('[Sanjeevani Voice] Failed to fetch provider config from backend, using cached/default:', err);
+    if (cached) return cached;
     return {
       primary: 'bhashini',
       fallback: 'sarvam',
       offline_fallback: 'neural_indic',
+      sarvam_model: 'bulbul:v3',
+      sarvam_speaker: 'meera',
+      bhashini_model: 'ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4',
+      bhashini_gender: 'female',
+      tts_speed: 1.0,
       bhashini_configured: true,
       sarvam_configured: true,
       status: 'ready',
@@ -162,17 +221,89 @@ export const getVoiceProviderConfig = async () => {
 
 /**
  * Dynamically switches the primary voice provider between 'bhashini' and 'sarvam',
- * and allows saving model and speaker choices.
- * Automatically clears audio cache so new configuration is reflected immediately.
+ * and saves model, speaker, and speech rate choices both to backend disk and localStorage.
  */
 export const setVoiceProviderConfig = async (payload) => {
   clearAudioCache();
   const req = typeof payload === 'string'
     ? { provider: payload.toLowerCase().trim(), clear_cache: true }
     : { ...payload, clear_cache: true };
+
+  if (req.tts_speed !== undefined) {
+    try {
+      localStorage.setItem(TTS_SPEED_STORAGE_KEY, req.tts_speed.toString());
+    } catch {}
+  }
+
+  // Update localStorage immediately so frontend never resets even if connection lags
+  try {
+    const existing = getCachedVoiceConfig() || {};
+    const optimistic = { ...existing, ...req };
+    localStorage.setItem(VOICE_CONFIG_STORAGE_KEY, JSON.stringify(optimistic));
+  } catch {}
+
   const res = await voiceApi.post('/voice/provider', req);
   clearAudioCache();
+  try {
+    localStorage.setItem(VOICE_CONFIG_STORAGE_KEY, JSON.stringify(res.data));
+    if (res.data.tts_speed) {
+      localStorage.setItem(TTS_SPEED_STORAGE_KEY, res.data.tts_speed.toString());
+    }
+  } catch {}
   return res.data;
+};
+
+/**
+ * Loads general application settings from backend disk or local fallback.
+ */
+export const getPersistedAppSettings = async () => {
+  let local = null;
+  try {
+    const raw = localStorage.getItem(APP_SETTINGS_STORAGE_KEY);
+    if (raw) local = JSON.parse(raw);
+  } catch {}
+
+  try {
+    const res = await voiceApi.get('/voice/settings');
+    const merged = { ...(local || {}), ...res.data };
+    try {
+      localStorage.setItem(APP_SETTINGS_STORAGE_KEY, JSON.stringify(merged));
+      if (merged.tts_speed) {
+        localStorage.setItem(TTS_SPEED_STORAGE_KEY, merged.tts_speed.toString());
+      }
+    } catch {}
+    return merged;
+  } catch {
+    return local || {
+      tts_speed: 1.0,
+      dialect_assistance: true,
+      health_alerts: true,
+      language_preference: 'hi',
+    };
+  }
+};
+
+/**
+ * Persists general application settings to disk across restarts and to localStorage.
+ */
+export const savePersistedAppSettings = async (settings) => {
+  try {
+    const raw = localStorage.getItem(APP_SETTINGS_STORAGE_KEY);
+    const prev = raw ? JSON.parse(raw) : {};
+    const merged = { ...prev, ...settings };
+    localStorage.setItem(APP_SETTINGS_STORAGE_KEY, JSON.stringify(merged));
+    if (merged.tts_speed) {
+      localStorage.setItem(TTS_SPEED_STORAGE_KEY, merged.tts_speed.toString());
+    }
+  } catch {}
+
+  try {
+    const res = await voiceApi.post('/voice/settings', settings);
+    return res.data;
+  } catch (err) {
+    console.warn('[Settings] Failed to save settings to backend:', err);
+    return settings;
+  }
 };
 
 // Active audio elements and request tracking to strictly prevent overlapping voices
@@ -251,6 +382,7 @@ export const previewVoiceAudio = async ({
     const { audio_base64, format } = res.data;
     const url = base64ToAudioUrl(audio_base64, format || 'wav');
     const audio = new Audio(url);
+    applyPlaybackRate(audio);
 
     if (controller.signal.aborted) {
       URL.revokeObjectURL(url);
@@ -358,6 +490,7 @@ export const streamSpeech = (text, { language = 'hi', gender = 'female', onStart
         const mediaSource = new MediaSource();
         const objectUrl = URL.createObjectURL(mediaSource);
         audioEl = new Audio(objectUrl);
+        applyPlaybackRate(audioEl);
 
         audioEl.onplay = () => { if (!cancelled) onStart?.(); };
         audioEl.onended = () => {
@@ -426,6 +559,7 @@ export const streamSpeech = (text, { language = 'hi', gender = 'female', onStart
         const blob = new Blob(chunks, { type: 'audio/mpeg' });
         const blobUrl = URL.createObjectURL(blob);
         audioEl = new Audio(blobUrl);
+        applyPlaybackRate(audioEl);
         audioEl.onplay = () => { if (!cancelled) onStart?.(); };
         audioEl.onended = () => {
           URL.revokeObjectURL(blobUrl);
@@ -554,7 +688,7 @@ export const speakText = (text, { language = 'hi', gender = 'female', onStart, o
       utterance.lang = 'en-IN';
     }
 
-    utterance.rate   = 0.95;  // Natural conversational speed
+    utterance.rate   = Math.min(2.0, Math.max(0.5, getPlaybackRate() * 0.95));  // Natural conversational speed
     utterance.pitch  = 1.0;
     utterance.volume = 1.0;
 
@@ -571,6 +705,7 @@ export const speakText = (text, { language = 'hi', gender = 'female', onStart, o
     .then((url) => {
       if (cancelled) return;
       audioEl = new Audio(url);
+      applyPlaybackRate(audioEl);
       globalActiveAudio = audioEl;
 
       audioEl.onplay = () => {

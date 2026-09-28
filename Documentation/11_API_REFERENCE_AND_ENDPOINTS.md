@@ -118,9 +118,64 @@ Returns all stored conversational turns for a specific session.
 
 ## 4. Multilingual Voice Routes (`/voice`)
 
+### `POST /auth/refresh`
+Rotates an existing refresh token and issues a new access token + refresh token.
+- **Security Features**:
+  - Implements RFC 7519 unique `jti` (UUID hex) and `iat` claims, guaranteeing cryptographic uniqueness.
+  - Enforces session revocation check against `users_table.token_version` (tokens invalidated on password change or explicit logout).
+- **Request Body**:
+  ```json
+  {
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsIn..."
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "access_token": "eyJhbGciOiJIUzI1NiIsIn...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsIn...",
+    "token_type": "bearer"
+  }
+  ```
+
+---
+
+## 4. Voice & Speech Routes (`/voice`)
+
+### `GET /voice/provider`
+Retrieves the active Primary Voice Provider, automatic first fallback, available models, speaker personas, and backend credentials readiness.
+- **Response `200 OK`**:
+  ```json
+  {
+    "provider": "sarvam",
+    "primary": "sarvam",
+    "fallback": "bhashini",
+    "offline_fallback": "neural_indic",
+    "sarvam_configured": true,
+    "bhashini_configured": true,
+    "sarvam_model": "bulbul:v3",
+    "sarvam_speaker": "meera",
+    "bhashini_model": "ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4",
+    "bhashini_gender": "female",
+    "status": "ready"
+  }
+  ```
+
+### `POST /voice/provider`
+Switches the active primary voice provider between `sarvam` and `bhashini`, sets active model/speaker selections, and purges stale audio cache.
+- **Request Body**:
+  ```json
+  {
+    "provider": "bhashini",
+    "bhashini_gender": "female",
+    "clear_cache": true
+  }
+  ```
+
 ### `POST /voice/stt`
-Transcribes spoken audio into text using **Sarvam AI (Saaras:v3)**.
-- **Request**: `multipart/form-data` with `file: UploadFile` (WAV, WEBM, MP3).
+Transcribes spoken audio into text using the active primary provider (**Sarvam Saaras:v3** or **Bhashini ASR**) with mutual automatic failover.
+- **Request**: `multipart/form-data` with `file: UploadFile` (`audio/webm`, `audio/wav`, `audio/mp3`, `audio/ogg`).
+  - Automatically sanitizes browser container parameter tags (e.g. `audio/webm;codecs=opus` is sanitized to `audio/webm`).
 - **Response `200 OK`**:
   ```json
   {
@@ -132,7 +187,7 @@ Transcribes spoken audio into text using **Sarvam AI (Saaras:v3)**.
   ```
 
 ### `POST /voice/tts`
-Synthesizes speech from text and returns a base64 audio payload.
+Synthesizes speech from text and returns a base64 audio payload using active provider with offline Edge-TTS backup.
 - **Request Body**:
   ```json
   {
@@ -152,7 +207,10 @@ Synthesizes speech from text and returns a base64 audio payload.
   ```
 
 ### `GET /voice/tts/stream` & `POST /voice/tts/stream`
-Progressively streams audio chunks with `Content-Type: audio/mpeg` for sub-second client playback.
+Progressively streams audio chunks with `Content-Type: audio/mpeg` and `Transfer-Encoding: chunked` for sub-500ms initial playback.
+
+### `GET /voice/tts/health`
+Returns provider readiness and current speaker diagnostics for health check probes and monitoring.
 
 ---
 

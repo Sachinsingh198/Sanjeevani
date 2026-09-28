@@ -19,6 +19,12 @@ import {
 import SanjeevaniOrb from '../components/SanjeevaniOrb';
 import BackButton from '../components/BackButton';
 import VoiceProviderSwitcher from '../components/VoiceProviderSwitcher';
+import {
+  getPersistedAppSettings,
+  savePersistedAppSettings,
+  setVoiceProviderConfig,
+  TTS_SPEED_STORAGE_KEY
+} from '../api/voiceClient';
 
 const COMMON_CONDITIONS = [
   'Hypertension (हाई बीपी)',
@@ -101,10 +107,55 @@ export default function Profile() {
     }
   }, [rawSettingsJson]);
 
-  const [ttsSpeed, setTtsSpeed] = useState(parsedSettings.tts_speed || '1.0');
-  const [dialectAssistance, setDialectAssistance] = useState(parsedSettings.dialect_assistance ?? true);
-  const [healthAlerts, setHealthAlerts] = useState(parsedSettings.health_alerts ?? true);
+  const [ttsSpeed, setTtsSpeed] = useState(() => {
+    try {
+      const saved = localStorage.getItem(TTS_SPEED_STORAGE_KEY) || localStorage.getItem('sanjeevani_tts_speed');
+      if (saved) return saved;
+    } catch {}
+    return '1.0';
+  });
+
+  const [dialectAssistance, setDialectAssistance] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sanjeevani_dialect_assistance');
+      if (saved !== null) return saved === 'true';
+    } catch {}
+    return true;
+  });
+
+  const [healthAlerts, setHealthAlerts] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sanjeevani_health_alerts');
+      if (saved !== null) return saved === 'true';
+    } catch {}
+    return true;
+  });
+
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // Sync settings from backend disk or local storage on initial mount
+  useEffect(() => {
+    let active = true;
+    getPersistedAppSettings()
+      .then((cfg) => {
+        if (active && cfg) {
+          if (cfg.tts_speed) setTtsSpeed(cfg.tts_speed.toString());
+          if (cfg.dialect_assistance !== undefined) setDialectAssistance(Boolean(cfg.dialect_assistance));
+          if (cfg.health_alerts !== undefined) setHealthAlerts(Boolean(cfg.health_alerts));
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  // Sync settings whenever user profile loads
+  useEffect(() => {
+    if (parsedSettings && Object.keys(parsedSettings).length > 0) {
+      if (parsedSettings.tts_speed) setTtsSpeed(parsedSettings.tts_speed.toString());
+      if (parsedSettings.dialect_assistance !== undefined) setDialectAssistance(Boolean(parsedSettings.dialect_assistance));
+      if (parsedSettings.health_alerts !== undefined) setHealthAlerts(Boolean(parsedSettings.health_alerts));
+    }
+  }, [parsedSettings]);
 
   // Password Change State
   const [oldPassword, setOldPassword] = useState('');
@@ -230,19 +281,43 @@ export default function Profile() {
   const handleSettingsSave = async () => {
     setSavingSettings(true);
     try {
+      const parsedSpeed = parseFloat(ttsSpeed) || 1.0;
       const newSettings = {
         ...parsedSettings,
-        tts_speed: ttsSpeed,
+        tts_speed: parsedSpeed,
         dialect_assistance: dialectAssistance,
         health_alerts: healthAlerts,
-      };
-      const updated = await updateUserProfile({
-        settings_json: JSON.stringify(newSettings),
         language_preference: profileForm.language_preference,
-      });
-      updateUser(updated);
+      };
+
+      // 1. Mirror directly to localStorage
+      try {
+        localStorage.setItem(TTS_SPEED_STORAGE_KEY, ttsSpeed.toString());
+        localStorage.setItem('sanjeevani_tts_speed', ttsSpeed.toString());
+        localStorage.setItem('sanjeevani_dialect_assistance', dialectAssistance.toString());
+        localStorage.setItem('sanjeevani_health_alerts', healthAlerts.toString());
+      } catch {}
+
+      // 2. Persist to backend app_settings.json & sync TTS engine speed
+      await savePersistedAppSettings(newSettings);
+      await setVoiceProviderConfig({ tts_speed: parsedSpeed });
+
+      // 3. Persist to authenticated user profile if logged in
+      if (user) {
+        try {
+          const updated = await updateUserProfile({
+            settings_json: JSON.stringify(newSettings),
+            language_preference: profileForm.language_preference,
+          });
+          updateUser(updated);
+        } catch (authErr) {
+          console.warn('[Profile Settings] User profile sync skipped or non-fatal:', authErr);
+        }
+      }
+
       toast.success('प्राथमिकताएं (Settings) सुरक्षित कर ली गई हैं!');
     } catch (err) {
+      console.error('Settings save error:', err);
       toast.error('सेटिंग्स सुरक्षित करने में त्रुटि हुई।');
     } finally {
       setSavingSettings(false);

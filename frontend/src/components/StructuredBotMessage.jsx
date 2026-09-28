@@ -9,6 +9,8 @@ import {
   ShieldAlert,
   ThumbsUp,
   ThumbsDown,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { sendChatFeedback } from '../api/client';
 
@@ -327,6 +329,9 @@ export default function StructuredBotMessage({
   isConcluded = false,
   remedies = [],
   onFeedback,
+  onReadAloud = null,
+  isSpeaking = false,
+  onStopSpeaking = null,
 }) {
   const [feedbackStatus, setFeedbackStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -402,34 +407,66 @@ export default function StructuredBotMessage({
     );
   };
 
-  if (summary && (summary.remedy_name || summary.possible_cause || summary.condition)) {
-    return (
-      <div className="space-y-3 text-xs sm:text-sm leading-relaxed">
-        {summary.condition && (
-          <div className="p-2.5 sm:p-3 rounded-xl bg-mist dark:bg-[#131D2A] border border-sage/15 dark:border-gray-700/60">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
-              <span className="w-2 h-2 rounded-full bg-sage" />
-              Aapki Takleef (Reported Symptoms)
-            </div>
-            <p className="text-xs sm:text-sm font-medium text-primary dark:text-[#E2E8F0]">
-              {summary.condition}
-            </p>
+  const renderSummaryFallback = () => (
+    <div className="space-y-3 text-xs sm:text-sm leading-relaxed">
+      {summary.condition && (
+        <div className="p-2.5 sm:p-3 rounded-xl bg-mist dark:bg-[#131D2A] border border-sage/15 dark:border-gray-700/60">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+            <span className="w-2 h-2 rounded-full bg-sage" />
+            Aapki Takleef (Reported Symptoms)
           </div>
-        )}
+          <p className="text-xs sm:text-sm font-medium text-primary dark:text-[#E2E8F0]">
+            {renderInlineText(summary.condition)}
+          </p>
+        </div>
+      )}
 
-        {summary.possible_cause && (
-          <div className="p-2.5 sm:p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/50">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider mb-1">
-              <Stethoscope className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              Sambhavit Karan (Possible Reason)
-            </div>
-            <p className="text-xs sm:text-sm font-semibold text-primary dark:text-[#E2E8F0]">
-              {summary.possible_cause}
-            </p>
+      {summary.possible_cause && (
+        <div className="p-2.5 sm:p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/50">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider mb-1">
+            <Stethoscope className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            Sambhavit Karan (Possible Reason)
           </div>
-        )}
+          <p className="text-xs sm:text-sm font-semibold text-primary dark:text-[#E2E8F0]">
+            {renderInlineText(summary.possible_cause)}
+          </p>
+        </div>
+      )}
 
-        {summary.remedy_name && (
+      {summary.remedy_name && (
+        <div className="space-y-1.5">
+          {/* Voice accessibility control banner */}
+          {isSpeaking ? (
+            <div className="flex items-center justify-between p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200">
+              <div className="flex items-center gap-1.5 text-xs font-semibold">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                <span>नुस्खा आवाज़ में सुनाया जा रहा है...</span>
+              </div>
+              {onStopSpeaking && (
+                <button
+                  type="button"
+                  onClick={onStopSpeaking}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-100 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+                  title="Awaaz rokein aur screen par padhein"
+                >
+                  <VolumeX className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span>पढ़ना चाहते हैं? आवाज़ रोकें</span>
+                </button>
+              )}
+            </div>
+          ) : onReadAloud && (
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={onReadAloud}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sage/10 hover:bg-sage/20 text-sage dark:text-booti-glow text-xs font-semibold border border-sage/20 transition-all cursor-pointer"
+                title="Pura nuskha aawaaz me sunein"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                <span>पूरा नुस्खा आवाज़ में सुनें (Listen Aloud)</span>
+              </button>
+            </div>
+          )}
           <div className="p-3 rounded-xl bg-gold-warm/10 dark:bg-gold-warm/15 border border-gold-warm/30 flex items-start gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gold-warm text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
               <Leaf className="w-4.5 h-4.5" />
@@ -443,96 +480,109 @@ export default function StructuredBotMessage({
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {summary.preparation_steps && summary.preparation_steps.length > 0 && (() => {
-          let steps = [];
-          summary.preparation_steps.forEach(st => {
-            if (typeof st === 'string') {
-              const lines = st.split(/\n+/).map(l => l.replace(/^\s*\d+[\.\)]\s*/, '').trim()).filter(Boolean);
-              if (lines.length > 1) {
-                steps.push(...lines);
-              } else if (/\b(?:Ingredients|Indication|Method|Preparation|Dosage|Action):/i.test(st)) {
-                const parts = st.split(/(?=\b(?:Ingredients|Indication|Method|Preparation|Dosage|Action):)/i)
-                  .map(p => p.trim())
-                  .filter(Boolean);
-                if (parts.length > 1) steps.push(...parts);
-                else steps.push(st.trim());
-              } else {
-                steps.push(st.replace(/^\s*\d+[\.\)]\s*/, '').trim());
-              }
+      {summary.preparation_steps && summary.preparation_steps.length > 0 && (() => {
+        let steps = [];
+        summary.preparation_steps.forEach(st => {
+          if (typeof st === 'string') {
+            const lines = st.split(/\n+/).map(l => l.replace(/^\s*\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+            if (lines.length > 1) {
+              steps.push(...lines);
             } else {
-              steps.push(String(st));
+              steps.push(st.replace(/^\s*\d+[\.\)]\s*/, '').trim());
             }
-          });
-          if (steps.length === 0) return null;
-          return (
-            <div className="p-3 rounded-xl bg-white dark:bg-[#15202E] border border-gray-200 dark:border-gray-700/80 shadow-xs space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-primary dark:text-[#E2E8F0]">
-                <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
-                <span>Kaise Banayein (How to Prepare)</span>
-              </div>
-              <div className="space-y-1.5 pl-1">
-                {steps.map((st, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs sm:text-sm">
-                    <span className="w-5 h-5 rounded-full bg-sage/15 dark:bg-sage/30 text-sage dark:text-booti-glow text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-                      {i + 1}
-                    </span>
-                    <span className="text-gray-800 dark:text-gray-200 flex-1 leading-snug">{st}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-
-        {summary.dosage && summary.dosage.length > 0 && (
-          <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 space-y-1.5">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
-              <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Kab Tak Lein (Dosage & Timing)</span>
-            </div>
-            <div className="space-y-1 pl-1">
-              {summary.dosage.map((d, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs sm:text-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 shrink-0 mt-1.5" />
-                  <span className="text-emerald-950 dark:text-emerald-100 font-medium">{d}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {summary.precautions && summary.precautions.length > 0 && (
-          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs sm:text-sm space-y-2">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <div className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                Dhyan Rakhein (Precautions)
-              </div>
+          } else {
+            steps.push(String(st));
+          }
+        });
+        if (steps.length === 0) return null;
+        let stepCount = 0;
+        return (
+          <div className="p-3 rounded-xl bg-white dark:bg-[#15202E] border border-gray-200 dark:border-gray-700/80 shadow-xs space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-primary dark:text-[#E2E8F0]">
+              <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
+              <span>Kaise Banayein (How to Prepare)</span>
             </div>
             <div className="space-y-1.5 pl-1">
-              {summary.precautions.map((p, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs sm:text-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0 mt-1.5" />
-                  <span className="leading-relaxed text-amber-950 dark:text-amber-100">{p}</span>
-                </div>
-              ))}
+              {steps.map((st, i) => {
+                const isSubheading = /^\*\*[^*:]+(?::\*\*|\*\*[:]?)$/.test(st.trim());
+                if (isSubheading) {
+                  return (
+                    <div key={i} className="pt-2 pb-0.5 text-xs font-bold text-primary dark:text-[#E2E8F0] flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gold-warm" />
+                      <span>{renderInlineText(st)}</span>
+                    </div>
+                  );
+                }
+                if (st.trim().startsWith('**') && st.trim().length < 25 && !st.includes('.') && !st.includes(':')) {
+                  return null;
+                }
+                stepCount += 1;
+                return (
+                  <div key={i} className="flex items-start gap-2 text-xs sm:text-sm">
+                    <span className="w-5 h-5 rounded-full bg-sage/15 dark:bg-sage/30 text-sage dark:text-booti-glow text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      {stepCount}
+                    </span>
+                    <span className="text-gray-800 dark:text-gray-200 flex-1 leading-snug">{renderInlineText(st)}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        )}
-        {renderFeedbackWidget()}
-      </div>
-    );
-  }
+        );
+      })()}
+
+      {summary.dosage && summary.dosage.length > 0 && (
+        <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 space-y-1.5">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+            <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Kab Tak Lein (Dosage & Timing)</span>
+          </div>
+          <div className="space-y-1 pl-1">
+            {summary.dosage.map((d, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs sm:text-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 shrink-0 mt-1.5" />
+                <span className="text-emerald-950 dark:text-emerald-100 font-medium">{renderInlineText(d)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {summary.precautions && summary.precautions.length > 0 && (
+        <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs sm:text-sm space-y-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+              Dhyan Rakhein (Precautions)
+            </div>
+          </div>
+          <div className="space-y-1.5 pl-1">
+            {summary.precautions.map((p, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs sm:text-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0 mt-1.5" />
+                <span className="leading-relaxed text-amber-950 dark:text-amber-100">{renderInlineText(p)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {renderFeedbackWidget()}
+    </div>
+  );
 
   const blocks = parseMessageBlocks(text);
 
-  return (
-    <div className="space-y-2.5 text-xs sm:text-sm leading-relaxed">
-      {blocks.map((block, idx) => {
-        // --- 1. EMERGENCY WARNING BLOCK ---
-        if (block.type === 'emergency') {
+  // 1. If text produced structured clinical blocks, render them directly!
+  // This guarantees 100% visual consistency between streaming and completed phases.
+  if (blocks && blocks.length > 0) {
+    return (
+      <div className="space-y-2.5 text-xs sm:text-sm leading-relaxed">
+        {blocks.map((block, idx) => {
+          // --- 1. EMERGENCY WARNING BLOCK ---
+          if (block.type === 'emergency') {
           return (
             <div
               key={idx}
@@ -595,19 +645,50 @@ export default function StructuredBotMessage({
           if (secType === 'remedy') {
             const bodyText = content.filter((c) => typeof c === 'string').join(' ');
             return (
-              <div
-                key={idx}
-                className="p-2.5 sm:p-3 rounded-xl bg-gold-warm/10 dark:bg-gold-warm/15 border border-gold-warm/30 flex items-start gap-2.5"
-              >
-                <div className="w-7 h-7 rounded-lg bg-gold-warm text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                  <Leaf className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-gold-warm dark:text-gold-warm">
-                    {label}
+              <div key={idx} className="space-y-1.5">
+                {/* Voice accessibility control banner */}
+                {isSpeaking ? (
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                      <span>नुस्खा आवाज़ में सुनाया जा रहा है...</span>
+                    </div>
+                    {onStopSpeaking && (
+                      <button
+                        type="button"
+                        onClick={onStopSpeaking}
+                        className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-100 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+                        title="Awaaz rokein aur screen par padhein"
+                      >
+                        <VolumeX className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                        <span>पढ़ना चाहते हैं? आवाज़ रोकें</span>
+                      </button>
+                    )}
                   </div>
-                  <div className="text-xs sm:text-sm font-bold text-primary">
-                    {renderInlineText(bodyText)}
+                ) : onReadAloud && (
+                  <div className="flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={onReadAloud}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sage/10 hover:bg-sage/20 text-sage dark:text-booti-glow text-xs font-semibold border border-sage/20 transition-all cursor-pointer"
+                      title="Pura nuskha aawaaz me sunein"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                      <span>पूरा नुस्खा आवाज़ में सुनें (Listen Aloud)</span>
+                    </button>
+                  </div>
+                )}
+                <div className="p-2.5 sm:p-3 rounded-xl bg-gold-warm/10 dark:bg-gold-warm/15 border border-gold-warm/30 flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-gold-warm text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                    <Leaf className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-gold-warm dark:text-gold-warm">
+                      {label}
+                    </div>
+                    <div className="text-xs sm:text-sm font-bold text-primary">
+                      {renderInlineText(bodyText)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -616,31 +697,46 @@ export default function StructuredBotMessage({
 
           // (d) Preparation / Kaise Banayein (Steps)
           if (secType === 'preparation') {
+            let stepCounter = 0;
             return (
               <div
                 key={idx}
                 className="p-3 rounded-xl bg-white dark:bg-[#15202E] border border-gray-200 dark:border-gray-700/80 shadow-xs space-y-2"
               >
-                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-primary">
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-primary dark:text-[#E2E8F0]">
                   <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
                   <span>{label}</span>
                 </div>
                 <div className="space-y-1.5 pl-1">
                   {content.map((item, ci) => {
                     if (typeof item === 'object' && item.type === 'step') {
+                      const stepText = (item.text || '').trim();
+                      const isSubheading = /^\*\*[^*:]+(?::\*\*|\*\*[:]?)$/.test(stepText);
+                      if (isSubheading) {
+                        return (
+                          <div key={ci} className="pt-2 pb-0.5 text-xs font-bold text-primary dark:text-[#E2E8F0] flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gold-warm" />
+                            <span>{renderInlineText(stepText)}</span>
+                          </div>
+                        );
+                      }
+                      if (stepText.startsWith('**') && stepText.length < 25 && !stepText.includes('.') && !stepText.includes(':')) {
+                        return null;
+                      }
+                      stepCounter += 1;
                       return (
                         <div key={ci} className="flex items-start gap-2 text-xs sm:text-sm">
                           <span className="w-5 h-5 rounded-full bg-sage/15 dark:bg-sage/30 text-sage dark:text-booti-glow text-[10px] font-extrabold flex items-center justify-center shrink-0 mt-0.5">
-                            {item.num}
+                            {stepCounter}
                           </span>
-                          <span className="text-gray-700 dark:text-gray-300 flex-1">{renderInlineText(item.text)}</span>
+                          <span className="text-gray-700 dark:text-gray-300 flex-1">{renderInlineText(stepText)}</span>
                         </div>
                       );
                     }
                     return (
-                      <p key={ci} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                      <div key={ci} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
                         {renderInlineText(item)}
-                      </p>
+                      </div>
                     );
                   })}
                 </div>
@@ -815,4 +911,24 @@ export default function StructuredBotMessage({
       {renderFeedbackWidget()}
     </div>
   );
+}
+
+  // 2. Fallback: If no structured blocks parsed from text, render from structured summary
+  if (summary && (summary.remedy_name || summary.possible_cause || summary.condition)) {
+    return renderSummaryFallback();
+  }
+
+  // 3. Fallback for plain unformatted text
+  if (text) {
+    return (
+      <div className="space-y-2.5 text-xs sm:text-sm leading-relaxed">
+        <p className="leading-relaxed text-gray-800 dark:text-gray-200">
+          {renderInlineText(text)}
+        </p>
+        {renderFeedbackWidget()}
+      </div>
+    );
+  }
+
+  return null;
 }

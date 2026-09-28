@@ -40,6 +40,12 @@ class HybridRemedyStore:
         else:
             self.botanical_herbs_path = herbs_cand
 
+        ayurveda_3_cand = "DATA/ayurveda_3_remedies.json"
+        if not os.path.exists(ayurveda_3_cand) and os.path.exists(os.path.join("backend", ayurveda_3_cand)):
+            self.ayurveda_3_path = os.path.join("backend", ayurveda_3_cand)
+        else:
+            self.ayurveda_3_path = ayurveda_3_cand
+
         # Load Botanical Herbs Dravyaguna lookup map
         self.herbs_lookup: Dict[str, Dict[str, Any]] = {}
         self._load_botanical_herbs()
@@ -126,12 +132,36 @@ class HybridRemedyStore:
             except Exception as e:
                 logger.error(f"[Qdrant Error] Failed loading botanical herbs: {e}")
 
+        # Also register Dravyaguna herbs from ayurveda_3 monographs if available
+        if os.path.exists(self.ayurveda_3_path):
+            try:
+                with open(self.ayurveda_3_path, "r", encoding="utf-8") as f:
+                    a3_items = json.load(f)
+                    for item in a3_items:
+                        s_name = item.get("sanskrit_name", "").strip().lower()
+                        c_name = item.get("common_name", "").strip().lower()
+                        herb_profile = {
+                            "vernacular_name": item.get("sanskrit_name", ""),
+                            "common_name": item.get("common_name", ""),
+                            "full_title": item.get("remedy_name", ""),
+                            "dravyaguna_properties": item.get("dravyaguna_properties", ""),
+                            "searchable_summary": f"{item.get('remedy_name', '')}: {item.get('dravyaguna_properties', '')} {item.get('clinical_indications', '')}"
+                        }
+                        if s_name and s_name not in self.herbs_lookup:
+                            self.herbs_lookup[s_name] = herb_profile
+                        if c_name and c_name not in self.herbs_lookup:
+                            self.herbs_lookup[c_name] = herb_profile
+                logger.info(f"[Qdrant] Registered ayurveda_3 dravyaguna profiles into herb lookup.")
+            except Exception as e:
+                logger.debug(f"[Qdrant] ayurveda_3 herb lookup note: {e}")
+
     def load_all_remedies(self) -> List[Dict[str, Any]]:
         """
         Loads and combines remedies from verified sources:
         1. CCRAS & AYUSH base remedies (DATA/remedies_dataset.json)
         2. Classical Ayurveda Treatise formulations (DATA/Ayush/ayurveda_1.docx)
         3. Curated Vaidya Chikitsa clinical ailments (DATA/vaidya_chikitsa_curated.json)
+        4. Classical Dravyaguna Monographs (DATA/Ayush/ayurveda_3.docx -> DATA/ayurveda_3_remedies.json)
         """
         all_remedies: List[Dict[str, Any]] = []
         seen_names = set()
@@ -212,6 +242,29 @@ class HybridRemedyStore:
                     item["ayurvedic_note"] = item.get("causes") or item.get("classical_medicines_note") or item.get("safety_precaution") or ""
                 all_remedies.append(item)
 
+        # 4. Classical Dravyaguna Monographs (DATA/Ayush/ayurveda_3.docx)
+        ayurveda_3_items: List[Dict[str, Any]] = []
+        if not os.path.exists(self.ayurveda_3_path):
+            try:
+                from app.core.ayurveda_3_extractor import save_ayurveda_3_remedies_json
+                ayurveda_3_items = save_ayurveda_3_remedies_json(self.ayurveda_3_path)
+            except Exception as e:
+                logger.info(f"[Qdrant] Notice: could not auto-build ayurveda_3 remedies: {e}")
+
+        if os.path.exists(self.ayurveda_3_path) and not ayurveda_3_items:
+            try:
+                with open(self.ayurveda_3_path, "r", encoding="utf-8") as f:
+                    ayurveda_3_items = json.load(f)
+            except Exception as e:
+                logger.error(f"[Qdrant Error] Failed reading ayurveda_3 JSON: {e}")
+
+        for item in ayurveda_3_items:
+            name_key = item.get("remedy_name", "").strip().lower()
+            if name_key and name_key not in seen_names:
+                seen_names.add(name_key)
+                item["safety_tier"] = "household_safe"
+                all_remedies.append(item)
+
         self._all_cached_remedies = all_remedies
         return all_remedies
 
@@ -279,7 +332,7 @@ class HybridRemedyStore:
             payloads.append(item)
             ids.append(idx + 1)
 
-        batch_size = 50
+        batch_size = 25
         total_upserted = 0
         for i in range(0, len(search_texts), batch_size):
             b_texts = search_texts[i:i+batch_size]
@@ -296,11 +349,20 @@ class HybridRemedyStore:
                 for j in range(len(b_ids))
             ]
 
-            self.client.upsert(
-                collection_name=self.collection_name,
-                points=points,
-                wait=True
-            )
+            for attempt in range(3):
+                try:
+                    self.client.upsert(
+                        collection_name=self.collection_name,
+                        points=points,
+                        wait=False
+                    )
+                    break
+                except Exception as e:
+                    if attempt == 2:
+                        logger.error(f"[Qdrant] Upsert batch {i} failed: {e}")
+                        raise e
+                    time.sleep(1.0)
+
             total_upserted += len(points)
 
         logger.info(f"[Qdrant] Successfully uploaded and indexed {total_upserted} vector points in '{self.collection_name}'.")
@@ -337,6 +399,50 @@ class HybridRemedyStore:
             except Exception as e:
                 logger.warning(f"[Qdrant] Error closing client: {e}")
 
+    # Synonym expansion table for cross-lingual lexical matching (Hindi/Garhwali/English)
+    CLINICAL_SYNONYM_MAP = {
+        "naak": ["nasal", "nose", "rhinitis", "pratishyaya", "allergy", "cold", "sinus", "peenas", "sneezing", "congestion"],
+        "nak": ["nasal", "nose", "rhinitis", "pratishyaya", "allergy", "sneezing"],
+        "chheenk": ["sneezing", "chheekein", "chheken", "chhink", "chhik", "rhinitis", "pratishyaya", "allergy"],
+        "chhink": ["sneezing", "chheenk", "chhik", "rhinitis", "pratishyaya", "allergy"],
+        "allergy": ["allergic", "rhinitis", "pratishyaya", "itch", "khujli", "sneezing", "naak"],
+        "allergic": ["allergy", "rhinitis", "pratishyaya", "nasal", "naak", "sneezing"],
+        "rhinitis": ["allergic rhinitis", "pratishyaya", "nasal", "naak", "sneezing", "chheenk", "peenas", "congestion"],
+        "pratishyaya": ["rhinitis", "nasal", "naak", "sneezing", "chheenk", "sinus", "peenas"],
+        "aankh": ["eye", "watery eyes", "aankhon", "itchy eyes", "allergy", "khujli"],
+        "aankhon": ["eye", "eyes", "watery eyes", "aankh", "itchy eyes", "allergy", "khujli"],
+        "khujli": ["itching", "itch", "allergy", "kandu"],
+        "sinus": ["sinusitis", "pratishyaya", "rhinitis", "naak", "nasal"],
+        "jod": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
+        "jodo": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
+        "jodon": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
+        "ghutna": ["joint", "knee", "sandhi", "stiffness", "jakdan", "amavata", "sandhivata"],
+        "ghutne": ["joint", "knee", "sandhi", "stiffness", "jakdan", "amavata", "sandhivata"],
+        "ghutno": ["joint", "knee", "sandhi", "stiffness", "jakdan", "amavata", "sandhivata"],
+        "jakdan": ["stiffness", "joint", "sandhi", "stiff", "amavata", "sandhivata", "morning stiffness"],
+        "sandhi": ["joint", "sandhivata", "stiffness", "amavata"],
+        "gathiya": ["arthritis", "rheumatoid", "joint", "amavata", "vatarakta"],
+        "pet": ["stomach", "abdomen", "abdominal", "indigestion", "gas", "bloating", "apach", "colic", "shoola"],
+        "gas": ["bloating", "flatulence", "indigestion", "pet", "stomach", "apach"],
+        "apach": ["indigestion", "digestion", "gas", "bloating", "stomach"],
+        "marod": ["colic", "cramps", "stomach", "abdomen", "shoola"],
+        "bukhar": ["fever", "pyrexia", "jwara", "taap", "temperature"],
+        "thand": ["fever", "chills", "cold", "pyrexia", "syal"],
+        "khansi": ["cough", "kasa", "cold", "respiratory", "throat"],
+        "khang": ["cough", "kasa", "cold", "throat"],
+        "gala": ["throat", "cough", "cold", "pharyngitis"],
+        "kharash": ["throat", "cough", "scratchy throat"],
+        "sar": ["headache", "head", "mund", "shirashoola"],
+        "sir": ["headache", "head", "mund", "shirashoola"],
+        "mund": ["headache", "head", "sir", "sar"],
+        "badan": ["body", "fatigue", "ache", "body ache", "thakan"],
+        "thakan": ["fatigue", "tiredness", "weakness", "body ache"],
+        "chakkar": ["dizziness", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
+        "dizzy": ["chakkar", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
+        "dizziness": ["chakkar", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
+        "vertigo": ["chakkar", "dizziness", "giddiness", "bhrama", "bhram"],
+    }
+
     def keyword_search_fallback(self, query_text: str, limit: int = 2) -> List[Dict[str, Any]]:
         """
         In-memory keyword / BM25 lexical search fallback over remedies dataset.
@@ -350,50 +456,7 @@ class HybridRemedyStore:
                 logger.warning(f"[RAG] Failed to load dataset for keyword fallback: {e}")
                 self._all_cached_remedies = []
 
-        # Synonym expansion table for cross-lingual lexical matching (Hindi/Garhwali/English)
-        SYNONYM_MAP = {
-            "naak": ["nasal", "nose", "rhinitis", "pratishyaya", "allergy", "cold", "sinus", "peenas", "sneezing", "congestion"],
-            "nak": ["nasal", "nose", "rhinitis", "pratishyaya", "allergy", "sneezing"],
-            "chheenk": ["sneezing", "chheekein", "chheken", "chhink", "chhik", "rhinitis", "pratishyaya", "allergy"],
-            "chhink": ["sneezing", "chheenk", "chhik", "rhinitis", "pratishyaya", "allergy"],
-            "allergy": ["allergic", "rhinitis", "pratishyaya", "itch", "khujli", "sneezing", "naak"],
-            "allergic": ["allergy", "rhinitis", "pratishyaya", "nasal", "naak", "sneezing"],
-            "rhinitis": ["allergic rhinitis", "pratishyaya", "nasal", "naak", "sneezing", "chheenk", "peenas", "congestion"],
-            "pratishyaya": ["rhinitis", "nasal", "naak", "sneezing", "chheenk", "sinus", "peenas"],
-            "aankh": ["eye", "watery eyes", "aankhon", "itchy eyes", "allergy", "khujli"],
-            "aankhon": ["eye", "eyes", "watery eyes", "aankh", "itchy eyes", "allergy", "khujli"],
-            "khujli": ["itching", "itch", "allergy", "kandu"],
-            "sinus": ["sinusitis", "pratishyaya", "rhinitis", "naak", "nasal"],
-            "jod": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
-            "jodo": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
-            "jodon": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
-            "ghutna": ["joint", "knee", "sandhi", "stiffness", "jakdan", "amavata", "sandhivata"],
-            "ghutne": ["joint", "knee", "sandhi", "stiffness", "jakdan", "amavata", "sandhivata"],
-            "ghutno": ["joint", "knee", "sandhi", "stiffness", "jakdan", "amavata", "sandhivata"],
-            "jakdan": ["stiffness", "joint", "sandhi", "stiff", "amavata", "sandhivata", "morning stiffness"],
-            "sandhi": ["joint", "sandhivata", "stiffness", "amavata"],
-            "gathiya": ["arthritis", "rheumatoid", "joint", "amavata", "vatarakta"],
-            "pet": ["stomach", "abdomen", "abdominal", "indigestion", "gas", "bloating", "apach", "colic", "shoola"],
-            "gas": ["bloating", "flatulence", "indigestion", "pet", "stomach", "apach"],
-            "apach": ["indigestion", "digestion", "gas", "bloating", "stomach"],
-            "marod": ["colic", "cramps", "stomach", "abdomen", "shoola"],
-            "bukhar": ["fever", "pyrexia", "jwara", "taap", "temperature"],
-            "thand": ["fever", "chills", "cold", "pyrexia", "syal"],
-            "khansi": ["cough", "kasa", "cold", "respiratory", "throat"],
-            "khang": ["cough", "kasa", "cold", "throat"],
-            "gala": ["throat", "cough", "cold", "pharyngitis"],
-            "kharash": ["throat", "cough", "scratchy throat"],
-            "sar": ["headache", "head", "mund", "shirashoola"],
-            "sir": ["headache", "head", "mund", "shirashoola"],
-            "mund": ["headache", "head", "sir", "sar"],
-            "badan": ["body", "fatigue", "ache", "body ache", "thakan"],
-            "thakan": ["fatigue", "tiredness", "weakness", "body ache"],
-            "chakkar": ["dizziness", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
-            "dizzy": ["chakkar", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
-            "dizziness": ["chakkar", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
-            "vertigo": ["chakkar", "dizziness", "giddiness", "bhrama", "bhram"],
-        }
-
+        SYNONYM_MAP = self.CLINICAL_SYNONYM_MAP
         raw_tokens = [w for w in re.split(r'\W+', query_text.lower()) if len(w) > 2]
         expanded_tokens = set(raw_tokens)
         for t in raw_tokens:
@@ -499,17 +562,26 @@ class HybridRemedyStore:
 
         def _do_qdrant_query():
             query_embedding = list(self.embedding_model.embed([query_text]))[0].tolist()
+            # Fetch a wider candidate pool from Qdrant to enable hybrid clinical re-ranking
+            candidate_limit = max(limit * 8, 30)
             search_result = self.client.query_points(
                 collection_name=self.collection_name,
                 query=query_embedding,
-                limit=limit * 2,
+                limit=candidate_limit,
                 timeout=int(timeout)
             )
             BANNED_HOME_TERMS = (
                 "tobacco", "snuff", "tambaku", "opium", "afeem", "cannabis", "ganja", "bhang",
                 "syphilis", "upadansh", "gonorrhea", "flesh decay", "foul odor", "kshar oil"
             )
-            matched = []
+
+            raw_tokens = [w for w in re.split(r'\W+', query_text.lower()) if len(w) > 2]
+            expanded_tokens = set(raw_tokens)
+            for t in raw_tokens:
+                if t in self.CLINICAL_SYNONYM_MAP:
+                    expanded_tokens.update(self.CLINICAL_SYNONYM_MAP[t])
+
+            candidates = []
             for point in search_result.points:
                 if not point.payload:
                     continue
@@ -518,15 +590,37 @@ class HybridRemedyStore:
                 payload_desc = f"{point.payload.get('remedy_name', '')} {point.payload.get('preparation', '')} {point.payload.get('remedy_text', '')} {point.payload.get('causes', '')}".lower()
                 if any(b in payload_desc for b in BANNED_HOME_TERMS):
                     continue
+
                 enriched = self._enrich_with_botanicals(point.payload)
                 if not enriched.get("remedy_text"):
                     enriched["remedy_text"] = enriched.get("preparation") or enriched.get("treatment") or ""
                 if not enriched.get("ayurvedic_note"):
                     enriched["ayurvedic_note"] = enriched.get("causes") or enriched.get("classical_medicines_note") or ""
-                enriched["similarity_score"] = getattr(point, "score", None)
-                matched.append(enriched)
-                if len(matched) >= limit:
-                    break
+
+                vec_score = float(getattr(point, "score", 0.0) or 0.0)
+
+                # Hybrid lexical match calculation
+                kw_str = " ".join(point.payload.get("keywords", [])) if isinstance(point.payload.get("keywords"), list) else str(point.payload.get("keywords", ""))
+                sym_str = " ".join(point.payload.get("symptoms", [])) if isinstance(point.payload.get("symptoms"), list) else str(point.payload.get("symptoms", ""))
+                searchable = (
+                    f"{point.payload.get('remedy_name', '')} {point.payload.get('condition_name', '')} "
+                    f"{kw_str} {sym_str} {point.payload.get('remedy_text', '')}"
+                ).lower()
+
+                # Score boosts for symptom/keyword matches
+                lexical_hits = sum(3.0 for token in raw_tokens if token in searchable)
+                lexical_hits += sum(1.0 for token in expanded_tokens if token in searchable)
+                for t in raw_tokens:
+                    if t in point.payload.get("remedy_name", "").lower() or t in point.payload.get("condition_name", "").lower():
+                        lexical_hits += 2.0
+
+                hybrid_score = vec_score + (0.04 * lexical_hits)
+                enriched["similarity_score"] = vec_score
+                enriched["hybrid_score"] = hybrid_score
+                candidates.append((hybrid_score, enriched))
+
+            candidates.sort(key=lambda x: x[0], reverse=True)
+            matched = [c[1] for c in candidates[:limit]]
             return matched
 
         max_attempts = 2 if getattr(self, "is_cloud", False) else 1

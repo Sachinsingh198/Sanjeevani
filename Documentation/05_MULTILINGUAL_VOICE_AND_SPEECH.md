@@ -14,109 +14,104 @@ Sanjeevani solves this with **Sanjeevani Live**, an integrated voice-in, voice-o
 ## 2. Speech Architecture & Pipeline
 
 ```mermaid
-flowchart LR
-    subgraph Browser ["Client Audio (Browser)"]
-        UserVoice["Spoken Speech (Hindi / Garhwali)"]
-        MediaRec["MediaRecorder (audio/wav or webm)"]
+flowchart TD
+    subgraph Browser ["Client Audio (Browser / PWA)"]
+        UserVoice["Spoken Speech (Hindi / Garhwali / English)"]
+        MediaRec["MediaRecorder (audio/webm;codecs=opus)"]
         AudioTag["HTML5 Streaming Audio Element"]
+        VoiceSwitcher["VoiceProviderSwitcher.jsx UI\n(Active: Sarvam / Bhashini)"]
     end
 
-    subgraph BackendGateway ["FastAPI Voice Services"]
-        STTEndpoint["/voice/stt Endpoint"]
-        TTSEndpoint["/voice/tts/stream Endpoint"]
-        Cleaner["Bhashini Text Cleaner"]
+    subgraph BackendGateway ["FastAPI Voice Services (/voice)"]
+        ProviderEndpoint["/voice/provider (Config & Status)"]
+        STTEndpoint["/voice/stt Endpoint\n(MIME Normalization to audio/webm)"]
+        TTSEndpoint["/voice/tts & /voice/tts/stream"]
+        Cleaner["_clean_for_speech Normalizer\n(Factorial '!' fix, emoji, markdown strip)"]
+        AudioCache["LRU + Disk Audio Cache (<50ms)"]
     end
 
-    subgraph CloudSpeech ["Voice Intelligence"]
-        SarvamSTT["Sarvam Saaras:v3\n(Mode: codemix)"]
-        SarvamTTS["Sarvam Bulbul:v3\n(Streaming Voice)"]
-        EdgeTTS["Neural Indic Edge-TTS\n(Cloud Fallback)"]
-        AI4Bharat["AI4Bharat Indic-TTS\n(Offline Local)"]
+    subgraph CloudSpeech ["Dual-Engine Speech Intelligence"]
+        subgraph SarvamEngine ["Sarvam AI Suite"]
+            SarvamSTT["Sarvam Saaras:v3\n(Mode: codemix)"]
+            SarvamTTS["Sarvam Bulbul:v3\n(Ultra HD Neural: Meera, Shubh, etc.)"]
+        end
+        subgraph BhashiniEngine ["Bhashini (National AI Portal)"]
+            BhashiniASR["AI4Bharat Conformer ASR\n(16kHz Indian Languages)"]
+            BhashiniTTS["AI4Bharat Coqui Neural TTS\n(Indo-Aryan & Dravidian Clusters)"]
+        end
+        EdgeTTS["Neural Indic Edge-TTS\n(hi-IN-Swara / hi-IN-Madhur Cloud Backup)"]
     end
 
     UserVoice --> MediaRec
-    MediaRec -->|Multipart Audio Upload| STTEndpoint
-    STTEndpoint --> SarvamSTT
-    SarvamSTT -->|Transcript JSON| STTEndpoint
+    MediaRec -->|Sanitized Blob| STTEndpoint
+    VoiceSwitcher <-->|Switch Provider / Models| ProviderEndpoint
 
-    TTSEndpoint --> Cleaner
-    Cleaner --> SarvamTTS
-    SarvamTTS -.->|Fallback| EdgeTTS
-    EdgeTTS -.->|Offline Fallback| AI4Bharat
+    STTEndpoint -->|Primary Provider == Sarvam| SarvamSTT
+    SarvamSTT -.->|Failover 5xx / 4xx| BhashiniASR
+    STTEndpoint -->|Primary Provider == Bhashini| BhashiniASR
+    BhashiniASR -.->|Failover 5xx / 4xx| SarvamSTT
+
+    TTSEndpoint --> AudioCache
+    AudioCache -->|Cache Miss| Cleaner
+    Cleaner -->|Primary == Sarvam| SarvamTTS
+    SarvamTTS -.->|Failover 1| BhashiniTTS
+    Cleaner -->|Primary == Bhashini| BhashiniTTS
+    BhashiniTTS -.->|Failover 1| SarvamTTS
+    SarvamTTS -.->|Failover 2 (Offline)| EdgeTTS
+    BhashiniTTS -.->|Failover 2 (Offline)| EdgeTTS
 
     SarvamTTS -->|Chunked MP3 Stream| TTSEndpoint
+    BhashiniTTS -->|Chunked Audio Stream| TTSEndpoint
+    EdgeTTS -->|Chunked MP3 Stream| TTSEndpoint
     TTSEndpoint -->|Direct Progressive Playback| AudioTag
 ```
 
 ---
 
-## 3. Speech-to-Text (STT): Sarvam AI Saaras v3
+## 3. Speech-to-Text (STT): Multi-Engine ASR & MIME Sanitization
 
-Implemented in [`backend/app/core/sarvam_stt.py`](file:///d:/Sanjeevani/backend/app/core/sarvam_stt.py).
+Implemented in [`backend/app/core/sarvam_stt.py`](file:///d:/Sanjeevani/backend/app/core/sarvam_stt.py) and [`backend/app/core/bhashini_client.py`](file:///d:/Sanjeevani/backend/app/core/bhashini_client.py).
 
-### Why Saaras v3?
-General ASR models trained predominantly on Western English or formal broadcast Hindi fail when confronted with:
-- Colloquial Hinglish code-mixing (*"Doctor saab, mujhe thoda chest me discomfort ho raha hai"*).
-- Garhwali grammatical inflections and regional loanwords.
-- Low-cost mobile phone microphones with background wind and room reverberation.
+### Symmetrical Dual-Provider ASR Architecture:
+- **Sarvam Saaras v3**: High-accuracy transcription with `codemix` mode for colloquial Hindi, Garhwali regional terms, and Indian English.
+- **Bhashini ASR (AI4Bharat Conformer)**: Official Government of India national speech recognition pipeline for official 8th Schedule Indic languages.
+- **Automatic Mutual Failover**: If the active primary ASR provider fails (e.g., HTTP 500, network timeout, rate limit 429), the request seamlessly retries against the fallback provider without dropping the patient's consultation.
 
-### Client Implementation:
-```python
-async def transcribe_audio(
-    self,
-    audio_bytes: bytes,
-    content_type: str = "audio/wav",
-    model: str = "saaras:v3",
-    mode: str = "codemix"
-) -> Dict[str, Any]:
-    url = f"{self.base_url}/speech-to-text"
-    headers = {"api-subscription-key": self.api_key}
-    
-    files = {"file": ("audio_input.wav", audio_bytes, content_type)}
-    data = {"model": model, "mode": mode}
-
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.post(url, headers=headers, data=data, files=files)
-        return resp.json()
-```
-The endpoint returns:
-- `transcript`: Clean textual representation in standard Devanagari script.
-- `language_code`: Detected language (e.g., `hi-IN`).
-- `language_probability`: Confidence score.
+### Browser MediaRecorder MIME Sanitization:
+Modern browsers capture microphone input via `MediaRecorder` using container MIME types with parameters, typically `audio/webm;codecs=opus`. 
+- **The Challenge**: Strictly validated speech APIs (such as Sarvam AI) reject parameters with `400 Invalid file type: audio/webm;codecs=opus`.
+- **The Solution**: Both frontend ([`voiceClient.js`](file:///d:/Sanjeevani/frontend/src/api/voiceClient.js)) and backend ([`voice.py`](file:///d:/Sanjeevani/backend/app/api/voice.py)) strip MIME parameter suffixes:
+  ```python
+  clean_content_type = raw_ct.split(";")[0].strip().lower()  # -> 'audio/webm'
+  ```
+  This guarantees standard format compliance across Chromium, Safari, Firefox, and mobile WebViews.
 
 ---
 
-## 4. Text-to-Speech (TTS): Streaming Sarvam Bulbul v3
+## 4. Text-to-Speech (TTS): Dynamic Voice Switching & Progressive Streaming
 
-Implemented in [`backend/app/core/tts_engine.py`](file:///d:/Sanjeevani/backend/app/core/tts_engine.py).
+Implemented in [`backend/app/core/tts_engine.py`](file:///d:/Sanjeevani/backend/app/core/tts_engine.py) and [`frontend/src/components/VoiceProviderSwitcher.jsx`](file:///d:/Sanjeevani/frontend/src/components/VoiceProviderSwitcher.jsx).
 
-### Progressive Streaming:
-Instead of waiting for an entire paragraph to synthesize into a complete WAV/MP3 file before sending it to the client, the `/voice/tts/stream` endpoint streams audio chunks via chunked transfer encoding (`Transfer-Encoding: chunked`).
+### Active Models & Voice Personas:
+1. **Sarvam AI (bulbul:v3)**:
+   - **Female Personas**: `meera` (gentle doctor voice, default), `ananya`, `ritu`, `priya`, `kavya`, `shreya`.
+   - **Male Personas**: `shubh` (senior clinical physician), `arjun`, `rahul`, `aditya`, `amit`, `dev`.
+2. **Bhashini (AI4Bharat Indic-TTS)**:
+   - **Neural Clusters**: `ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4` (Hindi, Garhwali, Kumaoni) and `ai4bharat/indic-tts-coqui-dravidian-gpu--t4`.
+   - **Genders**: Male and Female neural speakers with natural prosody.
+3. **Neural Indic Edge-TTS (Offline Cloud Fallback)**:
+   - Zero-configuration high-reliability cloud neural voices (`hi-IN-SwaraNeural`, `hi-IN-MadhurNeural`) serving as the ultimate fallback when both primary APIs are unreachable.
 
-The client begins playback within **300ms–500ms** of the LLM completing its first sentence, achieving an end-to-end turn time under **1.5 seconds**.
-
-### Multi-Provider Fallback Hierarchy:
-1. **Primary**: `Sarvam AI (bulbul:v3)` — High naturalness, warm Indian voice inflections, accurate pronunciation of Ayurvedic botanical names (*Tulsi*, *Ashwagandha*, *Giloy*).
-2. **Secondary Fallback**: `Edge-TTS` (`hi-IN-SwaraNeural` / `hi-IN-MadhurNeural`) — Highly reliable cloud neural voice with zero configuration.
-3. **Tertiary Offline Fallback**: `AI4Bharat Indic-TTS` (`ai4bharat_tts.py`) — Local PyTorch acoustic and vocoder model (`FastSpeech2 + HiFi-GAN`) running on edge CPU for zero-connectivity health outposts.
+### Ultra-Low Latency Audio Caching (<50ms):
+Common mission-critical phrases (greetings, emergency 108 escalation warnings, hold messages) are seeded via `seed_audio_cache()` into a differentiated LRU memory cache and on-disk audio store. Cache keys incorporate `text`, `language`, `gender`, `provider`, `model`, and `speaker` to guarantee zero playback bleeding between different voice configurations.
 
 ---
 
-## 5. Conversational Voice Guardrails
+## 5. Conversational Voice Guardrails & Pronunciation Sanitization
 
-When communicating via speech, text designed for visual reading becomes awkward or confusing:
-- Patients cannot remember a barrage of 4-5 questions spoken sequentially.
-- Technical markdown symbols (e.g., `**bold**`, `## Heading`, `* item`) sound jarring when read aloud by screen readers or TTS engines.
-
-Sanjeevani enforces two conversational voice guardrails:
-
-### Guardrail 1: Single-Question Conversational Pacing
-When `voice_mode == True`, the LLM system prompt strictly instructs:
-> *"Aap Sanjeevani Live voice mode me hain. Kripya apna uttar chhota (zyada se zyada 2-3 panktiyon me) rakhein. Ek baar me KEVL EK hi prashn poochhein taaki mariz aasaani se sun aur samajh sake."*
-
-### Guardrail 2: Automatic Markdown & Technical Symbol Stripping
-The `BhashiniVoiceEngine.format_tts_payload` cleans all text before TTS:
-- Strips Markdown headers (`#`, `##`, `###`).
-- Strips bold/italic markers (`**`, `*`, `_`).
-- Converts numbered lists (`1. `, `2. `) into natural spoken pauses.
-- Removes URLs, brackets, and code tags.
+Implemented in `IndicTTSEngine._clean_for_speech()`:
+- **Exclamation Mark Normalization**: Bhashini's ASR/TTS pipeline historically expanded ASCII `!` into mathematical *"factorial"*. The cleaner normalizes `!` and `！` into natural sentence-ending periods (`. `).
+- **Number & Range Formatting**: Replaces numeric ranges like `7-10` with *"7 se 10"* so the TTS engine speaks conversational Hindi instead of reading the hyphen as mathematical *"minus"*.
+- **Percentage Expansion**: Translates `95%` to *"95 प्रतिशत"* in Hindi and *"95 percent"* in English.
+- **Markdown & Symbol Stripping**: Cleans asterisks, hashes, backticks, emojis, and math operators (`+`, `=`, `/`) to prevent robotic verbalization of UI code artifacts.
+- **Single-Question Conversational Pacing**: Voice prompts constrain LLM responses to short, conversational sentences with at most one diagnostic question per turn.

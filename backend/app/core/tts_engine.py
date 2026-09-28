@@ -1,6 +1,7 @@
 import os
 import io
 import re
+import json
 import hashlib
 import asyncio
 import httpx
@@ -16,6 +17,49 @@ bhashini_engine = BhashiniVoiceEngine()
 # Cache directory for synthesized audio
 AUDIO_CACHE_DIR = os.path.join(os.getcwd(), "models_cache", "audio_tts")
 os.makedirs(AUDIO_CACHE_DIR, exist_ok=True)
+
+# Persistent storage files for configuration across application restarts
+SETTINGS_DATA_DIR = os.path.join(os.getcwd(), "DATA")
+if not os.path.exists(SETTINGS_DATA_DIR) and os.path.exists(os.path.join(os.getcwd(), "backend", "DATA")):
+    SETTINGS_DATA_DIR = os.path.join(os.getcwd(), "backend", "DATA")
+os.makedirs(SETTINGS_DATA_DIR, exist_ok=True)
+VOICE_SETTINGS_FILE = os.path.join(SETTINGS_DATA_DIR, "voice_settings.json")
+APP_SETTINGS_FILE = os.path.join(SETTINGS_DATA_DIR, "app_settings.json")
+
+
+def load_persisted_app_settings() -> dict:
+    """Loads general application settings persisted to disk across restarts."""
+    try:
+        if os.path.exists(APP_SETTINGS_FILE):
+            with open(APP_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        logger.warning(f"[Settings] Error loading {APP_SETTINGS_FILE}: {e}")
+    return {
+        "tts_speed": 1.0,
+        "dialect_assistance": True,
+        "health_alerts": True,
+        "language_preference": "hi",
+    }
+
+
+def save_persisted_app_settings(new_settings: dict) -> dict:
+    """Saves general application settings to disk so they survive restarts."""
+    try:
+        current = load_persisted_app_settings()
+        current.update(new_settings)
+        tmp = APP_SETTINGS_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(current, f, indent=2, ensure_ascii=False)
+        if os.path.exists(APP_SETTINGS_FILE):
+            os.replace(tmp, APP_SETTINGS_FILE)
+        else:
+            os.rename(tmp, APP_SETTINGS_FILE)
+        logger.info(f"[Settings] App settings successfully persisted to disk ({APP_SETTINGS_FILE})")
+        return current
+    except Exception as e:
+        logger.warning(f"[Settings] Error saving {APP_SETTINGS_FILE}: {e}")
+        return new_settings
 
 
 class AudioLRUCache:
@@ -214,6 +258,7 @@ class IndicTTSEngine:
     1. Sarvam AI (bulbul:v3) full and chunked streaming speech synthesis (primary).
     2. Neural Indian Accent Voice Engine (edge-tts) for 100% natural, authentic Indian accent
        without robotic artifacts or latency (sole fallback).
+    All selections (provider, models, speakers, speed) are automatically persisted to disk.
     """
     def __init__(self):
         self._client: Optional[httpx.AsyncClient] = None
@@ -222,7 +267,66 @@ class IndicTTSEngine:
         self.sarvam_speaker: str = getattr(settings, "SARVAM_FEMALE_SPEAKER", "meera") or "meera"
         self.bhashini_model: str = "ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4"
         self.bhashini_gender: str = "female"
+        self.tts_speed: float = 1.0
         self.memory_cache = AudioLRUCache(maxsize=256)
+        # Load any previously saved settings from disk so they survive restarts
+        self._load_persisted_config()
+
+    def _load_persisted_config(self):
+        """Loads and applies voice configuration previously saved to disk across restarts."""
+        try:
+            if os.path.exists(VOICE_SETTINGS_FILE):
+                with open(VOICE_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    saved_provider = data.get("provider") or data.get("primary")
+                    if saved_provider in ("bhashini", "sarvam"):
+                        settings.PRIMARY_VOICE_PROVIDER = saved_provider
+                        settings.TTS_PROVIDER = saved_provider
+                        self.last_provider = saved_provider
+                    if data.get("sarvam_model"):
+                        self.sarvam_model = str(data["sarvam_model"])
+                    if data.get("sarvam_speaker"):
+                        self.sarvam_speaker = str(data["sarvam_speaker"])
+                    if data.get("bhashini_model"):
+                        self.bhashini_model = str(data["bhashini_model"])
+                    if data.get("bhashini_gender"):
+                        self.bhashini_gender = str(data["bhashini_gender"])
+                    if "tts_speed" in data:
+                        try:
+                            self.tts_speed = float(data["tts_speed"])
+                        except (ValueError, TypeError):
+                            pass
+                    logger.info(
+                        f"[Voice Config] Successfully restored persisted voice configuration from disk ({VOICE_SETTINGS_FILE}): "
+                        f"provider={self.get_primary_provider()}, sarvam_model={self.sarvam_model}, "
+                        f"speaker={self.sarvam_speaker}, speed={self.tts_speed}"
+                    )
+        except Exception as e:
+            logger.warning(f"[Voice Config] Could not load persisted voice settings from disk: {e}")
+
+    def _save_persisted_config(self):
+        """Saves current voice configuration to disk so it survives restarts."""
+        try:
+            cfg = {
+                "provider": self.get_primary_provider(),
+                "primary": self.get_primary_provider(),
+                "sarvam_model": self.sarvam_model,
+                "sarvam_speaker": self.sarvam_speaker,
+                "bhashini_model": self.bhashini_model,
+                "bhashini_gender": self.bhashini_gender,
+                "tts_speed": getattr(self, "tts_speed", 1.0),
+            }
+            tmp_path = VOICE_SETTINGS_FILE + ".tmp"
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2, ensure_ascii=False)
+            if os.path.exists(VOICE_SETTINGS_FILE):
+                os.replace(tmp_path, VOICE_SETTINGS_FILE)
+            else:
+                os.rename(tmp_path, VOICE_SETTINGS_FILE)
+            logger.info(f"[Voice Config] Persisted voice settings to disk: {VOICE_SETTINGS_FILE}")
+        except Exception as e:
+            logger.warning(f"[Voice Config] Failed to save voice settings to disk: {e}")
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
@@ -273,6 +377,7 @@ class IndicTTSEngine:
         settings.TTS_PROVIDER = norm
         self.last_provider = norm
         self.clear_all_cache()
+        self._save_persisted_config()
         logger.info(f"[Voice Config] Primary voice provider switched to: '{norm}' (Automatic fallback: '{'sarvam' if norm == 'bhashini' else 'bhashini'}')")
         return norm
 
@@ -283,9 +388,10 @@ class IndicTTSEngine:
         sarvam_speaker: Optional[str] = None,
         bhashini_model: Optional[str] = None,
         bhashini_gender: Optional[str] = None,
+        tts_speed: Optional[float] = None,
         clear_cache: Optional[bool] = False,
     ) -> dict:
-        """Updates provider, model, and speaker configuration and purges stale audio cache."""
+        """Updates provider, model, speaker, and speed configuration and purges stale audio cache."""
         changed = False
         if provider and provider != self.get_primary_provider():
             self.set_primary_provider(provider)
@@ -306,9 +412,18 @@ class IndicTTSEngine:
         if bhashini_gender and bhashini_gender != self.bhashini_gender:
             self.bhashini_gender = bhashini_gender
             changed = True
+        if tts_speed is not None:
+            try:
+                parsed_speed = float(tts_speed)
+                if abs(parsed_speed - getattr(self, "tts_speed", 1.0)) > 0.01:
+                    self.tts_speed = parsed_speed
+                    changed = True
+            except (ValueError, TypeError):
+                pass
 
         if changed or clear_cache:
             self.clear_all_cache()
+            self._save_persisted_config()
 
         return self.get_provider_status()
 
@@ -329,6 +444,7 @@ class IndicTTSEngine:
             "sarvam_speaker": self.sarvam_speaker,
             "bhashini_model": self.bhashini_model,
             "bhashini_gender": self.bhashini_gender,
+            "tts_speed": getattr(self, "tts_speed", 1.0),
             "available_sarvam_models": AVAILABLE_SARVAM_MODELS,
             "available_sarvam_speakers": active_sarvam_speakers,
             "available_sarvam_speakers_by_model": SARVAM_SPEAKERS_BY_MODEL,

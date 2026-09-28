@@ -4,10 +4,14 @@ from fastapi.responses import StreamingResponse
 from app.config import settings
 from app.schemas.voice_schemas import (
     TTSRequest, TTSResponse, STTResponse,
-    VoiceProviderConfigRequest, VoiceProviderConfigResponse
+    VoiceProviderConfigRequest, VoiceProviderConfigResponse,
+    AppSettingsRequest, AppSettingsResponse
 )
 from app.core.bhashini_engine import BhashiniVoiceEngine
-from app.core.tts_engine import IndicTTSEngine, get_shared_tts_engine
+from app.core.tts_engine import (
+    IndicTTSEngine, get_shared_tts_engine,
+    load_persisted_app_settings, save_persisted_app_settings
+)
 from app.core.limiter import limiter
 from app.core.logger import logger
 from app.core.bhashini_client import bhashini_client
@@ -76,10 +80,54 @@ async def set_voice_provider(req: VoiceProviderConfigRequest):
             sarvam_speaker=req.sarvam_speaker,
             bhashini_model=req.bhashini_model,
             bhashini_gender=req.bhashini_gender,
+            tts_speed=req.tts_speed,
             clear_cache=req.clear_cache,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/settings", response_model=AppSettingsResponse)
+async def get_app_settings():
+    """
+    Returns persisted general application settings (audio speed, dialect assistance,
+    health alerts, default language) that survive backend restarts.
+    """
+    data = load_persisted_app_settings()
+    current_speed = getattr(_indic_tts_engine, "tts_speed", 1.0)
+    return AppSettingsResponse(
+        tts_speed=float(data.get("tts_speed", current_speed)),
+        dialect_assistance=bool(data.get("dialect_assistance", True)),
+        health_alerts=bool(data.get("health_alerts", True)),
+        language_preference=str(data.get("language_preference", "hi")),
+    )
+
+
+@router.post("/settings", response_model=AppSettingsResponse)
+async def set_app_settings(req: AppSettingsRequest):
+    """
+    Persists general application settings to disk across restarts.
+    Also synchronizes tts_speed with the active IndicTTSEngine.
+    """
+    update_dict = {}
+    if req.tts_speed is not None:
+        update_dict["tts_speed"] = float(req.tts_speed)
+        _indic_tts_engine.set_provider_config(tts_speed=req.tts_speed)
+    if req.dialect_assistance is not None:
+        update_dict["dialect_assistance"] = bool(req.dialect_assistance)
+    if req.health_alerts is not None:
+        update_dict["health_alerts"] = bool(req.health_alerts)
+    if req.language_preference is not None:
+        update_dict["language_preference"] = str(req.language_preference).strip()
+
+    saved = save_persisted_app_settings(update_dict)
+    return AppSettingsResponse(
+        tts_speed=float(saved.get("tts_speed", 1.0)),
+        dialect_assistance=bool(saved.get("dialect_assistance", True)),
+        health_alerts=bool(saved.get("health_alerts", True)),
+        language_preference=str(saved.get("language_preference", "hi")),
+    )
+
 
 
 @router.post("/tts", response_model=TTSResponse)

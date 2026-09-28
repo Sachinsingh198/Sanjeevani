@@ -44,10 +44,12 @@ class VoiceProviderConfigRequest(BaseModel):
     sarvam_speaker: Optional[str] = None
     bhashini_model: Optional[str] = None
     bhashini_gender: Optional[str] = None
+    tts_speed: Optional[float] = None
     clear_cache: Optional[bool] = False
 
 
 class VoiceProviderConfigResponse(BaseModel):
+    provider: Optional[str] = None
     primary: str
     fallback: str
     offline_fallback: str = "neural_indic"
@@ -57,9 +59,25 @@ class VoiceProviderConfigResponse(BaseModel):
     sarvam_speaker: str = "meera"
     bhashini_model: str = "ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4"
     bhashini_gender: str = "female"
+    tts_speed: Optional[float] = 1.0
     available_sarvam_models: list = []
     available_sarvam_speakers: list = []
     available_sarvam_speakers_by_model: Optional[dict] = None
     available_bhashini_models: list = []
     available_bhashini_genders: list = []
+    status: str = "ok"
+
+
+class AppSettingsRequest(BaseModel):
+    tts_speed: Optional[float] = None
+    dialect_assistance: Optional[bool] = None
+    health_alerts: Optional[bool] = None
+    language_preference: Optional[str] = None
+
+
+class AppSettingsResponse(BaseModel):
+    tts_speed: float = 1.0
+    dialect_assistance: bool = True
+    health_alerts: bool = True
+    language_preference: str = "hi"
     status: str = "ok"

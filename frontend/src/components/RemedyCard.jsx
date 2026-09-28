@@ -8,7 +8,7 @@ import { ShieldCheck, BookOpen, ChevronDown, ChevronUp, Leaf } from 'lucide-reac
  * - Ayurvedic note and safety verification status
  */
 export default function RemedyCard({ remedy, index = 0 }) {
-  const [expanded, setExpanded] = useState(index === 0);
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <div
