@@ -57,8 +57,8 @@ flowchart TD
     SarvamTTS -.->|Failover 1| BhashiniTTS
     Cleaner -->|Primary == Bhashini| BhashiniTTS
     BhashiniTTS -.->|Failover 1| SarvamTTS
-    SarvamTTS -.->|Failover 2 (Offline)| EdgeTTS
-    BhashiniTTS -.->|Failover 2 (Offline)| EdgeTTS
+    SarvamTTS -.->|Failover 2 Cloud Fallback| EdgeTTS
+    BhashiniTTS -.->|Failover 2 Cloud Fallback| EdgeTTS
 
     SarvamTTS -->|Chunked MP3 Stream| TTSEndpoint
     BhashiniTTS -->|Chunked Audio Stream| TTSEndpoint

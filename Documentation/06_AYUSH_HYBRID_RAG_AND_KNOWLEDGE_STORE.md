@@ -145,7 +145,7 @@ flowchart TD
 
     subgraph SafetyGate ["Five-Layer Safety & Exclusion Gate"]
         Candidates --> KGValidation{"Safety Knowledge Graph:\nComorbidity / Contraindication?"}
-        KGValidation -->|Conflict Found\ne.g., Ulcer + Spicy Churna| RejectKG["Discard Candidate &\nLog Safety Warning"]
+        KGValidation -->|Conflict Found - e.g. Ulcer| RejectKG["Discard Candidate &\nLog Safety Warning"]
         KGValidation -->|Safe for Patient| SubstanceFilter{"Banned Substance Filter:\nTobacco, Snuff, Opium, Toxic Minerals?"}
         SubstanceFilter -->|Contains Banned Term| RejectToxic["Quarantine & Block Formulation"]
         SubstanceFilter -->|Safe Botanical / Kitchen Herbs| GoldStandard{"Gold-Standard CCRAS Match?"}

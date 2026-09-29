@@ -71,7 +71,8 @@ graph TB
     EdgeTTS -.->|Fallback| AI4BharatTTS
 
     ImgDecoder --> Preproc
-    Preproc --> AnemiaEngine & JaundiceEngine
+    Preproc --> AnemiaEngine
+    Preproc --> JaundiceEngine
 
     JWTAuth --> SQLiteDB
     LangGraphWorkflow --> CheckpointerDB
@@ -197,7 +198,7 @@ flowchart TD
     Checkpointer -->|Immediate Local Write| LocalSQLite
     Checkpointer -->|Async Upstream Mirror| CloudCluster
     SyncEndpoint --> Analytics
-    SyncEndpoint -->>|200 OK: Synced Count| IDB
+    SyncEndpoint -->|200 OK: Synced Count| IDB
     IDB -->|Mark Synced| UI
 ```
 

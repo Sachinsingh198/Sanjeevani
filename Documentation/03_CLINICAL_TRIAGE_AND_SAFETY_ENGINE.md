@@ -14,8 +14,8 @@ To provide an absolute safety guarantee, Sanjeevani implements a deterministic r
 graph TD
     Input[Patient Symptom Narrative] --> Evaluate{ClinicalTriageEngine.evaluate}
 
-    Evaluate -->|Matches Red Discriminators\nAND not negated| Red[🔴 RED TIER\nImmediate Life Threat]
-    Evaluate -->|Matches Yellow Discriminators\nAND not negated| Yellow[🟡 YELLOW TIER\nSub-Acute / Urgent Monitoring]
+    Evaluate -->|Matches Red Discriminators AND not negated| Red[🔴 RED TIER\nImmediate Life Threat]
+    Evaluate -->|Matches Yellow Discriminators AND not negated| Yellow[🟡 YELLOW TIER\nSub-Acute / Urgent Monitoring]
     Evaluate -->|No Critical Discriminators| Green[🟢 GREEN TIER\nRoutine / Community Self-Care]
 
     Red --> RedAction[1. Suppress all home remedies\n2. Trigger 108 Emergency Call Card\n3. Display immediate first aid & PHC referral]

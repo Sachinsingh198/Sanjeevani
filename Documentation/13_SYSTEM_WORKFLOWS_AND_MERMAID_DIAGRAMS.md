@@ -204,11 +204,11 @@ flowchart TD
         Lowercase --> MatchYellow{"Match Yellow Pattern?\n(Prolonged Fever, Severe Pain)"}
     end
 
-    MatchRed -->|Pattern Detected at [start:end]| NegationCheckRed{"Bi-Directional Negation Check\n(35-char sliding window)"}
-    MatchYellow -->|Pattern Detected at [start:end]| NegationCheckYellow{"Bi-Directional Negation Check\n(35-char sliding window)"}
+    MatchRed -->|Pattern Match Detected| NegationCheckRed{"Bi-Directional Negation Check\n(35-char sliding window)"}
+    MatchYellow -->|Pattern Match Detected| NegationCheckYellow{"Bi-Directional Negation Check\n(35-char sliding window)"}
 
     subgraph NegationWindow ["Negation Evaluation (Prefix & Postfix)"]
-        NegationCheckRed -->|Preceding or Succeeding Token in:\n'nahi', 'nahin', 'no', 'not', 'denies'| DiscardRed["Negation True:\nDiscard Red Trigger"]
+        NegationCheckRed -->|Negation Token Found| DiscardRed["Negation True:\nDiscard Red Trigger"]
         NegationCheckRed -->|No Negation Token Found| ConfirmRed["Negation False:\nTrigger Active Emergency"]
 
         NegationCheckYellow -->|Negation Token Found| DiscardYellow["Negation True:\nDiscard Yellow Trigger"]
@@ -288,7 +288,7 @@ flowchart TD
 
     subgraph Step2 ["2. Safety Knowledge Graph Validation"]
         RawCandidates --> KGCheck{"Safety Knowledge Graph:\nCheck Comorbidities & Contraindications"}
-        KGCheck -->|Contraindication Found\n(e.g., Pitta aggravation in peptic ulcer)| DiscardKG["Drop Candidate &\nRecord Safety Audit Log"]
+        KGCheck -->|Contraindication Found| DiscardKG["Drop Candidate &\nRecord Safety Audit Log\n(e.g. Pitta aggravation in ulcer)"]
         KGCheck -->|No Clinical Conflict| PassedKG["Approved for Substance Screen"]
     end
 
@@ -412,10 +412,10 @@ flowchart TD
         CIELAB_EI --> ErythemaIndex["Compute Erythema Index:\nEI = a* / L*"]
         ErythemaIndex --> CalcHb["Calibrate Estimated Hemoglobin:\nHb_est = 13.5 * EI (g/dL)"]
         CalcHb --> TriageHb{"Triage Hb Level"}
-        TriageHb -->|>= 12.0| HbNorm["Normal / Non-Anemic"]
+        TriageHb -->|12.0 or higher| HbNorm["Normal / Non-Anemic"]
         TriageHb -->|10.0 - 11.9| HbMild["Mild Pallor"]
         TriageHb -->|7.0 - 9.9| HbMod["Moderate Pallor (ASHA Referral)"]
-        TriageHb -->|< 7.0| HbSev["Severe Pallor (Urgent Transfusion Warning)"]
+        TriageHb -->|Under 7.0| HbSev["Severe Pallor (Urgent Transfusion Warning)"]
     end
 
     %% Jaundice Path
@@ -424,10 +424,10 @@ flowchart TD
         ScleraROI --> CIELAB_B["Extract Yellow-Blue Chromatic Shift\nMeasure mean(b*) across Sclera Mask"]
         CIELAB_B --> CalcBili["Estimate Serum Bilirubin:\nBili_est = f(mean(b*)) mg/dL"]
         CalcBili --> TriageBili{"Triage Bilirubin"}
-        TriageBili -->|< 1.2| BiliNorm["Normal Range"]
+        TriageBili -->|Under 1.2| BiliNorm["Normal Range"]
         TriageBili -->|1.2 - 2.5| BiliBorder["Borderline Sub-Clinical Icterus"]
         TriageBili -->|2.5 - 5.0| BiliMod["Moderate Icterus (Liver/Gallbladder Evaluation)"]
-        TriageBili -->|>= 5.0| BiliSev["Severe Hyperbilirubinemia (Urgent PHC Care)"]
+        TriageBili -->|5.0 or higher| BiliSev["Severe Hyperbilirubinemia (Urgent PHC Care)"]
     end
 
     %% Oral Cavity Path
