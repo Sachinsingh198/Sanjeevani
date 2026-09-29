@@ -1176,8 +1176,8 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
         has_sufficient = _has_sufficient_info(updated_notes)
         # Can only conclude if:
         # 1. At least 3 interactive clinical turns completed, OR
-        # 2. At least 2 turns completed AND multi-dimensional info is sufficient AND LLM explicitly determines conclusion is ready
-        can_conclude = ((turn_count >= 3) or (turn_count >= 2 and has_sufficient)) and has_actual_symptoms
+        # 2. Multi-dimensional info is sufficient (duration + severity/associated symptoms)
+        can_conclude = ((turn_count >= 3) or has_sufficient) and has_actual_symptoms
         # Hard safety cap strictly at turn 5 to guarantee timely remedy delivery
         force_conclude = (turn_count >= 5) and has_actual_symptoms
 

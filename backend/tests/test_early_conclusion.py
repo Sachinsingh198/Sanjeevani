@@ -1,12 +1,14 @@
 import pytest
 from app.agents.graph import sanjeevani_workflow
 
-def test_early_conclusion_single_turn_with_sufficient_info():
+def test_early_conclusion_single_turn_with_sufficient_info(monkeypatch):
     """
     A single patient message containing both duration ('3 din') and associated
     symptoms / severity ('tez bukhar', 'kapkapi') must conclude within one turn
     without forcing 3 probing turns.
     """
+    import app.agents.nodes.responder_node as rn
+    monkeypatch.setattr(rn, "get_llm", lambda: None)
     initial_state = {
         "conversation_id": "test-early-conclude-201",
         "raw_user_message": "3 din se tez bukhar hai, kapkapi bhi hai",

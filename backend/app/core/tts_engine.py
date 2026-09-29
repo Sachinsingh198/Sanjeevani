@@ -210,9 +210,9 @@ def get_voice_lang_key(lang: str) -> str:
 # Neutral/slightly brisk rate prevents sluggish or robotic articulation.
 VOICE_PROSODY = {
     "hi-IN-SwaraNeural":           {"rate": "-2%",  "pitch": "+0Hz", "volume": "+8%"},
-    "hi-IN-MadhurNeural":          {"rate": "-1%",  "pitch": "0Hz",  "volume": "+5%"},
+    "hi-IN-MadhurNeural":          {"rate": "-1%",  "pitch": "+0Hz", "volume": "+5%"},
     "en-IN-NeerjaExpressiveNeural":{"rate": "-2%",  "pitch": "+0Hz", "volume": "+8%"},
-    "en-IN-PrabhatNeural":         {"rate": "-1%",  "pitch": "0Hz",  "volume": "+5%"},
+    "en-IN-PrabhatNeural":         {"rate": "-1%",  "pitch": "+0Hz", "volume": "+5%"},
 }
 
 
@@ -552,19 +552,36 @@ class IndicTTSEngine:
             voice = INDIAN_VOICES.get(lang_key, {}).get(gender, "hi-IN-SwaraNeural")
             prosody = VOICE_PROSODY.get(voice, {"rate": "-8%", "pitch": "+1Hz", "volume": "+10%"})
 
-            communicate = edge_tts.Communicate(
-                text=text,
-                voice=voice,
-                rate=prosody.get("rate", "-8%"),
-                pitch=prosody.get("pitch", "+1Hz"),
-                volume=prosody.get("volume", "+10%"),
-            )
-            audio_buffer = io.BytesIO()
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    audio_buffer.write(chunk["data"])
+            pitch_val = str(prosody.get("pitch", "+0Hz")).strip()
+            if pitch_val and not pitch_val.startswith(("+", "-")):
+                pitch_val = f"+{pitch_val}"
+            rate_val = str(prosody.get("rate", "+0%")).strip()
+            if rate_val and not rate_val.startswith(("+", "-")):
+                rate_val = f"+{rate_val}"
+            volume_val = str(prosody.get("volume", "+0%")).strip()
+            if volume_val and not volume_val.startswith(("+", "-")):
+                volume_val = f"+{volume_val}"
 
-            data = audio_buffer.getvalue()
+            data = None
+            try:
+                communicate = edge_tts.Communicate(
+                    text=text,
+                    voice=voice,
+                    rate=rate_val,
+                    pitch=pitch_val,
+                    volume=volume_val,
+                )
+                audio_buffer = io.BytesIO()
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        audio_buffer.write(chunk["data"])
+
+                buf_val = audio_buffer.getvalue()
+                if buf_val and len(buf_val) > 0:
+                    data = buf_val
+            except Exception as prosody_err:
+                logger.warning(f"[Neural Indic Prosody Fallback]: {prosody_err}")
+
             if data and len(data) > 0:
                 return data
 
@@ -890,10 +907,12 @@ class IndicTTSEngine:
         # Deduce effective gender:
         # If user explicitly requested gender (e.g. 'male' or 'female') in preview or request, honor it.
         # Otherwise, if primary is bhashini, reflect configured self.bhashini_gender.
-        if primary == "bhashini":
-            effective_gender = "male" if (effective_speaker.lower() == "male" or (gender and gender.lower() == "male") or (self.bhashini_gender == "male")) else "female"
+        if gender and gender.lower().strip() in ("male", "female"):
+            effective_gender = gender.lower().strip()
+        elif primary == "bhashini":
+            effective_gender = "male" if (effective_speaker.lower() == "male" or self.bhashini_gender == "male") else "female"
         else:
-            effective_gender = "male" if (gender and gender.lower() == "male") else "female"
+            effective_gender = "male" if effective_speaker.lower() == "male" else "female"
 
         # Differentiated cache key guarantees never serving audio from another provider or model
         cache_key = get_audio_cache_key(
@@ -907,6 +926,10 @@ class IndicTTSEngine:
 
         # 0. Check in-memory LRU cache (< 5ms response time)
         mem_cached = self.memory_cache.get(cache_key)
+        if not mem_cached:
+            # Also check generic cache key (e.g. pre-seeded or cross-provider cached)
+            gen_cache_key = get_audio_cache_key(clean_text, language=language, gender=effective_gender)
+            mem_cached = self.memory_cache.get(gen_cache_key)
         if mem_cached:
             return mem_cached[0], mem_cached[1]
 
