@@ -112,9 +112,10 @@ flowchart TD
     CVUI -->|Image Uploads| Router
     CORS --> Router
 
-    Router -->|1. Transcribe Audio (MIME Sanitized)| SarvamSTT & BhashiniASR
+    Router -->|1. Transcribe Audio| SarvamSTT
+    Router -->|1. Transcribe Audio| BhashiniASR
     Router -->|2. Dispatch Consultation| LangGraph
-    Router -->|3. Image Bytes| VisionSubsystem
+    Router -->|3. Image Bytes| Preproc
 
     LangGraph --> TriageEngine
     TriageEngine -->|Red Tier: Emergency| Emergency
@@ -123,15 +124,19 @@ flowchart TD
     Retriever --> Qdrant
 
     Responder -->|Synthesize Speech| VoiceSwitcher
-    VoiceSwitcher --> SarvamTTS & BhashiniTTS
+    VoiceSwitcher --> SarvamTTS
+    VoiceSwitcher --> BhashiniTTS
     SarvamTTS -.->|Mutual Failover| BhashiniTTS
     BhashiniTTS -.->|Mutual Failover| SarvamTTS
-    SarvamTTS & BhashiniTTS -.->|Cloud Fallback| EdgeTTS
+    SarvamTTS -.->|Cloud Fallback| EdgeTTS
+    BhashiniTTS -.->|Cloud Fallback| EdgeTTS
 
     LangGraph -.->|Traces & Spans| LangSmith
     LangGraph -.->|State Checkpoint| Sessions
     Router -.->|Users & OTPs| DB
-    VisionSubsystem --> AnemiaCalc & JaundiceCalc & OralSkin
+    Preproc --> AnemiaCalc
+    Preproc --> JaundiceCalc
+    Preproc --> OralSkin
 ```
 
 ### 🔄 End-to-End Clinical Consultation Dataflow
