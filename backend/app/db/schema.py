@@ -171,6 +171,46 @@ emergency_alerts_table = Table(
     Column("created_at", DateTime, nullable=False, server_default=func.now(), index=True),
 )
 
+# 11. System Settings Table (Dynamic runtime config managed from Admin Dashboard)
+system_settings_table = Table(
+    "system_settings",
+    metadata,
+    Column("key", String(100), primary_key=True),
+    Column("value", Text, nullable=False),
+    Column("category", String(50), nullable=False, default="general"),
+    Column("updated_by", String(255), nullable=True),
+    Column("updated_at", DateTime, nullable=False, server_default=func.now(), onupdate=func.now()),
+)
+
+# 12. CMO District Health Advisories & Outbreak Broadcasts
+cmo_broadcasts_table = Table(
+    "cmo_broadcasts",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("title", String(255), nullable=False),
+    Column("message", Text, nullable=False),
+    Column("severity", String(50), nullable=False, default="info"),  # info, warning, emergency
+    Column("target_village", String(255), nullable=True, default="all"),
+    Column("disease_tag", String(100), nullable=True),
+    Column("is_active", Boolean, nullable=False, default=True),
+    Column("author", String(255), nullable=True, default="District CMO"),
+    Column("created_at", DateTime, nullable=False, server_default=func.now(), index=True),
+    Column("updated_at", DateTime, nullable=False, server_default=func.now(), onupdate=func.now()),
+)
+
+# 13. District Outbreak Actions (Field Dispatch & Containment Orders)
+outbreak_actions_table = Table(
+    "outbreak_actions",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("action_type", String(100), nullable=False),  # ASHA_DISPATCH, ADVISORY_ISSUED, CONTAINMENT_TEAM
+    Column("village", String(255), nullable=False),
+    Column("disease", String(100), nullable=True),
+    Column("notes", Text, nullable=True),
+    Column("initiated_by", String(255), nullable=False),
+    Column("created_at", DateTime, nullable=False, server_default=func.now(), index=True),
+)
+
 
 def _migrate_columns_safely(engine):
     """

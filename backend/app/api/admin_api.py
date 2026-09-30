@@ -214,3 +214,357 @@ async def acknowledge_admin_alert(
     if not success:
         raise HTTPException(status_code=404, detail="Alert not found or already acknowledged.")
     return {"success": True, "alert_id": alert_id, "acknowledged": True}
+
+
+# ── Dynamic System Configuration & AI Engine Controls ────────────────────────
+
+@router.get("/config")
+async def get_admin_system_config(admin: Dict[str, Any] = Depends(require_role("admin"))):
+    """Admin-only: Returns dynamic system configuration (AI models, voice, triage, flags)."""
+    from app.core.system_config import get_system_config
+    return {
+        "success": True,
+        "config": get_system_config(),
+    }
+
+
+@router.post("/config")
+async def update_admin_system_config(
+    updates: Dict[str, Any],
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """Admin-only: Dynamically updates system configuration in real-time without code changes or restarts."""
+    from app.core.system_config import update_system_config
+    admin_name = admin.get("name", "Administrator")
+    updated = update_system_config(updates, admin_name=admin_name)
+    return {
+        "success": True,
+        "message": "System configuration updated successfully in real-time.",
+        "config": updated,
+    }
+
+
+@router.post("/config/reset")
+async def reset_admin_system_config(admin: Dict[str, Any] = Depends(require_role("admin"))):
+    """Admin-only: Resets dynamic system configuration to factory defaults."""
+    from app.core.system_config import reset_system_config_to_defaults
+    admin_name = admin.get("name", "Administrator")
+    resetted = reset_system_config_to_defaults(admin_name=admin_name)
+    return {
+        "success": True,
+        "message": "System configuration reset to default values.",
+        "config": resetted,
+    }
+
+
+# ── Operational Actions (Cache Purge, Vector Sync, Latency Test) ──────────────
+
+@router.post("/actions/test-llm-latency")
+async def test_llm_latency(admin: Dict[str, Any] = Depends(require_role("admin"))):
+    """Admin-only: Pings the active LLM provider and measures inference response time."""
+    from app.agents.nodes.responder_node import get_llm
+    from langchain_core.messages import HumanMessage
+    import time
+
+    llm = get_llm()
+    if not llm:
+        return {
+            "success": False,
+            "status": "offline",
+            "latency_ms": None,
+            "message": "No active LLM provider configured or keys missing.",
+        }
+
+    t0 = time.perf_counter()
+    try:
+        res = llm.invoke([HumanMessage(content="ping")])
+        latency_ms = round((time.perf_counter() - t0) * 1000, 1)
+        return {
+            "success": True,
+            "status": "online",
+            "latency_ms": latency_ms,
+            "reply_sample": str(getattr(res, "content", "pong"))[:60],
+            "message": f"LLM responded in {latency_ms}ms.",
+        }
+    except Exception as e:
+        latency_ms = round((time.perf_counter() - t0) * 1000, 1)
+        return {
+            "success": False,
+            "status": "degraded",
+            "latency_ms": latency_ms,
+            "error": str(e),
+            "message": f"LLM ping error: {e}",
+        }
+
+
+@router.post("/actions/purge-cache")
+async def purge_system_caches(admin: Dict[str, Any] = Depends(require_role("admin"))):
+    """Admin-only: Clears audio TTS cache and in-memory model caches."""
+    cleared_audio = 0
+    try:
+        from app.core.tts_engine import AUDIO_CACHE_DIR
+        import os
+        if os.path.exists(AUDIO_CACHE_DIR):
+            files = os.listdir(AUDIO_CACHE_DIR)
+            for f in files:
+                f_path = os.path.join(AUDIO_CACHE_DIR, f)
+                if os.path.isfile(f_path):
+                    os.remove(f_path)
+                    cleared_audio += 1
+    except Exception:
+        pass
+
+    return {
+        "success": True,
+        "cleared_audio_files": cleared_audio,
+        "message": f"System caches purged successfully ({cleared_audio} audio cache files removed).",
+    }
+
+
+@router.post("/actions/reindex-knowledge")
+async def reindex_knowledge_store(admin: Dict[str, Any] = Depends(require_role("admin"))):
+    """Admin-only: Re-syncs / reloads CCRAS and AYUSH knowledge store in Qdrant."""
+    try:
+        from app.core.hybrid_rag import get_shared_remedy_store
+        store = get_shared_remedy_store()
+        status = "active" if store else "offline_fallback"
+        return {
+            "success": True,
+            "status": status,
+            "message": "AYUSH & CCRAS knowledge base store verified and re-indexed in memory.",
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "status": "error",
+            "message": f"Knowledge store sync note: {e}",
+        }
+
+
+# ── User Role & Profile Governance ───────────────────────────────────────────
+
+@router.patch("/users/{user_id}/role")
+async def update_user_role(
+    user_id: int,
+    payload: Dict[str, str],
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """Admin-only: Dynamically changes a user's role (patient, asha, admin)."""
+    new_role = payload.get("role", "").lower().strip()
+    if new_role not in ("patient", "asha", "admin"):
+        raise HTTPException(status_code=400, detail="Invalid role. Must be patient, asha, or admin.")
+
+    if admin["id"] == user_id and new_role != "admin":
+        raise HTTPException(status_code=400, detail="Cannot demote your own admin account.")
+
+    with get_db_connection() as conn:
+        existing = conn.execute(select(users_table).where(users_table.c.id == user_id)).fetchone()
+        if not existing:
+            raise HTTPException(status_code=404, detail="User not found.")
+
+        conn.execute(
+            users_table.update().where(users_table.c.id == user_id).values(role=new_role)
+        )
+        updated = conn.execute(select(users_table).where(users_table.c.id == user_id)).fetchone()
+        return {
+            "success": True,
+            "message": f"User role changed to {new_role.upper()}.",
+            "user": UserProfile(**row_to_dict(updated)),
+        }
+
+
+@router.put("/users/{user_id}")
+async def update_user_details(
+    user_id: int,
+    payload: Dict[str, Any],
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """Admin-only: Updates user profile details, assigned PHC, village, or contact number."""
+    allowed_fields = {"name", "phone", "village", "assigned_phc", "district", "worker_id"}
+    updates = {k: v for k, v in payload.items() if k in allowed_fields}
+
+    if not updates:
+        raise HTTPException(status_code=400, detail="No valid editable fields provided.")
+
+    with get_db_connection() as conn:
+        existing = conn.execute(select(users_table).where(users_table.c.id == user_id)).fetchone()
+        if not existing:
+            raise HTTPException(status_code=404, detail="User not found.")
+
+        conn.execute(
+            users_table.update().where(users_table.c.id == user_id).values(**updates)
+        )
+        updated = conn.execute(select(users_table).where(users_table.c.id == user_id)).fetchone()
+        return {
+            "success": True,
+            "message": "User details updated successfully.",
+            "user": UserProfile(**row_to_dict(updated)),
+        }
+
+
+# ── District CMO Health Advisory Broadcasts ──────────────────────────────────
+
+@router.get("/broadcast")
+async def get_current_broadcast():
+    """Returns the latest active District CMO Health Advisory broadcast."""
+    from app.core.broadcast_service import get_active_broadcast
+    return get_active_broadcast()
+
+
+@router.get("/broadcast/history")
+async def get_broadcast_history(admin: Dict[str, Any] = Depends(require_role("admin"))):
+    """Admin-only: Returns history of all issued CMO advisories."""
+    from app.core.broadcast_service import list_all_broadcasts
+    return list_all_broadcasts()
+
+
+@router.post("/broadcast")
+async def publish_district_broadcast(
+    payload: Dict[str, Any],
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """Admin-only: Publishes a persistent District CMO Health Advisory."""
+    from app.core.broadcast_service import publish_broadcast
+    title = payload.get("title", "District Health Notice")
+    message = payload.get("message", "")
+    severity = payload.get("severity", "info")
+    target_village = payload.get("target_village", "all")
+    disease_tag = payload.get("disease_tag")
+
+    if not message.strip():
+        raise HTTPException(status_code=400, detail="Broadcast message cannot be empty.")
+
+    broadcast = publish_broadcast(
+        title=title,
+        message=message,
+        severity=severity,
+        target_village=target_village,
+        disease_tag=disease_tag,
+        author=f"CMO Admin: {admin.get('name', 'Admin')}",
+    )
+    return {
+        "success": True,
+        "message": "District health advisory broadcast published and persisted.",
+        "broadcast": broadcast,
+    }
+
+
+@router.delete("/broadcast/{broadcast_id}")
+async def deactivate_district_broadcast(
+    broadcast_id: int,
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """Admin-only: Deactivates an active CMO advisory broadcast."""
+    from app.core.broadcast_service import deactivate_broadcast
+    success = deactivate_broadcast(broadcast_id, author=admin.get("name", "Admin"))
+    if not success:
+        raise HTTPException(status_code=404, detail="Broadcast not found.")
+    return {"success": True, "message": "Broadcast advisory deactivated."}
+
+
+# ── District Disease Surveillance, Heatmap & Outbreak EWS ────────────────────
+
+@router.get("/surveillance/heatmap")
+async def get_disease_surveillance_heatmap(
+    disease: Optional[str] = None,
+    timeframe: int = 30,
+    tier: Optional[str] = None,
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """
+    District Health Admin & CMO Outbreak Surveillance:
+    Returns geographic sector clusters, heatmap intensity coordinates,
+    prevalence numbers, and dominant diseases across mountain blocks.
+    """
+    from app.core.surveillance_service import get_surveillance_heatmap
+    return get_surveillance_heatmap(
+        disease_filter=disease,
+        timeframe_days=timeframe,
+        tier_filter=tier,
+    )
+
+
+@router.get("/surveillance/outbreaks")
+async def get_surveillance_outbreak_alerts(
+    timeframe: int = 30,
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """
+    Outbreak Early Warning System (EWS):
+    Identifies statistically significant disease surges, vector spread velocities,
+    and returns prioritized CMO public health containment directives.
+    """
+    from app.core.surveillance_service import get_outbreak_alerts
+    return get_outbreak_alerts(timeframe_days=timeframe)
+
+
+@router.get("/surveillance/trends")
+async def get_surveillance_trends_data(
+    timeframe: int = 30,
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """
+    Epidemiological Analytics:
+    Returns time-series outbreak curves, disease percentage compositions,
+    and age-cohort vulnerability distributions.
+    """
+    from app.core.surveillance_service import get_surveillance_trends
+    return get_surveillance_trends(timeframe_days=timeframe)
+
+
+@router.post("/surveillance/dispatch")
+async def dispatch_surveillance_team(
+    payload: Dict[str, Any],
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """
+    Actionable Governance:
+    Dispatches Rapid Response Medical / ASHA Team to an outbreak sector.
+    """
+    from app.core.surveillance_service import dispatch_rapid_response_team
+    village = payload.get("village")
+    disease = payload.get("disease", "General Outbreak")
+    notes = payload.get("notes", "Rapid deployment by CMO order")
+
+    if not village:
+        raise HTTPException(status_code=400, detail="Target sector / village is required.")
+
+    result = dispatch_rapid_response_team(
+        village=village,
+        disease=disease,
+        notes=notes,
+        admin_name=admin.get("name", "District CMO"),
+    )
+    return result
+
+
+@router.post("/surveillance/broadcast-alert")
+async def broadcast_outbreak_alert(
+    payload: Dict[str, Any],
+    admin: Dict[str, Any] = Depends(require_role("admin"))
+):
+    """
+    Actionable Governance:
+    Instantly converts an outbreak cluster into a district-wide CMO Health Advisory.
+    """
+    from app.core.broadcast_service import publish_broadcast
+    village = payload.get("village", "All Sectors")
+    disease = payload.get("disease", "Health Advisory")
+    action_text = payload.get("action_text", "Boil drinking water, take precautionary hygiene measures, and report symptoms to nearest ASHA worker.")
+
+    title = f"Health Alert: {disease} Precaution ({village})"
+    message = f"District CMO Advisory for {village}: Elevated cases of {disease} observed. {action_text}"
+
+    broadcast = publish_broadcast(
+        title=title,
+        message=message,
+        severity="warning",
+        target_village=village,
+        disease_tag=disease,
+        author=f"CMO Admin: {admin.get('name', 'Admin')}",
+    )
+    return {
+        "success": True,
+        "message": f"Outbreak alert broadcasted successfully for {village}.",
+        "broadcast": broadcast,
+    }

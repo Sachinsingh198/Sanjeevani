@@ -331,31 +331,72 @@ def get_sarvam_llm():
 
 
 def get_llm():
-    """Initializes LLM client with automatic failover between Groq, Gemini, and Sarvam."""
-    if settings.PRIMARY_LLM_PROVIDER == "groq" and settings.GROQ_API_KEY:
+    """Initializes LLM client with dynamic configuration and automatic failover between Groq, Gemini, and Sarvam."""
+    try:
+        from app.core.system_config import get_system_config
+        cfg = get_system_config()
+    except Exception:
+        cfg = {}
+
+    provider = cfg.get("primary_llm_provider", settings.PRIMARY_LLM_PROVIDER)
+    groq_mod = cfg.get("groq_model", settings.GROQ_MODEL)
+    gemini_mod = cfg.get("gemini_model", settings.GEMINI_MODEL)
+    temp = float(cfg.get("temperature", 0.3))
+    max_tok = int(cfg.get("max_tokens", 1200))
+
+    if provider == "groq" and settings.GROQ_API_KEY:
         try:
             from langchain_groq import ChatGroq
             return ChatGroq(
                 api_key=settings.GROQ_API_KEY,
-                model=settings.GROQ_MODEL,
-                temperature=0.3,
-                max_tokens=1200,
+                model=groq_mod,
+                temperature=temp,
+                max_tokens=max_tok,
             )
         except Exception as e:
             logger.error(f"[LLM] Groq init failed: {e}")
 
-    if settings.GEMINI_API_KEY:
+    if provider == "gemini" and settings.GEMINI_API_KEY:
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
             return ChatGoogleGenerativeAI(
                 google_api_key=settings.GEMINI_API_KEY,
-                model=settings.GEMINI_MODEL,
-                temperature=0.3,
+                model=gemini_mod,
+                temperature=temp,
             )
         except Exception as e:
             logger.error(f"[LLM] Gemini init failed: {e}")
 
-    if settings.SARVAM_API_KEY:
+    if provider == "sarvam" and settings.SARVAM_API_KEY:
+        sarvam_llm = get_sarvam_llm()
+        if sarvam_llm is not None:
+            return sarvam_llm
+
+    # Fallbacks in case preferred provider fails
+    if settings.GROQ_API_KEY and provider != "groq":
+        try:
+            from langchain_groq import ChatGroq
+            return ChatGroq(
+                api_key=settings.GROQ_API_KEY,
+                model=groq_mod,
+                temperature=temp,
+                max_tokens=max_tok,
+            )
+        except Exception:
+            pass
+
+    if settings.GEMINI_API_KEY and provider != "gemini":
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            return ChatGoogleGenerativeAI(
+                google_api_key=settings.GEMINI_API_KEY,
+                model=gemini_mod,
+                temperature=temp,
+            )
+        except Exception:
+            pass
+
+    if settings.SARVAM_API_KEY and provider != "sarvam":
         sarvam_llm = get_sarvam_llm()
         if sarvam_llm is not None:
             return sarvam_llm

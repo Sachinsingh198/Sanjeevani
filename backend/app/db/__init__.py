@@ -13,6 +13,9 @@ from app.db.schema import (
     access_logs_table,
     consultation_feedback_table,
     emergency_alerts_table,
+    system_settings_table,
+    cmo_broadcasts_table,
+    outbreak_actions_table,
     create_all_tables,
 )
 from app.db.session import (
@@ -39,6 +42,9 @@ __all__ = [
     "access_logs_table",
     "consultation_feedback_table",
     "emergency_alerts_table",
+    "system_settings_table",
+    "cmo_broadcasts_table",
+    "outbreak_actions_table",
     "create_all_tables",
     "get_db_connection",
     "get_db_conn",

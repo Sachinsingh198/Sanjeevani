@@ -258,3 +258,95 @@ export const fetchAnalyticsSummary = async (days = 30) => {
   const res = await authApi.get(`/admin/analytics/summary?days=${days}`);
   return res.data;
 };
+
+// ── Admin Dynamic System Configuration & Operational Controls ───────────
+
+export const fetchSystemConfig = async () => {
+  const res = await authApi.get('/admin/config');
+  return res.data;
+};
+
+export const updateSystemConfig = async (updates) => {
+  const res = await authApi.post('/admin/config', updates);
+  return res.data;
+};
+
+export const resetSystemConfig = async () => {
+  const res = await authApi.post('/admin/config/reset');
+  return res.data;
+};
+
+export const testLlmLatency = async () => {
+  const res = await authApi.post('/admin/actions/test-llm-latency');
+  return res.data;
+};
+
+export const purgeSystemCache = async () => {
+  const res = await authApi.post('/admin/actions/purge-cache');
+  return res.data;
+};
+
+export const reindexKnowledgeStore = async () => {
+  const res = await authApi.post('/admin/actions/reindex-knowledge');
+  return res.data;
+};
+
+export const updateUserRole = async (userId, role) => {
+  const res = await authApi.patch(`/admin/users/${userId}/role`, { role });
+  return res.data;
+};
+
+export const updateUserDetails = async (userId, data) => {
+  const res = await authApi.put(`/admin/users/${userId}`, data);
+  return res.data;
+};
+
+// ── District CMO Health Advisory Broadcasts ──────────────────────────────
+
+export const fetchCurrentBroadcast = async () => {
+  const res = await authApi.get('/admin/broadcast');
+  return res.data;
+};
+
+export const fetchBroadcastHistory = async () => {
+  const res = await authApi.get('/admin/broadcast/history');
+  return res.data;
+};
+
+export const publishBroadcast = async (data) => {
+  const res = await authApi.post('/admin/broadcast', data);
+  return res.data;
+};
+
+export const deactivateBroadcast = async (broadcastId) => {
+  const res = await authApi.delete(`/admin/broadcast/${broadcastId}`);
+  return res.data;
+};
+
+// ── District Disease Surveillance & Heatmap ──────────────────────────────
+
+export const fetchSurveillanceHeatmap = async (params = {}) => {
+  const res = await authApi.get('/admin/surveillance/heatmap', { params });
+  return res.data;
+};
+
+export const fetchOutbreakAlerts = async (timeframe = 30) => {
+  const res = await authApi.get(`/admin/surveillance/outbreaks?timeframe=${timeframe}`);
+  return res.data;
+};
+
+export const fetchSurveillanceTrends = async (timeframe = 30) => {
+  const res = await authApi.get(`/admin/surveillance/trends?timeframe=${timeframe}`);
+  return res.data;
+};
+
+export const dispatchSurveillanceTeam = async (payload) => {
+  const res = await authApi.post('/admin/surveillance/dispatch', payload);
+  return res.data;
+};
+
+export const broadcastOutbreakAlert = async (payload) => {
+  const res = await authApi.post('/admin/surveillance/broadcast-alert', payload);
+  return res.data;
+};
+

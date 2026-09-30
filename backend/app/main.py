@@ -57,7 +57,9 @@ async def lifespan(app: FastAPI):
     try:
         create_tables()
         seed_default_admin()
-        logger.info("[Sanjeevani] Database initialized, admin seeded.")
+        from app.core.system_config import init_system_config
+        init_system_config()
+        logger.info("[Sanjeevani] Database initialized, admin seeded, dynamic config loaded.")
     except Exception as db_init_err:
         logger.warning(f"[Sanjeevani] Database initialization warning ({db_init_err}). Running in resilient offline-first mode.")
 
