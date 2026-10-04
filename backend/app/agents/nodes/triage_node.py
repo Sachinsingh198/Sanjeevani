@@ -1,6 +1,6 @@
 import re
 from app.agents.state import AgentState
-from app.core.triage_engine import ClinicalTriageEngine
+from app.core.triage_engine import ClinicalTriageEngine, SeverityTier
 from app.core.bhashini_engine import BhashiniVoiceEngine
 from app.core.dialogue_manager import classify_intent, GREETING_PATTERNS
 
@@ -11,8 +11,49 @@ def triage_node(state: AgentState) -> AgentState:
     raw_text = state.get("raw_user_message", "")
     normalized = bhashini_engine.normalize_dialect(raw_text)
 
-    # 1. Run deterministic bi-directional negation triage
-    tier, flags = triage_engine.evaluate(normalized)
+    # 1. Evaluate current turn message
+    tier_current, flags_current = triage_engine.evaluate(normalized)
+
+    # 1.1 Evaluate cumulative consultation context for cross-turn emergent flags
+    consultation_notes = state.get("consultation_notes", "") or ""
+    cumulative_text = f"{consultation_notes}\n{normalized}".strip()
+    tier_cumulative, flags_cumulative = triage_engine.evaluate(cumulative_text)
+
+    if tier_cumulative.value == "Red" or tier_current.value == "Red":
+        tier = SeverityTier.RED
+        flags = flags_current + flags_cumulative
+    elif tier_cumulative.value == "Yellow" or tier_current.value == "Yellow":
+        tier = SeverityTier.YELLOW
+        flags = flags_current + flags_cumulative
+    else:
+        tier = tier_current
+        flags = flags_current
+
+    # Clean and deduplicate flags while preserving order
+    flags = [f for f in dict.fromkeys(flags) if not (len(flags) > 1 and "GREEN_FLAG" in f)]
+
+    # 1.2 Demographic risk auto-escalation based on age
+    age = state.get("patient_age")
+    combined_lower = f"{consultation_notes.lower()} {normalized.lower()}"
+
+    if age is not None:
+        has_fever = (
+            "bukhar" in combined_lower or "fever" in combined_lower or "taap" in combined_lower or
+            any("fever" in f.lower() or "bukhar" in f.lower() for f in flags)
+        )
+        # Infant (<1 year) with fever -> auto-escalate to Red emergency
+        if age < 1 and has_fever:
+            tier = SeverityTier.RED
+            infant_flag = "RED_FLAG: pediatric_infant_fever ('Infant under 1 year with fever requires emergency pediatric care')"
+            if infant_flag not in flags:
+                flags.insert(0, infant_flag)
+        # Elderly (>65) or Infant (<2) with active symptoms -> escalate Green to Yellow
+        elif (age > 65 or age < 2) and flags and tier.value == "Green":
+            tier = SeverityTier.YELLOW
+            age_flag = f"YELLOW_FLAG: high_risk_age_monitoring ('Patient age {age} with active symptoms requires clinical monitoring')"
+            if age_flag not in flags:
+                flags.append(age_flag)
+
     intent = classify_intent(normalized)
 
     # 1.5 Multi-Language Auto-Detection across all Indian languages

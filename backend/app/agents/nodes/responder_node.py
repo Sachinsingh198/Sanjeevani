@@ -1,6 +1,6 @@
 import re
 import json
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 from app.agents.state import AgentState
 from app.config import settings
 from app.core.logger import logger
@@ -14,248 +14,8 @@ bhashini_engine = BhashiniVoiceEngine()
 # Canonical Clinical Symptom & Diagnosis Catalog
 # Single source of truth keyed by symptom category; derived across languages.
 # ─────────────────────────────────────────────────────────────────────────────
-CLINICAL_SYMPTOM_REGISTRY: Dict[str, Dict[str, Any]] = {
-    "allergic_rhinitis": {
-        "keywords": (
-            "naak", "nak", "naak band", "band naak", "chheenk", "chheekein", "chheken",
-            "chhink", "chhik", "sneezing", "pratishyaya", "rhinitis", "allergic rhinitis",
-            "allergy", "allergic", "aankh", "aankhon", "aankhon me khujli", "aankhon main khujli",
-            "watery eyes", "sinus", "peenas", "running nose", "sugan", "balgam", "naak se balgam"
-        ),
-        "diagnosis_hin": "Allergic Rhinitis / Vata-Kaphaja Pratishyaya (एलर्जीक राइनाइटिस / वात-कफज प्रतिश्याय - Allergic Rhinitis)",
-        "diagnosis_eng": "Allergic Rhinitis / Chronic allergic nasal irritation (Vata-Kaphaja Pratishyaya)",
-        "diagnosis_garh_dev": "स्याल, धूल या मौसमी एलर्जी से नाक बंद, छींक और आंख्युं मा खुजली (Allergic Rhinitis / प्रतिश्याय)।",
-        "diagnosis_garh_rom": "Syal, dhool ya mausami allergy se naak band, chheenk aur aankhyu ma khujli (Allergic Rhinitis / Pratishyaya).",
-        "spoken_hin": "allergic rhinitis aur naak ki allergy",
-        "spoken_garh_dev": "एलर्जीक राइनाइटिस और नाक बंद की समस्या",
-        "spoken_garh_rom": "allergic rhinitis aur naak band ki samasya",
-        "t1_hin": "Maine aapki takleef sun li. Naak band hone ya chheenko ki samasya kab se hai?",
-        "t2_hin": "Theek hai. Kya naak ke sath aankhon mein khujli, paani aana ya sar bhari rehta hai?",
-        "t1_eng": "I understand. How long have you had this nasal blockage or sneezing?",
-        "t2_eng": "Understood. Are you having itchy/watery eyes or facial/head heaviness?",
-        "t1_garh_dev": "त्वरि बात सुणी ली। नाक बंद या छींक कतगा दिन बटि छन?",
-        "t1_garh_rom": "Twari baat suni li. Naak band ya chheenk katga din bati chhan?",
-        "t2_garh_dev": "ठीक छ। क्या नाक दगड़ आंख्युं मा खुजली या पाणी भी औणु छ?",
-        "t2_garh_rom": "Theek chha. Kya naak dagad aankhyu ma khujli ya paani bhi aunu chha?",
-    },
-    "joint_pain": {
-        "keywords": (
-            "jod", "jodo", "jodon", "ghutna", "ghutne", "ghutno", "kamar", "kamar dard",
-            "sandhi", "sandhivata", "gathiya", "joint", "joints", "arthritis", "stiffness", "jakdan", "amavata"
-        ),
-        "diagnosis_hin": "Jodon mein jakdan aur dard / Sandhivata (संधिवात / Osteoarthritis or Joint Inflammation)",
-        "diagnosis_eng": "Joint inflammation, stiffness and discomfort (Sandhivata)",
-        "diagnosis_garh_dev": "संधिवात या स्याल से गोड़ों (घुटनों) और जोड़ों मा पीर और जकड़न (Sandhivata)।",
-        "diagnosis_garh_rom": "Sandhivata ya syal se godo (ghutno) aur jodo ma peed aur jakdan (Sandhivata).",
-        "spoken_hin": "jodon mein dard aur sandhivata",
-        "spoken_garh_dev": "जोड़ों मा पीर और संधिवात",
-        "spoken_garh_rom": "jodo ma peed aur sandhivata",
-        "t1_hin": "Samajh gayi. Jodon ya ghutnon mein dard kab se ho raha hai?",
-        "t2_hin": "Theek hai. Kya subah uthne par jodon mein zyada jakdan ya soojan rehti hai?",
-        "t1_eng": "I understand. How long have you had this joint or knee pain?",
-        "t2_eng": "Understood. Do you experience morning stiffness or swelling in the joints?",
-        "t1_garh_dev": "गोड़ों या जोड़ों मा पीर कतगा दिन बटि छ?",
-        "t1_garh_rom": "Godo ya jodo ma peed katga din bati chha?",
-        "t2_garh_dev": "ठीक छ। क्या ब्याळ उठिक जोड़ों मा जकड़न या सूजण भी छ?",
-        "t2_garh_rom": "Theek chha. Kya byal uthik jodo ma jakdan ya soojan bhi chha?",
-    },
-    "acidity": {
-        "keywords": (
-            "acidity", "jalan", "seene mein jalan", "chhati mein jalan", "khatti dakar",
-            "amlapitta", "heartburn", "acid reflux", "pet mein jalan"
-        ),
-        "diagnosis_hin": "Pitta dosha aur khan-paan se acidity / amlapitta (अम्लपित्त - Hyperacidity / Acid Reflux)",
-        "diagnosis_eng": "Hyperacidity and acid reflux (Amlapitta)",
-        "diagnosis_garh_dev": "खान-पान और पित्त से छाती और पैट मा जलन (अम्लपित्त / Acidity)।",
-        "diagnosis_garh_rom": "Khan-paan aur pitta se chhati aur pet ma jalan (Amlapitta / Acidity).",
-        "spoken_hin": "acidity aur amlapitta ki samasya",
-        "spoken_garh_dev": "छाती मा जलन और अम्लपित्त",
-        "spoken_garh_rom": "chhati ma jalan aur amlapitta",
-        "t1_hin": "Samajh gayi. Seene ya pet mein jalan ki samasya kab se ho rahi hai?",
-        "t2_hin": "Theek hai. Kya khana khane ke baad khatti dakar ya matli hoti hai?",
-        "t1_eng": "I understand. How long have you been having this acidity or heartburn?",
-        "t2_eng": "Understood. Do you experience sour burps or nausea after meals?",
-        "t1_garh_dev": "पैट या छाती मा जलन कतगा दिन बटि छ?",
-        "t1_garh_rom": "Pet ya chhati ma jalan katga din bati chha?",
-        "t2_garh_dev": "ठीक छ। क्या खाना खाणा बाद खट्टी डकार भी औणी छन?",
-        "t2_garh_rom": "Theek chha. Kya khana khana baad khatti dakar bhi auni chhan?",
-    },
-    "skin_allergy": {
-        "keywords": (
-            "tvacha", "chamdi", "khujli", "daane", "dane", "rash", "rashes",
-            "charmarog", "hives", "sheeta pitta"
-        ),
-        "diagnosis_hin": "Tvacha ki allergy ya rakt-pitta asantulan (शीतपित्त / Allergic Urticaria)",
-        "diagnosis_eng": "Allergic skin irritation or urticaria (Sheeta-Pitta)",
-        "diagnosis_garh_dev": "त्वचा मा एलर्जी या पित्त से खाज-खुजली और दाने (शीतपित्त)।",
-        "diagnosis_garh_rom": "Tvacha ma allergy ya pitta se khaj-khujli aur daane (Sheeta-Pitta).",
-        "spoken_hin": "tvacha ki allergy aur khujli",
-        "spoken_garh_dev": "त्वचा मा एलर्जी और खुजली",
-        "spoken_garh_rom": "tvacha ma allergy aur khujli",
-        "t1_hin": "Samajh gayi. Tvacha par khujli ya daane kab se nikal rahe hain?",
-        "t2_hin": "Theek hai. Kya tvacha par laal dhabbe, soojan ya jalan bhi ho rahi hai?",
-        "t1_eng": "I understand. How long have you had this skin itching or rash?",
-        "t2_eng": "Understood. Are there red patches, swelling, or burning sensations?",
-        "t1_garh_dev": "खाळ (त्वचा) मा खुजली या दाणा कतगा दिन बटि छन?",
-        "t1_garh_rom": "Khaal (tvacha) ma khujli ya daana katga din bati chhan?",
-        "t2_garh_dev": "ठीक छ। क्या खाळ मा लाल चकता या सूजण भी छ?",
-        "t2_garh_rom": "Theek chha. Kya khaal ma laal chakata ya soojan bhi chha?",
-    },
-    "headache": {
-        "keywords": ("mund", "sar dard", "headache", "peed", "peer"),
-        "diagnosis_hin": "Thakan, sardi ya mansik tanav se hone wala sadharan sar dard (Tension Headache)",
-        "diagnosis_eng": "Mild tension or fatigue-induced headache",
-        "diagnosis_garh_dev": "रात बटि मुंड मा पीर और थकावट छ। स्याल या थकान से साधारण मुंड पीड़ (Tension Headache) लगणु छ।",
-        "diagnosis_garh_rom": "Kal bati mund ma peed aur thakawat chha. Syal ya thakawat se aam mund pid (Tension Headache) lagnu chha.",
-        "spoken_hin": "sardi ya tanav se sadharan sar dard",
-        "spoken_garh_dev": "स्याल या थकान से साधारण मुंड पीड़",
-        "spoken_garh_rom": "syal ya thakawat se aam mund pid",
-        "t1_hin": "Maine aapki takleef sun li. Yeh sar dard kab se ho raha hai?",
-        "t2_hin": "Theek hai. Kya sar dard ke sath chakkar ya ulti jaisa bhi lag raha hai?",
-        "t1_eng": "I understand. How long have you had this headache?",
-        "t2_eng": "Understood. Are you having any dizziness or nausea with it?",
-        "t1_garh_dev": "त्वरि बात सुणी ली। मुंड पीड़ कब बटि हो रयु छ?",
-        "t1_garh_rom": "Twari baat suni li. Mund pid kaba bati ho rahyu chha?",
-        "t2_garh_dev": "ठीक छ। क्या मुंड पीड़ दगड़ चक्कर या उलटी भी छन?",
-        "t2_garh_rom": "Theek chha. Kya mund pid dagad ulti ya chakkar bhi chha?",
-    },
-    "stomach": {
-        "keywords": ("pet", "stomach", "tummy", "abdomen", "pait", "marod", "krodh", "gas"),
-        "diagnosis_hin": "Khan-paan mein asantulan ya gas se pet dard (Indigestion / Gastritis)",
-        "diagnosis_eng": "Mild gastritis or indigestion",
-        "diagnosis_garh_dev": "खान-पान मा असंतुलन या अपच से पैट मा जलन और मरोड़ लगणु छ।",
-        "diagnosis_garh_rom": "Khan-paan ma asantulan ya gas se pet ma jalan aur marod lagnu chha.",
-        "spoken_hin": "apach ya gas se pet dard",
-        "spoken_garh_dev": "खान-पान या गैस से पैट मा जलन",
-        "spoken_garh_rom": "khan-paan ya gas se pet dard",
-        "t1_hin": "Samajh gayi. Pet mein dard kab se shuru hua?",
-        "t2_hin": "Theek hai. Kya ulti ya dast ki samasya bhi ho rahi hai?",
-        "t1_eng": "I understand. How long have you had this stomach pain?",
-        "t2_eng": "Understood. Are you having any vomiting or loose stools?",
-        "t1_garh_dev": "पैट मा पीर कब बटि हो रयु छ?",
-        "t1_garh_rom": "Pet ma peed kaba bati ho rahyu chha?",
-        "t2_garh_dev": "ठीक छ। क्या उलटी या दस्त भी लग्यूँ छ?",
-        "t2_garh_rom": "Theek chha. Kya ulti ya dast bhi lagyu chha?",
-    },
-    "fever": {
-        "keywords": ("bukhar", "fever", "thand", "syal", "taap"),
-        "diagnosis_hin": "Mausami badlav ya thakan se halka bukhar (Mild Seasonal Fever)",
-        "diagnosis_eng": "Mild seasonal viral pyrexia",
-        "diagnosis_garh_dev": "मौसमी बदलाव और स्याल से साधारण बुखार (Mild Seasonal Fever) लगणु छ।",
-        "diagnosis_garh_rom": "Mausami badlav aur syal se aam bukhar (Mild Seasonal Pyrexia) lagnu chha.",
-        "spoken_hin": "mausami badlav se halka bukhar",
-        "spoken_garh_dev": "मौसमी बदलाव से साधारण बुखार",
-        "spoken_garh_rom": "mausami badlav se aam bukhar",
-        "t1_hin": "Bukhar kitne din se hai?",
-        "t2_hin": "Theek hai. Kya bukhar ke sath thand ya kapkapi lag rahi hai?",
-        "t1_eng": "How many days have you had this fever?",
-        "t2_eng": "Understood. Are you having chills or shivering with the fever?",
-        "t1_garh_dev": "बुखार कतगा दिन बटि छ?",
-        "t1_garh_rom": "Bukhar katga din bati chha?",
-        "t2_garh_dev": "ठीक छ। क्या बुखार दगड़ स्याल या कपकपी भी लगणी छ?",
-        "t2_garh_rom": "Theek chha. Kya bukhar dagad kapkapi bhi lagni chha?",
-    },
-    "cough": {
-        "keywords": ("khang", "khansi", "cough", "gala", "kanth"),
-        "diagnosis_hin": "Sardi-zukham se gale mein kharash aur khansi (Common Cold / Pharyngitis)",
-        "diagnosis_eng": "Common viral upper respiratory irritation",
-        "diagnosis_garh_dev": "स्याल और सर्दी से सूखी खंग और गाळ मा खराश लगणी छ।",
-        "diagnosis_garh_rom": "Syal aur sardi se sukhi khang aur gala ma kharash lagnu chha.",
-        "spoken_hin": "sardi se gale mein kharash aur khansi",
-        "spoken_garh_dev": "सर्दी से सूखी खंग और गाळ मा खराश",
-        "spoken_garh_rom": "sardi se khang aur gala ma kharash",
-        "t1_hin": "Yeh khansi kab se ho rahi hai?",
-        "t2_hin": "Theek hai. Kya khansi ke sath saans lene mein dikkat ho rahi hai?",
-        "t1_eng": "How long have you had this cough?",
-        "t2_eng": "Understood. Are you having any difficulty breathing?",
-        "t1_garh_dev": "खंग कब बटि लगी छ?",
-        "t1_garh_rom": "Khang kaba bati lagi chha?",
-        "t2_garh_dev": "ठीक छ। क्या सांस फुलणी त नी छ?",
-        "t2_garh_rom": "Theek chha. Kya saans phulnu toh ni chha?",
-    },
-    "general": {
-        "keywords": (),
-        "diagnosis_hin": "Sharirik asuvidha aur thakan (Mild Fatigue / Discomfort)",
-        "diagnosis_eng": "Physical fatigue and mild discomfort",
-        "diagnosis_garh_dev": "शारीरिक थकावट और कमजोरी से सामान्य अस्वस्थता लगणी छ।",
-        "diagnosis_garh_rom": "Sharirik thakawat aur kamzori se aam asuvidha lagnu chha.",
-        "spoken_hin": "sharirik thakan aur aam asuvidha",
-        "spoken_garh_dev": "शारीरिक थकावट और कमजोरी",
-        "spoken_garh_rom": "sharirik thakawat aur kamzori",
-        "t1_hin": "Samajh gayi. Yeh takleef kab se ho rahi hai?",
-        "t2_hin": "Theek hai. Kya yeh takleef tezi se badh rahi hai?",
-        "t1_eng": "I understand. How long have you been experiencing this discomfort?",
-        "t2_eng": "Understood. Has this discomfort been worsening rapidly?",
-        "t1_garh_dev": "त्वरि बात समझी गे। ये तकलीफ कब बटि हो रयी छ?",
-        "t1_garh_rom": "Twari baat samajh ge. Yeh takleef kaba bati ho rahyu chha?",
-        "t2_garh_dev": "ठीक छ। क्या ये तकलीफ तेजी से बढ़णी छ?",
-        "t2_garh_rom": "Theek chha. Kya yeh takleef tezi se badhni chha?",
-    },
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Patient-Facing Explanations for Yellow Triage Clinical Flags
-# Human-readable explanations across Hindi, English, and Garhwali.
-# ─────────────────────────────────────────────────────────────────────────────
-YELLOW_FLAG_EXPLANATIONS: Dict[str, Dict[str, str]] = {
-    "prolonged_fever": {
-        "hin": "aapko 3 din se zyada bukhar hai",
-        "eng": "you have had fever for more than 3 days",
-        "garh_dev": "त्वकु ३ दिन बटि लगातार बुखार छ",
-        "garh_rom": "twaku 3 din bati lagatar bukhar chha",
-    },
-    "severe_localized_pain": {
-        "hin": "pet ya sir mein tezz asahniya dard hai",
-        "eng": "you have severe localized pain in your abdomen or head",
-        "garh_dev": "पैट या मुंड मा तेज असहनीय पीर छ",
-        "garh_rom": "pet ya mund ma tezz asahniya peed chha",
-    },
-    "dehydration_signs": {
-        "hin": "sharir mein paani ki kami (dehydration) ke lakshan hain",
-        "eng": "there are signs of dehydration or lack of urination",
-        "garh_dev": "शरीर मा पाणी की कमी का लक्षण छन",
-        "garh_rom": "sharir ma paani ki kami ka lakshan chhan",
-    },
-    "persistent_vomiting": {
-        "hin": "baar baar ya lagatar ulti ho rahi hai",
-        "eng": "you are experiencing continuous vomiting",
-        "garh_dev": "बार-बार लगातार उलटी लग्यूँ छ",
-        "garh_rom": "baar baar lagatar ulti lagyu chha",
-    },
-}
-
-
-def get_symptom_data(text: str) -> Dict[str, Any]:
-    """Retrieves clinical diagnosis and follow-up templates matching patient complaints using weighted keyword scoring."""
-    text_lower = (text or "").lower()
-    
-    # Priority order for clinical scoring (specific categories first)
-    best_cat = None
-    best_score = 0
-
-    # Explicit multi-word phrases get extra weight
-    specific_phrase_weights = {
-        "naak band": 5, "band naak": 5, "allergic rhinitis": 6, "pratishyaya": 5,
-        "aankhon me khujli": 5, "aankhon main khujli": 5, "watery eyes": 4, "chheenk": 4,
-        "sar dard": 4, "kamar dard": 4, "jodon mein dard": 5, "seene mein jalan": 5,
-        "khatti dakar": 5, "pet dard": 4
-    }
-
-    for cat, data in CLINICAL_SYMPTOM_REGISTRY.items():
-        if cat == "general":
-            continue
-        score = 0
-        for kw in data["keywords"]:
-            if kw in text_lower:
-                score += specific_phrase_weights.get(kw, 2)
-        if score > best_score:
-            best_score = score
-            best_cat = cat
-
-    if best_cat and best_score > 0:
-        return CLINICAL_SYMPTOM_REGISTRY[best_cat]
-
-    return CLINICAL_SYMPTOM_REGISTRY["general"]
+from app.core.clinical_ontology import CLINICAL_SYMPTOM_REGISTRY, get_symptom_data
+from app.core.symptom_model import StructuredSymptomProfile
 
 
 def apply_garhwali_adaptation(hindi_text: str, is_devanagari: bool = False) -> str:
@@ -312,6 +72,10 @@ def apply_garhwali_adaptation(hindi_text: str, is_devanagari: bool = False) -> s
 # LLM Client Initialization & Failover
 # ─────────────────────────────────────────────────────────────────────────────
 
+_cached_llm = None
+_cached_llm_key = None
+
+
 def get_sarvam_llm():
     """Initializes Sarvam Indic LLM client via OpenAI compatible endpoint."""
     if not settings.SARVAM_API_KEY:
@@ -331,7 +95,8 @@ def get_sarvam_llm():
 
 
 def get_llm():
-    """Initializes LLM client with dynamic configuration and automatic failover between Groq, Gemini, and Sarvam."""
+    """Initializes LLM client with dynamic configuration, cached singleton, and automatic failover."""
+    global _cached_llm, _cached_llm_key
     try:
         from app.core.system_config import get_system_config
         cfg = get_system_config()
@@ -341,13 +106,23 @@ def get_llm():
     provider = cfg.get("primary_llm_provider", settings.PRIMARY_LLM_PROVIDER)
     groq_mod = cfg.get("groq_model", settings.GROQ_MODEL)
     gemini_mod = cfg.get("gemini_model", settings.GEMINI_MODEL)
+    sarvam_mod = settings.SARVAM_CHAT_MODEL or "sarvam-30b"
     temp = float(cfg.get("temperature", 0.3))
     max_tok = int(cfg.get("max_tokens", 1200))
 
+    cache_key = (
+        provider, groq_mod, gemini_mod, sarvam_mod, temp, max_tok,
+        settings.GROQ_API_KEY, settings.GEMINI_API_KEY, settings.SARVAM_API_KEY
+    )
+
+    if _cached_llm is not None and _cached_llm_key == cache_key:
+        return _cached_llm
+
+    client = None
     if provider == "groq" and settings.GROQ_API_KEY:
         try:
             from langchain_groq import ChatGroq
-            return ChatGroq(
+            client = ChatGroq(
                 api_key=settings.GROQ_API_KEY,
                 model=groq_mod,
                 temperature=temp,
@@ -356,10 +131,10 @@ def get_llm():
         except Exception as e:
             logger.error(f"[LLM] Groq init failed: {e}")
 
-    if provider == "gemini" and settings.GEMINI_API_KEY:
+    if client is None and provider == "gemini" and settings.GEMINI_API_KEY:
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
-            return ChatGoogleGenerativeAI(
+            client = ChatGoogleGenerativeAI(
                 google_api_key=settings.GEMINI_API_KEY,
                 model=gemini_mod,
                 temperature=temp,
@@ -367,16 +142,14 @@ def get_llm():
         except Exception as e:
             logger.error(f"[LLM] Gemini init failed: {e}")
 
-    if provider == "sarvam" and settings.SARVAM_API_KEY:
-        sarvam_llm = get_sarvam_llm()
-        if sarvam_llm is not None:
-            return sarvam_llm
+    if client is None and provider == "sarvam" and settings.SARVAM_API_KEY:
+        client = get_sarvam_llm()
 
     # Fallbacks in case preferred provider fails
-    if settings.GROQ_API_KEY and provider != "groq":
+    if client is None and settings.GROQ_API_KEY and provider != "groq":
         try:
             from langchain_groq import ChatGroq
-            return ChatGroq(
+            client = ChatGroq(
                 api_key=settings.GROQ_API_KEY,
                 model=groq_mod,
                 temperature=temp,
@@ -385,10 +158,10 @@ def get_llm():
         except Exception:
             pass
 
-    if settings.GEMINI_API_KEY and provider != "gemini":
+    if client is None and settings.GEMINI_API_KEY and provider != "gemini":
         try:
             from langchain_google_genai import ChatGoogleGenerativeAI
-            return ChatGoogleGenerativeAI(
+            client = ChatGoogleGenerativeAI(
                 google_api_key=settings.GEMINI_API_KEY,
                 model=gemini_mod,
                 temperature=temp,
@@ -396,10 +169,13 @@ def get_llm():
         except Exception:
             pass
 
-    if settings.SARVAM_API_KEY and provider != "sarvam":
-        sarvam_llm = get_sarvam_llm()
-        if sarvam_llm is not None:
-            return sarvam_llm
+    if client is None and settings.SARVAM_API_KEY and provider != "sarvam":
+        client = get_sarvam_llm()
+
+    if client is not None:
+        _cached_llm = client
+        _cached_llm_key = cache_key
+        return _cached_llm
 
     logger.warning("[LLM] WARNING: No LLM configured. Running in deterministic fallback mode.")
     return None
@@ -577,6 +353,45 @@ def _clean_text_for_speech(text: str) -> str:
     return t
 
 
+def _clean_spoken_name(raw_name: str, lang: str = "hindi") -> str:
+    """
+    Cleans remedy and diagnosis names for speech synthesis.
+    Eliminates repetitive dual-language translations (e.g. 'Allergic Rhinitis / Vata-Kaphaja Pratishyaya (Allergic Rhinitis)'),
+    English parenthetical technical terms like '(Decoction)', '(Tension Headache)', Latin botanical names, and slashes.
+    """
+    if not raw_name:
+        return ""
+    text = raw_name.strip()
+    # Strip parenthetical English technical tags like (Decoction), (Tension Headache), (Allergic Rhinitis)
+    text = re.sub(
+        r'\((?:Decoction|Infusion|Tension Headache|Common Cold|Allergic Rhinitis|Osteoarthritis|Joint Inflammation|Linctus|Powder|Paste|Juice|Cold Infusion)[^)]*\)',
+        '',
+        text,
+        flags=re.I
+    )
+
+    if lang == "english":
+        text = re.sub(r'[\u0900-\u097F]+', '', text)
+        if "/" in text:
+            parts = [p.strip() for p in text.split("/")]
+            text = parts[0] if parts else text
+        text = re.sub(r'\([^)]*\)', '', text)
+    else:
+        # Indic / Hindi / Garhwali
+        if "/" in text:
+            parts = [p.strip() for p in text.split("/")]
+            dev_parts = [p for p in parts if re.search(r'[\u0900-\u097F]', p)]
+            if dev_parts:
+                text = dev_parts[0]
+            else:
+                text = parts[-1] if len(parts) > 1 and any(w in parts[0].lower() for w in ["allergic rhinitis", "osteoarthritis", "tension headache", "acute"]) else parts[0]
+        text = re.sub(r'\([A-Za-z\s,/-]+\)', '', text)
+
+    text = re.sub(r'[*_#`~/-]', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
 def _build_complete_spoken_remedy(
     r_name: str,
     diagnosis: str,
@@ -590,69 +405,106 @@ def _build_complete_spoken_remedy(
     Constructs a complete, accessible spoken audio explanation of the remedy for
     illiterate patients or audio-first users. Pronounces diagnosis, remedy name,
     step-by-step preparation instructions, dosage timing, and precautions.
+    Guarantees no confusing duplicate bilingual repetition or awkward slashes.
     """
-    clean_r_name = re.sub(r'[*_#`~]', '', r_name).strip()
-    clean_diagnosis = re.sub(r'[*_#`~]', '', diagnosis).strip()
+    clean_r_name = _clean_spoken_name(r_name, lang=lang)
+    clean_diagnosis = _clean_spoken_name(diagnosis, lang=lang)
 
     speech_steps = []
-    ordinals_hin = ["Pehla", "Doosra", "Teesra", "Chautha", "Paanchva"]
-    ordinals_eng = ["First", "Second", "Third", "Fourth", "Fifth"]
+    ordinals_hin = ["Pehla", "Doosra", "Teesra", "Chautha"]
+    ordinals_eng = ["First", "Second", "Third", "Fourth"]
 
-    for idx, step in enumerate(prep_steps):
+    for idx, step in enumerate(prep_steps[:3]):
         s = re.sub(r'^\s*(?:\d+[\.\)]|\-|\*)\s*', '', step)
         s = re.sub(r'^\*\*(?:[^*]+):\*\*\s*', '', s)
+        s = re.sub(r'\([A-Za-z\s,/-]+\)', '', s)
         s = re.sub(r'[*_#`~]', '', s).strip()
         if not s or len(s) < 8:
             continue
         if lang == "english":
             ord_prefix = ordinals_eng[idx] if idx < len(ordinals_eng) else f"Step {idx+1}"
-            speech_steps.append(f"{ord_prefix}: {s}")
-        elif lang == "garhwali":
-            ord_prefix = ordinals_hin[idx] if idx < len(ordinals_hin) else f"Kram {idx+1}"
-            speech_steps.append(f"{ord_prefix}: {s}")
+            speech_steps.append(f"{ord_prefix}, {s}")
         else:
             ord_prefix = ordinals_hin[idx] if idx < len(ordinals_hin) else f"Kram {idx+1}"
-            speech_steps.append(f"{ord_prefix}: {s}")
+            speech_steps.append(f"{ord_prefix}, {s}")
 
     steps_speech = ". ".join(speech_steps)
     if steps_speech and not steps_speech.endswith('.'):
         steps_speech += "."
 
+    clean_dosage = dosage_str or "Din mein do baar gungune paani ke sath"
+    if lang != "english":
+        if re.search(r'\b(?:take|daily|meals|lukewarm|times|after)\b', clean_dosage, re.I):
+            clean_dosage = "Din mein do baar khana khane ke baad gungune paani ke sath lein"
+    else:
+        if re.search(r'[\u0900-\u097F]', clean_dosage) or "din mein" in clean_dosage.lower():
+            clean_dosage = "Take 1 to 2 times daily after meals with lukewarm water"
+
+    clean_dosage = re.sub(r'\([^)]*\)', '', clean_dosage).strip()
+
     if lang == "garhwali":
         spoken_text = (
             f"Twara lakshano bati {clean_diagnosis} lagnu chha. "
             f"Yaikhatir pramanit nuskha chha: {clean_r_name}. "
-            f"Yaiku pura tarika dhyan se suna. {steps_speech} "
-            f"Ise {dosage_str}. "
+            f"Yaiku tarika aaram se suna. {steps_speech} "
+            f"Khuraak: {clean_dosage}. "
             f"2 din ma aaram ni aala ta 104 par phone kara ya PHC jaawa."
         )
     elif lang == "english":
         spoken_text = (
             f"Based on your symptoms, this appears to be {clean_diagnosis}. "
-            f"The verified remedy is {clean_r_name}. "
-            f"Please listen carefully to the instructions. {steps_speech} "
-            f"Dosage: {dosage_str}. "
+            f"The recommended remedy is {clean_r_name}. "
+            f"Here are the instructions: {steps_speech} "
+            f"Dosage: {clean_dosage}. "
             f"If symptoms do not improve in two days, please call 104 or visit your nearest Primary Health Centre."
         )
     elif lang == "hindi":
         spoken_text = (
             f"Aapke bataye lakshano ke aadhar par {clean_diagnosis} lag raha hai. "
             f"Iske liye pramanit nuskha hai: {clean_r_name}. "
-            f"Ise taiyar karne aur lene ka pura tarika dhyan se sunein. {steps_speech} "
-            f"Ise {dosage_str}. "
+            f"Ise banane ka tarika dhyan se sunein: {steps_speech} "
+            f"Khuraak: {clean_dosage}. "
             f"Dhyan rakhein, agar do din mein aaram na aaye toh 104 par call karein ya najdeeki PHC jaayein."
         )
     else:
         base_hin = (
             f"आपके बताए लक्षणों के आधार पर {clean_diagnosis} लग रहा है। "
             f"इसके लिए प्रमाणित नुस्खा है: {clean_r_name}। "
-            f"इसे तैयार करने और लेने का पूरा तरीका ध्यान से सुनें। {steps_speech} "
-            f"इसे {dosage_str}। "
+            f"इसे बनाने का तरीका ध्यान से सुनें: {steps_speech} "
+            f"खुराक: {clean_dosage}। "
             f"ध्यान रखें, अगर 2 दिन में आराम न आए तो 104 पर कॉल करें या नजदीकी PHC जाएं।"
         )
         spoken_text = localize_clinical_text(base_hin, lang, is_devanagari)
 
     return _clean_text_for_speech(spoken_text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Allopathic Medication Guardrail & Anti-Hallucination Filter
+# ─────────────────────────────────────────────────────────────────────────────
+
+BANNED_ALLOPATHIC_DRUGS: List[str] = [
+    "paracetamol", "ibuprofen", "aspirin", "amoxicillin", "crocin",
+    "dolo", "azithromycin", "metformin", "combiflam", "brufen", "cetirizine",
+    "pantoprazole", "ranitidine", "omeprazole"
+]
+
+
+def _check_allopathic_hallucination(text: str) -> Tuple[bool, str]:
+    """
+    Detects and sanitizes any hallucinated allopathic medications.
+    Returns (has_allopathic, cleaned_text).
+    """
+    if not text:
+        return False, text
+    text_lower = text.lower()
+    has_banned = False
+    cleaned = text
+    for drug in BANNED_ALLOPATHIC_DRUGS:
+        if re.search(rf"\b{re.escape(drug)}\b", text_lower):
+            has_banned = True
+            cleaned = re.sub(rf"\b{re.escape(drug)}(?:\s*\d+\s*(?:mg|ml|gm))?\b", "[allopathic drug omitted]", cleaned, flags=re.IGNORECASE)
+    return has_banned, cleaned
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -717,11 +569,61 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
     elif lang != "hindi" and sym_data:
         cause_str = localize_clinical_text(sym_data.get('diagnosis_hin', cause_str), lang, is_devanagari)
 
-    dosage_str = "Din mein 1-2 baar khana khane ke baad"
-    if lang == "english":
-        dosage_str = "Take 1-2 times daily after meals"
-    elif lang not in ("hindi", "garhwali"):
-        dosage_str = localize_clinical_text("दिन में 1-2 बार भोजन के बाद", lang, is_devanagari)
+    # 1.1 Differential diagnosis awareness & confidence handling
+    diff_data = sym_data.get("differential") if sym_data else None
+    confidence = sym_data.get("confidence", "high") if sym_data else "high"
+    if diff_data and confidence == "moderate":
+        diff_name = diff_data.get('diagnosis_hin', '')
+        if lang == "english":
+            diff_name = diff_data.get('diagnosis_eng', diff_name)
+        elif lang == "garhwali":
+            diff_name = diff_data.get('diagnosis_garh_dev' if is_devanagari else 'diagnosis_garh_rom', diff_name)
+
+        uncertainty_note = (
+            f" (Possible differential: {diff_name}. Note: Initial preliminary estimate; please visit PHC if symptoms persist.)"
+            if lang == "english" else
+            f" (वैकल्पिक सम्भावना: {diff_name}। नोट: यह प्राथमिक अनुमान है, सुधार न होने पर PHC चिकित्सक से मिलें।)"
+            if (lang == "garhwali" and is_devanagari) else
+            f" (Sambhavit vikalp: {diff_name}. Yeh ek prathmik anumaan hai; aaram na aane par PHC doctor se milein.)"
+        )
+        cause_str = f"{cause_str}{uncertainty_note}"
+
+    # 1.2 Remedy-specific dosage resolution
+    remedy_dosage = remedy.get("dosage", {})
+    age = state.get("patient_age")
+    if isinstance(remedy_dosage, dict):
+        if age and age < 6:
+            dosage_str = remedy_dosage.get("child_under_6", "Doctor se sampark karein (Under 6 requires doctor guidance)")
+        elif age and age < 12:
+            dosage_str = remedy_dosage.get("child_6_12") or remedy_dosage.get("adult", "Bachon ke liye: aadhi matra din mein 1 baar")
+        elif age and age > 65:
+            dosage_str = remedy_dosage.get("elderly") or remedy_dosage.get("adult", "Buzurgon ke liye: aadhi matra din mein 1-2 baar")
+        else:
+            if lang == "english":
+                dosage_str = remedy_dosage.get("adult") or remedy_dosage.get("hindi") or "Take 1-2 times daily after meals"
+            else:
+                dosage_str = remedy_dosage.get("hindi") or remedy_dosage.get("adult") or "Din mein 1-2 baar khana khane ke baad"
+    elif isinstance(remedy_dosage, str) and remedy_dosage.strip():
+        dosage_str = remedy_dosage.strip()
+    else:
+        if age and age < 12:
+            dosage_str = "Bachon ke liye: aadhi matra (half dose) din mein 1 baar khana khane ke baad"
+            if lang == "english":
+                dosage_str = "For children: half dose once daily after meals under parental supervision"
+            elif lang not in ("hindi", "garhwali"):
+                dosage_str = localize_clinical_text("बच्चों के लिए: आधी मात्रा दिन में 1 बार भोजन के बाद", lang, is_devanagari)
+        elif age and age > 65:
+            dosage_str = "Buzurgon ke liye: aadhi matra (half dose) din mein 1-2 baar khana khane ke baad"
+            if lang == "english":
+                dosage_str = "For seniors: half dose 1-2 times daily after meals with lukewarm water"
+            elif lang not in ("hindi", "garhwali"):
+                dosage_str = localize_clinical_text("बुजुर्गों के लिए: आधी मात्रा दिन में 1-2 बार भोजन के बाद", lang, is_devanagari)
+        else:
+            dosage_str = "Din mein 1-2 baar khana khane ke baad"
+            if lang == "english":
+                dosage_str = "Take 1-2 times daily after meals"
+            elif lang not in ("hindi", "garhwali"):
+                dosage_str = localize_clinical_text("दिन में 1-2 बार भोजन के बाद", lang, is_devanagari)
 
     precaution_str = "2 din mein aaram na aaye toh 104 par call karein ya PHC jaayein."
     if lang == "english":
@@ -766,6 +668,12 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             "Tu Dr. Sanjeevani hai — Uttarakhand ki samajhdaar, anubhavi aur mamtamayi gaon ki doctor.\n"
             "Patient ki poori clinical jaanch ke baad ek safe, CCRAS-pramanit Ayurvedic nuskha spasht aur poora batana hai.\n"
             "Sirf HINDI ya HINGLISH mein likh.\n\n"
+            "CRITICAL CLINICAL & DIAGNOSTIC ACCURACY RULES:\n"
+            "1. NO FAKE OR PREDEFINED SYMPTOMS: Do NOT invent or list symptoms that the patient does not suffer from. Base 'Aapki Takleef' and 'Sambhavit Karan' strictly and honestly on the symptoms reported by the patient.\n"
+            "2. ACCURATE DIAGNOSIS (Cold is NOT Allergic Rhinitis): A common cold, acute jukham, or mild eye irritation cannot be described as 'Allergic Rhinitis' unless the patient explicitly has chronic long-term allergy. For acute cold/jukham, diagnose as 'Mausami Sardi-Zukaam (Pratishyaya / Acute Common Cold)'.\n"
+            "3. NO DUPLICATE BILINGUAL REPETITIONS: Do NOT write terms twice (e.g. do NOT write 'Allergic Rhinitis / Vata-Kaphaja Pratishyaya (Allergic Rhinitis)' or 'Tulsi-Mulethi Kwath (Decoction)'). Write cleanly in simple, natural language without redundant parenthetical repetition or slashes.\n"
+            "4. GROUNDING: ONLY use the remedy name, ingredients, and instructions provided in 'Verified Remedy Instructions'. Do NOT add, modify, or suggest any ingredient, herb, or medicine not explicitly listed.\n"
+            "5. Do NOT promise an instant or absolute cure. Frame all advice as traditional supportive care.\n\n"
             "CRITICAL FORMATTING RULES:\n"
             "1. Har section se pehle aur baad mein ek blank line chhodhein.\n"
             "2. '**Kaise Banayein:**' ke andar diye gaye Verified Remedy Instructions ke steps ko numbered list (1. ..., 2. ..., 3. ...) mein saaf aur poora likhein.\n"
@@ -774,8 +682,8 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             "4. '**Dhyan Rakhein:**' ke andar mukhya savdhani aur 104 helpline referral likhein ('- ' bullet list).\n\n"
             "Bilkul is format mein likho:\n\n"
             "**Aapki Takleef:** [ek line mein mukhya lakshan]\n\n"
-            "**Sambhavit Karan (Possible Reason):** [kya samasya lagti hai aur kyu, e.g. thakan ya sardi se hone wala sadharan sar dard]\n\n"
-            "**Nuskha:** [nuskhe ka naam]\n\n"
+            "**Sambhavit Karan (Possible Reason):** [kya samasya lagti hai aur kyu, e.g. thakan ya sardi se hone wala sadharan jukham]\n\n"
+            "**Nuskha:** [nuskhe ka naam spasht Hindi mein]\n\n"
             "**Kaise Banayein:**\n"
             "1. [Pehla step - poora instruction]\n"
             "2. [Doosra step - poora instruction]\n\n"
@@ -800,6 +708,10 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             HumanMessage(content=user_prompt),
         ])
         if reply:
+            has_banned, _ = _check_allopathic_hallucination(reply)
+            if has_banned:
+                logger.warning("[LLM SAFETY] Hallucinated allopathic drug detected in LLM reply. Forcing deterministic fallback.")
+                reply = None
             # Parse numbered preparation steps from LLM output into consultation_summary
             prep_match = re.search(r"\*\*(?:Kaise Banayein|How to Prepare|बनाने का तरीका)[^*:]*:\*\*\s*\n([\s\S]*?)(?=\n\s*\*\*|$)", reply, re.IGNORECASE)
             if prep_match:
@@ -837,6 +749,37 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
                 state["final_reply_text"] = reply
             else:
                 state["final_reply_text"] = localize_clinical_text(reply, lang, is_devanagari)
+
+            # Task 3.4 — Present alternative remedy when available
+            if len(remedies) > 1:
+                alt = remedies[1]
+                alt_name = alt.get('remedy_name', '')
+                alt_text = alt.get('remedy_text', '')
+                if alt_name and alt_text:
+                    if lang == "english":
+                        alt_card = f"\n\n---\n\n**Alternative Option:** {alt_name}\n\n{alt_text}"
+                    elif lang == "garhwali":
+                        alt_card = f"\n\n---\n\n**वैकल्पिक नुस्खा:** {alt_name}\n\n{alt_text}" if is_devanagari else f"\n\n---\n\n**Vaikalpik Nuskha:** {alt_name}\n\n{alt_text}"
+                    else:
+                        alt_card = f"\n\n---\n\n**Vaikalpik Nuskha (Alternative Option):** {alt_name}\n\n{alt_text}"
+                    state["final_reply_text"] = f"{state['final_reply_text']}{alt_card}"
+                    if state.get("consultation_summary"):
+                        state["consultation_summary"]["alternative_remedy"] = {
+                            "remedy_name": alt_name,
+                            "remedy_text": alt_text,
+                            "ayurvedic_note": alt.get("ayurvedic_note", "")
+                        }
+
+            disclaimer_str = (
+                "⚕️ This is preliminary health guidance only, not a substitute for professional medical diagnosis or treatment. Please consult a qualified doctor for persistent or serious symptoms."
+                if lang == "english" else
+                ("⚕️ यै सिर्फ प्रारम्भिक स्वास्थ्य मार्गदर्शन छ, डॉक्टरी उपचार नी। गम्भीर तकलीफ मा डॉक्टर बटि जरूर मिला।" if is_devanagari else "⚕️ Yai sirf prarambhik swasthya margdarshan chha, doctory upchar ni. Gambhir takleef ma doctor bati zaroor mila.")
+                if lang == "garhwali" else
+                "⚕️ Yeh sirf prathmik swasthya margdarshan hai, chikitsa parishad ka vivaranik upchar nahi. Kripya gambhir ya lagatar takleef mein doctor se zaroor milein."
+            )
+            state["disclaimer"] = disclaimer_str
+            state["final_reply_text"] = f"{state['final_reply_text']}\n\n{disclaimer_str}"
+
             state["spoken_reply_text"] = _build_complete_spoken_remedy(
                 r_name=r_name,
                 diagnosis=cause_str,
@@ -900,6 +843,36 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
         )
         state["final_reply_text"] = localize_clinical_text(hin_card, lang, is_devanagari)
 
+    # Task 3.4 — Present alternative remedy in deterministic card
+    if len(remedies) > 1:
+        alt = remedies[1]
+        alt_name = alt.get('remedy_name', '')
+        alt_text = alt.get('remedy_text', '')
+        if alt_name and alt_text:
+            if lang == "english":
+                alt_card = f"\n\n---\n\n**Alternative Option:** {alt_name}\n\n{alt_text}"
+            elif lang == "garhwali":
+                alt_card = f"\n\n---\n\n**वैकल्पिक नुस्खा:** {alt_name}\n\n{alt_text}" if is_devanagari else f"\n\n---\n\n**Vaikalpik Nuskha:** {alt_name}\n\n{alt_text}"
+            else:
+                alt_card = f"\n\n---\n\n**Vaikalpik Nuskha (Alternative Option):** {alt_name}\n\n{alt_text}"
+            state["final_reply_text"] = f"{state['final_reply_text']}{alt_card}"
+            if state.get("consultation_summary"):
+                state["consultation_summary"]["alternative_remedy"] = {
+                    "remedy_name": alt_name,
+                    "remedy_text": alt_text,
+                    "ayurvedic_note": alt.get("ayurvedic_note", "")
+                }
+
+    disclaimer_str = (
+        "⚕️ This is preliminary health guidance only, not a substitute for professional medical diagnosis or treatment. Please consult a qualified doctor for persistent or serious symptoms."
+        if lang == "english" else
+        ("⚕️ यै सिर्फ प्रारम्भिक स्वास्थ्य मार्गदर्शन छ, डॉक्टरी उपचार नी। गम्भीर तकलीफ मा डॉक्टर बटि जरूर मिला।" if is_devanagari else "⚕️ Yai sirf prarambhik swasthya margdarshan chha, doctory upchar ni. Gambhir takleef ma doctor bati zaroor mila.")
+        if lang == "garhwali" else
+        "⚕️ Yeh sirf prathmik swasthya margdarshan hai, chikitsa parishad ka vivaranik upchar nahi. Kripya gambhir ya lagatar takleef mein doctor se zaroor milein."
+    )
+    state["disclaimer"] = disclaimer_str
+    state["final_reply_text"] = f"{state['final_reply_text']}\n\n{disclaimer_str}"
+
     state["spoken_reply_text"] = _build_complete_spoken_remedy(
         r_name=r_name,
         diagnosis=cause_str,
@@ -927,34 +900,58 @@ def _limit_to_single_question(text: str) -> str:
 
 def _has_sufficient_info(notes: str) -> bool:
     """
-    Checks whether the patient's consultation notes contain:
-    (a) a duration/timing cue (e.g. 'din', 'hafte', 'ghante', 'kal', 'aaj', digits + 'din')
-    (b) at least one associated-symptom or severity cue beyond the chief complaint.
+    Checks whether the patient's consultation notes contain sufficient clinical information
+    (chief complaint, timeline/duration, and either confirmed denial of other symptoms or multiple distinct symptom domains).
+    A brief statement like 'akshar naak band rehta hai' or 'sar dard hai' WITHOUT duration is NEVER clinically sufficient.
     """
     if not notes:
         return False
     notes_lower = notes.lower()
 
-    # (a) Duration / timing cue
-    duration_pattern = r"\b(?:\d+\s*(?:din|hafte|ghante|mahine|days?|hours?|weeks?)|din|hafte|ghante|kal|aaj|parso|yesterday|today|since|katga\s+din|kaba\s+bati)\b"
+    # (a) Duration / timing cue - must have explicit number or temporal anchor, NOT bare words like 'din'
+    duration_pattern = r"\b(?:\d+\s*(?:din|hafte|ghante|mahine|days?|hours?|weeks?|months?)|kal\s*se|aaj\s*se|parso\s*se|subah\s*se|shaam\s*se|raat\s*se|since\s+\w+|katga\s*din|kaba\s*bati)\b"
     has_duration = bool(re.search(duration_pattern, notes_lower))
+
+    # Without duration, clinical assessment cannot be finalized safely on early turns
     if not has_duration:
         return False
 
-    # (b) Associated-symptom or severity cue beyond chief complaint
+    # (b) Severity cue
     severity_cues = [
-        "tez", "tezz", "severe", "bahut", "mild", "halka", "halki", "high", "zyada", "badh", "intense", "ghani"
+        "tez", "tezz", "severe", "bahut", "bohot", "mild", "halka", "halki", "high", "zyada", "badh", "intense", "ghani"
     ]
     has_severity = any(re.search(rf"\b{re.escape(cue)}\b", notes_lower) for cue in severity_cues)
 
-    from app.core.clinical_lexicon import SYMPTOM_KEYWORDS
-    matched_symptoms = set()
-    for kw in SYMPTOM_KEYWORDS:
-        if re.search(rf"\b{re.escape(kw)}\b", notes_lower):
-            matched_symptoms.add(kw)
+    # (c) Confirmation that there are no other symptoms
+    has_denied_other = bool(re.search(
+        r"\b(?:aur koi (?:lakshan|takleef) nahi|koi aur nahi|kuch nahi|nahi hai|nahin hai|bas yahi|bas itna|no other|nothing else|only this)\b",
+        notes_lower
+    ))
 
-    has_associated_or_severity = has_severity or len(matched_symptoms) >= 2
-    return bool(has_duration and has_associated_or_severity)
+    # (d) Distinct symptom domains (avoids counting 'naak' and 'naak band' as 2 distinct symptoms)
+    symptom_domains = {
+        "nasal": ["naak", "zukaam", "zukam", "jukham", "jukhaam", "chheenk", "sneezing", "congestion"],
+        "throat": ["gala", "gale", "kharash", "sore throat"],
+        "cough": ["khansi", "cough"],
+        "fever": ["bukhar", "fever", "taap", "thand"],
+        "head": ["sar dard", "sir dard", "headache", "mund"],
+        "digestive": ["pet", "gas", "acidity", "apach", "ulti", "dast"],
+        "body": ["badan dard", "thakan", "kamzori"]
+    }
+    matched_domains = set()
+    for domain, kws in symptom_domains.items():
+        if any(re.search(rf"\b{re.escape(kw)}\b", notes_lower) for kw in kws):
+            matched_domains.add(domain)
+
+    # Has duration AND (denied other symptoms OR severity OR multiple distinct domains) -> sufficient!
+    if has_denied_other and len(matched_domains) >= 1:
+        return True
+    if has_severity and len(matched_domains) >= 1:
+        return True
+    if len(matched_domains) >= 2:
+        return True
+
+    return False
 
 
 def compress_consultation_notes(notes: str, llm=None) -> str:
@@ -1000,6 +997,40 @@ def compress_consultation_notes(notes: str, llm=None) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # Doctor Consultation Dialogue Inner Flow
 # ─────────────────────────────────────────────────────────────────────────────
+
+YELLOW_FLAG_EXPLANATIONS: Dict[str, Dict[str, str]] = {
+    "prolonged_fever": {
+        "hin": "bukhar lambe samay se bana hua hai",
+        "eng": "the fever has persisted for an extended duration",
+        "garh_dev": "बुखार काफी दिन बटि बणि रयु छ",
+        "garh_rom": "bukhar kaafi din bati bani rahyu chha"
+    },
+    "severe_localized_pain": {
+        "hin": "dard kafi tez aur gambhir hai",
+        "eng": "the pain is severe and localized",
+        "garh_dev": "पीर बहुत तेज और असहनीय छ",
+        "garh_rom": "peed bahut tej aur asahniya chha"
+    },
+    "dehydration_signs": {
+        "hin": "sharir mein paani ki kami (dehydration) ke lakshan dikh rahe hain",
+        "eng": "signs of clinical dehydration are present",
+        "garh_dev": "शरीर मा पाणी की कमी (डिहाइड्रेशन) का लक्षण छन",
+        "garh_rom": "sharir ma paani ki kami (dehydration) ka lakshan chhan"
+    },
+    "persistent_vomiting": {
+        "hin": "lagatar ulti hone se sharir kamzor ho sakta hai",
+        "eng": "persistent vomiting can cause severe weakness and electrolyte loss",
+        "garh_dev": "लगातार उलटी होण से कमजोरी बढ़ सकदी",
+        "garh_rom": "lagatar ulti hon se kamzori badh sakdi"
+    },
+    "high_risk_age_monitoring": {
+        "hin": "umra ke anusaar doctori dekh-rekh aur savdhani zaroori hai",
+        "eng": "age-stratified monitoring requires clinical evaluation",
+        "garh_dev": "उमरा का हिसाब से डॉक्टर की जांच जरूरी छ",
+        "garh_rom": "umra ka hisaab se doctor ki jaanch zaroori chha"
+    }
+}
+
 
 def _doctor_consultation_inner(state: AgentState) -> AgentState:
     phase    = state.get("dialogue_phase", "GREETING")
@@ -1101,12 +1132,66 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
             state["final_reply_text"] = localize_clinical_text(base_guard_hin, lang, is_devanagari)
         return state
 
-    # 3. YELLOW tier
+    # 3. YELLOW tier (2-turn clarification flow)
     if tier == "Yellow":
         state["retrieved_remedies"] = []
         flags = state.get("clinical_flags", [])
+        yellow_turn = state.get("yellow_clarification_turn") or 0
 
-        # Match specific yellow flag explanation strings
+        # Turn 0: First yellow encounter — ask clarifying triage question
+        if yellow_turn == 0:
+            state["yellow_clarification_turn"] = 1
+            if any("prolonged_fever" in f or "fever" in f for f in flags):
+                if lang == "garhwali":
+                    reply = "यै बुखार कतगा दिन बटि छ और क्या थरथरी/जाड़ लगिक आणु छ?" if is_devanagari else "Yai bukhar katga din bati chha aur kya tharthari lagik aanoo chha?"
+                elif lang == "english":
+                    reply = "How many days have you had this fever, and are you having chills or shivering?"
+                elif lang == "hindi":
+                    reply = "Yeh bukhar kitne dino se hai aur kya thand lagkar chadh raha hai?"
+                else:
+                    reply = localize_clinical_text("यह बुखार कितने दिनों से है और क्या ठंड लगकर चढ़ रहा है?", lang, is_devanagari)
+            elif any("severe_localized_pain" in f or "pain" in f for f in flags):
+                if lang == "garhwali":
+                    reply = "पीर कखि जादा होंदू छ, और क्या दगड़ मा उलटी या चक्कर भी छ?" if is_devanagari else "Peed kakhi jaada hondu chha, aur kya dagad ma ulti ya chakkar bhi chha?"
+                elif lang == "english":
+                    reply = "Where exactly is the pain most severe, and do you also have nausea, vomiting, or dizziness?"
+                elif lang == "hindi":
+                    reply = "Dard pet ya sharir ke kis hisse mein zyada hai, aur kya ulti ya chakkar bhi hai?"
+                else:
+                    reply = localize_clinical_text("दर्द शरीर के किस हिस्से में ज्यादा है, और क्या उल्टी या चक्कर भी है?", lang, is_devanagari)
+            elif any("dehydration_signs" in f or "dehydration" in f for f in flags):
+                if lang == "garhwali":
+                    reply = "क्या गौल बहुत सुखाणु छ या पेशाब कम/प्यूलो रंग को आणु छ?" if is_devanagari else "Kya goul bahut sukhanu chha ya peshab kam/pyulo rang ko aanoo chha?"
+                elif lang == "english":
+                    reply = "Is your mouth very dry, or are you passing less or dark-colored urine?"
+                elif lang == "hindi":
+                    reply = "Kya gala bohot sookh raha hai ya peshab kam/peele rang ka aa raha hai?"
+                else:
+                    reply = localize_clinical_text("क्या गला बहुत सूख रहा है या पेशाब कम और गहरे पीले रंग का आ रहा है?", lang, is_devanagari)
+            elif any("persistent_vomiting" in f or "vomiting" in f for f in flags):
+                if lang == "garhwali":
+                    reply = "क्या पाणी पीण पर भी उलटी होणी छ, और कतगा देर बटि?" if is_devanagari else "Kya paani peen par bhi ulti honi chha, aur katga der bati?"
+                elif lang == "english":
+                    reply = "Are you unable to keep even water or liquids down, and since how long?"
+                elif lang == "hindi":
+                    reply = "Kya paani ya kuch bhi lene par turant ulti ho rahi hai, aur kab se?"
+                else:
+                    reply = localize_clinical_text("क्या पानी या कुछ भी लेने पर तुरंत उल्टी हो रही है, और कब से?", lang, is_devanagari)
+            else:
+                if lang == "garhwali":
+                    reply = "यै तकलीफ कतगा दिन बटि छ और क्या दगड़ मा कोई और परेशानी भी छ?" if is_devanagari else "Yai takleef katga din bati chha aur kya dagad ma koi aur pareshani bhi chha?"
+                elif lang == "english":
+                    reply = "Since how long have you had this issue, and are you noticing any other serious discomfort?"
+                elif lang == "hindi":
+                    reply = "Yeh takleef kab se hai aur kya iske sath koi anya gambhir pareshani mehsoos ho rahi hai?"
+                else:
+                    reply = localize_clinical_text("यह तकलीफ कब से है और क्या इसके साथ कोई अन्य गंभीर परेशानी महसूस हो रही है?", lang, is_devanagari)
+
+            state["final_reply_text"] = reply
+            return state
+
+        # Turn >= 1: Second encounter — supportive care + strong PHC referral
+        state["yellow_clarification_turn"] = yellow_turn + 1
         matched_reasons = []
         for cat, expl in YELLOW_FLAG_EXPLANATIONS.items():
             if any(cat in f for f in flags):
@@ -1117,64 +1202,48 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                 else:
                     matched_reasons.append(expl["hin"])
 
+        reasons_prefix = ""
         if matched_reasons:
             reasons_str = " aur ".join(matched_reasons) if lang != "english" else " and ".join(matched_reasons)
             if lang == "english":
-                reply = (
-                    f"Because {reasons_str}, your symptoms require a formal clinical evaluation.\n\n"
-                    "Please call **104** (e-Sanjeevani) or visit your nearest **Primary Health Centre (PHC)** promptly."
-                )
+                reasons_prefix = f"Because {reasons_str}, "
             elif lang == "garhwali":
-                if is_devanagari:
-                    reply = (
-                        f"क्युंकी {reasons_str}, यै खातिर डॉक्टर की पूरी जांच जरूरी छ।\n\n"
-                        "**104** पर फोन करा या nazdiki **PHC** जावा।"
-                    )
-                else:
-                    reply = (
-                        f"Kyunki {reasons_str}, yaikhatir doctor ki poori jaanch zaroori chha.\n\n"
-                        "**104** par call kara ya nazdiki **PHC** jaawa."
-                    )
-            elif lang == "hindi":
-                reply = (
-                    f"Kyunki {reasons_str}, isliye yeh lakshan gehri doctori jaanch maangte hain.\n\n"
-                    "Kripya **104** (e-Sanjeevani) par call karein ya nazdiki **PHC** par doctor se sampark karein."
-                )
+                reasons_prefix = f"क्युंकी {reasons_str}, " if is_devanagari else f"Kyunki {reasons_str}, "
             else:
-                base_rep = (
-                    f"क्योंकि {reasons_str}, इसलिए यह लक्षण गहरी डॉक्टरी जांच मांगते हैं।\n\n"
-                    "कृपया **104** (ई-संजीवनी) पर कॉल करें या नजदीकी **PHC** पर डॉक्टर से संपर्क करें।"
-                )
-                reply = localize_clinical_text(base_rep, lang, is_devanagari)
-        else:
-            if lang == "english":
-                reply = (
-                    "Your symptoms require a closer medical assessment.\n\n"
-                    "If fever, severe pain, or vomiting has persisted for **more than 3 days**, please call **104** or visit your nearest **PHC**."
-                )
-            elif lang == "garhwali":
-                if is_devanagari:
-                    reply = (
-                        "त्वरा लक्ष्णों मा डॉक्टर की जांच जरूरी छ।\n\n"
-                        "यदि बुखार, तेज पीर या उलटी **३ दिन बटि** छ त **104** पर फोन करा या **PHC** जावा।"
-                    )
-                else:
-                    reply = (
-                        "Twara lakshano ma doctor ki jaanch zaroori chha.\n\n"
-                        "Yadi bukhar, tezz peed ya ulti **3 din bati** chha toh **104** par call kara ya **PHC** jaawa."
-                    )
-            elif lang == "hindi":
-                reply = (
-                    "Aapke lakshan thodi gehri jaanch maangte hain.\n\n"
-                    "Agar bukhar, tez dard ya ulti **3 din se zyada** hai — toh **104** par call karein ya nazdiki **PHC** jaayein."
-                )
-            else:
-                base_rep = (
-                    "आपके लक्षण थोड़ी गहरी डॉक्टरी जांच मांगते हैं।\n\n"
-                    "अगर बुखार, तेज दर्द या उल्टी **3 दिन से ज्यादा** है — तो **104** पर कॉल करें या नजदीकी **PHC** जाएं।"
-                )
-                reply = localize_clinical_text(base_rep, lang, is_devanagari)
+                reasons_prefix = f"चूंकि {reasons_str}, इसलिए " if is_devanagari else f"Kyunki {reasons_str}, isliye "
 
+        if lang == "english":
+            reply = (
+                f"{reasons_prefix}your symptoms require a formal clinical evaluation at your nearest Primary Health Centre (PHC).\n\n"
+                "In the meantime, rest well and stay adequately hydrated with clean water or ORS. "
+                "For immediate medical assistance or tele-consultation, please call **104** (e-Sanjeevani) or **108**."
+            )
+        elif lang == "garhwali":
+            if is_devanagari:
+                reply = (
+                    f"{reasons_prefix}त्वरा लक्ष्णों मा नज़दीकी **PHC** मा डॉक्टर थैं दिखौण बहुत जरूरी छ।\n\n"
+                    "तब तक ओआरएस (ORS) या पाणी खूब पिया और आराम करा। सलाह खातिर **104** (ई-संजीवनी) पर फोन करा।"
+                )
+            else:
+                reply = (
+                    f"{reasons_prefix}twara lakshano ma nazdiki **PHC** ma doctor thain dikhon bahut zaroori chha.\n\n"
+                    "Tab tak ORS ya paani khoob piya aur aaram kara. Salah khatir **104** (e-Sanjeevani) par call kara."
+                )
+        elif lang == "hindi":
+            reply = (
+                f"{reasons_prefix}aapke lakshan dekhkar lagta hai ki aapko nazdiki **PHC (Primary Health Centre)** jakar doctor ko dikhana chahiye.\n\n"
+                "Tab tak khoob paani/ORS piyein aur poora aaram karein. Kisi bhi sahayata ke liye **104** (e-Sanjeevani) par call karein."
+            )
+        else:
+            base_rep = (
+                f"{reasons_prefix}आपके लक्षण देखकर लगता है कि आपको नजदीकी **PHC (प्राथमिक स्वास्थ्य केंद्र)** जाकर डॉक्टर को दिखाना चाहिए।\n\n"
+                "तब तक खूब पानी/ORS पिएं और पूरा आराम करें। किसी भी सहायता के लिए **104** (ई-संजीवनी) पर कॉल करें।"
+            )
+            reply = localize_clinical_text(base_rep, lang, is_devanagari)
+
+        # Standard medical disclaimer on Yellow referral
+        disclaimer_hin = "सूचना: यह केवल प्राथमिक स्वास्थ्य मार्गदर्शन है, आपातकालीन या गंभीर स्थिति में तुरंत डॉक्टर या अस्पताल से संपर्क करें।"
+        state["disclaimer"] = localize_clinical_text(disclaimer_hin, lang, is_devanagari)
         state["final_reply_text"] = reply
         return state
 
@@ -1182,6 +1251,12 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
     if phase == "CONSULTATION":
         turn_count = state.get("turn_count", 1)
         patient_text = raw_msg or user_msg
+
+        # Structured Symptom Profile tracking
+        stored_profile_dict = state.get("structured_symptoms")
+        profile = StructuredSymptomProfile.from_dict(stored_profile_dict)
+        profile.update_from_narrative(patient_text)
+        state["structured_symptoms"] = profile.to_dict()
 
         # Handle in-consultation symptom correction without restarting
         is_correction = patient_text.strip().startswith("[CORRECTION]")
@@ -1212,15 +1287,11 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
         state["consultation_notes"] = updated_notes
 
         from app.core.dialogue_manager import has_symptom_mention
-        has_actual_symptoms = has_symptom_mention(updated_notes) or has_symptom_mention(patient_text)
+        has_actual_symptoms = has_symptom_mention(updated_notes) or has_symptom_mention(patient_text) or bool(profile.chief_complaint)
 
-        has_sufficient = _has_sufficient_info(updated_notes)
-        # Can only conclude if:
-        # 1. At least 3 interactive clinical turns completed, OR
-        # 2. Multi-dimensional info is sufficient (duration + severity/associated symptoms)
-        can_conclude = ((turn_count >= 3) or has_sufficient) and has_actual_symptoms
-        # Hard safety cap strictly at turn 5 to guarantee timely remedy delivery
-        force_conclude = (turn_count >= 5) and has_actual_symptoms
+        has_sufficient = _has_sufficient_info(updated_notes) or profile.is_clinically_sufficient()
+        can_conclude = (has_sufficient or turn_count >= 2) and has_actual_symptoms
+        force_conclude = (turn_count >= 4) and has_actual_symptoms
 
         sym_data = get_symptom_data(updated_notes)
 
@@ -1231,32 +1302,30 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
             canonical_consultation_prompt = (
                 "Tu Dr. Sanjeevani hai — Uttarakhand ki anubhavi, samajhdaar aur mamtamayi gaon ki doctor.\n"
                 "Ek asali, chatur doctor ki tarah clinical jaanch (differential diagnosis) kar.\n\n"
-                "CLINICAL DOCTOR CONSULTATION GUIDELINES:\n"
-                "1. ASALI DOCTOR KI TARAH SOCHO: Sirf samay/ghante pooch kar turant nuskha mat de dena! "
-                "Takleef ki gehrai aur differential lakshan jaano:\n"
-                "   - Agar Sar Dard / Chakkar hai: Dard ka sthaan (kanpatti, maatha ya poora sar) aur nature pata karo; "
-                "kya ulti/matli, aankhon mein dhundhlapan, neend ki kami ya tanav hai.\n"
-                "   - Agar Naak Band / Allergy / Chhink hai: Pata karo kya subah uthne par chhinkon ki jhad lagti hai, "
-                "aankhon mein khujli/paani ya dhool/mausam badlav se badhta hai.\n"
-                "   - Agar Jodon ka Dard hai: Pata karo kya subah jakdan rehti hai, soojan hai ya chalne-phirne mein takleef hoti hai.\n"
-                "   - Agar Pet Dard / Acidity hai: Pata karo kya khatti dakar, seene mein jalan khane ke baad hoti hai ya pet mein marod hai.\n"
-                "2. EK BAAR MEIN SIRF EK SATEEK SAWAAL (Under 18 words) poocho, bilkul aam bolchal aur apnepan ke sath.\n"
-                "3. CLINICAL SUFFICIENCY (Kab Jaanch Puri Maanein):\n"
-                "   - Kam se kam 3 se 4 turns tak lakshano, triggers aur warning signs ki jaanch karo.\n"
-                "   - Sirf tab conclude: true karein jab aapko takleef ki aavdhi (duration), sthaan/swaroop (nature), "
-                "aur sath ke lakshan (associated symptoms) achhi tarah samajh aa gaye hon.\n"
-                "   - Agar jaanch adhoori hai (aur Turn Count 5 se kam hai), toh conclude: false rakhein aur agla clinical sawaal poochein.\n"
-                "   - Hard Cap: Turn 5 par jaanch zaroor samapt karein (conclude: true).\n"
-                "4. Jo baat patient pehle bata chuka hai, use dobara kabhi mat poochna.\n"
+                "DYNAMIC CLINICAL CONSULTATION GUIDELINES:\n"
+                "1. NEVER CONCLUDE ON INCOMPLETE INITIAL PHRASES:\n"
+                "   - Agar patient ne sirf ek brief lakshan kaha hai (jaise 'akshar naak band rehta hai', 'sar dard hai', 'pet dard hai') bina samay/duration bataye, toh turant prescription MAT do!\n"
+                "   - Pehle poochho ki yeh takleef kab se hai aur kya iske saath chheenk, bukhar ya koi aur lakshan bhi hai.\n"
+                "2. CONFIRMATION PROTOCOL BEFORE PRESCRIBING:\n"
+                "   - Agar patient ne apni mukhy takleef aur samay (duration) bata diya hai, toh prescription dene se pehle ek baar zaroor confirm karo:\n"
+                "     'Kya iske alawa koi aur lakshan bhi hain jaise bukhar, gale mein dard ya khansi?'\n"
+                "   - Agar patient kahe 'nahi / no / bas yahi hai / aur koi lakshan nahi', TABHI 'has_enough_info': true aur 'conclude': true karke nuskha deliver karo!\n"
+                "   - Agar patient kahe 'haan' ya koi aur lakshan bataye (jaise bukhar ya sar dard), toh us nayi takleef ki jaanch karo aur uske hisab se aage badho.\n"
+                "3. ACCURATE DIAGNOSIS (Cold is NOT Allergic Rhinitis):\n"
+                "   - Sadharan sardi, zukaam, naak behna ya halki aankhon mein paani ko Allergic Rhinitis mat kaho jab tak ki patient khud na kahe ki use mahino se dhool ya allergy ki purani bimaari hai. Aam sardi-zukam ko Pratishyaya / Common Cold hi maano.\n"
+                "   - Jo lakshan patient ne nahi bataye, unhe apni taraf se man-ghadant (hallucinate) mat jodo.\n"
+                "4. EK BAAR MEIN SIRF EK SATEEK SAWAAL (Under 18 words) poocho, bilkul aam bolchal aur apnepan ke sath.\n"
                 "5. OUTPUT FORMAT: Respond strictly in valid JSON format:\n"
-                '{\n  "has_enough_info": true/false,\n  "reply": "Doctor ka agla sateek clinical sawaal (Under 18 words) ya samapti sandesh",\n  "conclude": true/false\n}\n'
+                '{\n  "has_enough_info": true/false,\n  "reply": "Doctor ka agla sateek clinical sawaal (agar zaroorat ho) ya samapti sandesh",\n  "conclude": true/false\n}\n'
                 "Do NOT output markdown code blocks or text outside the JSON."
             )
             if lang == "garhwali":
                 canonical_consultation_prompt += f"\n\n{bhashini_engine.get_garhwali_guidance(is_devanagari)}"
 
+            clinical_summary = profile.to_clinical_summary()
             human_content = (
                 f"Conversation History:\n{updated_notes}\n\n"
+                f"Structured Clinical Profile: {clinical_summary}\n\n"
                 f"Turn Count: {turn_count}/5\n"
                 f"Patient just said: \"{patient_text}\"\n\n"
                 "Evaluate clinical information sufficiency. Respond as Dr. Sanjeevani with valid JSON: "
@@ -1281,11 +1350,19 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                     llm_conclude = bool(parsed_json.get("conclude", False))
                     reply_content = str(parsed_json.get("reply", "")).strip()
                 else:
-                    llm_has_info = ("##CONCLUDE##" in reply) or (has_sufficient and turn_count >= 3)
-                    llm_conclude = ("##CONCLUDE##" in reply) or force_conclude
+                    llm_has_info = ("##CONCLUDE##" in reply) or has_sufficient
+                    llm_conclude = ("##CONCLUDE##" in reply) or (has_sufficient and turn_count >= 2) or force_conclude
                     reply_content = reply.replace("##CONCLUDE##", "").strip()
 
-                if (llm_conclude or force_conclude) and (can_conclude or turn_count >= 5):
+                patient_denied_other = bool(re.search(
+                    r"\b(?:aur koi (?:lakshan|takleef) nahi|koi aur nahi|kuch nahi|nahi hai|nahin hai|bas yahi|bas itna|no other|nothing else|only this)\b",
+                    patient_text.lower()
+                )) or ("no_other_symptoms" in profile.denied_symptoms)
+
+                # Only conclude when LLM confirms it has enough info, or patient denied other symptoms, or hard cap reached
+                can_finish = (llm_conclude and llm_has_info) or force_conclude or (has_sufficient and patient_denied_other)
+
+                if can_finish and has_actual_symptoms:
                     should_conclude = True
                     conclude_llm = llm
                 else:
@@ -1308,95 +1385,45 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
 
         # Deterministic fallback when no LLM
         if not should_conclude:
-            if not can_conclude:
-                if not has_actual_symptoms:
-                    if lang == "garhwali":
-                        reply = "त्वकु क्या तकलीफ या बीमारी हो रयु छ? कल्याणी से अपणा लक्षण बतावा।" if is_devanagari else "Twaku kya takleef ya bimaari ho rahyu chha? Kripya apna lakshan batava."
-                    elif lang == "english":
-                        reply = "Could you please describe what specific symptoms or health concerns you are experiencing (such as fever, headache, cough, or stomach pain)?"
-                    elif lang == "hindi":
-                        reply = "Aapko kya takleef ya lakshan mehsoos ho rahe hain? Kripya batayein (jaise bukhar, sardi, sar dard, ya pet dard) taaki main sahi jaanch kar sakoon."
-                    else:
-                        base_intake = "आपको क्या तकलीफ या लक्षण महसूस हो रहे हैं? कृपया बताएं (जैसे बुखार, सर्दी, सिर दर्द, या पेट दर्द) ताकि मैं सही जांच कर सकूं।"
-                        reply = localize_clinical_text(base_intake, lang, is_devanagari)
-                elif turn_count == 1:
-                    # Turn 1 duration question from registry
-                    if lang == "garhwali":
-                        reply = sym_data["t1_garh_dev"] if is_devanagari else sym_data["t1_garh_rom"]
-                    elif lang == "english":
-                        reply = sym_data["t1_eng"]
-                    elif lang == "hindi":
-                        reply = sym_data["t1_hin"]
-                    else:
-                        reply = localize_clinical_text(sym_data["t1_hin"], lang, is_devanagari)
-                elif turn_count == 2:
-                    # Turn 2 warning question from registry
-                    if lang == "garhwali":
-                        reply = sym_data["t2_garh_dev"] if is_devanagari else sym_data["t2_garh_rom"]
-                    elif lang == "english":
-                        reply = sym_data["t2_eng"]
-                    elif lang == "hindi":
-                        reply = sym_data["t2_hin"]
-                    else:
-                        reply = localize_clinical_text(sym_data["t2_hin"], lang, is_devanagari)
-                elif turn_count == 3:
-                    if lang == "garhwali":
-                        reply = "क्या ये तकलीफ लगातार बणी छ या बीच-बीच मा कम होन्दी?" if is_devanagari else "Kya ye takleef lagatar bani chha ya beech-beech ma kam gondi?"
-                    elif lang == "english":
-                        reply = "Is this discomfort continuous or does it come and go?"
-                    elif lang == "hindi":
-                        reply = "Kya yeh takleef lagatar bani rehti hai ya beech-beech mein kam hoti hai?"
-                    else:
-                        reply = localize_clinical_text("क्या यह तकलीफ लगातार बनी रहती है या बीच-बीच में कम होती है?", lang, is_devanagari)
-                elif turn_count == 4:
-                    if lang == "garhwali":
-                        reply = "क्या दगड़ मा कमजोरी या भूख नी लगणी छ?" if is_devanagari else "Kya dagad ma kamzori ya bhookh ni lagni chha?"
-                    elif lang == "english":
-                        reply = "Are you also experiencing weakness or loss of appetite?"
-                    elif lang == "hindi":
-                        reply = "Kya iske sath kamzori ya khane-peene mein man nahi lag raha?"
-                    else:
-                        reply = localize_clinical_text("क्या इसके साथ कमजोरी या खाने-पीने में अरुचि महसूस हो रही है?", lang, is_devanagari)
+            if has_sufficient:
+                should_conclude = True
+                conclude_llm = None
+            elif not has_actual_symptoms:
+                if lang == "garhwali":
+                    reply = "त्वकु क्या तकलीफ या बीमारी हो रयु छ? कल्याणी से अपणा लक्षण बतावा।" if is_devanagari else "Twaku kya takleef ya bimaari ho rahyu chha? Kripya apna lakshan batava."
+                elif lang == "english":
+                    reply = "Could you please describe what specific symptoms or health concerns you are experiencing (such as fever, headache, cough, or stomach pain)?"
+                elif lang == "hindi":
+                    reply = "Aapko kya takleef ya lakshan mehsoos ho rahe hain? Kripya batayein (jaise bukhar, sardi, sar dard, ya pet dard) taaki main sahi jaanch kar sakoon."
                 else:
-                    should_conclude = True
-                    conclude_llm = None
+                    base_intake = "आपको क्या तकलीफ या लक्षण महसूस हो रहे हैं? कृपया बताएं (जैसे बुखार, सर्दी, सिर दर्द, या पेट दर्द) ताकि मैं सही जांच कर सकूं।"
+                    reply = localize_clinical_text(base_intake, lang, is_devanagari)
+            elif not profile.has_duration():
+                if lang == "garhwali":
+                    reply = sym_data["t1_garh_dev"] if is_devanagari else sym_data["t1_garh_rom"]
+                elif lang == "english":
+                    reply = sym_data["t1_eng"]
+                elif lang == "hindi":
+                    reply = sym_data["t1_hin"]
+                else:
+                    reply = localize_clinical_text(sym_data["t1_hin"], lang, is_devanagari)
+            elif not profile.has_associated_symptoms() and turn_count <= 2:
+                if lang == "garhwali":
+                    reply = sym_data["t2_garh_dev"] if is_devanagari else sym_data["t2_garh_rom"]
+                elif lang == "english":
+                    reply = sym_data["t2_eng"]
+                elif lang == "hindi":
+                    reply = sym_data["t2_hin"]
+                else:
+                    reply = localize_clinical_text(sym_data["t2_hin"], lang, is_devanagari)
+            else:
+                should_conclude = True
+                conclude_llm = None
 
-                if not should_conclude:
-                    state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"
-                    state["final_reply_text"] = reply
-                    return state
-            elif turn_count < 5 and not has_sufficient:
-                # If can_conclude (>=2 turns) but not yet sufficient, continue probing up to turn 5
-                if turn_count == 2:
-                    if lang == "garhwali":
-                        reply = sym_data["t2_garh_dev"] if is_devanagari else sym_data["t2_garh_rom"]
-                    elif lang == "english":
-                        reply = sym_data["t2_eng"]
-                    elif lang == "hindi":
-                        reply = sym_data["t2_hin"]
-                    else:
-                        reply = localize_clinical_text(sym_data["t2_hin"], lang, is_devanagari)
-                elif turn_count == 3:
-                    if lang == "garhwali":
-                        reply = "क्या ये तकलीफ लगातार बणी छ या बीच-बीच मा कम होन्दी?" if is_devanagari else "Kya ye takleef lagatar bani chha ya beech-beech ma kam gondi?"
-                    elif lang == "english":
-                        reply = "Is this discomfort continuous or does it come and go?"
-                    elif lang == "hindi":
-                        reply = "Kya yeh takleef lagatar bani rehti hai ya beech-beech mein kam hoti hai?"
-                    else:
-                        reply = localize_clinical_text("क्या यह तकलीफ लगातार बनी रहती है या बीच-बीच में कम होती है?", lang, is_devanagari)
-                elif turn_count == 4:
-                    if lang == "garhwali":
-                        reply = "क्या दगड़ मा कमजोरी या भूख नी लगणी छ?" if is_devanagari else "Kya dagad ma kamzori ya bhookh ni lagni chha?"
-                    elif lang == "english":
-                        reply = "Are you also experiencing weakness or loss of appetite?"
-                    elif lang == "hindi":
-                        reply = "Kya iske sath kamzori ya khane-peene mein man nahi lag raha?"
-                    else:
-                        reply = localize_clinical_text("क्या इसके साथ कमजोरी या खाने-पीने में अरुचि महसूस हो रही है?", lang, is_devanagari)
-                else:
-                    should_conclude = True
-                    conclude_llm = None
+            if not should_conclude:
+                state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"
+                state["final_reply_text"] = reply
+                return state
 
                 if not should_conclude:
                     state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"

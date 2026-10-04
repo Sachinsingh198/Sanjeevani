@@ -179,46 +179,56 @@ const HIMALAYAN_HERBS = [
     id: 'tulsi',
     name: 'Himalayan Krishna Tulsi (तुलसी)',
     botanical: 'Ocimum sanctum',
+    icon: '🌿',
     benefit: 'Powerful adaptogen that lowers cortisol and shields against altitude lung irritation.',
     tag: 'Immunity & Breath',
     flavor: 'Peppery, warm, sacred herbal note',
     recipe: 'Boil 5-6 fresh leaves with crushed ginger and honey for 3 minutes.',
+    hindiSpoken: 'Krishna Tulsi: Pahaadi sardi, kaph aur gala kharab hone par sabse uttam hai. Paani mein ubaal kar piyein.',
   },
   {
     id: 'buransh',
     name: 'Wild Buransh Petals (बुरांश)',
     botanical: 'Rhododendron arboreum',
+    icon: '🌺',
     benefit: 'State flower of Uttarakhand. Rich in flavonoids, supports heart health and reduces inflammation.',
     tag: 'Heart & Vitality',
     flavor: 'Tangy, floral, refreshing nectar note',
     recipe: 'Steep dried crimson petals in hot mountain spring water with a hint of rock sugar.',
+    hindiSpoken: 'Buransh Phool: Uttarakhand ka rajya phool. Yeh dil ko taazgi aur takat deta hai aur jalan shaant karta hai.',
   },
   {
     id: 'giloy',
     name: 'Pahadi Giloy / Amrita (गिलोय)',
     botanical: 'Tinospora cordifolia',
+    icon: '🌱',
     benefit: 'The divine nectar vine. Cleanses deep metabolic toxins and strengthens systemic immunity.',
     tag: 'Immunity Shield',
     flavor: 'Deeply bitter, purifying earthy tonic',
     recipe: 'Crush a 2-inch stem and boil down until water reduces to half. Drink warm.',
+    hindiSpoken: 'Pahadi Giloy: Shareer ki rog-pratirodhak kshamta badhati hai aur bukhar mein shanti deti hai.',
   },
   {
     id: 'timur',
     name: 'Chamoli Timur Berry (तिम्मूर)',
     botanical: 'Zanthoxylum armatum',
+    icon: '🌶️',
     benefit: 'High-altitude wild prickly ash. Warms peripheral circulation and relieves joint stiffness.',
     tag: 'Warmth & Joints',
     flavor: 'Citrusy, tingling, invigorating aroma',
     recipe: 'Lightly crush 3-4 seeds into hot black tea during freezing winter mornings.',
+    hindiSpoken: 'Chamoli Timur: Thand mein shareer ko garmi deta hai aur jodon ke dard mein turant aaram deta hai.',
   },
   {
     id: 'jatamansi',
     name: 'Alpine Jatamansi (जटामांसी)',
     botanical: 'Nardostachys jatamansi',
+    icon: '🪵',
     benefit: 'Rare Himalayan rhizome. Renowned in Charaka Samhita as the premier natural neural sedative.',
     tag: 'Deep Sleep & Mind',
     flavor: 'Woody, earthy, deeply grounded scent',
     recipe: 'Infuse a pinch with warm milk or chamomile 30 minutes before sleep.',
+    hindiSpoken: 'Alpine Jatamansi: Mann ko shaant karti hai aur gehri sukhad neend laane mein madad karti hai.',
   },
 ];
 
@@ -230,6 +240,7 @@ const TEA_RECIPES = [
     steepSeconds: 60,
     herbs: ['Wild Buransh', 'Krishna Tulsi', 'Ginger'],
     benefits: 'Antioxidant heart shield, soothes sore throat from cold mountain drafts.',
+    spokenGuide: 'Buransh-Tulsi Kadha: Ek cup paani mein Buransh phool aur Tulsi ke patte daalkar ek minute tak ubaalein. Yeh dil aur gale ke liye amrit hai.',
   },
   {
     id: 'timur-chai',
@@ -238,6 +249,7 @@ const TEA_RECIPES = [
     steepSeconds: 90,
     herbs: ['Chamoli Timur', 'Cinnamon', 'Black Tea'],
     benefits: 'Warms icy feet and fingers, stimulates sluggish morning circulation.',
+    spokenGuide: 'Timur Chai: Chamoli Timur ke dane aur dalchini ko garam chai mein daalein. Yeh thandi subah mein shareer ko garmi aur urja deta hai.',
   },
   {
     id: 'jatamansi-shanti',
@@ -246,6 +258,7 @@ const TEA_RECIPES = [
     steepSeconds: 120,
     herbs: ['Jatamansi', 'Cardamom', 'Chamomile'],
     benefits: 'Melts away cerebral tension for deep restorative Himalayan sleep.',
+    spokenGuide: 'Jatamansi Nidra Peya: Sone se aadha ghanta pehle jatamansi aur elaichi ko ubaalkar piyein. Isse chinta door hogi aur gehri neend aayegi.',
   },
 ];
 
@@ -311,6 +324,7 @@ const WELLNESS_PILLARS = [
     badgeColor: 'bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-500/30',
     description: 'Expanding sacred geometric mandala with 5 authentic Himalayan techniques: Anulom-Vilom, 4-7-8 Deep Sleep, Bhramari Bee Breath, and Box Breathing with audio cues.',
     actionText: 'श्वास अभ्यास करें (Start Breath)',
+    speakPrompt: 'Praanaayaam aur dhyaan kaksh: Yahaan saans lene ke pahaadi abhyaas hain jo mann ko turant shaant karte hain.',
   },
   {
     id: 'dosha',
@@ -324,6 +338,7 @@ const WELLNESS_PILLARS = [
     badgeColor: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30',
     description: 'Discover your unique body constitution (Vata, Pitta, Kapha) through 4 intuitive lifestyle questions with tailored Himalayan dietary and seasonal advice.',
     actionText: 'दोष परीक्षण करें (Scan Dosha)',
+    speakPrompt: 'Tri-dosha pareekshan: Chaar saral prashnon se jaanein ki aapka shareer Vaat, Pitta ya Kaph prakriti ka hai.',
   },
   {
     id: 'marma',
@@ -337,6 +352,7 @@ const WELLNESS_PILLARS = [
     badgeColor: 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/30',
     description: '6 vital high-altitude acupressure points (Adhipati crown, Kshipra hand web, Hridaya heart center, Janu knee) with hold timers to dispel headaches and stress.',
     actionText: 'मर्म बिंदु देखें (Explore Marma)',
+    speakPrompt: 'Marma bindu chikitsa: Shareer ke mukhya dabaav binduon ko dabaakar sar dard, kamar aur jodon ka dard door karein.',
   },
   {
     id: 'herbs',
@@ -350,6 +366,7 @@ const WELLNESS_PILLARS = [
     badgeColor: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
     description: 'Timur pepper tea, Buransh (Rhododendron) heart nectar, Tulsi-Ginger mountain kadha and Haldi-Doodh traditional recipes for immunity and altitude vitality.',
     actionText: 'हर्बल चाय बनाएं (Brew Teas)',
+    speakPrompt: 'Pahaadi aushadhi aur chai: Tulsi, adrak, timur aur buransh ka garam kaadha banayein aur uski aawaz mein vidhi sunein.',
   },
   {
     id: 'sound',
@@ -363,6 +380,7 @@ const WELLNESS_PILLARS = [
     badgeColor: 'bg-purple-500/15 text-purple-600 dark:text-purple-300 border-purple-500/30',
     description: 'Tibetan singing bowls, pahadi temple bronze bells, Solfeggio 528Hz DNA tone, and pure Alaknanda river stream acoustic pink noise to calm the nervous system.',
     actionText: 'ध्वनि ध्यान सुनें (Play Soundscapes)',
+    speakPrompt: 'Dhwani dhyan: Mandir ki ghanti, alaknanda nadi aur kangsya katora ki pavitra dhwani sunein.',
   },
   {
     id: 'yoga',
@@ -376,6 +394,7 @@ const WELLNESS_PILLARS = [
     badgeColor: 'bg-gold-warm/20 text-gold-warm border-gold-warm/40',
     description: 'Real-time on-device MediaPipe pose tracking for Tadasana, Bhadrasana, Vrikshasana & Virabhadrasana with auditory postural alignment cues.',
     actionText: 'योगाभ्यास करें (Open Yoga AI)',
+    speakPrompt: 'Yogabhyas: Camera AI se aasanon ki sahi mudra seekhein aur shareer ko lacheela banayein.',
   },
   {
     id: 'flow',
@@ -389,6 +408,7 @@ const WELLNESS_PILLARS = [
     badgeColor: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/30',
     description: 'Holistic step-by-step journeys: Morning Vitality, Mountain Joint Relief, and Evening Nidra combining breathing, gentle movement, tea, and soundscapes.',
     actionText: 'दैनिक यात्रा चुनें (View Flows)',
+    speakPrompt: 'Dainik dincharya yatra: Subah se raat tak ke poorna swasthya abhyaas ek sath karein.',
   },
 ];
 
@@ -1149,13 +1169,26 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                         <div className="w-12 h-12 rounded-2xl bg-sage/10 dark:bg-sage/20 text-sage dark:text-booti-glow flex items-center justify-center group-hover:scale-110 group-hover:bg-sage group-hover:text-white transition-all shadow-2xs">
                           <Icon className="w-6 h-6" />
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${pillar.badgeColor}`}>
-                            {pillar.badge}
-                          </span>
-                          <span className="text-[10px] font-mono text-muted flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-gold-warm" /> {pillar.duration}
-                          </span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (pillar.speakPrompt) speakCue(pillar.speakPrompt, 'hi-IN');
+                            }}
+                            className="p-1.5 rounded-full bg-gold-warm/15 hover:bg-gold-warm/25 text-gold-warm transition-all cursor-pointer"
+                            title="आवाज़ में सुनें"
+                          >
+                            <Volume2 className="w-3.5 h-3.5" />
+                          </button>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${pillar.badgeColor}`}>
+                              {pillar.badge}
+                            </span>
+                            <span className="text-[10px] font-mono text-muted flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-gold-warm" /> {pillar.duration}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -1190,6 +1223,58 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
         ══════════════════════════════════════════════════════════════ */}
         {activeTab === 'pranayama' && (
           <div className="space-y-6">
+
+            {/* ── SACRED PRANAYAMA VISUAL HERO (FOR NON-READERS & VISUAL LEARNERS) ── */}
+            <div className="relative rounded-3xl overflow-hidden shadow-md border border-sage/40 bg-gradient-to-br from-[#1E2A43] via-card to-sage/30 text-white">
+              <div className="relative h-52 sm:h-64 w-full overflow-hidden group">
+                <img
+                  src="/assets/wellness/pranayama_hero.jpg"
+                  alt="हिमालयी प्राणायाम व ध्यान"
+                  className="w-full h-full object-cover object-center filter brightness-95 contrast-105 group-hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-4 sm:p-6">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sage/90 text-white text-[10px] sm:text-xs font-extrabold uppercase tracking-wider mb-1.5 w-fit shadow-md">
+                    <span>🪷 हिमालयी श्वास साधना</span>
+                    <span className="opacity-80">• Sacred Breathwork</span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-serif font-bold text-white leading-tight drop-shadow-md">
+                    गहरी श्वास, शांत मन (Breath with Sunrise)
+                  </h3>
+                  <p className="text-xs sm:text-sm text-white/90 mt-1 max-w-xl leading-relaxed drop-shadow-sm">
+                    चित्र को देखें, सीधे बैठें, और घूमते हुए चक्र के साथ अपनी श्वास को अंदर व बाहर करें।
+                  </p>
+                </div>
+
+                {/* 1-Tap Voice Guide Button */}
+                <button
+                  onClick={() => speakCue('Aaram se Sukhasana mein baith jayein. Peeth seedhi rakhein. Mandala ke badhne par shwaas andar len, aur chhota hone par dheere se chhodein.', 'hi-IN')}
+                  className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sage hover:bg-sage/90 text-white text-xs font-bold shadow-lg active:scale-95 transition-all cursor-pointer"
+                  title="श्वास विधि सुनें"
+                >
+                  <Volume2 className="w-4 h-4 animate-bounce" />
+                  <span>🔊 श्वास विधि सुनें</span>
+                </button>
+              </div>
+
+              {/* Visual 3-Step Pictogram Strip for Illiterate Users */}
+              <div className="p-3 sm:p-4 bg-white dark:bg-[#131E2B] text-primary dark:text-gray-100 grid grid-cols-3 gap-2 border-t border-sage/20 text-center">
+                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <span className="text-xl sm:text-2xl block">🌬️</span>
+                  <span className="text-[11px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400">1. श्वास लें</span>
+                  <span className="text-[9px] text-muted block">Inhale Deeply</span>
+                </div>
+                <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                  <span className="text-xl sm:text-2xl block">⏸️</span>
+                  <span className="text-[11px] sm:text-xs font-bold text-amber-600 dark:text-amber-400">2. अंदर रोकें</span>
+                  <span className="text-[9px] text-muted block">Hold Still</span>
+                </div>
+                <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+                  <span className="text-xl sm:text-2xl block">🍃</span>
+                  <span className="text-[11px] sm:text-xs font-bold text-indigo-600 dark:text-indigo-400">3. छोड़ें</span>
+                  <span className="text-[9px] text-muted block">Exhale Calmly</span>
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               
               {/* Pattern Selector Cards */}
@@ -1638,98 +1723,166 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
         ══════════════════════════════════════════════════════════════ */}
         {activeTab === 'herbs' && (
           <div className="space-y-6">
-            
-            {/* Live Tea Brew Kettle Assistant */}
-            <div className="bg-gradient-to-r from-amber-500/10 via-gold-warm/10 to-sage/10 dark:from-card dark:to-card border border-gold-warm/30 rounded-3xl p-5 sm:p-7 shadow-xs">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                
-                {/* Kettle Animated Graphic */}
-                <div className="md:col-span-4 flex flex-col items-center justify-center text-center">
-                  <div className="relative w-36 h-36 flex items-center justify-center">
-                    {teaBrewing && (
-                      <div className="absolute -top-3 flex gap-2">
-                        <span className="w-1.5 h-6 bg-gray-400/40 rounded-full animate-steam" />
-                        <span className="w-2 h-8 bg-gray-400/50 rounded-full animate-steam delay-150" />
-                        <span className="w-1.5 h-5 bg-gray-400/40 rounded-full animate-steam delay-300" />
-                      </div>
-                    )}
-                    
-                    <div className={`w-28 h-28 rounded-3xl bg-gold-warm/20 text-gold-warm flex items-center justify-center text-5xl shadow-md transition-all ${teaBrewing ? 'animate-bounce' : ''}`}>
-                      🫖
-                    </div>
+
+            {/* ── ALPINE HERBAL BREW VISUAL HERO CARD ── */}
+            <div className="relative rounded-3xl overflow-hidden shadow-md border border-amber-500/30 bg-gradient-to-br from-amber-950/90 via-[#1E2A43] to-primary text-white">
+              <div className="relative h-60 sm:h-72 w-full overflow-hidden group">
+                <img
+                  src="/assets/wellness/herbal_brew.jpg"
+                  alt="हिमालयी पारंपरिक चाय व काढ़ा"
+                  className="w-full h-full object-cover object-center filter brightness-95 contrast-105 group-hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-4 sm:p-6">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-600/90 text-white text-[10px] sm:text-xs font-extrabold uppercase tracking-wider mb-1.5 w-fit shadow-md">
+                    <span>🫖 पहाड़ी रसोई काढ़ा</span>
+                    <span className="opacity-80">• Herbal Hearth Brew</span>
                   </div>
-                  <span className="text-xs font-bold text-primary mt-1">
-                    {teaBrewing ? 'Simmering Himalayan Spring Water...' : 'Kettle Ready'}
-                  </span>
+                  <h3 className="text-xl sm:text-2xl md:text-3xl font-serif font-bold text-white leading-tight drop-shadow-md">
+                    {selectedTea.hindiTitle} ({selectedTea.title})
+                  </h3>
+                  <p className="text-xs sm:text-sm text-white/90 mt-1 max-w-xl leading-relaxed drop-shadow-sm">
+                    {selectedTea.benefits}
+                  </p>
                 </div>
 
-                {/* Recipe & Steep Controls */}
-                <div className="md:col-span-8 space-y-3">
+                {/* 1-Tap Voice Guide Button for Illiterate Users */}
+                <button
+                  onClick={() => speakCue(selectedTea.spokenGuide || `${selectedTea.title}. ${selectedTea.benefits}`, 'hi-IN')}
+                  className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-lg active:scale-95 transition-all cursor-pointer"
+                  title="पूरी चाय विधि आवाज़ में सुनें"
+                >
+                  <Volume2 className="w-4 h-4 animate-bounce" />
+                  <span>🔊 विधि सुनें (Listen)</span>
+                </button>
+              </div>
+
+              {/* 4-Step Visual Brewing Pictograms for Low-Literacy / Illiterate Users */}
+              <div className="p-3.5 sm:p-4 bg-white dark:bg-[#131E2B] text-primary dark:text-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-2.5 border-t border-amber-500/20 text-center">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col items-center">
+                  <span className="text-2xl sm:text-3xl mb-0.5">💧</span>
+                  <span className="text-xs font-bold text-primary dark:text-white">1. पानी उबालें</span>
+                  <span className="text-[10px] text-muted">1 कप पानी</span>
+                </div>
+                <div className="p-2 sm:p-2.5 rounded-xl bg-sage/10 border border-sage/20 flex flex-col items-center">
+                  <span className="text-2xl sm:text-3xl mb-0.5">🌿</span>
+                  <span className="text-xs font-bold text-primary dark:text-white">2. पत्ती व अदरक</span>
+                  <span className="text-[10px] text-muted">जड़ी-बूटी डालें</span>
+                </div>
+                <div className="p-2 sm:p-2.5 rounded-xl bg-gold-warm/10 border border-gold-warm/20 flex flex-col items-center">
+                  <span className="text-2xl sm:text-3xl mb-0.5">⏱️</span>
+                  <span className="text-xs font-bold text-primary dark:text-white">3. धीमी आंच पर ढकें</span>
+                  <span className="text-[10px] text-muted">1-2 मिनट भाप</span>
+                </div>
+                <div className="p-2 sm:p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex flex-col items-center">
+                  <span className="text-2xl sm:text-3xl mb-0.5">☕</span>
+                  <span className="text-xs font-bold text-primary dark:text-white">4. गुनगुना पिएं</span>
+                  <span className="text-[10px] text-muted">सुकून का घूंट</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Live Tea Brew Steeping Assistant */}
+            <div className="bg-gradient-to-r from-amber-500/10 via-gold-warm/10 to-sage/10 dark:from-[#131E2B] dark:to-[#131E2B] border border-gold-warm/30 rounded-3xl p-5 sm:p-7 shadow-xs">
+              <div className="space-y-4">
+                
+                {/* Recipe Selection Tabs */}
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted block mb-2">
+                    काढ़ा या चाय का प्रकार चुनें (Select Recipe):
+                  </span>
                   <div className="flex flex-wrap items-center gap-2">
                     {TEA_RECIPES.map((recipe) => (
                       <button
                         key={recipe.id}
                         onClick={() => setSelectedTea(recipe)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[44px] ${
                           selectedTea.id === recipe.id
-                            ? 'bg-gold-warm text-primary shadow-xs'
-                            : 'bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
+                            ? 'bg-gold-warm text-primary shadow-xs ring-2 ring-gold-warm/40 font-extrabold'
+                            : 'bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gold-warm/50'
                         }`}
                       >
                         {recipe.title}
                       </button>
                     ))}
                   </div>
+                </div>
 
+                {/* Active Recipe Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-gray-200/60 dark:border-gray-800">
                   <div>
-                    <h4 className="font-serif font-bold text-lg text-primary">
+                    <h4 className="font-serif font-bold text-base sm:text-lg text-primary">
                       {selectedTea.title} ({selectedTea.hindiTitle})
                     </h4>
-                    <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+                    <p className="text-xs text-muted dark:text-muted mt-0.5">
                       {selectedTea.benefits}
                     </p>
                   </div>
+                  <button
+                    onClick={() => speakCue(selectedTea.spokenGuide || selectedTea.benefits, 'hi-IN')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gold-warm/15 hover:bg-gold-warm/25 text-gold-warm font-bold text-xs w-fit cursor-pointer"
+                  >
+                    <Volume2 className="w-4 h-4" /> <span>विधि सुनें</span>
+                  </button>
+                </div>
 
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span className="font-bold">Ingredients:</span>
+                {/* Interactive Ingredients Badges (Tap to Speak for Illiterate Users) */}
+                <div>
+                  <span className="text-[11px] font-bold text-muted block mb-1.5">
+                    आवश्यक सामग्री (Tap any herb to hear in Hindi):
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
                     {selectedTea.herbs.map((h, i) => (
-                      <span key={i} className="bg-sage/15 text-sage px-2 py-0.5 rounded-md text-[11px] font-medium">
-                        {h}
-                      </span>
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => speakCue(`${h}: Is chai mein ${h} daal kar gunguna ubaalein.`, 'hi-IN')}
+                        className="bg-sage/15 hover:bg-sage/25 text-sage dark:text-booti-glow px-3 py-1.5 rounded-xl text-xs font-bold border border-sage/30 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                      >
+                        <span>🌿</span>
+                        <span>{h}</span>
+                        <Volume2 className="w-3 h-3 opacity-70" />
+                      </button>
                     ))}
                   </div>
+                </div>
 
-                  <div className="flex items-center gap-3 pt-2">
-                    <button
-                      onClick={() => setTeaBrewing(!teaBrewing)}
-                      className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md transition-all ${
-                        teaBrewing ? 'bg-amber-500 text-white' : 'bg-sage text-white hover:bg-sage/90'
-                      }`}
-                    >
-                      {teaBrewing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
-                      <span>{teaBrewing ? `Steeping (${teaSecondsLeft}s)` : `Start Steep (${selectedTea.steepSeconds}s)`}</span>
-                    </button>
+                {/* Steeping Controls */}
+                <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-200/60 dark:border-gray-800">
+                  <button
+                    onClick={() => setTeaBrewing(!teaBrewing)}
+                    className={`px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 cursor-pointer shadow-md transition-all active:scale-95 min-h-[44px] ${
+                      teaBrewing ? 'bg-amber-500 text-white animate-pulse' : 'bg-sage text-white hover:bg-sage/90'
+                    }`}
+                  >
+                    {teaBrewing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
+                    <span>{teaBrewing ? `उबाल आ रहा है (${teaSecondsLeft}s)` : `काढ़ा पकाना शुरू करें (${selectedTea.steepSeconds}s)`}</span>
+                  </button>
 
-                    <button
-                      onClick={() => {
-                        handleDrinkWater(wellnessStats.waterGlassesToday);
-                        toast.success('चाय पीकर जल साधना में दर्ज किया गया!', { icon: '☕' });
-                      }}
-                      className="px-3 py-2 bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gold-warm/20 flex items-center gap-1 cursor-pointer"
-                    >
-                      <Check className="w-3.5 h-3.5" /> Log Cup Drunk
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      handleDrinkWater(wellnessStats.waterGlassesToday);
+                      toast.success('चाय पीकर जल साधना में दर्ज किया गया!', { icon: '☕' });
+                    }}
+                    className="px-4 py-3 bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 rounded-2xl text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gold-warm/20 flex items-center gap-1.5 cursor-pointer active:scale-95 min-h-[44px]"
+                  >
+                    <Check className="w-4 h-4 text-emerald-500" />
+                    <span>कप पिएं (Log Cup)</span>
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Alpine Herbarium Cards */}
+            {/* Alpine Herbarium Cards with Audio Guidance */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-serif font-bold text-base text-primary">
-                  Sacred Himalayan Herbarium (हिमालयी जड़ी-बूटी ज्ञान)
-                </h3>
+                <div>
+                  <h3 className="font-serif font-bold text-base sm:text-lg text-primary">
+                    Sacred Himalayan Herbarium (हिमालयी जड़ी-बूटी ज्ञान)
+                  </h3>
+                  <p className="text-xs text-muted dark:text-muted">
+                    किसी भी जड़ी-बूटी के स्पीकर बटन को दबाकर उसकी उपयोगिता सुनें:
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1739,14 +1892,23 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     className="bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-800 rounded-2xl p-4 space-y-2.5 shadow-xs hover:border-sage transition-all"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-sage/15 text-sage">
-                        {herb.tag}
-                      </span>
-                      <span className="text-[11px] italic text-gray-400">{herb.botanical}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xl">{herb.icon || '🌿'}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-sage/15 text-sage dark:text-booti-glow">
+                          {herb.tag}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => speakCue(herb.hindiSpoken || `${herb.name}. ${herb.benefit}. Pahaadi vidhi: ${herb.recipe}`, 'hi-IN')}
+                        className="p-1.5 rounded-xl bg-gold-warm/15 hover:bg-gold-warm/25 text-gold-warm transition-all cursor-pointer"
+                        title="जड़ी-बूटी की जानकारी सुनें"
+                      >
+                        <Volume2 className="w-4 h-4" />
+                      </button>
                     </div>
 
                     <div>
-                      <h4 className="font-serif font-bold text-sm text-primary">{herb.name}</h4>
+                      <h4 className="font-serif font-bold text-sm sm:text-base text-primary">{herb.name}</h4>
                       <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
                         {herb.benefit}
                       </p>

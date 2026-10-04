@@ -2,243 +2,597 @@
   {
     "id": "rem_001",
     "condition_name": "Common Cold & Scratchy Throat",
-    "keywords": ["cough", "cold", "sore throat", "gale me kharash", "zukaam", "khasi"],
+    "keywords": [
+      "cough",
+      "cold",
+      "sore throat",
+      "gale me kharash",
+      "zukaam",
+      "khasi"
+    ],
     "tier": "Green",
     "remedy_name": "Tulsi-Mulethi Kwath (Decoction)",
     "remedy_text": "Boil 5-6 fresh Tulsi leaves and 1/2 tsp Mulethi (Licorice) powder in 2 cups of water until reduced to 1 cup. Strain and drink warm twice daily. Perform warm water gargles with a pinch of rock salt.",
     "ayurvedic_note": "Pacifies Kapha and Vata doshas, soothes mucosal lining.",
     "altitude_band": "All Altitudes (500m - 3000m)",
-    "source": "CCRAS / Ministry of AYUSH Guidelines"
+    "source": "CCRAS / Ministry of AYUSH Guidelines",
+    "dosage": {
+      "adult": "40-80 ml lukewarm kwath twice daily, 30 min after meals",
+      "child_6_12": "20-40 ml lukewarm kwath once daily after meals",
+      "child_under_6": "Not recommended for children under 6 without physician guidance",
+      "elderly": "30-40 ml lukewarm kwath twice daily after meals",
+      "hindi": "Din mein 1-2 baar khana khane ke 30 minute baad gunguna piyein",
+      "duration": "3-5 din tak"
+    }
   },
   {
     "id": "rem_002",
     "condition_name": "Mild Indigestion & Bloating",
-    "keywords": ["indigestion", "bloating", "gas", "pet me gas", "apach", "heavy stomach"],
+    "keywords": [
+      "indigestion",
+      "bloating",
+      "gas",
+      "pet me gas",
+      "apach",
+      "heavy stomach"
+    ],
     "tier": "Green",
     "remedy_name": "Jeera-Ajwain Infusion",
     "remedy_text": "Boil 1/2 tsp Cumin (Jeera) and 1/2 tsp Carom seeds (Ajwain) with a pinch of black salt in 250ml water for 5 minutes. Sip slowly after meals.",
     "ayurvedic_note": "Kindles Deepana (digestive fire) and relieves Vata entrapment.",
     "altitude_band": "All Altitudes",
-    "source": "AYUSH Ayurvedic Home Formularies"
+    "source": "AYUSH Ayurvedic Home Formularies",
+    "dosage": {
+      "adult": "100-150 ml warm infusion sipped slowly after major meals",
+      "child_6_12": "50 ml warm infusion once daily after lunch",
+      "child_under_6": "1-2 teaspoons under pediatric supervision",
+      "elderly": "50-100 ml warm infusion after meals",
+      "hindi": "Khana khane ke baad din mein 1-2 baar gunguna ghunt-ghunt piyein",
+      "duration": "3-5 din tak"
+    }
   },
   {
     "id": "rem_003",
     "condition_name": "Physical Fatigue & Cold Weather Soreness",
-    "keywords": ["fatigue", "body ache", "tiredness", "thakan", "badan dard", "thand lagna"],
+    "keywords": [
+      "fatigue",
+      "body ache",
+      "tiredness",
+      "thakan",
+      "badan dard",
+      "thand lagna"
+    ],
     "tier": "Green",
     "remedy_name": "Haldi-Ashwagandha Ksheerapaka",
     "remedy_text": "Mix 1/4 tsp pure turmeric powder and 1/2 tsp Ashwagandha root powder in 1 cup of warm milk. Consume before sleep.",
     "ayurvedic_note": "Rasayana (rejuvenator) and Balya (strength-promoting).",
     "altitude_band": "Mid-to-High Hills (1000m - 3500m)",
-    "source": "Ayurvedic Pharmacopoeia of India (API)"
+    "source": "Ayurvedic Pharmacopoeia of India (API)",
+    "dosage": {
+      "adult": "1 cup (150-200 ml) warm ksheerapaka at bedtime",
+      "child_6_12": "Half cup (80-100 ml) with half dosage of herbs at bedtime",
+      "child_under_6": "Plain warm turmeric milk only, avoid Ashwagandha under 6",
+      "elderly": "Half cup (100 ml) warm ksheerapaka before sleeping",
+      "hindi": "Raat ko sone se pehle 1 cup gungune doodh ke sath lein",
+      "duration": "5-7 din tak"
+    }
   },
   {
     "id": "rem_004",
     "condition_name": "Mild Dry Cough (Hill Cold)",
-    "keywords": ["dry cough", "sookhi khasi", "sukhi khasi", "throat tickle"],
+    "keywords": [
+      "dry cough",
+      "sookhi khasi",
+      "sukhi khasi",
+      "throat tickle"
+    ],
     "tier": "Green",
     "remedy_name": "Vasa (Adhatoda) & Honey Linctus",
     "remedy_text": "Mix 1 tsp fresh Vasa (Adhatoda vasica) leaf juice with 1 tsp raw organic honey. Take twice daily after meals.",
     "ayurvedic_note": "Potent bronchodilator and mucolytic herb native to Himalayan foothills.",
     "altitude_band": "Foothills and Mid-Hills (500m - 2000m)",
-    "source": "CCRAS Himalayan Herbal Compendium"
+    "source": "CCRAS Himalayan Herbal Compendium",
+    "dosage": {
+      "adult": "1 teaspoon (5 ml) juice with 1 tsp honey, twice daily after food",
+      "child_6_12": "Half teaspoon (2.5 ml) with 1 tsp honey, once daily",
+      "child_under_6": "Avoid Vasa in children under 6; consult doctor",
+      "elderly": "Half teaspoon twice daily with honey",
+      "hindi": "Din mein 1-2 baar khana khane ke baad shahad ke sath lein",
+      "duration": "3-5 din tak"
+    }
   },
   {
     "id": "rem_005",
     "condition_name": "Indigestion & Cold",
-    "keywords": ["indigestion", "gas", "cold", "cough", "ginger"],
+    "keywords": [
+      "indigestion",
+      "gas",
+      "cold",
+      "cough",
+      "ginger"
+    ],
     "tier": "Green",
     "remedy_name": "Adrak (Ginger) Decoction",
     "remedy_text": "Boil 2 gm dry ginger rhizome in water, reduce to one-fourth, and drink 10–20 ml twice daily. Ginger paste can also be applied on forehead for headache.",
     "ayurvedic_note": "Stimulates Agni (digestive fire), relieves Kapha-related congestion.",
     "altitude_band": "All Altitudes",
-    "source": "CCRAS Ayurvedic Home Remedies Booklet"
+    "source": "CCRAS Ayurvedic Home Remedies Booklet",
+    "dosage": {
+      "adult": "10-20 ml warm decoction twice daily before or after food",
+      "child_6_12": "5-10 ml with a little honey once daily",
+      "child_under_6": "Not recommended for infants; mild ginger water for ages 3-6",
+      "elderly": "10 ml warm decoction once or twice daily",
+      "hindi": "Din mein 1-2 baar 10-20 ml gunguna piyein",
+      "duration": "3-4 din tak"
+    }
   },
   {
     "id": "rem_006",
     "condition_name": "Piles & Gas",
-    "keywords": ["piles", "ajwain", "flatulence", "gas", "sinusitis"],
+    "keywords": [
+      "piles",
+      "ajwain",
+      "flatulence",
+      "gas",
+      "sinusitis"
+    ],
     "tier": "Green",
     "remedy_name": "Ajwain Powder with Buttermilk",
     "remedy_text": "Take 1 gm Ajwain powder with black salt in buttermilk twice daily. For sinusitis, apply warm paste over forehead and inhale vapors.",
     "ayurvedic_note": "Relieves Vata imbalance, useful in digestive and respiratory complaints.",
     "altitude_band": "All Altitudes",
-    "source": "CCRAS Ayurvedic Home Remedies Booklet"
+    "source": "CCRAS Ayurvedic Home Remedies Booklet",
+    "dosage": {
+      "adult": "1 gm powder with a glass of spiced buttermilk twice daily with meals",
+      "child_6_12": "0.5 gm in half glass buttermilk with lunch",
+      "child_under_6": "Avoid ajwain powder internally under 6",
+      "elderly": "0.5-1 gm in warm buttermilk once daily",
+      "hindi": "Dopehar ke khane ke sath chhaachh mein milakar lein",
+      "duration": "5-7 din tak"
+    }
   },
   {
     "id": "rem_007",
     "condition_name": "General Health & Hair Care",
-    "keywords": ["amla", "diabetes", "hair fall", "greying hair", "constipation"],
+    "keywords": [
+      "amla",
+      "diabetes",
+      "hair fall",
+      "greying hair",
+      "constipation"
+    ],
     "tier": "Green",
     "remedy_name": "Amla Juice & Paste",
     "remedy_text": "Consume 10–20 ml Amla juice daily. Apply paste of fruit rind on scalp to prevent hair fall and greying. Also useful for diabetes when combined with turmeric juice.",
     "ayurvedic_note": "Rasayana (rejuvenator), balances all three doshas, especially Pitta.",
     "altitude_band": "All Altitudes",
-    "source": "CCRAS Ayurvedic Home Remedies Booklet"
+    "source": "CCRAS Ayurvedic Home Remedies Booklet",
+    "dosage": {
+      "adult": "10-20 ml fresh juice mixed with equal water every morning on empty stomach",
+      "child_6_12": "5-10 ml diluted juice in the morning",
+      "child_under_6": "2.5-5 ml diluted juice once daily",
+      "elderly": "10 ml diluted juice in the morning",
+      "hindi": "Subah khali pet 10-20 ml taaze paani ke sath lein",
+      "duration": "Niyamit ya 1-2 hafte tak"
+    }
   },
   {
     "id": "rem_008",
     "condition_name": "Cough & Fever",
-    "keywords": ["tulsi", "cough", "cold", "fever", "skin allergy"],
+    "keywords": [
+      "tulsi",
+      "cough",
+      "cold",
+      "fever",
+      "skin allergy"
+    ],
     "tier": "Green",
     "remedy_name": "Tulsi Decoction",
     "remedy_text": "Boil handful of Tulsi leaves with 5 gm coriander seeds in water, reduce, and take 30 ml thrice daily for fever. Tulsi juice with honey relieves cough and cold.",
     "ayurvedic_note": "Sacred herb, balances Kapha and Vata, boosts immunity.",
     "altitude_band": "All Altitudes",
-    "source": "CCRAS Ayurvedic Home Remedies Booklet"
+    "source": "CCRAS Ayurvedic Home Remedies Booklet",
+    "dosage": {
+      "adult": "30 ml lukewarm decoction thrice daily during acute fever/cough",
+      "child_6_12": "15 ml lukewarm decoction twice daily",
+      "child_under_6": "5 ml with honey twice daily under supervision",
+      "elderly": "20 ml lukewarm decoction twice daily",
+      "hindi": "Din mein 2-3 baar gunguna karke 30 ml piyein",
+      "duration": "3-5 din tak"
+    }
   },
   {
     "id": "rem_009",
     "condition_name": "Seasonal Rejuvenation & Tridosha Balance",
-    "keywords": ["haritaki", "rasayana", "seasonal health", "constipation", "immunity", "rutucharya"],
+    "keywords": [
+      "haritaki",
+      "rasayana",
+      "seasonal health",
+      "constipation",
+      "immunity",
+      "rutucharya"
+    ],
     "tier": "Green",
     "remedy_name": "Ritu Haritaki (Seasonal Chebulic Myrobalan)",
     "remedy_text": "Take 2-3 gm of fine Haritaki fruit powder daily with seasonal adjuvants (Anupana): with Rock Salt (Saindhava) in Varsha/Monsoon, Sugar (Sita) in Sharad/Autumn, Ginger (Shunthi) in Hemanta/Early Winter, Long Pepper (Pippali) in Shishira/Late Winter, Honey (Madhu) in Vasanta/Spring, and Jaggery (Guda) in Grishma/Summer.",
     "ayurvedic_note": "Tridoshahara, Deepana, Medhya, Rasayana; preserves longevity and cleanses metabolic wastes (Mala shodhana).",
     "altitude_band": "All Altitudes (500m - 3500m)",
-    "source": "Madanapāla Nighaṇṭu, Abhayādi Varga, Sl. 18-25"
+    "source": "Madanapāla Nighaṇṭu, Abhayādi Varga, Sl. 18-25",
+    "dosage": {
+      "adult": "2-3 gm fine powder with seasonal adjuvant once daily in morning",
+      "child_6_12": "1 gm with seasonal adjuvant once daily",
+      "child_under_6": "Avoid purgatives like Haritaki under 6",
+      "elderly": "1-1.5 gm with warm water or seasonal anupana",
+      "hindi": "Subah khali pet mausam ke anusaar anupaan ke sath lein",
+      "duration": "7-14 din tak"
+    }
   },
   {
     "id": "rem_010",
     "condition_name": "Chronic Fever & Rheumatoid Pain",
-    "keywords": ["guduchi", "giloy", "amrita", "chronic fever", "joint pain", "amavata", "vatarakta"],
+    "keywords": [
+      "guduchi",
+      "giloy",
+      "amrita",
+      "chronic fever",
+      "joint pain",
+      "amavata",
+      "vatarakta"
+    ],
     "tier": "Green",
     "remedy_name": "Guduchi Svarasa with Specific Anupana",
     "remedy_text": "Take 10–15 ml fresh stem juice or 30 ml decoction of Guduchi. Administer with Jaggery (Guda) for Vata & constipation, with Sugar (Sita) for Pitta disorders, with Honey (Madhu) for Kapha, with Castor Oil (Eranda Taila) for Vatarakta/Gout, and with Shunthi for Amavata (Rheumatoid arthritis).",
     "ayurvedic_note": "Tridoshashamaka, Vishaghna, Balya, Rasayana; eliminates Ama and cleanses blood.",
     "altitude_band": "All Altitudes (0m - 1500m)",
-    "source": "Madanapāla Nighaṇṭu, Abhayādi Varga, Sl. 37-40"
+    "source": "Madanapāla Nighaṇṭu, Abhayādi Varga, Sl. 37-40",
+    "dosage": {
+      "adult": "10-15 ml fresh juice or 30 ml decoction twice daily with anupana",
+      "child_6_12": "5-10 ml decoction once daily with honey",
+      "child_under_6": "Consult an Ayurvedic physician",
+      "elderly": "15 ml decoction twice daily after meals",
+      "hindi": "Din mein 2 baar khana khane ke baad upyukt anupaan ke sath lein",
+      "duration": "7-10 din tak"
+    }
   },
   {
     "id": "rem_011",
     "condition_name": "Bronchial Congestion & Deep Cough",
-    "keywords": ["vasa", "adusa", "productive cough", "kasa", "shwasa", "haemoptysis", "raktapitta"],
+    "keywords": [
+      "vasa",
+      "adusa",
+      "productive cough",
+      "kasa",
+      "shwasa",
+      "haemoptysis",
+      "raktapitta"
+    ],
     "tier": "Green",
     "remedy_name": "Vasa Patra Svarasa with Honey",
     "remedy_text": "Express 10–15 ml fresh juice from gently warmed Vasa leaves. Blend thoroughly with 5–10 ml raw honey. Consume 2–3 times daily after food.",
     "ayurvedic_note": "Tikta-Kashaya rasa, Sheeta virya; specifically alleviates Kapha-Pitta, Kasa, Shwasa, and Raktapitta.",
     "altitude_band": "Foothills and Mid-Hills (500m - 2000m)",
-    "source": "Madanapāla Nighaṇṭu, Abhayādi Varga, Sl. 35-36"
+    "source": "Madanapāla Nighaṇṭu, Abhayādi Varga, Sl. 35-36",
+    "dosage": {
+      "adult": "10-15 ml warmed leaf juice blended with 5-10 ml honey, 2-3 times daily",
+      "child_6_12": "5 ml juice with honey twice daily",
+      "child_under_6": "Contraindicated under 6 years",
+      "elderly": "5-10 ml with honey twice daily after meals",
+      "hindi": "Din mein 2 baar khana khane ke baad shahad mein milakar lein",
+      "duration": "3-5 din tak"
+    }
   },
   {
     "id": "rem_012",
     "condition_name": "Loss of Appetite & Sluggish Agni",
-    "keywords": ["trikatu", "shunthi", "maricha", "pippali", "appetite", "agnimandya", "slow metabolism"],
+    "keywords": [
+      "trikatu",
+      "shunthi",
+      "maricha",
+      "pippali",
+      "appetite",
+      "agnimandya",
+      "slow metabolism"
+    ],
     "tier": "Green",
     "remedy_name": "Trikatu Churna with Honey",
     "remedy_text": "Combine equal parts of Dry Ginger (Shunthi), Black Pepper (Maricha), and Long Pepper (Pippali). Take 1 to 2 gm of this blend mixed with 1 tsp honey before meals.",
     "ayurvedic_note": "Katu rasa, Ushna virya, Deepana, Pachana; scrapes away Kapha, clears respiratory channels, and kindles digestive fire.",
     "altitude_band": "All Altitudes",
-    "source": "Madanapāla Nighaṇṭu, Shunthyādi Varga, Sl. 16-17"
+    "source": "Madanapāla Nighaṇṭu, Shunthyādi Varga, Sl. 16-17",
+    "dosage": {
+      "adult": "1-2 gm powder mixed with 1 tsp honey before meals twice daily",
+      "child_6_12": "0.5 gm with honey once daily before food",
+      "child_under_6": "Avoid pungent Trikatu under 6",
+      "elderly": "0.5-1 gm with honey twice daily before food",
+      "hindi": "Khana khane se 15 minute pehle shahad ke sath lein",
+      "duration": "5-7 din tak"
+    }
   },
   {
     "id": "rem_013",
     "condition_name": "Abdominal Spasms, Gas & Flatulence",
-    "keywords": ["panchakola", "pet dard", "shoola", "gulma", "anaha", "bloating", "cramps"],
+    "keywords": [
+      "panchakola",
+      "pet dard",
+      "shoola",
+      "gulma",
+      "anaha",
+      "bloating",
+      "cramps"
+    ],
     "tier": "Green",
     "remedy_name": "Panchakola Churna Infusion",
     "remedy_text": "Take 1–2 gm of powdered Panchakola (equal parts of Pippali, Pippalimoola, Chavya, Chitraka, and Nagara/Shunthi) with warm water or buttermilk twice daily.",
     "ayurvedic_note": "Potent Deepana-Pachana formulation; eradicates Gulma, Shoola, Anaha, and Kapha-Vata blockage.",
     "altitude_band": "All Altitudes",
-    "source": "Madanapāla Nighaṇṭu, Shunthyādi Varga, Sl. 26-27"
+    "source": "Madanapāla Nighaṇṭu, Shunthyādi Varga, Sl. 26-27",
+    "dosage": {
+      "adult": "1-2 gm powder with warm water or buttermilk twice daily after food",
+      "child_6_12": "0.5 gm with warm water once daily",
+      "child_under_6": "Contraindicated in young children",
+      "elderly": "0.5-1 gm with warm water twice daily",
+      "hindi": "Din mein 1-2 baar gungune paani ke sath khana khane ke baad lein",
+      "duration": "3-5 din tak"
+    }
   },
   {
     "id": "rem_014",
     "condition_name": "Severe Spasmodic Colic & Tympanites",
-    "keywords": ["hingu", "asafoetida", "colic", "afara", "stomach cramp", "gas pain", "gulma"],
+    "keywords": [
+      "hingu",
+      "asafoetida",
+      "colic",
+      "afara",
+      "stomach cramp",
+      "gas pain",
+      "gulma"
+    ],
     "tier": "Green",
     "remedy_name": "Shodhita Hingu with Ghee & Warm Water",
     "remedy_text": "Fry a pinch (approx. 125–250 mg) of pure Hing in cow's ghee until aromatic. Consume with the first morsel of warm food or mix in warm water with a pinch of rock salt.",
     "ayurvedic_note": "Tikshna, Ushna, Vata-Kaphanut; instantly normalizes Apana Vata and relieves colicky pain.",
     "altitude_band": "All Altitudes",
-    "source": "Madanapāla Nighaṇṭu, Shunthyādi Varga, Sl. 58-59"
+    "source": "Madanapāla Nighaṇṭu, Shunthyādi Varga, Sl. 58-59",
+    "dosage": {
+      "adult": "125-250 mg shodhita hing fried in ghee with first morsel of food",
+      "child_6_12": "A small pinch (approx 50 mg) in ghee with rice",
+      "child_under_6": "External hing paste on navel only; do NOT ingest under 2",
+      "elderly": "100-125 mg in warm water or food",
+      "hindi": "Ghee mein bhunkar khane ke pehle niwale ke sath ya gungune paani mein lein",
+      "duration": "Zaroorat padne par"
+    }
   },
   {
     "id": "rem_015",
     "condition_name": "Burning Micturition & Urinary Dysuria",
-    "keywords": ["gokshura", "mutrakrichha", "burning urine", "kidney cleanse", "peshab me jalan"],
+    "keywords": [
+      "gokshura",
+      "mutrakrichha",
+      "burning urine",
+      "kidney cleanse",
+      "peshab me jalan"
+    ],
     "tier": "Green",
     "remedy_name": "Gokshura Phanta / Kwath",
     "remedy_text": "Boil 10 gm crushed Gokshura (Tribulus terrestris) fruit in 200 ml water down to 50 ml. Cool slightly, add 1 tsp Mishri (unrefined sugar), and drink twice daily.",
     "ayurvedic_note": "Madhura, Sheeta virya, Vasti-shodhana; soothes the urinary tract, eliminates Pitta-Vata burning, and acts as a mild diuretic.",
     "altitude_band": "All Altitudes",
-    "source": "Madanapāla Nighaṇṭu, Abhayādi Varga, Sl. 55-56"
+    "source": "Madanapāla Nighaṇṭu, Abhayādi Varga, Sl. 55-56",
+    "dosage": {
+      "adult": "50 ml warm kwath with 1 tsp mishri twice daily after food",
+      "child_6_12": "25 ml with mishri once daily",
+      "child_under_6": "Consult a pediatric doctor",
+      "elderly": "25-40 ml twice daily after food",
+      "hindi": "Din mein 2 baar mishri milakar gunguna piyein",
+      "duration": "5-7 din tak"
+    }
   },
   {
     "id": "rem_016",
     "condition_name": "Burning Sensations, Internal Heat & Bilious Emesis",
-    "keywords": ["draksha", "munakka", "pitta", "tishna", "burning sensation", "chhardi", "acid vomit"],
+    "keywords": [
+      "draksha",
+      "munakka",
+      "pitta",
+      "tishna",
+      "burning sensation",
+      "chhardi",
+      "acid vomit"
+    ],
     "tier": "Green",
     "remedy_name": "Draksha Sheeta Kashaya (Cold Infusion)",
     "remedy_text": "Soak 10-15 seeded dry grapes (Munakka) in 1 cup of boiled, cooled water overnight. Mash well in the morning, strain, and drink on an empty stomach.",
     "ayurvedic_note": "Madhura, Snigdha, Sheeta; immediately subdues aggravated Pitta, relieves Trishna (morbid thirst), and controls burning sensations.",
     "altitude_band": "All Altitudes",
-    "source": "Madanapāla Nighaṇṭu, Drākshādi Phala Varga, Sl. 2-5"
+    "source": "Madanapāla Nighaṇṭu, Drākshādi Phala Varga, Sl. 2-5",
+    "dosage": {
+      "adult": "1 cup cold infusion (from 10-15 Munakka) on empty stomach in morning",
+      "child_6_12": "Half cup cold infusion (from 5-7 Munakka) in morning",
+      "child_under_6": "3-4 soaked and mashed Munakka water",
+      "elderly": "1 cup cold infusion on empty stomach",
+      "hindi": "Subah khali pet raat ki bhigoyi hui draksha ka paani piyein",
+      "duration": "5-7 din tak"
+    }
   },
   {
     "id": "rem_017",
     "condition_name": "Hyperacidity & Nervous Exhaustion",
-    "keywords": ["kushmanda", "pethha", "acidity", "amlapitta", "daha", "ulcer pain", "heat"],
+    "keywords": [
+      "kushmanda",
+      "pethha",
+      "acidity",
+      "amlapitta",
+      "daha",
+      "ulcer pain",
+      "heat"
+    ],
     "tier": "Green",
     "remedy_name": "Fresh Kushmanda (Ash Gourd) Svarasa",
     "remedy_text": "Extract 30–50 ml fresh juice from peeled, raw Kushmanda fruit. Add a small pinch of powdered Yastimadhu or rock sugar. Consume early morning.",
     "ayurvedic_note": "Sheeta, Guru, Basti-shodhaka; powerfully cools systemic Pitta, nourishes tissues (Dhatu-vardhana), and pacifies Amlapitta.",
     "altitude_band": "All Altitudes",
-    "source": "Madanapāla Nighaṇṭu, Kushmāndādi Shāka Varga, Sl. 4-8"
+    "source": "Madanapāla Nighaṇṭu, Kushmāndādi Shāka Varga, Sl. 4-8",
+    "dosage": {
+      "adult": "30-50 ml fresh raw juice with a pinch of rock sugar early morning",
+      "child_6_12": "15-25 ml diluted juice in the morning",
+      "child_under_6": "10-15 ml diluted juice under supervision",
+      "elderly": "25-30 ml in the morning",
+      "hindi": "Subah khali pet 30-50 ml taaza ras mishri ke sath lein",
+      "duration": "7-14 din tak"
+    }
   },
   {
     "id": "rem_018",
     "condition_name": "Post-Illness Debility & Convalescence",
-    "keywords": ["laja manda", "parched rice", "weakness", "fever recovery", "kamzori", "dehydration"],
+    "keywords": [
+      "laja manda",
+      "parched rice",
+      "weakness",
+      "fever recovery",
+      "kamzori",
+      "dehydration"
+    ],
     "tier": "Green",
     "remedy_name": "Laja Manda (Popped Rice Gruel Water)",
     "remedy_text": "Boil 1 part roasted puffed paddy/rice (Laja) in 14 parts water until soft. Strain the supernatant liquid, add a pinch of Saindhava salt and roasted Jeera, and serve warm in small, frequent sips.",
     "ayurvedic_note": "Laghu, Grahi, Deepana, Dhatu-satmya; provides instant hydration and energy without overloading weak digestive fire.",
     "altitude_band": "All Altitudes",
-    "source": "Madanapāla Nighaṇṭu, Kritānna Varga, Sl. 23-27 & 135-136"
+    "source": "Madanapāla Nighaṇṭu, Kritānna Varga, Sl. 23-27 & 135-136",
+    "dosage": {
+      "adult": "100-200 ml warm laja manda in small frequent sips 2-3 times daily",
+      "child_6_12": "50-100 ml warm gruel water as needed for hydration",
+      "child_under_6": "30-50 ml warm gruel water in small spoonfuls",
+      "elderly": "100 ml warm gruel water twice daily",
+      "hindi": "Din mein 2-3 baar halka gunguna karke ghunt-ghunt piyein",
+      "duration": "2-3 din tak"
+    }
   },
   {
     "id": "rem_019",
     "condition_name": "Joint Pain & Morning Stiffness (Sandhivata / Amavata)",
-    "keywords": ["joint pain", "jod dard", "jodon me dard", "jodo me dard", "jodo", "jodon", "ghutno ka dard", "ghutna", "jakdan", "sandhivata", "amavata", "stiffness", "arthritis", "sandhi-shoola", "knee pain"],
+    "keywords": [
+      "joint pain",
+      "jod dard",
+      "jodon me dard",
+      "jodo me dard",
+      "jodo",
+      "jodon",
+      "ghutno ka dard",
+      "ghutna",
+      "jakdan",
+      "sandhivata",
+      "amavata",
+      "stiffness",
+      "arthritis",
+      "sandhi-shoola",
+      "knee pain"
+    ],
     "tier": "Green",
     "remedy_name": "Methi-Sunthi Churna & Nirgundi Tel",
     "remedy_text": "1. Ek chammach Methi dana powder aur aadha chammach Sunthi (Dry ginger) powder milayein.\n2. Subah khali pet gungune paani ke sath lein.\n3. Jodon par gungune Nirgundi ya Til ke tel ki halke haath se malish karein.",
     "ayurvedic_note": "Methi aur Sunthi Vata-Kapha dosha ko shaant karte hain, jodon ki jakdan (Stambha) aur sujan ko door karte hain aur pachan ko theek karte hain.",
     "altitude_band": "All Altitudes",
-    "source": "CCRAS Ayurvedic Home Formularies & Classical Treatise"
+    "source": "CCRAS Ayurvedic Home Formularies & Classical Treatise",
+    "dosage": {
+      "adult": "1 tsp Methi powder + 1/2 tsp Sunthi powder with warm water in morning; Nirgundi oil massage twice daily",
+      "child_6_12": "Gentle external warm oil massage only; powder half dose if prescribed",
+      "child_under_6": "External gentle oil massage only; do not administer powder",
+      "elderly": "Half tsp Methi + 1/4 tsp Sunthi with warm water; regular gentle oil massage",
+      "hindi": "Subah gungune paani ke sath lein aur tel se jodon par halke haath se malish karein",
+      "duration": "10-14 din tak"
+    }
   },
   {
     "id": "rem_020",
     "condition_name": "Allergic Rhinitis, Sneezing & Nasal Congestion (Vata-Kapha Pratishyaya)",
-    "keywords": ["allergic rhinitis", "nasal congestion", "naak band", "chheenk", "chheekein", "chheken", "chhik", "sneezing", "pratishyaya", "running nose", "sinus", "khujli", "aankhon me khujli", "watery eyes", "peenas"],
+    "keywords": [
+      "allergic rhinitis",
+      "nasal congestion",
+      "naak band",
+      "chheenk",
+      "chheekein",
+      "chheken",
+      "chhik",
+      "sneezing",
+      "pratishyaya",
+      "running nose",
+      "sinus",
+      "khujli",
+      "aankhon me khujli",
+      "watery eyes",
+      "peenas"
+    ],
     "tier": "Green",
     "remedy_name": "Anu Taila Pratimarsha Nasya & Haridra-Tulsi Bashpa",
     "remedy_text": "1. Subah aur shaam gungune Anu Taila ya shuddh Til ke tel ki 2-2 boond dono naak ke chhidron (nostrils) mein daalein (Pratimarsha Nasya).\n2. 4-5 Tulsi ke patte aur ek chauthai chammach Haldi ko 1 litre paani mein ubaal kar uski bhaap (steam inhalation) din mein 1-2 baar lein.\n3. Thanda paani aur dhool-mitti se bachein aur gunguna paani piyein.",
     "ayurvedic_note": "Anu Taila Urdhwajatrugata rogon (ENT) mein srotas ko kholta hai, kaph ko nikalta hai aur naak ki allergy tatha chheenko ko shaant karta hai.",
     "altitude_band": "All Altitudes",
-    "source": "CCRAS / Ministry of AYUSH Guidelines"
+    "source": "CCRAS / Ministry of AYUSH Guidelines",
+    "dosage": {
+      "adult": "2 drops Anu Taila in each nostril morning/evening; steam inhalation 1-2 times daily",
+      "child_6_12": "1 drop warm sesame oil in each nostril; mild steam under supervision",
+      "child_under_6": "Avoid nasal drops in infants under 2; gentle chest warmth only",
+      "elderly": "1-2 drops warm sesame or Anu Taila twice daily; gentle steam inhalation",
+      "hindi": "Naak mein 2-2 boond tel daalein aur haldi-tulsi paani ki bhaap lein",
+      "duration": "5-7 din tak"
+    }
   },
   {
     "id": "rem_021",
     "condition_name": "Tension Headache & Mental Fatigue (Shirashoola)",
-    "keywords": ["headache", "sar dard", "sir dard", "mund peed", "mund pid", "shirashoola", "tension headache", "forehead pain", "stress"],
+    "keywords": [
+      "headache",
+      "sar dard",
+      "sir dard",
+      "mund peed",
+      "mund pid",
+      "shirashoola",
+      "tension headache",
+      "forehead pain",
+      "stress"
+    ],
     "tier": "Green",
     "remedy_name": "Adrak-Chandan Lep & Dhanyaka Infusion",
     "remedy_text": "1. Saunth (dry ginger) ya Chandan ka paste banakar maathe par lagayein.\n2. 1 chammach Dhaniya seeds ko 1 cup paani mein ubaal kar gunguna piyein.",
     "ayurvedic_note": "Pitta aur Vata dosha ko shaant karta hai aur sar ke tanav aur thakan ko door karta hai.",
     "altitude_band": "All Altitudes",
-    "source": "CCRAS / Ministry of AYUSH Guidelines"
+    "source": "CCRAS / Ministry of AYUSH Guidelines",
+    "dosage": {
+      "adult": "External paste on forehead; 1 cup coriander infusion warm twice daily",
+      "child_6_12": "External Chandan paste on forehead; half cup coriander infusion",
+      "child_under_6": "External paste only; ensure rest in quiet room",
+      "elderly": "Forehead paste and 1 cup warm coriander infusion after meals",
+      "hindi": "Maathe par lep lagayein aur dhaniya ka gunguna paani piyein",
+      "duration": "1-3 din tak"
+    }
   },
   {
     "id": "rem_022",
     "condition_name": "Dizziness, Vertigo & Lightheadedness (Bhrama)",
-    "keywords": ["dizziness", "vertigo", "chakkar", "sir ghumna", "sar ghoomna", "bhrama", "bhram", "lightheadedness", "weakness"],
+    "keywords": [
+      "dizziness",
+      "vertigo",
+      "chakkar",
+      "sir ghumna",
+      "sar ghoomna",
+      "bhrama",
+      "bhram",
+      "lightheadedness",
+      "weakness"
+    ],
     "tier": "Green",
     "remedy_name": "Dhanyaka-Mishri Hima & Nimbu-Lavana Jal",
     "remedy_text": "1. Turant aaram se baith jaayein aur pairon ko halka sa uncha rakhein.\n2. Ek glass taaze paani mein halka sa nimbu, ek chutki sendha namak aur thodi mishri milaakar ghoont-ghoont piyein.\n3. Ek chammach Dhaniya ke beej raat ko paani mein bhigo dein, subah chhaan kar mishri ke sath piyein (Dhanyaka Hima).",
     "ayurvedic_note": "Dhanyaka aur Mishri Sheet-virya hone ke karan Pitta aur Vata dosha ko shaant karte hain aur Bhrama (chakkar) ko turant shaant karte hain.",
     "altitude_band": "All Altitudes",
-    "source": "CCRAS / Ministry of AYUSH Guidelines"
+    "source": "CCRAS / Ministry of AYUSH Guidelines",
+    "dosage": {
+      "adult": "1 glass electrolyte lemon water immediately; 1 cup Dhanyaka Hima on empty stomach",
+      "child_6_12": "Half glass lemon water with salt and sugar; rest with elevated feet",
+      "child_under_6": "Oral rehydration solution in small sips; seek pediatric evaluation",
+      "elderly": "1 glass lemon-salt-sugar water slowly; rest immediately with feet elevated",
+      "hindi": "Turant aaram se baith kar nimbu-namak paani piyein aur dhaniya paani subah lein",
+      "duration": "Lakshan theek hone tak"
+    }
   }
 ]

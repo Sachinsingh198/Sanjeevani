@@ -2,17 +2,32 @@
 // Sanjeevani — lightweight client-side consultation history.
 //
 // The backend owns the real conversation record; this is a thin, resilient
-// mirror kept in localStorage so a patient can glance back at "what did
-// Sanjeevani tell me last time" even on a low-end device with patchy
-// connectivity, without needing an extra API round trip just to render a
-// history list. Each entry is intentionally small (title + tier + date).
+// mirror kept in localStorage scoped per user so a patient can glance back
+// at "what did Sanjeevani tell me last time".
+// When a new account is registered, history starts completely empty.
 // ---------------------------------------------------------------------------
-const STORAGE_KEY = 'sanjeevani_session_history_v1';
 const MAX_ENTRIES = 25;
 
-export function listSessions() {
+export function getCurrentUserId() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const rawUser = localStorage.getItem('sanjeevani_user_profile');
+    if (rawUser) {
+      const u = JSON.parse(rawUser);
+      if (u?.id) return String(u.id);
+    }
+  } catch {}
+  return null;
+}
+
+export function getStorageKey(userId) {
+  const uid = userId || getCurrentUserId();
+  return uid ? `sanjeevani_session_history_u_${uid}` : 'sanjeevani_session_history_guest';
+}
+
+export function listSessions(userId) {
+  try {
+    const key = getStorageKey(userId);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -21,13 +36,14 @@ export function listSessions() {
 
 /**
  * Fetches server-side consultations from GET /chat/history,
- * caching the results in localStorage for offline availability.
+ * caching the results in localStorage scoped to the authenticated user.
  */
-export async function fetchServerSessions() {
+export async function fetchServerSessions(userId) {
+  const key = getStorageKey(userId);
   try {
     const { getChatHistory } = await import('../api/client');
     const data = await getChatHistory();
-    if (Array.isArray(data) && data.length > 0) {
+    if (Array.isArray(data)) {
       const formatted = data.map((item) => ({
         conversationId: item.conversation_id || item.conversationId,
         summary: item.summary || 'Consultation',
@@ -35,7 +51,7 @@ export async function fetchServerSessions() {
         updatedAt: item.updatedAt || item.created_at || new Date().toISOString(),
       }));
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(formatted.slice(0, MAX_ENTRIES)));
+        localStorage.setItem(key, JSON.stringify(formatted.slice(0, MAX_ENTRIES)));
       } catch {
         /* storage full or unavailable */
       }
@@ -44,12 +60,13 @@ export async function fetchServerSessions() {
   } catch (err) {
     console.warn('[SessionStore] Server sessions unavailable, using local cache:', err);
   }
-  return listSessions();
+  return listSessions(userId);
 }
 
-export function recordSessionTurn({ conversationId, summary, tier }) {
+export function recordSessionTurn({ conversationId, summary, tier, userId }) {
   try {
-    const all = listSessions();
+    const key = getStorageKey(userId);
+    const all = listSessions(userId);
     const existingIdx = all.findIndex((s) => s.conversationId === conversationId);
     const entry = {
       conversationId,
@@ -65,16 +82,18 @@ export function recordSessionTurn({ conversationId, summary, tier }) {
     }
 
     const trimmed = all.slice(0, MAX_ENTRIES);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(key, JSON.stringify(trimmed));
     return trimmed;
   } catch {
-    return listSessions();
+    return listSessions(userId);
   }
 }
 
-export function clearSessionHistory() {
+export function clearSessionHistory(userId) {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(getStorageKey(userId));
+    localStorage.removeItem('sanjeevani_session_history_v1');
+    sessionStorage.removeItem('sanjeevani_conv_id');
   } catch {
     /* no-op */
   }

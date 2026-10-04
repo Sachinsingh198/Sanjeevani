@@ -7,28 +7,748 @@
       "reason": "Increases Pitta and irritates inflamed gastric mucosa."
     },
     {
+      "herb": "Ginger/Sunthi",
+      "target_condition": "BleedingDisorders",
+      "severity": "MEDIUM",
+      "reason": "Inhibits thromboxane synthetase and may prolong bleeding time."
+    },
+    {
+      "herb": "Ginger/Sunthi",
+      "target_condition": "Gallstones",
+      "severity": "MEDIUM",
+      "reason": "Stimulates bile flow which may precipitate biliary colic."
+    },
+    {
       "herb": "Black Pepper/Maricha",
       "target_condition": "Hyperacidity/PepticUlcer",
       "severity": "HIGH",
-      "reason": "Direct irritant to active gastrointestinal ulcerations."
+      "reason": "Direct irritant to active gastrointestinal ulcerations and mucosal erosions."
     },
     {
-      "herb": "Mulethi/Licorice",
-      "target_condition": "Hypertension",
+      "herb": "Black Pepper/Maricha",
+      "target_condition": "Gastritis",
+      "severity": "HIGH",
+      "reason": "Pungent ushna virya aggravates mucosal inflammation."
+    },
+    {
+      "herb": "Black Pepper/Maricha",
+      "target_condition": "GERD",
       "severity": "MEDIUM",
-      "reason": "Excessive licorice consumption can cause pseudoaldosteronism and elevate blood pressure."
+      "reason": "Relaxes lower esophageal sphincter and causes acid reflux flare."
+    },
+    {
+      "herb": "Mulethi/Licorice/Yashtimadhu",
+      "target_condition": "Hypertension",
+      "severity": "HIGH",
+      "reason": "Excessive licorice causes pseudoaldosteronism, sodium retention, and elevates blood pressure."
+    },
+    {
+      "herb": "Mulethi/Licorice/Yashtimadhu",
+      "target_condition": "HeartFailure",
+      "severity": "HIGH",
+      "reason": "Fluid retention and hypokalemia risk from glycyrrhizin."
+    },
+    {
+      "herb": "Mulethi/Licorice/Yashtimadhu",
+      "target_condition": "KidneyDisease",
+      "severity": "HIGH",
+      "reason": "Alters electrolyte balance leading to hazardous potassium depletion."
+    },
+    {
+      "herb": "Mulethi/Licorice/Yashtimadhu",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "High intake associated with preterm labor and endocrine disruption."
     },
     {
       "herb": "Guggulu",
       "target_condition": "Pregnancy",
       "severity": "CRITICAL",
-      "reason": "Possesses mild emmenagogue properties; strictly avoided during pregnancy."
+      "reason": "Possesses mild emmenagogue and uterine stimulant properties; strictly avoided during pregnancy."
+    },
+    {
+      "herb": "Guggulu",
+      "target_condition": "LiverDisease",
+      "severity": "HIGH",
+      "reason": "Metabolized extensively by hepatic enzymes; potentially hepatotoxic in liver compromise."
+    },
+    {
+      "herb": "Guggulu",
+      "target_condition": "BleedingDisorders",
+      "severity": "HIGH",
+      "reason": "Inhibits platelet aggregation and increases hemorrhage risk."
+    },
+    {
+      "herb": "Guggulu",
+      "target_condition": "ThyroidDisorders",
+      "severity": "MEDIUM",
+      "reason": "Stimulates thyroid activity; may interfere with thyroid hormone replacement therapy."
     },
     {
       "herb": "Vasa/Adhatoda",
       "target_condition": "Pregnancy",
       "severity": "CRITICAL",
-      "reason": "Contains uterotonic alkaloids (vasicine); unsafe in pregnancy."
+      "reason": "Contains uterotonic alkaloids (vasicine, vasicinone); induces uterine contractions."
+    },
+    {
+      "herb": "Vasa/Adhatoda",
+      "target_condition": "ActiveBleeding",
+      "severity": "MEDIUM",
+      "reason": "High doses may alter coagulation dynamics."
+    },
+    {
+      "herb": "Ashwagandha",
+      "target_condition": "Hyperthyroidism",
+      "severity": "HIGH",
+      "reason": "Stimulates thyroid gland activity and increases free T3 and T4 levels, worsening thyrotoxicosis."
+    },
+    {
+      "herb": "Ashwagandha",
+      "target_condition": "AutoimmuneDisease",
+      "severity": "MEDIUM",
+      "reason": "Immunostimulatory actions may exacerbate autoimmune conditions like Lupus, MS, or RA."
+    },
+    {
+      "herb": "Ashwagandha",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Possesses abortifacient potential in high pharmacological doses."
+    },
+    {
+      "herb": "Ashwagandha",
+      "target_condition": "Hypotension",
+      "severity": "MEDIUM",
+      "reason": "Has mild hypotensive and vasodilatory effects, lowering blood pressure further."
+    },
+    {
+      "herb": "Triphala",
+      "target_condition": "AnticoagulantTherapy",
+      "severity": "HIGH",
+      "reason": "Constituents possess antiplatelet properties and potentiate bleeding risks with warfarin/aspirin."
+    },
+    {
+      "herb": "Triphala",
+      "target_condition": "Diarrhea",
+      "severity": "HIGH",
+      "reason": "Mild laxative effect will exacerbate acute gastrointestinal fluid loss."
+    },
+    {
+      "herb": "Triphala",
+      "target_condition": "Dehydration",
+      "severity": "MEDIUM",
+      "reason": "Aperient action promotes bowel evacuation, aggravating electrolyte loss."
+    },
+    {
+      "herb": "Triphala",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "Downward moving Apana Vayu stimulation and laxative action may trigger uterine irritability."
+    },
+    {
+      "herb": "Haridra/Turmeric/Curcumin",
+      "target_condition": "GallbladderDisease",
+      "severity": "HIGH",
+      "reason": "Strong cholagogue effect stimulates gallbladder contraction, risking ductal obstruction."
+    },
+    {
+      "herb": "Haridra/Turmeric/Curcumin",
+      "target_condition": "Gallstones",
+      "severity": "HIGH",
+      "reason": "Contraction of biliary vesicle against cholelithiasis causes acute biliary pain."
+    },
+    {
+      "herb": "Haridra/Turmeric/Curcumin",
+      "target_condition": "BileDuctObstruction",
+      "severity": "CRITICAL",
+      "reason": "Contraindicated where bile flow is mechanically obstructed."
+    },
+    {
+      "herb": "Haridra/Turmeric/Curcumin",
+      "target_condition": "AnticoagulantTherapy",
+      "severity": "MEDIUM",
+      "reason": "Curcumin exhibits mild antiplatelet activity, enhancing antithrombotic drug effects."
+    },
+    {
+      "herb": "Haridra/Turmeric/Curcumin",
+      "target_condition": "BleedingDisorders",
+      "severity": "MEDIUM",
+      "reason": "Prolongs bleeding time; must be used cautiously in hemorrhagic diathesis."
+    },
+    {
+      "herb": "Tulsi/HolyBasil",
+      "target_condition": "AntidiabeticDrugs",
+      "severity": "MEDIUM",
+      "reason": "Additive hypoglycemic action can cause sudden blood glucose drops when combined with insulin or sulfonylureas."
+    },
+    {
+      "herb": "Tulsi/HolyBasil",
+      "target_condition": "AnticoagulantTherapy",
+      "severity": "MEDIUM",
+      "reason": "Eugenol content has antiplatelet properties, potentiating blood thinners."
+    },
+    {
+      "herb": "Tulsi/HolyBasil",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "Mild emmenagogue effects and uterine tone stimulation reported in traditional texts."
+    },
+    {
+      "herb": "Methi/Fenugreek",
+      "target_condition": "InsulinTherapy",
+      "severity": "MEDIUM",
+      "reason": "High soluble fiber content slows glucose absorption and increases hypoglycemia risk."
+    },
+    {
+      "herb": "Methi/Fenugreek",
+      "target_condition": "AnticoagulantTherapy",
+      "severity": "MEDIUM",
+      "reason": "Contains coumarin derivatives that may potentiate anticoagulant medications."
+    },
+    {
+      "herb": "Methi/Fenugreek",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "Acts as uterine stimulant (oxytocic properties); can induce premature contractions."
+    },
+    {
+      "herb": "Methi/Fenugreek",
+      "target_condition": "PeanutAllergy",
+      "severity": "HIGH",
+      "reason": "Fabaceae cross-reactivity poses acute anaphylaxis or allergic risk."
+    },
+    {
+      "herb": "Shatavari",
+      "target_condition": "EstrogenSensitiveCancers",
+      "severity": "HIGH",
+      "reason": "Phytoestrogenic steroidal saponins may stimulate estrogen receptor-positive tumors."
+    },
+    {
+      "herb": "Shatavari",
+      "target_condition": "KidneyDisease",
+      "severity": "MEDIUM",
+      "reason": "Mild diuretic properties may alter electrolyte clearance in compromised nephrons."
+    },
+    {
+      "herb": "Shatavari",
+      "target_condition": "HeartDisease",
+      "severity": "MEDIUM",
+      "reason": "Fluid shifts associated with diuretic action warrant caution in cardiac failure."
+    },
+    {
+      "herb": "Brahmi/Bacopa",
+      "target_condition": "ThyroidMedications",
+      "severity": "MEDIUM",
+      "reason": "May elevate T3 and T4 levels, requiring dose adjustments in levothyroxine users."
+    },
+    {
+      "herb": "Brahmi/Bacopa",
+      "target_condition": "Bradycardia",
+      "severity": "HIGH",
+      "reason": "Increases cholinergic tone which can further depress resting heart rate."
+    },
+    {
+      "herb": "Brahmi/Bacopa",
+      "target_condition": "PepticUlcer",
+      "severity": "MEDIUM",
+      "reason": "Increases gastric secretions and may irritate active mucosal lesions."
+    },
+    {
+      "herb": "Brahmi/Bacopa",
+      "target_condition": "UrinaryObstruction",
+      "severity": "MEDIUM",
+      "reason": "Cholinergic stimulation may aggravate urinary tract blockage."
+    },
+    {
+      "herb": "Arjuna",
+      "target_condition": "HeartMedications",
+      "severity": "HIGH",
+      "reason": "Inotropic and antianginal effects can cause additive interactions with beta-blockers or digoxin."
+    },
+    {
+      "herb": "Arjuna",
+      "target_condition": "Hypotension",
+      "severity": "MEDIUM",
+      "reason": "Mild peripheral vasodilatory actions can precipitate symptomatic hypotension."
+    },
+    {
+      "herb": "Arjuna",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "Lack of adequate reproductive safety data; avoided in gestation."
+    },
+    {
+      "herb": "Neem",
+      "target_condition": "DiabetesMedications",
+      "severity": "MEDIUM",
+      "reason": "Potent hypoglycemic action; combined use with oral antidiabetics can cause hypoglycemia."
+    },
+    {
+      "herb": "Neem",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Known spermicidal, anti-implantation, and abortifacient activities."
+    },
+    {
+      "herb": "Neem",
+      "target_condition": "Infant",
+      "severity": "CRITICAL",
+      "reason": "Neem seed oil ingestion in infants can induce severe toxic encephalopathy (Reye-like syndrome)."
+    },
+    {
+      "herb": "Neem",
+      "target_condition": "AutoimmuneDisease",
+      "severity": "MEDIUM",
+      "reason": "Strong immune stimulant that may trigger flares in autoimmune disorders."
+    },
+    {
+      "herb": "Aloe/Kumari",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Aloin anthraquinones are powerful purgatives that induce reflex uterine hypermotility."
+    },
+    {
+      "herb": "Aloe/Kumari",
+      "target_condition": "KidneyDisease",
+      "severity": "HIGH",
+      "reason": "Anthraquinone laxatives cause severe electrolyte wasting and acute renal irritation."
+    },
+    {
+      "herb": "Aloe/Kumari",
+      "target_condition": "IntestinalObstruction",
+      "severity": "CRITICAL",
+      "reason": "Laxative stimulation against mechanical bowel obstruction risks intestinal perforation."
+    },
+    {
+      "herb": "Aloe/Kumari",
+      "target_condition": "Diarrhea",
+      "severity": "HIGH",
+      "reason": "Stimulant laxative action worsens severe dehydration."
+    },
+    {
+      "herb": "Senna/Sanay",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Strong anthranoid purgative triggering pelvic hyperemia and uterine contractions."
+    },
+    {
+      "herb": "Senna/Sanay",
+      "target_condition": "IntestinalObstruction",
+      "severity": "CRITICAL",
+      "reason": "Contraindicated in mechanical stenosis, ileus, and bowel impaction."
+    },
+    {
+      "herb": "Senna/Sanay",
+      "target_condition": "CrohnsDisease",
+      "severity": "HIGH",
+      "reason": "Irritates inflammatory bowel disease mucosa, provoking bleeding and ulceration."
+    },
+    {
+      "herb": "Senna/Sanay",
+      "target_condition": "UlcerativeColitis",
+      "severity": "HIGH",
+      "reason": "Promotes colonic mucosal irritation and severe cramping."
+    },
+    {
+      "herb": "Senna/Sanay",
+      "target_condition": "Appendicitis",
+      "severity": "CRITICAL",
+      "reason": "Contraindicated in undiagnosed acute surgical abdomen."
+    },
+    {
+      "herb": "Kalonji/Nigella",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "Can slow down or inhibit uterine smooth muscle contractions in labor or cause uterine spasms in early gestation."
+    },
+    {
+      "herb": "Kalonji/Nigella",
+      "target_condition": "BleedingDisorders",
+      "severity": "MEDIUM",
+      "reason": "Inhibits platelet aggregation, increasing hemorrhage risks."
+    },
+    {
+      "herb": "Kalonji/Nigella",
+      "target_condition": "Hypotension",
+      "severity": "MEDIUM",
+      "reason": "Contains thymoquinone which exerts blood pressure-lowering properties."
+    },
+    {
+      "herb": "Pippali/Pippalimool",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "Traditional abortifacient and emmenagogue properties attributed to root (Pippalimoola)."
+    },
+    {
+      "herb": "Pippali/Pippalimool",
+      "target_condition": "Hyperacidity/PepticUlcer",
+      "severity": "HIGH",
+      "reason": "Ushna tikshna gunas exacerbate Pitta and worsen burning epigastric pain."
+    },
+    {
+      "herb": "All Bhasmas",
+      "target_condition": "Pediatric",
+      "severity": "CRITICAL",
+      "reason": "Calx and mineral formulations are contraindicated in pediatric patients (<5 years) due to immature renal/hepatic clearance."
+    },
+    {
+      "herb": "All Bhasmas",
+      "target_condition": "KidneyDisease",
+      "severity": "CRITICAL",
+      "reason": "Mineral metabolism failure creates toxicity and nephrocalcinosis risks."
+    },
+    {
+      "herb": "All Bhasmas",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Teratogenic and embryonic toxicity risks from processed mineral compounds."
+    },
+    {
+      "herb": "All Kashaya",
+      "target_condition": "Pediatric",
+      "severity": "HIGH",
+      "reason": "Concentrated decoctions possess high tannin/alkaloid density unsuitable for infants under 2 years."
+    },
+    {
+      "herb": "Garlic/Lashuna",
+      "target_condition": "BleedingDisorders",
+      "severity": "HIGH",
+      "reason": "Ajoene and sulfur compounds significantly inhibit platelet aggregation."
+    },
+    {
+      "herb": "Garlic/Lashuna",
+      "target_condition": "AnticoagulantTherapy",
+      "severity": "HIGH",
+      "reason": "Synergistic bleeding risk with warfarin, clopidogrel, or aspirin."
+    },
+    {
+      "herb": "Garlic/Lashuna",
+      "target_condition": "ActiveUlcer",
+      "severity": "MEDIUM",
+      "reason": "Direct chemical irritant to gastric mucosa; worsens heartburn."
+    },
+    {
+      "herb": "Shilajit",
+      "target_condition": "Gout/Hyperuricemia",
+      "severity": "HIGH",
+      "reason": "May increase uric acid concentrations and trigger acute podagra/gout flare."
+    },
+    {
+      "herb": "Shilajit",
+      "target_condition": "Hemochromatosis",
+      "severity": "HIGH",
+      "reason": "High bioavailable iron content can worsen systemic iron overload."
+    },
+    {
+      "herb": "Shilajit",
+      "target_condition": "ActiveInfection",
+      "severity": "MEDIUM",
+      "reason": "Ayurvedic texts advise avoidance during acute Ama or febrile states."
+    },
+    {
+      "herb": "Shilajit",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "Risk of raw fulvic impurities and lack of safety validation in pregnancy."
+    },
+    {
+      "herb": "Chitrak/Plumbago",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Potent emmenagogue and known abortifacient (plumbagin content)."
+    },
+    {
+      "herb": "Chitrak/Plumbago",
+      "target_condition": "Gastritis/Ulcer",
+      "severity": "HIGH",
+      "reason": "Intense pungent virya causes chemical irritation and ulcer exacerbation."
+    },
+    {
+      "herb": "Hing/Asafoetida",
+      "target_condition": "BleedingDisorders",
+      "severity": "MEDIUM",
+      "reason": "Possesses coumarin constituents with mild anticoagulant properties."
+    },
+    {
+      "herb": "Hing/Asafoetida",
+      "target_condition": "Infant",
+      "severity": "HIGH",
+      "reason": "Can cause methemoglobinemia in neonates and young infants."
+    },
+    {
+      "herb": "Castor Oil/Eranda",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Ricinoleic acid triggers violent pelvic contractions and induces premature labor."
+    },
+    {
+      "herb": "Castor Oil/Eranda",
+      "target_condition": "Appendicitis",
+      "severity": "CRITICAL",
+      "reason": "Risk of appendix perforation in acute inflammatory abdominal pain."
+    },
+    {
+      "herb": "Kanchanar/Bauhinia",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "Astringent and alterative action not established for gestational safety."
+    },
+    {
+      "herb": "Kanchanar/Bauhinia",
+      "target_condition": "Hypothyroidism",
+      "severity": "MEDIUM",
+      "reason": "Modulates thyroid enzyme pathways; requires endocrinologist coordination."
+    },
+    {
+      "herb": "Shankhpushpi/Convolvulus",
+      "target_condition": "Hypotension",
+      "severity": "MEDIUM",
+      "reason": "Possesses sedative and blood pressure-lowering properties."
+    },
+    {
+      "herb": "Shankhpushpi/Convolvulus",
+      "target_condition": "EpilepsyMedications",
+      "severity": "MEDIUM",
+      "reason": "May decrease plasma levels of phenytoin, reducing seizure threshold control."
+    },
+    {
+      "herb": "Manjistha/Rubia",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "Contains anthraquinones with uterine stimulant and emmenagogue properties."
+    },
+    {
+      "herb": "Manjistha/Rubia",
+      "target_condition": "KidneyDisease",
+      "severity": "MEDIUM",
+      "reason": "Excreted renally and may cause chromaturia and minor tubular stress."
+    },
+    {
+      "herb": "Vidanga/Embelia",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Embelin possesses documented antifertility and abortifacient actions."
+    },
+    {
+      "herb": "Kutaja/Holarrhena",
+      "target_condition": "Constipation",
+      "severity": "HIGH",
+      "reason": "Potent stambhana (astringent) antidiarrheal; causes severe fecal impaction in constipation."
+    },
+    {
+      "herb": "Bilva/Bael",
+      "target_condition": "Constipation",
+      "severity": "HIGH",
+      "reason": "Unripe or ripe astringent fruit formulation slows bowel motility dramatically."
+    },
+    {
+      "herb": "Punarnava/Boerhavia",
+      "target_condition": "KidneyFailure",
+      "severity": "HIGH",
+      "reason": "High diuretic activity without adequate glomerular filtration risks severe electrolyte derangements."
+    },
+    {
+      "herb": "Punarnava/Boerhavia",
+      "target_condition": "Hypotension",
+      "severity": "MEDIUM",
+      "reason": "Volume depletion from diuresis further lowers vascular pressure."
+    },
+    {
+      "herb": "Gokshura/Tribulus",
+      "target_condition": "ProstateCancer",
+      "severity": "HIGH",
+      "reason": "May elevate serum androgen levels, which can stimulate hormone-dependent malignancies."
+    },
+    {
+      "herb": "Gokshura/Tribulus",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "May adversely affect fetal hormonal development."
+    },
+    {
+      "herb": "Vacha/Acorus",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Beta-asarone content is potentially genotoxic, teratogenic, and emmenagogic."
+    },
+    {
+      "herb": "Vacha/Acorus",
+      "target_condition": "Depression",
+      "severity": "MEDIUM",
+      "reason": "Interacts with MAOIs and sedatives, risking serotonin or central nervous toxicity."
+    },
+    {
+      "herb": "Sarpagandha/Rauwolfia",
+      "target_condition": "Depression",
+      "severity": "CRITICAL",
+      "reason": "Reserpine depletes central biogenic amines, precipitating severe suicidal depression."
+    },
+    {
+      "herb": "Sarpagandha/Rauwolfia",
+      "target_condition": "Bradycardia",
+      "severity": "CRITICAL",
+      "reason": "Profound sympatholytic effect can drop heart rate to critical bradyarrhythmias."
+    },
+    {
+      "herb": "Sarpagandha/Rauwolfia",
+      "target_condition": "PepticUlcer",
+      "severity": "HIGH",
+      "reason": "Markedly increases gastric acid secretion and motility, worsening peptic ulceration."
+    },
+    {
+      "herb": "Sarpagandha/Rauwolfia",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Teratogenic and induces severe fetal neonatal respiratory depression."
+    },
+    {
+      "herb": "Bakuchi/Psoralea",
+      "target_condition": "LiverDisease",
+      "severity": "HIGH",
+      "reason": "Psoralens have documented risk of idiosyncratic toxic hepatitis."
+    },
+    {
+      "herb": "Bakuchi/Psoralea",
+      "target_condition": "Pregnancy",
+      "severity": "CRITICAL",
+      "reason": "Potential mutagenic and embryotoxic effects."
+    },
+    {
+      "herb": "Karela/BitterGourd",
+      "target_condition": "Hypoglycemia",
+      "severity": "HIGH",
+      "reason": "Polypeptide-p and charantin dramatically lower blood glucose, causing dangerous hypoglycemic coma."
+    },
+    {
+      "herb": "Karela/BitterGourd",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "Momordica compounds exert uterine tonicity and potential abortive risks."
+    },
+    {
+      "herb": "Amla/Amalaki",
+      "target_condition": "BleedingDisorders",
+      "severity": "MEDIUM",
+      "reason": "High vitamin C and antiplatelet activity in large medicinal doses may prolong coagulation."
+    },
+    {
+      "herb": "Amla/Amalaki",
+      "target_condition": "AcuteDiarrhea",
+      "severity": "MEDIUM",
+      "reason": "Cold (sheeta) virya and mild laxative tendency can aggravate acute dysentery."
+    },
+    {
+      "herb": "Guduchi/Giloy",
+      "target_condition": "AutoimmuneDisease",
+      "severity": "HIGH",
+      "reason": "Strong immunomodulatory properties can exacerbate autoimmune diseases (MS, SLE, Rheumatoid arthritis)."
+    },
+    {
+      "herb": "Guduchi/Giloy",
+      "target_condition": "LiverDisease",
+      "severity": "HIGH",
+      "reason": "Chronic high doses have been linked to drug-induced autoimmune-like hepatitis in predisposed individuals."
+    },
+    {
+      "herb": "Guduchi/Giloy",
+      "target_condition": "Pregnancy",
+      "severity": "HIGH",
+      "reason": "Immune alteration during pregnancy may interfere with fetal-maternal tolerance."
+    }
+  ],
+  "lifecycle_exclusions": [
+    {
+      "lifecycle": "pregnancy",
+      "trimester": "all",
+      "excluded_herbs": [
+        "guggulu",
+        "vasa",
+        "aloe",
+        "senna",
+        "kalonji",
+        "pippalimool",
+        "chitrak",
+        "eranda",
+        "shilajit",
+        "kanchanar",
+        "manjistha",
+        "vidanga",
+        "vacha",
+        "sarpagandha",
+        "bakuchi",
+        "jyotishmati",
+        "kupilu",
+        "jayapala",
+        "bhasma",
+        "neem",
+        "methi",
+        "tulsi",
+        "arjuna",
+        "karela"
+      ],
+      "severity": "CRITICAL",
+      "reason": "Herb has documented emmenagogue, abortifacient, uterotonic (uterine stimulant), or teratogenic properties."
+    },
+    {
+      "lifecycle": "lactation",
+      "excluded_herbs": [
+        "senna",
+        "neem",
+        "bhasma",
+        "kupilu",
+        "jayapala",
+        "manjistha",
+        "vacha",
+        "guggulu",
+        "sarpagandha"
+      ],
+      "severity": "HIGH",
+      "reason": "Herb or its toxic metabolites pass into breast milk and may harm the nursing infant."
+    },
+    {
+      "lifecycle": "pediatric_under_2",
+      "excluded_herbs": [
+        "all_kashaya",
+        "kashaya",
+        "all_bhasma",
+        "bhasma",
+        "guggulu",
+        "senna",
+        "hing",
+        "kupilu",
+        "jayapala",
+        "eranda",
+        "neem",
+        "vacha"
+      ],
+      "severity": "CRITICAL",
+      "reason": "Immature organ systems, metabolic pathways, and risk of severe toxicity or methemoglobinemia."
+    },
+    {
+      "lifecycle": "pediatric_under_5",
+      "excluded_herbs": [
+        "all_bhasma",
+        "bhasma",
+        "strong_purgatives",
+        "senna",
+        "kupilu",
+        "jayapala",
+        "vacha",
+        "sarpagandha"
+      ],
+      "severity": "HIGH",
+      "reason": "Heavy metal or potent alkaloid content contraindicated in young developing children."
+    },
+    {
+      "lifecycle": "elderly_above_70",
+      "notes": "Reduce all dosages by 50%. Avoid strong purgatives or central nervous sedatives.",
+      "excluded_herbs": [
+        "jayapala",
+        "kupilu",
+        "strong_purgatives",
+        "senna"
+      ],
+      "severity": "MEDIUM",
+      "reason": "Reduced renal clearance and increased sensitivity to electrolyte depletion or cardiac side effects."
     }
   ]
 }

@@ -22,7 +22,8 @@ import {
 } from '../api/client';
 import { speakText, transcribeAudio } from '../api/voiceClient';
 import { downloadConsultationReport } from '../api/reportsClient';
-import { listSessions, clearSessionHistory, recordSessionTurn } from '../lib/sessionStore';
+import { listSessions, clearSessionHistory, recordSessionTurn, fetchServerSessions } from '../lib/sessionStore';
+import { useAuth } from '../context/AuthContext';
 import { evaluateLocalRedFlags } from '../lib/localTriageFallback';
 import { processOfflineConsultation } from '../lib/offlineTriageEngine';
 import { queueOfflineChat } from '../lib/offlineSyncManager';
@@ -166,12 +167,22 @@ export default function Chat() {
     if (mediaStreamRef.current) {
       try { mediaStreamRef.current.getTracks().forEach(t => t.stop()); } catch { /* ignore */ }
     }
-    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
   }, []);
 
-  /* Load session history */
-  const refreshSessions = useCallback(() => setSessions(listSessions()), []);
-  useEffect(() => { if (sidebarOpen) refreshSessions(); }, [sidebarOpen, refreshSessions]);
+  /* Load session history scoped per user */
+  const { user } = useAuth();
+  const refreshSessions = useCallback(() => {
+    fetchServerSessions(user?.id).then(res => {
+      if (Array.isArray(res)) setSessions(res);
+      else setSessions(listSessions(user?.id));
+    }).catch(() => {
+      setSessions(listSessions(user?.id));
+    });
+  }, [user]);
+
+  useEffect(() => {
+    refreshSessions();
+  }, [user, refreshSessions]);
 
   /* ── Handlers ─────────────────────────────────────────────────── */
   const toggleCondition = useCallback(v => {
@@ -484,7 +495,7 @@ export default function Chat() {
         return [...p, finalBotMsg];
       });
 
-      recordSessionTurn({ conversationId: conversationIdRef.current, summary: trimmed, tier: res.tier });
+      recordSessionTurn({ conversationId: conversationIdRef.current, summary: trimmed, tier: res.tier, userId: user?.id });
       refreshSessions();
     } catch (err) {
       setError(err?.response?.data?.detail ?? err.message ?? 'Unknown error');
@@ -523,7 +534,7 @@ export default function Chat() {
             is_offline_fallback: true,
           }];
         });
-        recordSessionTurn({ conversationId: conversationIdRef.current, summary: trimmed, tier: offlineRes.tier });
+        recordSessionTurn({ conversationId: conversationIdRef.current, summary: trimmed, tier: offlineRes.tier, userId: user?.id });
         refreshSessions();
         try {
           queueOfflineChat(offlineRes);
@@ -657,7 +668,7 @@ export default function Chat() {
 
               {/* Clear History */}
               {sessions.length > 0 && (
-                <button onClick={() => { clearSessionHistory(); setSessions([]); }}
+                <button onClick={() => { clearSessionHistory(user?.id); setSessions([]); }}
                   className="w-full flex items-center justify-center gap-1.5 text-[11px] text-rose-soft/70 hover:text-rose-soft hover:bg-rose-soft/8 py-1.5 rounded-lg transition-all">
                   <Trash2 className="w-3 h-3" /> Itihas Saaf Karein
                 </button>

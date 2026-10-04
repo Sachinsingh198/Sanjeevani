@@ -53,6 +53,9 @@ async def _execute_chat_pipeline(
             # --- Per-turn input: always comes from the request ---
             "normalized_message": "",
             "patient_conditions": req.patient_context.known_conditions,
+            "patient_age": req.patient_context.age,
+            "patient_gender": req.patient_context.gender,
+            "patient_pregnancy": req.patient_context.pregnancy,
             "voice_mode": req.include_audio,
             "language_hint": req.language_hint,
         }
@@ -276,6 +279,7 @@ async def _execute_chat_pipeline(
             requires_immediate_doctor=(tier == "Red"),
             phase=result.get("dialogue_phase", "GREETING"),
             detected_language=result.get("detected_language", "hindi"),
+            disclaimer=result.get("disclaimer"),
             audio_base64=audio_b64,
             audio_format=audio_fmt,
             consultation_summary=result.get("consultation_summary"),

@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Clock, Trash2 } from 'lucide-react';
 import SkeletonLoader from './SkeletonLoader';
+import { useAuth } from '../context/AuthContext';
 import { listSessions, fetchServerSessions, clearSessionHistory } from '../lib/sessionStore';
 
 /**
@@ -10,25 +11,26 @@ import { listSessions, fetchServerSessions, clearSessionHistory } from '../lib/s
  * permanent sidebar, so the chat itself stays uncluttered by default.
  */
 export default function SessionHistoryDrawer({ open, onClose }) {
+  const { user } = useAuth();
   const [sessions, setSessions] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
     if (open) {
       setLoading(true);
-      // Immediately render local cached sessions
-      const local = listSessions();
+      // Immediately render local cached sessions scoped to user
+      const local = listSessions(user?.id);
       setSessions(local);
       if (local && local.length > 0) setLoading(false);
       // Reconcile with server-side history asynchronously
-      fetchServerSessions().then((remoteSessions) => {
+      fetchServerSessions(user?.id).then((remoteSessions) => {
         if (remoteSessions && remoteSessions.length > 0) {
           setSessions(remoteSessions);
         }
         setLoading(false);
       }).catch(() => setLoading(false));
     }
-  }, [open]);
+  }, [open, user?.id]);
 
   if (!open) return null;
 
@@ -78,8 +80,8 @@ export default function SessionHistoryDrawer({ open, onClose }) {
         {sessions.length > 0 && (
           <div className="p-4 border-t border-border-subtle">
             <button
-              onClick={() => { clearSessionHistory(); setSessions([]); }}
-              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-rose-soft hover:bg-rose-soft/10 py-2.5 rounded-xl transition-colors"
+              onClick={() => { clearSessionHistory(user?.id); setSessions([]); }}
+              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-rose-soft hover:bg-rose-soft/10 py-2.5 rounded-xl transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" /> Clear History
             </button>

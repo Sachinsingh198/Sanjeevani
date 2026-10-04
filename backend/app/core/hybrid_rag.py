@@ -507,8 +507,10 @@ class HybridRemedyStore:
         if not results and self._all_cached_remedies:
             q_lower = query_text.lower()
             category_target = None
-            if any(w in q_lower for w in ["naak", "nak", "chhink", "chheenk", "rhinitis", "pratishyaya", "allergy", "sinus"]):
+            if any(w in q_lower for w in ["allergic rhinitis", "chronic allergy", "dust allergy", "dhool se allergy"]):
                 category_target = "rhinitis"
+            elif any(w in q_lower for w in ["cold", "zukaam", "zukam", "jukham", "jukhaam", "sardi", "naak behna", "chheenk", "naak", "pratishyaya"]):
+                category_target = "cold"
             elif any(w in q_lower for w in ["jod", "ghutna", "jakdan", "sandhi", "joint", "arthritis"]):
                 category_target = "joint"
             elif any(w in q_lower for w in ["pet", "gas", "apach", "marod", "stomach", "digest"]):

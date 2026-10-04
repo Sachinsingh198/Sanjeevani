@@ -42,14 +42,23 @@ def extract_active_symptoms(notes: str, normalized_msg: str, llm=None) -> str:
         from app.agents.nodes.responder_node import get_symptom_data
         sym_data = get_symptom_data(content_to_extract)
         spoken = (sym_data.get("spoken_hin") or "").lower()
-        if "allergic rhinitis" in spoken or "naak" in spoken:
-            canonical_anchor = "allergic rhinitis pratishyaya naak band sneezing chheenk"
+        content_lower = content_to_extract.lower()
+
+        # Differentiate Acute Cold vs Chronic Allergic Rhinitis
+        if any(w in content_lower for w in ["allergic rhinitis", "chronic rhinitis", "dust allergy", "dhool se allergy", "purani allergy"]) or "allergic rhinitis" in spoken:
+            canonical_anchor = "allergic rhinitis pratishyaya chronic allergy sneezing chheenk"
+        elif any(w in content_lower for w in ["cold", "zukaam", "zukam", "jukham", "jukhaam", "sardi", "naak behna", "runny nose"]) or "sardi aur zukaam" in spoken:
+            canonical_anchor = "common cold zukaam sardi pratishyaya cough throat"
+        elif "naak" in spoken:
+            canonical_anchor = "common cold zukaam sardi naak band"
         elif "sandhivata" in spoken or "jod" in spoken:
             canonical_anchor = "sandhivata joint pain arthritis gathiya"
         elif "amlapitta" in spoken or "acidity" in spoken:
             canonical_anchor = "amlapitta acidity acid reflux jalan"
         elif "tvacha" in spoken or "sheeta" in spoken:
             canonical_anchor = "sheeta pitta skin allergy khujli rash"
+        elif "sar dard" in spoken or "mund" in spoken or "headache" in spoken:
+            canonical_anchor = "tension headache sar dard shirashoola stress"
     except Exception:
         pass
 
@@ -140,10 +149,17 @@ def retriever_node_sync(state: AgentState) -> AgentState:
     else:
         state["garhwali_context"] = []
 
+    patient_age = state.get("patient_age")
+    patient_gender = state.get("patient_gender")
+    patient_pregnancy = state.get("patient_pregnancy")
+
     for item in candidates:
         is_safe, reason = knowledge_graph.validate_remedy(
             item.get("remedy_text", ""),
-            patient_conditions
+            patient_conditions,
+            age=patient_age,
+            gender=patient_gender,
+            is_pregnant=patient_pregnancy
         )
         if is_safe:
             # If a top remedy is already selected, only accept candidate 2 if genuinely relevant
@@ -189,10 +205,17 @@ async def retriever_node(state: AgentState) -> AgentState:
         state["garhwali_context"] = []
 
     # 2. Safety Knowledge Graph Validation
+    patient_age = state.get("patient_age")
+    patient_gender = state.get("patient_gender")
+    patient_pregnancy = state.get("patient_pregnancy")
+
     for item in candidates:
         is_safe, reason = knowledge_graph.validate_remedy(
             item.get("remedy_text", ""),
-            patient_conditions
+            patient_conditions,
+            age=patient_age,
+            gender=patient_gender,
+            is_pregnant=patient_pregnancy
         )
         if is_safe:
             if verified_remedies:

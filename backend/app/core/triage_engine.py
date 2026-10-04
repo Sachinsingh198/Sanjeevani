@@ -12,27 +12,60 @@ class ClinicalTriageEngine:
     """
     Deterministic clinical triage engine based on the Manchester Triage System (MTS).
     Evaluates urgency with:
-    1. Bi-directional negation detection (English prefix + Hindi postfix).
-    2. Flexible multi-word clinical discriminators (e.g., "pressure in chest", "seene me bahut tezz dard").
+    1. Clause-bounded bi-directional negation detection (English prefix + Hindi postfix).
+    2. Temporal awareness for prior cardiac/critical history.
+    3. Flexible multi-word clinical discriminators (e.g., "pressure in chest", "seene me bahut tezz dard").
     """
 
     def __init__(self):
-        self.negation_window = 35
+        self.negation_window = 20
         self.negation_cues: Set[str] = NEGATION_CUES
         self.red_patterns = RED_PATTERNS
         self.yellow_patterns = YELLOW_PATTERNS
+        self.temporal_past_cues: Set[str] = {
+            "pehle", "kal", "parso", "kuch din pehle", "earlier", "previously", "yesterday", "last night"
+        }
 
     def _is_negated(self, text: str, match_start: int, match_end: int) -> bool:
-        pre_start = max(0, match_start - self.negation_window)
-        preceding_text = text[pre_start:match_start].lower()
-        pre_tokens = re.findall(r"\b\w+\b", preceding_text)
-        if any(cue in pre_tokens for cue in self.negation_cues):
-            return True
+        """
+        Determines whether a clinical match is genuinely negated.
+        1. Confines negation checking to the specific clause containing the match.
+        2. Detects temporal markers: past-tense critical symptoms ("pehle tha, ab nahi")
+           are NOT negated as they remain clinically urgent.
+        3. Looks at 3 tokens before and 3 tokens after within the clause.
+        """
+        # Find clause boundaries around the match (commas, semicolons, conjunctions)
+        clause_boundaries = [
+            m.start() for m in re.finditer(r'[,;!?]|\b(?:lekin|par|magar|but|however|aur|aur\s+saath)\b', text, re.IGNORECASE)
+        ]
+        clause_start = max([0] + [b for b in clause_boundaries if b < match_start])
+        # If clause boundary starts with delimiter/word, advance past it
+        clause_end_candidates = [b for b in clause_boundaries if b > match_end]
+        clause_end = min([len(text)] + clause_end_candidates) if clause_end_candidates else len(text)
 
-        post_end = min(len(text), match_end + self.negation_window)
-        succeeding_text = text[match_end:post_end].lower()
-        post_tokens = re.findall(r"\b\w+\b", succeeding_text)
-        if any(cue in post_tokens for cue in self.negation_cues):
+        clause_text = text[clause_start:clause_end].strip().lower()
+
+        # Check temporal past awareness:
+        # If the symptom occurred earlier ("pehle dard tha, ab nahi hai"), it is a medical flag, NOT an absent symptom
+        clause_tokens = set(re.findall(r"\b\w+\b", clause_text))
+        if any(past_cue in clause_tokens for past_cue in self.temporal_past_cues):
+            # Past critical occurrence reported -> do NOT negate
+            return False
+
+        # Match offset inside the clause
+        rel_start = max(0, match_start - clause_start)
+        rel_end = min(len(clause_text), match_end - clause_start)
+
+        pre_clause = clause_text[:rel_start]
+        post_clause = clause_text[rel_end:]
+
+        pre_tokens = re.findall(r"\b\w+\b", pre_clause)
+        post_tokens = re.findall(r"\b\w+\b", post_clause)
+
+        # Check within 3 tokens before or after the match in the same clause
+        if any(cue in pre_tokens[-3:] for cue in self.negation_cues):
+            return True
+        if any(cue in post_tokens[:3] for cue in self.negation_cues):
             return True
 
         return False

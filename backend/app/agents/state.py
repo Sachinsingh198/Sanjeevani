@@ -38,12 +38,18 @@ class AgentState(_AgentStateRequired, total=False):
 
     # Patient comorbidities passed from API
     patient_conditions: List[str]
+    patient_age: Optional[int]
+    patient_gender: Optional[str]
+    patient_pregnancy: Optional[bool]
+    disclaimer: Optional[str]
 
     # Clinical Dialog Management — evolve across turns
     dialogue_phase: str   # "GREETING" | "CONSULTATION" | "CONCLUDED" | "EMERGENCY" | "GUARDRAIL_BLOCKED"
     prev_dialogue_phase: str  # phase snapshot BEFORE this turn's transition (used by graph router)
     turn_count: int
     symptom_profile: SymptomProfile
+    structured_symptoms: Optional[Dict[str, Any]]
+    yellow_clarification_turn: Optional[int]
 
     # Accumulated patient information across turns — passed to LLM as context each turn.
     # The responder_node appends to this as new symptoms/answers are shared.

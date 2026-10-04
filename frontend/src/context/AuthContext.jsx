@@ -51,6 +51,10 @@ export function AuthProvider({ children }) {
     if (data.user?.role) {
       localStorage.setItem('sanjeevani_user_role', data.user.role);
     }
+    if (data.user) {
+      localStorage.setItem('sanjeevani_user_profile', JSON.stringify(data.user));
+    }
+    sessionStorage.removeItem('sanjeevani_conv_id');
     setUser(data.user);
     setToken(data.access_token);
     return data.user;
@@ -75,13 +79,26 @@ export function AuthProvider({ children }) {
     if (data.user?.role) {
       localStorage.setItem('sanjeevani_user_role', data.user.role);
     }
+    if (data.user) {
+      localStorage.setItem('sanjeevani_user_profile', JSON.stringify(data.user));
+    }
+    // Clean old conversation ID and guest history for the fresh account
+    sessionStorage.removeItem('sanjeevani_conv_id');
+    localStorage.removeItem('sanjeevani_session_history_guest');
+    localStorage.removeItem('sanjeevani_session_history_v1');
     setUser(data.user);
     setToken(data.access_token);
     return data.user;
   }, []);
 
   const updateUser = useCallback((updatedProfile) => {
-    setUser((prev) => ({ ...prev, ...updatedProfile }));
+    setUser((prev) => {
+      const merged = { ...prev, ...updatedProfile };
+      try {
+        localStorage.setItem('sanjeevani_user_profile', JSON.stringify(merged));
+      } catch {}
+      return merged;
+    });
   }, []);
 
   const logout = useCallback(() => {
@@ -90,6 +107,8 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('sanjeevani_token');
     localStorage.removeItem('sanjeevani_refresh_token');
     localStorage.removeItem('sanjeevani_user_role');
+    localStorage.removeItem('sanjeevani_user_profile');
+    sessionStorage.removeItem('sanjeevani_conv_id');
     setToken(null);
     setUser(null);
   }, []);
