@@ -38,18 +38,18 @@ export default function NearbyFacilityFinder({ onClose }) {
   };
 
   return (
-    <div className="bg-white dark:bg-[#1E2A43] rounded-3xl p-6 border border-[#5A7855]/20 dark:border-gray-800 shadow-sm">
+    <div className="bg-white dark:bg-card rounded-3xl p-6 border border-sage/20 dark:border-gray-800 shadow-sm">
       <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-[#5A7855]/15 dark:bg-[#5A7855]/25 flex items-center justify-center text-[#5A7855] dark:text-[#8ED14C] shrink-0">
+        <div className="w-12 h-12 rounded-2xl bg-sage/15 dark:bg-sage/25 flex items-center justify-center text-sage dark:text-booti-glow shrink-0">
           <MapPin className="w-6 h-6" />
         </div>
         <div className="flex-1">
           <div className="flex items-center justify-between">
-            <h3 className="font-serif font-bold text-lg text-[#2E4057] dark:text-[#F4F6F0]">निकटतम स्वास्थ्य केंद्र / Find Nearby Centers</h3>
+            <h3 className="font-serif font-bold text-lg text-primary">निकटतम स्वास्थ्य केंद्र / Find Nearby Centers</h3>
             {onClose && (
               <button 
                 onClick={onClose}
-                className="text-[#556376] dark:text-[#A8B4C2] hover:text-[#2E4057] dark:hover:text-[#F4F6F0] text-xs font-semibold px-2.5 py-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                className="text-muted hover:text-primary text-xs font-semibold px-2.5 py-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
                 aria-label="Close modal"
               >
                 ✕
@@ -70,7 +70,7 @@ export default function NearbyFacilityFinder({ onClose }) {
           <button
             onClick={handleFind}
             disabled={status === 'locating'}
-            className="mt-4 touch-target inline-flex items-center gap-2 bg-[#5A7855] hover:bg-[#476043] text-white text-sm font-bold px-5 py-3 rounded-2xl shadow-sm transition-all disabled:opacity-60 cursor-pointer"
+            className="mt-4 touch-target inline-flex items-center gap-2 bg-sage hover:bg-sage/90 text-white text-sm font-bold px-5 py-3 rounded-2xl shadow-sm transition-all disabled:opacity-60 cursor-pointer"
           >
             {status === 'locating' ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> स्थान का पता लगा रहे हैं (Locating)…</>

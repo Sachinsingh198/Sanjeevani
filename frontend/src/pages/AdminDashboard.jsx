@@ -387,7 +387,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-mist dark:bg-[#0b1120] text-primary transition-colors duration-300 flex flex-col lg:flex-row pb-16 lg:pb-0">
+    <div className="min-h-screen bg-mist dark:bg-[#0b1120] text-primary transition-colors duration-300 flex flex-col lg:flex-row pb-16 lg:pb-0 safe-bottom-nav">
       {/* ── Desktop Left-Hand Vertical Sidebar ────────────────────────── */}
       <aside className="hidden lg:flex w-72 xl:w-80 shrink-0 flex-col justify-between border-r border-gray-200/80 dark:border-gray-800/80 bg-white/95 dark:bg-[#0f172a]/95 backdrop-blur-md sticky top-0 h-screen z-30 overflow-y-auto">
         {/* Top Header */}

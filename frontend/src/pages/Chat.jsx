@@ -3,7 +3,8 @@ import {
   Send, Mic, MicOff, RefreshCw, User, AlertTriangle, AlertCircle, RotateCcw,
   Volume2, VolumeX, Settings2, Wifi, WifiOff, FileDown, PhoneCall,
   Sparkles, Stethoscope, X, ChevronLeft, ChevronRight,
-  MessageSquare, Plus, Clock, Trash2, Leaf, Edit3,
+  MessageSquare, Plus, Clock, Trash2, Leaf, Edit3, ThumbsUp, ThumbsDown,
+  QrCode
 } from 'lucide-react';
 import useTypewriter from '../lib/useTypewriter';
 import toast from 'react-hot-toast';
@@ -17,6 +18,8 @@ import SymptomChips from '../components/SymptomChips';
 import AccessibilityBar from '../components/AccessibilityBar';
 import StructuredBotMessage from '../components/StructuredBotMessage';
 import BackButton from '../components/BackButton';
+import AudioConsentModal from '../components/AudioConsentModal';
+import ReferralQRModal from '../components/ReferralQRModal';
 import {
   sendChatMessage, streamChatMessage, getOrCreateConversationId, resetConversationId, setStoredConversationId, getConversationDetails, checkBackendHealth,
 } from '../api/client';
@@ -128,6 +131,9 @@ export default function Chat() {
     try { localStorage.setItem('sanjeevani_ui_lang', uiLang); } catch { /* ignore */ }
   }, [uiLang]);
 
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [qrModalData, setQrModalData] = useState(null);
+
   /* Refs */
   const chatEndRef        = useRef(null);
   const inputRef          = useRef(null);
@@ -167,6 +173,40 @@ export default function Chat() {
     if (mediaStreamRef.current) {
       try { mediaStreamRef.current.getTracks().forEach(t => t.stop()); } catch { /* ignore */ }
     }
+  }, []);
+
+  /* ── Mobile Virtual Keyboard Accommodation ──────────────────────── */
+  /* Uses the Visual Viewport API to dynamically resize the chat
+     container when the on-screen keyboard appears, preventing the
+     input bar from being hidden and messages from jumping. */
+  const chatContainerRef = useRef(null);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return; // Not supported — graceful fallback
+
+    const handleResize = () => {
+      const container = chatContainerRef.current;
+      if (!container) return;
+      // On mobile, when keyboard opens, visualViewport.height shrinks
+      // We set the container height to match so the input stays visible
+      const offsetTop = container.getBoundingClientRect().top;
+      const availableHeight = vv.height - offsetTop;
+      container.style.height = `${Math.max(availableHeight, 200)}px`;
+    };
+
+    vv.addEventListener('resize', handleResize);
+    vv.addEventListener('scroll', handleResize);
+    // Initial call
+    handleResize();
+
+    return () => {
+      vv.removeEventListener('resize', handleResize);
+      vv.removeEventListener('scroll', handleResize);
+      // Reset height on unmount
+      if (chatContainerRef.current) {
+        chatContainerRef.current.style.height = '';
+      }
+    };
   }, []);
 
   /* Load session history scoped per user */
@@ -271,18 +311,7 @@ export default function Chat() {
     toast(`Sun raha hoon... (${effectiveLang === 'en-IN' ? 'English' : 'Hindi'} mode)`, { icon: '🎙️' });
   }, [detectedLanguage, sttLangOverride]);
 
-  const toggleListening = useCallback(async () => {
-    if (isListening) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsListening(false);
-      return;
-    }
-
+  const startRecordingStream = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
       fallbackToWebSpeech();
       return;
@@ -344,7 +373,41 @@ export default function Chat() {
       console.warn('[Microphone getUserMedia error]:', err);
       fallbackToWebSpeech();
     }
-  }, [isListening, fallbackToWebSpeech]);
+  }, [fallbackToWebSpeech]);
+
+  const toggleListening = useCallback(async () => {
+    if (isListening) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    const consent = localStorage.getItem('sanjeevani_audio_consent');
+    if (consent !== 'granted') {
+      setShowConsentModal(true);
+      return;
+    }
+
+    startRecordingStream();
+  }, [isListening, startRecordingStream]);
+
+  const handleConsentGranted = useCallback(() => {
+    localStorage.setItem('sanjeevani_audio_consent', 'granted');
+    setShowConsentModal(false);
+    toast.success('आवाज़ सहमति दर्ज हुई! बोलिए 🎙️');
+    startRecordingStream();
+  }, [startRecordingStream]);
+
+  const handleConsentDeclined = useCallback(() => {
+    setShowConsentModal(false);
+    toast('लिखित परामर्श जारी रखें।', { icon: '⌨️' });
+    inputRef.current?.focus();
+  }, []);
 
   const readAloud = useCallback((text, idx, spokenText) => {
     stopSpeakingRef.current?.();
@@ -575,6 +638,7 @@ export default function Chat() {
      ════════════════════════════════════════════════════════════ */
   return (
     <div
+      ref={chatContainerRef}
       className="flex bg-mist dark:bg-[#0F1521] text-primary overflow-hidden w-full h-full"
       style={{ fontSize: `${textScale}rem` }}
     >
@@ -878,6 +942,7 @@ export default function Chat() {
                     setSpeakingMsgIdx(null);
                   }}
                   onDownloadReport={(format) => handleDownloadReport(msg, idx, format)}
+                  onShowReferralQR={(data) => setQrModalData(data)}
                 />
               ))}
               {loading && <div className="py-1"><CalmLoader /></div>}
@@ -946,6 +1011,23 @@ export default function Chat() {
         </div>
 
       </div>
+
+      {/* Audio Voice Privacy Consent Modal */}
+      <AudioConsentModal
+        isOpen={showConsentModal}
+        onConsent={handleConsentGranted}
+        onDecline={handleConsentDeclined}
+      />
+
+      {/* Referral QR Pass Modal */}
+      {qrModalData && (
+        <ReferralQRModal
+          isOpen={!!qrModalData}
+          onClose={() => setQrModalData(null)}
+          consultation={qrModalData}
+          patientName={user?.name || 'Aapka Naam'}
+        />
+      )}
     </div>
   );
 }
@@ -969,6 +1051,7 @@ function MessageBubble({
   onCancelCorrection,
   onCorrectionChange,
   onSubmitCorrection,
+  onShowReferralQR,
 }) {
   const isUser = msg.sender === 'user';
   // Typewriter streaming: only the latest bot message animates if not already streamed live
@@ -980,6 +1063,7 @@ function MessageBubble({
     3    // chunkSize: 3 chars per tick (~185 chars/sec)
   );
   const visibleText = shouldStream ? displayText : msg.text;
+  const [feedback, setFeedback] = useState(null);
 
   return (
     <div className={`flex gap-1.5 sm:gap-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
@@ -1117,7 +1201,26 @@ function MessageBubble({
           </div>
         )}
         {!isUser && (msg.tier === 'Red' || msg.tier === 'Yellow') && (
-          <div className="mt-2 sm:mt-2.5"><EscalationCard tier={msg.tier} flags={msg.flags ?? []} /></div>
+          <div className="mt-2 sm:mt-2.5 space-y-2">
+            <EscalationCard tier={msg.tier} flags={msg.flags ?? []} />
+            {onShowReferralQR && (
+              <button
+                type="button"
+                onClick={() => onShowReferralQR({
+                  conversationId,
+                  tier: msg.tier,
+                  flags: msg.flags,
+                  remedies: msg.remedies,
+                  consultationSummary: msg.text,
+                  timestamp: new Date().toISOString(),
+                })}
+                className="touch-target w-full flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-bold py-2 px-3 rounded-xl border border-rose-500/30 transition-all cursor-pointer shadow-xs"
+              >
+                <QrCode className="w-3.5 h-3.5 text-rose-500" />
+                <span>Tatkal Doctor Referral Pass (QR Code)</span>
+              </button>
+            )}
+          </div>
         )}
         {!isUser && msg.phase === 'CONCLUDED' && msg.remedies?.length > 0 && (
           <div className="mt-2.5 sm:mt-3 space-y-2 pt-2 border-t border-sage/10 dark:border-gray-700/40">
@@ -1152,6 +1255,64 @@ function MessageBubble({
                 ) : (
                   <><FileDown className="w-3.5 h-3.5 text-rose-500" /> Parcha (PDF)</>
                 )}
+              </button>
+            </div>
+            {onShowReferralQR && (
+              <button
+                type="button"
+                onClick={() => onShowReferralQR({
+                  conversationId,
+                  tier: msg.tier,
+                  flags: msg.flags,
+                  remedies: msg.remedies,
+                  consultationSummary: msg.text,
+                  timestamp: new Date().toISOString(),
+                })}
+                className="touch-target w-full flex items-center justify-center gap-2 bg-booti-dark/10 hover:bg-booti-dark/20 dark:bg-booti-glow/10 dark:hover:bg-booti-glow/20 text-booti-dark dark:text-booti-glow text-xs font-bold py-2 sm:py-2.5 px-3 rounded-xl border border-booti-dark/30 dark:border-booti-glow/30 transition-all cursor-pointer mt-1"
+              >
+                <QrCode className="w-4 h-4" />
+                <span>PHC Doctor Referral Pass (QR Code)</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Helpful Feedback row for Bot responses */}
+        {!isUser && !isStreaming && (
+          <div className="mt-2.5 pt-1.5 flex items-center justify-between gap-2 text-[10px] text-gray-400 border-t border-sage/10 dark:border-gray-800">
+            <span className="truncate">Kya yeh salah upyogi thi?</span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setFeedback('yes');
+                  toast.success('Dhanyawad! Pratikriya darz ki gayi. 🙏');
+                }}
+                className={`px-2 py-0.5 rounded-full flex items-center gap-1 transition-all cursor-pointer ${
+                  feedback === 'yes'
+                    ? 'bg-sage text-white font-bold'
+                    : 'hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400'
+                }`}
+                title="Haan, upyogi thi"
+              >
+                <ThumbsUp className="w-3 h-3" />
+                <span>Haan</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFeedback('no');
+                  toast.success('Dhanyawad! Hum ise sudharenge.');
+                }}
+                className={`px-2 py-0.5 rounded-full flex items-center gap-1 transition-all cursor-pointer ${
+                  feedback === 'no'
+                    ? 'bg-rose-soft text-white font-bold'
+                    : 'hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400'
+                }`}
+                title="Nahi"
+              >
+                <ThumbsDown className="w-3 h-3" />
+                <span>Nahi</span>
               </button>
             </div>
           </div>

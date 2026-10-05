@@ -56,7 +56,7 @@ export default function EscalationCard({ tier, flags = [] }) {
               </a>
               <button
                 onClick={() => setShowFinderModal(true)}
-                className="touch-target flex items-center gap-2 bg-[#5A7855] hover:bg-[#4a6346] text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors"
+                className="touch-target flex items-center gap-2 bg-sage hover:bg-sage/90 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
               >
                 <MapPin className="w-4 h-4" />
                 <span>Nazdeeki Kendra</span>

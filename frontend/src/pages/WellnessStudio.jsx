@@ -13,8 +13,9 @@ import {
 import { initPoseLandmarker } from '../lib/mediapipePoseClient';
 import {
   playSingingBowl, playTempleBell, playMeditationChime, playWaterDrop, playHapticPulse,
-  ambientSoundscape, speakCue
+  ambientSoundscape, speakCue, stopCue
 } from '../lib/audioSynthesizer';
+import { useLanguage } from '../context/LanguageContext';
 import MountainRidge from '../components/MountainRidge';
 import PageVoiceGuide from '../components/PageVoiceGuide';
 import BackButton from '../components/BackButton';
@@ -417,6 +418,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const langCtx = useLanguage();
 
   const basePath = location.pathname.startsWith('/patient') ? '/patient/wellness' : '/mitra/wellness';
 
@@ -433,9 +435,41 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
     } else {
       navigate(`${basePath}/${pillarId}`);
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
   const handleTabChange = handleNavigateToPillar;
+
+  // Instantly scroll to top whenever tab changes to prevent feeling trapped on same scroll offset
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [activeTab]);
+
+  // Mobile Swipe Gesture Navigation
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+      const currentIndex = VALID_TABS.indexOf(activeTab);
+      if (deltaX < 0 && currentIndex < VALID_TABS.length - 1) {
+        handleNavigateToPillar(VALID_TABS[currentIndex + 1]);
+        if (navigator.vibrate) navigator.vibrate(25);
+      } else if (deltaX > 0 && currentIndex > 0) {
+        handleNavigateToPillar(VALID_TABS[currentIndex - 1]);
+        if (navigator.vibrate) navigator.vibrate(25);
+      }
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   // ── UNIFIED WELLNESS STATS & HYDRATION ─────────────────────────────────────
   const [wellnessStats, setWellnessStats] = useState(() => {
@@ -507,6 +541,77 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
   const [breathPhase, setBreathPhase] = useState('idle'); // 'inhale' | 'hold-in' | 'exhale' | 'hold-out'
   const [phaseSecondsLeft, setPhaseSecondsLeft] = useState(0);
   const [breathCyclesDone, setBreathCyclesDone] = useState(0);
+  const [voiceGuideEnabled, setVoiceGuideEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sanjeevani_meditation_voice_guide');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const voiceGuideRef = useRef(voiceGuideEnabled);
+  voiceGuideRef.current = voiceGuideEnabled;
+
+  const currentLang = langCtx?.lang || 'hi';
+  const langRef = useRef(currentLang);
+  langRef.current = currentLang;
+
+  const toggleVoiceGuide = () => {
+    setVoiceGuideEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sanjeevani_meditation_voice_guide', JSON.stringify(next));
+      } catch {}
+      if (next) {
+        toast.success('बोलकर निर्देश चालू (Voice Guide ON)', { icon: '🗣️' });
+        speakCue(langRef.current === 'en' ? 'Voice guidance enabled' : 'बोलकर निर्देश चालू किए गए हैं।', langRef.current === 'en' ? 'en-IN' : 'hi-IN');
+      } else {
+        stopCue();
+        toast('केवल घंटी चालू (Chime Only)', { icon: '🔇' });
+      }
+      return next;
+    });
+  };
+
+  const announceBreathPhase = (phase, lang) => {
+    if (!voiceGuideRef.current) return;
+    const isEn = lang === 'en';
+    let text = '';
+    if (phase === 'inhale') {
+      text = isEn ? 'Breathe in' : 'सांस अंदर लें';
+    } else if (phase === 'hold-in') {
+      text = isEn ? 'Hold' : 'सांस रोकें';
+    } else if (phase === 'exhale') {
+      text = isEn ? 'Breathe out' : 'सांस बाहर छोड़ें';
+    } else if (phase === 'hold-out') {
+      text = isEn ? 'Relax' : 'विश्राम करें';
+    }
+    if (text) {
+      speakCue(text, isEn ? 'en-IN' : 'hi-IN');
+    }
+  };
+
+  const handleStartBreathwork = () => {
+    setIsBreathingActive(true);
+    playSingingBowl(216, 2.5);
+    if (voiceGuideEnabled) {
+      const isEn = langRef.current === 'en';
+      const prompt = isEn
+        ? 'Close your eyes. Breathe in deeply.'
+        : 'अपनी आँखें बंद करें, गहरी सांस अंदर लें।';
+      speakCue(prompt, isEn ? 'en-IN' : 'hi-IN');
+    }
+  };
+
+  const handleStopBreathwork = () => {
+    setIsBreathingActive(false);
+    stopCue();
+    if (voiceGuideEnabled) {
+      const isEn = langRef.current === 'en';
+      speakCue(isEn ? 'Session paused. Relax.' : 'सत्र रोका गया। विश्राम करें।', isEn ? 'en-IN' : 'hi-IN');
+    }
+  };
 
   useEffect(() => {
     let breathTimer = null;
@@ -532,12 +637,27 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
             setBreathPhase(nextStep.phase);
             playMeditationChime(nextStep.phase);
 
+            // Announce spoken cue so user doesn't need to open eyes or read screen
+            if (voiceGuideRef.current) {
+              announceBreathPhase(nextStep.phase, langRef.current);
+            }
+
             if (currentSeqIdx === 0) {
               setBreathCyclesDone((c) => {
                 const nextC = c + 1;
                 if (nextC % 5 === 0) {
                   playTempleBell(852, 4);
                   toast.success(`अद्भुत! ${nextC} प्राणायाम चक्र पूर्ण हुए!`, { icon: '🪷' });
+                  if (voiceGuideRef.current) {
+                    setTimeout(() => {
+                      speakCue(
+                        langRef.current === 'en'
+                          ? `Wonderful, ${nextC} cycles completed.`
+                          : `बहुत सुंदर, ${nextC} चक्र पूर्ण हुए।`,
+                        langRef.current === 'en' ? 'en-IN' : 'hi-IN'
+                      );
+                    }, 1200);
+                  }
                 }
                 return nextC;
               });
@@ -555,10 +675,12 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
     } else {
       setBreathPhase('idle');
       setPhaseSecondsLeft(0);
+      stopCue();
     }
 
     return () => {
       if (breathTimer) clearInterval(breathTimer);
+      stopCue();
     };
   }, [isBreathingActive, selectedPranayama]);
 
@@ -567,41 +689,41 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
     switch (breathPhase) {
       case 'inhale':
         return {
-          scale: 'scale-125 sm:scale-135',
+          scale: 'scale-115 sm:scale-120',
           glow: 'from-emerald-400/40 via-teal-300/30 to-sage/50',
           borderColor: 'border-emerald-400',
-          label: 'श्वास अंदर लें (Inhale)',
-          sub: 'Fill your chest with pure Himalayan prana',
+          label: 'श्वास अंदर लें (Inhale Deeply)',
+          sub: 'धीमी और गहरी सांस अंदर भरें (Fill your lungs with pure prana)',
         };
       case 'hold-in':
         return {
-          scale: 'scale-120 sm:scale-130',
+          scale: 'scale-115 sm:scale-120',
           glow: 'from-amber-400/40 via-gold-warm/40 to-amber-500/50',
           borderColor: 'border-gold-warm',
-          label: 'कुम्भक (Hold Prana)',
-          sub: 'Retain the sacred stillness inside',
+          label: 'सांस रोकें (Hold Still)',
+          sub: 'श्वास भीतर रोककर शांत रहें (Retain the sacred stillness inside)',
         };
       case 'exhale':
         return {
-          scale: 'scale-85 sm:scale-90',
+          scale: 'scale-90 sm:scale-95',
           glow: 'from-indigo-400/30 via-slate-400/20 to-sky-500/40',
           borderColor: 'border-indigo-400',
-          label: 'श्वास बाहर छोड़ें (Exhale)',
-          sub: 'Release all tension down to the earth',
+          label: 'धीरे-धीरे सांस छोड़ें (Exhale Calmly)',
+          sub: 'तनाव और चिंता को बाहर छोड़ें (Release all tension down to the earth)',
         };
       case 'hold-out':
         return {
           scale: 'scale-90',
           glow: 'from-purple-400/20 via-pink-400/20 to-indigo-500/30',
           borderColor: 'border-purple-400',
-          label: 'बाह्य कुम्भक (Rest)',
-          sub: 'Rest in pure awareness',
+          label: 'विश्राम करें (Rest & Hold)',
+          sub: 'श्वास बाहर रोककर पूर्ण शांति महसूस करें (Rest in pure awareness)',
         };
       default:
         return {
           scale: 'scale-100',
           glow: 'from-sage/20 via-gold-warm/15 to-sage/30',
-          borderColor: 'border-sage/40',
+          borderColor: 'border-[#5b8257]',
           label: 'तैयार रहें (Ready)',
           sub: 'Press Start to begin guided sacred breathing',
         };
@@ -899,230 +1021,180 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
     };
   }, [isHoldingPose, selectedAsana]);
 
+  const currentPillar = WELLNESS_PILLARS.find((p) => p.id === activeTab);
+
   return (
-    <div className="min-h-screen bg-mist text-primary transition-colors duration-300 relative pb-24 safe-bottom-nav">
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      className="min-h-screen bg-mist text-primary transition-colors duration-300 relative pb-24 safe-bottom-nav select-text"
+    >
       {/* Background Mountain Contours */}
       <div className="absolute top-0 left-0 right-0 pointer-events-none opacity-20 dark:opacity-10 z-0">
         <MountainRidge tone="pine" className="w-full h-44 object-cover" />
       </div>
 
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 relative z-10 space-y-5">
-        {/* ── Universal Back Button for Mobile & Desktop ─────────────────── */}
-        <div className="flex items-center justify-between pb-1">
-          <BackButton fallback="/mitra" label="डैशबोर्ड (Dashboard)" />
-          {activeTab !== 'hub' && (
-            <button
-              onClick={() => handleTabChange('hub')}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-sage dark:text-booti-glow bg-sage/10 hover:bg-sage/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>हब पर वापस (Wellness Hub)</span>
-            </button>
-          )}
-        </div>
-
-        {/* ── TOP HERO BANNER & INTERACTIVE HYDRATION / VITALITY BAR ── */}
-        <div className="bg-white/95 dark:bg-card backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-sage/20 dark:border-gray-800 shadow-xs space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-sage/15 text-sage dark:text-booti-glow">
-                  Sanjeevani Wellness Studio
-                </span>
-                <span className="text-[10px] text-gray-500 flex items-center gap-1 font-medium">
-                  <Mountain className="w-3 h-3 text-gold-warm" /> Chamoli Hill Sanctuary
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl font-serif font-bold text-primary">
-                आरोग्यशाला (Interactive Wellness Sanctuary)
-              </h1>
-              <p className="text-xs sm:text-sm text-muted dark:text-muted mt-0.5">
-                Sacred Breathing Mandala, Tri-Dosha Scanner, Marma Acupressure & Alpine Tea Herbalist.
-              </p>
-            </div>
-
-            {/* Mindful Minutes & Daily Streak */}
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <div className="bg-mist dark:bg-card border border-sage/25 rounded-xl px-3 py-1.5 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-sage dark:text-booti-glow" />
-                <div>
-                  <span className="text-[9px] text-gray-500 uppercase font-bold block leading-none">Mindful</span>
-                  <span className="text-xs sm:text-sm font-bold text-primary">
-                    {wellnessStats.mindfulMinutesToday} Mins
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-mist dark:bg-card border border-gold-warm/30 rounded-xl px-3 py-1.5 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-gold-warm" />
-                <div>
-                  <span className="text-[9px] text-gray-500 uppercase font-bold block leading-none">Breaths</span>
-                  <span className="text-xs sm:text-sm font-bold text-primary">
-                    {wellnessStats.breathCyclesToday}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-mist dark:bg-card border border-orange-500/30 rounded-xl px-3 py-1.5 flex items-center gap-2">
-                <Flame className="w-4 h-4 text-orange-500" />
-                <div>
-                  <span className="text-[9px] text-gray-500 uppercase font-bold block leading-none">Streak</span>
-                  <span className="text-xs sm:text-sm font-bold text-primary">
-                    {wellnessStats.streakDays} Days 🔥
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive Himalayan Spring Water Tracker */}
-          <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Droplet className="w-4 h-4 text-sky-500 animate-bounce" />
-              <span className="text-xs font-bold text-primary">
-                Daily Mountain Hydration (जल साधना):
-              </span>
-              <span className="text-xs font-semibold text-gray-500">
-                {wellnessStats.waterGlassesToday}/8 Glasses ({wellnessStats.waterGlassesToday * 250}ml)
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((idx) => {
-                const filled = idx < wellnessStats.waterGlassesToday;
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleDrinkWater(idx)}
-                    title={`Glass ${idx + 1}`}
-                    className={`w-7 h-8 sm:w-8 sm:h-9 rounded-lg border flex flex-col items-center justify-center transition-all cursor-pointer ${
-                      filled
-                        ? 'bg-sky-500 text-white border-sky-600 shadow-xs scale-105'
-                        : 'bg-mist dark:bg-card border-gray-300 dark:border-gray-700 text-gray-400 hover:border-sky-400'
-                    }`}
-                  >
-                    <Droplet className={`w-3.5 h-3.5 ${filled ? 'fill-current' : ''}`} />
-                    <span className="text-[8px] font-bold mt-0.5">{idx + 1}</span>
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() => {
-                  saveStats({ ...wellnessStats, waterGlassesToday: 0 });
-                  toast('Hydration reset for new day', { icon: '💧' });
-                }}
-                className="text-[10px] text-gray-400 hover:text-gray-600 px-1 py-1 rounded-md cursor-pointer"
-                title="Reset water log"
-              >
-                <RotateCcw className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Page Voice Guide Banner ── */}
-        <PageVoiceGuide pageKey="wellness" />
-
-        {/* ── PERSISTENT SOUNDTRACK BAR ── */}
-        <div className="bg-gradient-to-r from-sage/10 via-[#D4A359]/10 to-sage/10 dark:from-sage/20 dark:via-card dark:to-sage/20 border border-sage/30 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-2 shrink-0">
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${ambientTrack !== 'off' ? 'bg-sage text-white animate-pulse' : 'bg-gray-200 dark:bg-gray-800 text-gray-500'}`}>
-              <Music className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-sage dark:text-booti-glow block leading-none">
-                Himalayan Soundscape
-              </span>
-              <span className="text-xs font-bold text-primary">
-                {ambientTrack === 'river' ? 'Alaknanda Stream (Pink Noise)' : ambientTrack === 'om' ? '136.1Hz Cosmic Om' : ambientTrack === 'bowls' ? 'Tibetan Bowls' : ambientTrack === 'bells' ? 'Temple Bells' : ambientTrack === 'wind' ? 'Pine Wind' : 'Acoustics Off'}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => toggleAmbientSound('river')}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${ambientTrack === 'river' ? 'bg-sage text-white shadow-xs' : 'bg-white dark:bg-warm-indigo text-gray-700 dark:text-gray-300 hover:bg-sage/10'}`}
-            >
-              🌊 Stream
-            </button>
-            <button
-              onClick={() => toggleAmbientSound('om')}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${ambientTrack === 'om' ? 'bg-gold-warm text-primary shadow-xs' : 'bg-white dark:bg-warm-indigo text-gray-700 dark:text-gray-300 hover:bg-gold-warm/10'}`}
-            >
-              🕉️ Om 136Hz
-            </button>
-            <button
-              onClick={() => toggleAmbientSound('bowls')}
-              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${ambientTrack === 'bowls' ? 'bg-sage text-white shadow-xs' : 'bg-white dark:bg-warm-indigo text-gray-700 dark:text-gray-300 hover:bg-sage/10'}`}
-            >
-              🥣 Bowls
-            </button>
-            {ambientTrack !== 'off' && (
-              <button
-                onClick={() => toggleAmbientSound(ambientTrack)}
-                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl cursor-pointer"
-                title="Mute Soundscape"
-              >
-                <VolumeX className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
         {/* ══════════════════════════════════════════════════════════════
-            PAGES INSIDE PAGE ARCHITECTURE:
-            1. HUB VIEW: 7 Distinct Pillar Cards (No horizontal scroll!)
-            2. SUB-VIEW HEADER: Back to Hub + Quick Switcher
+            1. SANCTUARY HUB VIEW (Only rendered when activeTab === 'hub')
+            Contains: Hero Banner, Hydration Tracker, Voice Guide,
+            Persistent Soundtrack Bar, and the 7 Practice Cards
         ══════════════════════════════════════════════════════════════ */}
-
-        {/* ── SUB-VIEW NAVIGATION HEADER (When inside a specific pillar) ── */}
-        {activeTab !== 'hub' && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 dark:bg-card p-3 sm:p-4 rounded-2xl border border-sage/20 dark:border-gray-800 shadow-xs animate-fadeIn">
-            <button
-              onClick={() => handleTabChange('hub')}
-              className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-sage dark:text-booti-glow hover:underline cursor-pointer group"
-            >
-              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-              <span>← आरोग्यशाला हब पर वापस (Back to Wellness Hub)</span>
-            </button>
-
-            {/* Responsive Pillar Selector (wrapped pills, zero horizontal scroll!) */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                onClick={() => handleTabChange('hub')}
-                className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-mist dark:bg-[#131E2B] text-muted hover:text-primary transition-all cursor-pointer"
-              >
-                🏠 हब (Hub)
-              </button>
-              {WELLNESS_PILLARS.map((p) => {
-                const Icon = p.icon;
-                const isActive = activeTab === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => handleTabChange(p.id)}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                      isActive
-                        ? 'bg-sage text-white shadow-xs'
-                        : 'bg-mist dark:bg-[#131E2B] text-muted hover:text-primary'
-                    }`}
-                  >
-                    <Icon className="w-3 h-3" />
-                    <span>{p.shortTitle}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ── 1. SANCTUARY HUB (When activeTab === 'hub') ── */}
         {activeTab === 'hub' && (
-          <div className="space-y-6 animate-fadeIn">
-            {/* Hub Header & Motivation */}
+          <div className="space-y-5 animate-fadeIn">
+            {/* Top Hero Banner & Interactive Hydration Bar */}
+            <div className="bg-white/95 dark:bg-card backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-sage/20 dark:border-gray-800 shadow-xs space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <BackButton fallback="/mitra" />
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-sage/15 text-sage dark:text-booti-glow">
+                      Sanjeevani Wellness Studio
+                    </span>
+                    <span className="text-[10px] text-gray-500 flex items-center gap-1 font-medium">
+                      <Mountain className="w-3 h-3 text-gold-warm" /> Chamoli Hill Sanctuary
+                    </span>
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-serif font-bold text-primary">
+                    आरोग्यशाला (Interactive Wellness Sanctuary)
+                  </h1>
+                  <p className="text-xs sm:text-sm text-muted dark:text-muted mt-0.5">
+                    Sacred Breathing Mandala, Tri-Dosha Scanner, Marma Acupressure & Alpine Tea Herbalist.
+                  </p>
+                </div>
+
+                {/* Mindful Minutes & Daily Streak */}
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  <div className="bg-mist dark:bg-card border border-sage/25 rounded-xl px-3 py-1.5 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-sage dark:text-booti-glow" />
+                    <div>
+                      <span className="text-[9px] text-gray-500 uppercase font-bold block leading-none">Mindful</span>
+                      <span className="text-xs sm:text-sm font-bold text-primary">
+                        {wellnessStats.mindfulMinutesToday} Mins
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-mist dark:bg-card border border-gold-warm/30 rounded-xl px-3 py-1.5 flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-gold-warm" />
+                    <div>
+                      <span className="text-[9px] text-gray-500 uppercase font-bold block leading-none">Breaths</span>
+                      <span className="text-xs sm:text-sm font-bold text-primary">
+                        {wellnessStats.breathCyclesToday}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-mist dark:bg-card border border-orange-500/30 rounded-xl px-3 py-1.5 flex items-center gap-2">
+                    <Flame className="w-4 h-4 text-orange-500" />
+                    <div>
+                      <span className="text-[9px] text-gray-500 uppercase font-bold block leading-none">Streak</span>
+                      <span className="text-xs sm:text-sm font-bold text-primary">
+                        {wellnessStats.streakDays} Days 🔥
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interactive Himalayan Spring Water Tracker */}
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Droplet className="w-4 h-4 text-sky-500 animate-bounce" />
+                  <span className="text-xs font-bold text-primary">
+                    Daily Mountain Hydration (जल साधना):
+                  </span>
+                  <span className="text-xs font-semibold text-gray-500">
+                    {wellnessStats.waterGlassesToday}/8 Glasses ({wellnessStats.waterGlassesToday * 250}ml)
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                  {[0, 1, 2, 3, 4, 5, 6, 7].map((idx) => {
+                    const filled = idx < wellnessStats.waterGlassesToday;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleDrinkWater(idx)}
+                        title={`Glass ${idx + 1}`}
+                        className={`w-7 h-8 sm:w-8 sm:h-9 rounded-lg border flex flex-col items-center justify-center transition-all cursor-pointer ${
+                          filled
+                            ? 'bg-sky-500 text-white border-sky-600 shadow-xs scale-105'
+                            : 'bg-mist dark:bg-card border-gray-300 dark:border-gray-700 text-gray-400 hover:border-sky-400'
+                        }`}
+                      >
+                        <Droplet className={`w-3.5 h-3.5 ${filled ? 'fill-current' : ''}`} />
+                        <span className="text-[8px] font-bold mt-0.5">{idx + 1}</span>
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      saveStats({ ...wellnessStats, waterGlassesToday: 0 });
+                      toast('Hydration reset for new day', { icon: '💧' });
+                    }}
+                    className="text-[10px] text-gray-400 hover:text-gray-600 px-1 py-1 rounded-md cursor-pointer"
+                    title="Reset water log"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Page Voice Guide Banner */}
+            <PageVoiceGuide pageKey="wellness" />
+
+            {/* Persistent Soundtrack Bar */}
+            <div className="bg-gradient-to-r from-sage/10 via-[#D4A359]/10 to-sage/10 dark:from-sage/20 dark:via-card dark:to-sage/20 border border-sage/30 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-2 shrink-0">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${ambientTrack !== 'off' ? 'bg-sage text-white animate-pulse' : 'bg-gray-200 dark:bg-gray-800 text-gray-500'}`}>
+                  <Music className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-sage dark:text-booti-glow block leading-none">
+                    Himalayan Soundscape
+                  </span>
+                  <span className="text-xs font-bold text-primary">
+                    {ambientTrack === 'river' ? 'Alaknanda Stream (Pink Noise)' : ambientTrack === 'om' ? '136.1Hz Cosmic Om' : ambientTrack === 'bowls' ? 'Tibetan Bowls' : ambientTrack === 'bells' ? 'Temple Bells' : ambientTrack === 'wind' ? 'Pine Wind' : 'Acoustics Off'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => toggleAmbientSound('river')}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${ambientTrack === 'river' ? 'bg-sage text-white shadow-xs' : 'bg-white dark:bg-warm-indigo text-gray-700 dark:text-gray-300 hover:bg-sage/10'}`}
+                >
+                  🌊 Stream
+                </button>
+                <button
+                  onClick={() => toggleAmbientSound('om')}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${ambientTrack === 'om' ? 'bg-gold-warm text-primary shadow-xs' : 'bg-white dark:bg-warm-indigo text-gray-700 dark:text-gray-300 hover:bg-gold-warm/10'}`}
+                >
+                  🕉️ Om 136Hz
+                </button>
+                <button
+                  onClick={() => toggleAmbientSound('bowls')}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${ambientTrack === 'bowls' ? 'bg-sage text-white shadow-xs' : 'bg-white dark:bg-warm-indigo text-gray-700 dark:text-gray-300 hover:bg-sage/10'}`}
+                >
+                  🥣 Bowls
+                </button>
+                {ambientTrack !== 'off' && (
+                  <button
+                    onClick={() => toggleAmbientSound(ambientTrack)}
+                    className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl cursor-pointer"
+                    title="Mute Soundscape"
+                  >
+                    <VolumeX className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Hub Practice Selector Intro */}
             <div className="bg-gradient-to-r from-sage/15 via-gold-warm/10 to-sage/15 dark:from-sage/20 dark:via-[#131E2B] dark:to-sage/20 border border-sage/25 rounded-3xl p-5 sm:p-6 shadow-xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -1136,7 +1208,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     आरोग्यशाला कक्ष चुनें (Select Wellness Practice)
                   </h2>
                   <p className="text-xs sm:text-sm text-muted mt-1 leading-relaxed max-w-2xl">
-                    प्रत्येक स्तंभ एक स्वतंत्र आरोग्य कक्ष है। अपनी आवश्यकतानुसार किसी भी अभ्यास पर टैप करें और समर्पित अनुभव प्राप्त करें।
+                    प्रत्येक स्तंभ एक स्वतंत्र आरोग्य कक्ष है। किसी भी अभ्यास पर टैप करें और समर्पित, ध्यान-केंद्रित पृष्ठ पर अभ्यास करें।
                   </p>
                 </div>
 
@@ -1219,271 +1291,311 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
         )}
 
         {/* ══════════════════════════════════════════════════════════════
-            TAB 1: SACRED PRANAYAMA MANDALA (IMMERSIVE BREATHING)
+            2. DEDICATED SEPARATE SUB-VIEW HEADER (When activeTab !== 'hub')
+            Clean, zero-clutter header with Back to Hub button, title & switcher
+        ══════════════════════════════════════════════════════════════ */}
+        {activeTab !== 'hub' && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 dark:bg-card p-3 sm:p-4 rounded-2xl border border-sage/20 dark:border-gray-800 shadow-xs animate-fadeIn">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => handleTabChange('hub')}
+                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-sage dark:text-booti-glow hover:underline cursor-pointer group"
+                title="आरोग्यशाला हब पर वापस जाएं"
+              >
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                <span>← आरोग्यशाला हब (Hub)</span>
+              </button>
+              {currentPillar && (
+                <span className="text-xs sm:text-sm font-serif font-bold text-primary border-l border-gray-300 dark:border-gray-700 pl-3">
+                  {currentPillar.title}
+                </span>
+              )}
+            </div>
+
+            {/* Responsive Pillar Selector (wrapped pills, zero horizontal scroll!) */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleTabChange('hub')}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-mist dark:bg-[#131E2B] text-muted hover:text-primary transition-all cursor-pointer"
+              >
+                🏠 हब
+              </button>
+              {WELLNESS_PILLARS.map((p) => {
+                const Icon = p.icon;
+                const isActive = activeTab === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleTabChange(p.id)}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-sage text-white shadow-xs'
+                        : 'bg-mist dark:bg-[#131E2B] text-muted hover:text-primary'
+                    }`}
+                  >
+                    <Icon className="w-3 h-3" />
+                    <span>{p.shortTitle}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════
+            TAB 1: DEDICATED SACRED PRANAYAMA & MEDITATION (MATCHING IMAGE)
         ══════════════════════════════════════════════════════════════ */}
         {activeTab === 'pranayama' && (
-          <div className="space-y-6">
+          <div className="space-y-4 animate-fadeIn max-w-3xl mx-auto">
+            {/* Top Rhythm Selector Bar */}
+            <div className="bg-white/95 dark:bg-[#111A24] border border-sage/20 dark:border-[#1E2E40] rounded-2xl p-3 shadow-xs">
+              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted dark:text-gray-400">
+                  श्वास लय चुनें (Select Rhythm):
+                </span>
+                <span className="text-[10px] text-sage dark:text-booti-glow font-bold">
+                  {selectedPranayama.benefits}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {PRANAYAMA_PATTERNS.map((p) => {
+                  const isSel = selectedPranayama.id === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPranayama(p);
+                        setIsBreathingActive(false);
+                        stopCue();
+                        playMeditationChime('inhale');
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        isSel
+                          ? 'bg-[#5b8257] text-white shadow-xs'
+                          : 'bg-mist dark:bg-[#182332] text-gray-700 dark:text-gray-300 hover:border-sage/40 border border-gray-200 dark:border-[#26374a]'
+                      }`}
+                    >
+                      <span>{p.hindiName.split(' ')[0]}</span>
+                      <span className={`text-[10px] px-1 py-0.2 rounded-md ${isSel ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-black/30 text-gray-500'}`}>
+                        {p.inhaleSec}-{p.holdInSec}-{p.exhaleSec}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-            {/* ── SACRED PRANAYAMA VISUAL HERO (FOR NON-READERS & VISUAL LEARNERS) ── */}
-            <div className="relative rounded-3xl overflow-hidden shadow-md border border-sage/40 bg-gradient-to-br from-[#1E2A43] via-card to-sage/30 text-white">
-              <div className="relative h-52 sm:h-64 w-full overflow-hidden group">
-                <img
-                  src="/assets/wellness/pranayama_hero.jpg"
-                  alt="हिमालयी प्राणायाम व ध्यान"
-                  className="w-full h-full object-cover object-center filter brightness-95 contrast-105 group-hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-4 sm:p-6">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sage/90 text-white text-[10px] sm:text-xs font-extrabold uppercase tracking-wider mb-1.5 w-fit shadow-md">
-                    <span>🪷 हिमालयी श्वास साधना</span>
-                    <span className="opacity-80">• Sacred Breathwork</span>
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-serif font-bold text-white leading-tight drop-shadow-md">
-                    गहरी श्वास, शांत मन (Breath with Sunrise)
-                  </h3>
-                  <p className="text-xs sm:text-sm text-white/90 mt-1 max-w-xl leading-relaxed drop-shadow-sm">
-                    चित्र को देखें, सीधे बैठें, और घूमते हुए चक्र के साथ अपनी श्वास को अंदर व बाहर करें।
-                  </p>
-                </div>
+            {/* DEDICATED IMMERSIVE SACRED BREATHING MANDALA CARD (MATCHING USER'S IMAGE) */}
+            <div className="bg-[#111A24] border border-[#1E2E40] rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-2xl relative overflow-hidden min-h-[480px]">
+              
+              {/* Subtle dynamic background aura */}
+              <div className={`absolute w-72 h-72 sm:w-88 sm:h-88 rounded-full bg-gradient-to-tr ${mandalaVisuals.glow} blur-3xl opacity-40 transition-all duration-1000 pointer-events-none`} />
 
-                {/* 1-Tap Voice Guide Button */}
+              {/* Top Controls: Spoken Voice Guide Toggle Pill */}
+              <div className="relative z-10 mb-2 flex items-center justify-center gap-2">
                 <button
-                  onClick={() => speakCue('Aaram se Sukhasana mein baith jayein. Peeth seedhi rakhein. Mandala ke badhne par shwaas andar len, aur chhota hone par dheere se chhodein.', 'hi-IN')}
-                  className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sage hover:bg-sage/90 text-white text-xs font-bold shadow-lg active:scale-95 transition-all cursor-pointer"
-                  title="श्वास विधि सुनें"
+                  type="button"
+                  onClick={toggleVoiceGuide}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                    voiceGuideEnabled
+                      ? 'bg-[#5b8257]/25 border-[#5b8257]/50 text-emerald-300 hover:bg-[#5b8257]/35'
+                      : 'bg-gray-800/80 border-gray-700 text-gray-400 hover:text-gray-200'
+                  }`}
+                  title="आँखें बंद होने पर बोलकर निर्देश सुनने के लिए टॉगल करें"
                 >
-                  <Volume2 className="w-4 h-4 animate-bounce" />
-                  <span>🔊 श्वास विधि सुनें</span>
+                  <Volume2 className={`w-3.5 h-3.5 ${voiceGuideEnabled ? 'text-emerald-400 animate-pulse' : 'text-gray-500'}`} />
+                  <span>
+                    {voiceGuideEnabled ? 'बोलकर निर्देश: चालू (Voice Guide ON)' : 'बोलकर निर्देश: बंद (Chime Only)'}
+                  </span>
                 </button>
               </div>
 
-              {/* Visual 3-Step Pictogram Strip for Illiterate Users */}
-              <div className="p-3 sm:p-4 bg-white dark:bg-[#131E2B] text-primary dark:text-gray-100 grid grid-cols-3 gap-2 border-t border-sage/20 text-center">
-                <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                  <span className="text-xl sm:text-2xl block">🌬️</span>
-                  <span className="text-[11px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400">1. श्वास लें</span>
-                  <span className="text-[9px] text-muted block">Inhale Deeply</span>
-                </div>
-                <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                  <span className="text-xl sm:text-2xl block">⏸️</span>
-                  <span className="text-[11px] sm:text-xs font-bold text-amber-600 dark:text-amber-400">2. अंदर रोकें</span>
-                  <span className="text-[9px] text-muted block">Hold Still</span>
-                </div>
-                <div className="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-                  <span className="text-xl sm:text-2xl block">🍃</span>
-                  <span className="text-[11px] sm:text-xs font-bold text-indigo-600 dark:text-indigo-400">3. छोड़ें</span>
-                  <span className="text-[9px] text-muted block">Exhale Calmly</span>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              
-              {/* Pattern Selector Cards */}
-              <div className="lg:col-span-4 space-y-2.5">
-                <span className="text-xs font-bold uppercase tracking-wider text-gray-500 block">
-                  Select Breath Rhythm (प्राणायाम विधि):
-                </span>
-                <div className="space-y-2">
-                  {PRANAYAMA_PATTERNS.map((p) => {
-                    const isSelected = selectedPranayama.id === p.id;
-                    return (
-                      <div
-                        key={p.id}
-                        onClick={() => {
-                          setSelectedPranayama(p);
-                          setIsBreathingActive(false);
-                          playMeditationChime('inhale');
-                        }}
-                        className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-sage text-white border-sage shadow-xs'
-                            : 'bg-white dark:bg-warm-indigo border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200 hover:border-sage/50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-serif font-bold text-sm">{p.name}</h4>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                            {p.inhaleSec}-{p.holdInSec}-{p.exhaleSec}-{p.holdOutSec}
-                          </span>
-                        </div>
-                        <span className={`text-[11px] block mt-0.5 ${isSelected ? 'text-white/80' : 'text-gold-warm'}`}>
-                          {p.hindiName}
-                        </span>
-                        <p className={`text-xs mt-1 line-clamp-1 ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
-                          {p.benefits}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Tempo Speed Selector */}
-                <div className="bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-800 rounded-2xl p-3 space-y-2">
-                  <span className="text-[11px] font-bold text-gray-500 block">Mindful Audio Guidance:</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => playSingingBowl(216, 4)}
-                      className="flex-1 py-1.5 bg-sage/15 hover:bg-sage/25 text-sage dark:text-booti-glow rounded-xl text-xs font-bold transition-all cursor-pointer"
-                    >
-                      🥣 Singing Bowl
-                    </button>
-                    <button
-                      onClick={() => playTempleBell(852, 3)}
-                      className="flex-1 py-1.5 bg-gold-warm/15 hover:bg-gold-warm/25 text-gold-warm rounded-xl text-xs font-bold transition-all cursor-pointer"
-                    >
-                      🔔 Temple Bell
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* LIVE SACRED LOTUS MANDALA VISUALIZER */}
-              <div className="lg:col-span-8 bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-xs relative overflow-hidden min-h-[460px]">
+              {/* SACRED MANDALA CONTAINER (MATCHING USER'S IMAGE) */}
+              <div className="relative w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center my-4 sm:my-6">
                 
-                {/* Dynamic Aura Gradient in background */}
-                <div className={`absolute w-72 h-72 sm:w-88 sm:h-88 rounded-full bg-gradient-to-tr ${mandalaVisuals.glow} blur-2xl opacity-60 transition-all duration-1000 pointer-events-none`} />
+                {/* Rotating 8 Golden-Olive Spikes (Lotus Sunburst as in image) */}
+                <svg
+                  viewBox="0 0 200 200"
+                  className={`absolute inset-0 w-full h-full animate-mandala-spin transition-transform duration-1000 ease-out ${mandalaVisuals.scale}`}
+                >
+                  {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+                    <g key={deg} transform={`rotate(${deg} 100 100)`}>
+                      <polygon
+                        points="100,8 109,46 91,46"
+                        fill="#6B7745"
+                        stroke="#505A32"
+                        strokeWidth="0.75"
+                        opacity="0.9"
+                      />
+                      <polygon
+                        points="100,16 105,44 95,44"
+                        fill="#869553"
+                        opacity="0.5"
+                      />
+                    </g>
+                  ))}
+                </svg>
 
-                {/* THE SACRED MANDALA CONTAINER */}
-                <div className="relative w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center mb-6">
-                  
-                  {/* Rotating Multi-Petal SVG Lotus Mandala */}
-                  <svg
-                    viewBox="0 0 200 200"
-                    className={`absolute inset-0 w-full h-full animate-mandala-spin transition-transform duration-1000 ease-out ${mandalaVisuals.scale}`}
-                  >
-                    <defs>
-                      <linearGradient id="mandalaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#4A6741" stopOpacity="0.4" />
-                        <stop offset="50%" stopColor="#D4A359" stopOpacity="0.5" />
-                        <stop offset="100%" stopColor="#2D4A22" stopOpacity="0.6" />
-                      </linearGradient>
-                    </defs>
+                {/* Dark circular border ring enclosing inner disc */}
+                <div className="absolute w-48 h-48 sm:w-52 sm:h-52 rounded-full border-[7px] border-[#182635] shadow-2xl pointer-events-none" />
 
-                    {/* Outer 8 Lotus Petals */}
-                    {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
-                      <g key={deg} transform={`rotate(${deg} 100 100)`}>
-                        <path
-                          d="M 100 20 C 112 50, 120 70, 100 95 C 80 70, 88 50, 100 20 Z"
-                          fill="url(#mandalaGrad)"
-                          stroke="currentColor"
-                          strokeWidth="0.75"
-                          className="text-sage/40 dark:text-booti-glow/40"
-                        />
-                      </g>
-                    ))}
-
-                    {/* Inner 8 Lotus Petals */}
-                    {[22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5].map((deg) => (
-                      <g key={deg} transform={`rotate(${deg} 100 100)`}>
-                        <path
-                          d="M 100 45 C 108 65, 112 78, 100 92 C 88 78, 92 65, 100 45 Z"
-                          fill="#D4A359"
-                          fillOpacity="0.3"
-                          stroke="currentColor"
-                          strokeWidth="0.5"
-                          className="text-gold-warm/60"
-                        />
-                      </g>
-                    ))}
-
-                    {/* Center Ring */}
-                    <circle cx="100" cy="100" r="32" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" className="text-sage/60" />
-                  </svg>
-
-                  {/* Circular Stroke Progress Countdown Ring */}
-                  <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
+                {/* Circular Stroke Progress Countdown Ring */}
+                <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
+                  <circle
+                    cx="50%"
+                    cy="50%"
+                    r="80"
+                    fill="none"
+                    stroke="#182635"
+                    strokeWidth="5"
+                  />
+                  {isBreathingActive && (
                     <circle
                       cx="50%"
                       cy="50%"
-                      r="70"
+                      r="80"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="4"
-                      className="text-gray-200 dark:text-gray-800"
+                      strokeWidth="6"
+                      strokeDasharray={502}
+                      strokeDashoffset={502 - (502 * (phaseSecondsLeft / Math.max(1, breathPhase === 'inhale' ? selectedPranayama.inhaleSec : breathPhase === 'hold-in' ? selectedPranayama.holdInSec : breathPhase === 'exhale' ? selectedPranayama.exhaleSec : selectedPranayama.holdOutSec || 1)))}
+                      strokeLinecap="round"
+                      className={`transition-all duration-1000 ${
+                        breathPhase === 'inhale'
+                          ? 'text-emerald-400'
+                          : breathPhase === 'hold-in'
+                          ? 'text-amber-400'
+                          : breathPhase === 'exhale'
+                          ? 'text-sky-400'
+                          : 'text-indigo-400'
+                      }`}
                     />
-                    {isBreathingActive && (
-                      <circle
-                        cx="50%"
-                        cy="50%"
-                        r="70"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="5"
-                        strokeDasharray={440}
-                        strokeDashoffset={440 - (440 * (phaseSecondsLeft / Math.max(1, selectedPranayama.inhaleSec)))}
-                        strokeLinecap="round"
-                        className={`transition-all duration-1000 ${
-                          breathPhase === 'inhale' ? 'text-emerald-500' : breathPhase === 'hold-in' ? 'text-amber-500' : 'text-indigo-500'
-                        }`}
-                      />
-                    )}
-                  </svg>
-
-                  {/* Central Mandala Nucleus */}
-                  <div
-                    className={`w-36 h-36 sm:w-40 sm:h-40 rounded-full shadow-lg flex flex-col items-center justify-center transition-all duration-1000 z-10 border-2 ${mandalaVisuals.borderColor} ${
-                      breathPhase === 'inhale'
-                        ? 'bg-gradient-to-tr from-sage to-emerald-500 text-white shadow-emerald-500/20'
-                        : breathPhase === 'hold-in'
-                        ? 'bg-gradient-to-tr from-gold-warm to-amber-500 text-primary shadow-amber-500/20'
-                        : breathPhase === 'exhale'
-                        ? 'bg-gradient-to-tr from-[#1E2A43] to-indigo-600 text-white shadow-indigo-500/20'
-                        : 'bg-gradient-to-tr from-sage to-[#7A9A75] text-white'
-                    }`}
-                  >
-                    <span className="text-[10px] uppercase tracking-wider font-extrabold opacity-90 px-2 text-center">
-                      {breathPhase === 'inhale' ? 'श्वास लें' : breathPhase === 'hold-in' ? 'रोकें' : breathPhase === 'exhale' ? 'छोड़ें' : breathPhase === 'hold-out' ? 'विश्राम' : 'आरंभ'}
-                    </span>
-                    <span className="text-4xl font-serif font-extrabold my-0.5">
-                      {isBreathingActive ? `${phaseSecondsLeft}s` : 'ॐ'}
-                    </span>
-                    <span className="text-[10px] font-bold opacity-80">
-                      Cycle: {breathCyclesDone}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Subtitle & Cue */}
-                <h3 className="text-base sm:text-lg font-serif font-bold text-primary mb-1">
-                  {mandalaVisuals.label}
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mb-5">
-                  {mandalaVisuals.sub}
-                </p>
-
-                {/* Interactive Controls */}
-                <div className="flex items-center gap-3">
-                  {!isBreathingActive ? (
-                    <button
-                      onClick={() => {
-                        setIsBreathingActive(true);
-                        playSingingBowl(216, 3);
-                      }}
-                      className="bg-sage hover:bg-sage/90 text-white px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 cursor-pointer shadow-md transition-all hover:scale-105"
-                    >
-                      <Play className="w-4 h-4 fill-current" />
-                      <span>प्राणायाम शुरू करें (Start Breathwork)</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setIsBreathingActive(false)}
-                      className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 cursor-pointer shadow-md"
-                    >
-                      <Pause className="w-4 h-4 fill-current" />
-                      <span>विश्राम दें (Pause)</span>
-                    </button>
                   )}
-                  <button
-                    onClick={() => {
-                      setIsBreathingActive(false);
-                      setBreathCyclesDone(0);
-                      toast('Breath counter reset', { icon: '🔄' });
-                    }}
-                    className="p-3 bg-mist dark:bg-card border border-gray-300 dark:border-gray-700 rounded-2xl text-gray-500 hover:text-primary cursor-pointer"
-                    title="Reset cycles"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </button>
+                </svg>
+
+                {/* Central Mandala Nucleus (Green Disc matching user's image) */}
+                <div
+                  className={`w-36 h-36 sm:w-40 sm:h-40 rounded-full shadow-2xl flex flex-col items-center justify-center transition-all duration-1000 z-10 bg-[#5b8257] border-2 border-[#6f9c6c] text-white`}
+                >
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/90">
+                    {breathPhase === 'inhale'
+                      ? 'श्वास लें'
+                      : breathPhase === 'hold-in'
+                      ? 'रोकें'
+                      : breathPhase === 'exhale'
+                      ? 'श्वास छोड़ें'
+                      : breathPhase === 'hold-out'
+                      ? 'विश्राम'
+                      : 'आरंभ'}
+                  </span>
+
+                  <span className="text-4xl sm:text-5xl font-serif font-extrabold my-0.5 leading-none text-white drop-shadow-sm select-none">
+                    ॐ
+                  </span>
+
+                  <span className="text-[11px] font-semibold text-white/90">
+                    {isBreathingActive ? `${phaseSecondsLeft}s • Cycle: ${breathCyclesDone}` : `Cycle: ${breathCyclesDone}`}
+                  </span>
                 </div>
+              </div>
+
+              {/* Subtitle & Phase Cue */}
+              <h3 className="text-lg sm:text-xl font-serif font-bold text-white mb-1">
+                {isBreathingActive ? `${mandalaVisuals.label} (${phaseSecondsLeft}s)` : 'तैयार रहें (Ready)'}
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-300 dark:text-gray-400 max-w-md mb-6 leading-relaxed">
+                {isBreathingActive
+                  ? (voiceGuideEnabled
+                      ? 'अपनी आँखें बंद रखें • बोलकर निर्देश दिए जा रहे हैं (Eyes closed • Voice guide active)'
+                      : mandalaVisuals.sub)
+                  : 'Press Start to begin guided sacred breathing'}
+              </p>
+
+              {/* Bottom Action Controls: Big Green Button + Reset Button */}
+              <div className="flex items-center justify-center gap-3 w-full max-w-sm mb-4">
+                {!isBreathingActive ? (
+                  <button
+                    type="button"
+                    onClick={handleStartBreathwork}
+                    className="flex-1 bg-[#5b8257] hover:bg-[#4d7049] text-white py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Play className="w-5 h-5 fill-current" />
+                    <span>प्राणायाम शुरू करें (Start Breathwork)</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleStopBreathwork}
+                    className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Pause className="w-5 h-5 fill-current" />
+                    <span>विश्राम दें (Pause)</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsBreathingActive(false);
+                    stopCue();
+                    setBreathCyclesDone(0);
+                    toast('चक्र रीसेट किए गए (Cycles reset)', { icon: '🔄' });
+                  }}
+                  className="w-13 h-13 rounded-2xl bg-[#182332] hover:bg-[#203044] border border-[#26374a] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0"
+                  title="चक्र रीसेट करें (Reset cycles)"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Compact Ambient Acoustic Soundscapes */}
+              <div className="pt-3 border-t border-[#1E2E40] w-full flex items-center justify-center gap-2 flex-wrap text-xs">
+                <span className="text-[11px] text-gray-400 font-semibold flex items-center gap-1">
+                  <Music className="w-3.5 h-3.5 text-sage" /> नाद तरंग:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => toggleAmbientSound('river')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    ambientTrack === 'river'
+                      ? 'bg-sage text-white'
+                      : 'bg-[#182332] text-gray-300 hover:bg-[#223247] border border-[#26374a]'
+                  }`}
+                >
+                  🌊 अलकनंदा
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleAmbientSound('om')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    ambientTrack === 'om'
+                      ? 'bg-gold-warm text-primary'
+                      : 'bg-[#182332] text-gray-300 hover:bg-[#223247] border border-[#26374a]'
+                  }`}
+                >
+                  🕉️ 136Hz ॐ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => playSingingBowl(216, 4)}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#182332] text-gray-300 hover:bg-[#223247] border border-[#26374a] transition-all cursor-pointer"
+                >
+                  🥣 कांस्य कटोरा
+                </button>
+                {ambientTrack !== 'off' && (
+                  <button
+                    type="button"
+                    onClick={() => toggleAmbientSound(ambientTrack)}
+                    className="p-1 text-red-400 hover:text-red-300 cursor-pointer"
+                    title="ध्वनि बंद करें"
+                  >
+                    <VolumeX className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           </div>

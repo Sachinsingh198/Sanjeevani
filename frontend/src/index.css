@@ -35,7 +35,7 @@
 
 :root {
   --mist: #F4F6F0;
-  --sage: #5A7855;
+  --sage: #4A6845;
   --sage-light: #EBF2E9;
   --warm-indigo: #2E4057;
   --sand: #EDE7DA;
@@ -53,7 +53,7 @@
 
 .dark {
   --mist: #151D28;
-  --sage: #6C9366;
+  --sage: #5F8A58;
   --sage-light: #1C2B21;
   --warm-indigo: #1A2433;
   --sand: #232C3A;
@@ -67,6 +67,29 @@
 
   --herb-glow: #7BC750;
   --herb-glow-light: #1F331D;
+}
+
+.high-contrast {
+  --mist: #FFFFFF;
+  --sage: #084008;
+  --sage-light: #E0E8DF;
+  --warm-indigo: #000000;
+  --sand: #F0F0F0;
+  --gold-warm: #5A3E00;
+  --rose-soft: #8A0000;
+
+  --text-primary: #000000;
+  --text-muted: #111111;
+  --bg-card: #FFFFFF;
+  --border-subtle: #000000;
+
+  --herb-glow: #006600;
+  --herb-glow-light: #CCFFCC;
+}
+
+.high-contrast button,
+.high-contrast a {
+  font-weight: 700;
 }
 
 html, body {
@@ -162,6 +185,19 @@ p, li {
 .touch-target-lg {
   min-height: 64px;
   min-width: 64px;
+}
+
+/* Accessibility: Screen-reader only (skip link, hidden labels) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Himalayan Alpenglow Breathing Aura */
@@ -302,7 +338,18 @@ select {
 
 @media (max-width: 768px) {
   .safe-bottom-nav {
-    padding-bottom: 5.5rem !important;
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* Ultra-small screens (320px feature phones common in rural India) */
+@media (max-width: 360px) {
+  .safe-bottom-nav {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  /* Force single-column grids */
+  .xs-grid-cols-1 {
+    grid-template-columns: 1fr !important;
   }
 }
 

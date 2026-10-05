@@ -16,6 +16,9 @@ export const ThemeProvider = ({ children }) => {
   };
 
   const [theme, setTheme] = useState(getInitialTheme);
+  const [highContrast, setHighContrast] = useState(() => {
+    return localStorage.getItem('sanjeevani_high_contrast') === 'true';
+  });
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -27,12 +30,26 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (highContrast) {
+      root.classList.add('high-contrast');
+    } else {
+      root.classList.remove('high-contrast');
+    }
+    localStorage.setItem('sanjeevani_high_contrast', String(highContrast));
+  }, [highContrast]);
+
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
+  const toggleHighContrast = () => {
+    setHighContrast((prev) => !prev);
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, highContrast, toggleHighContrast }}>
       {children}
     </ThemeContext.Provider>
   );

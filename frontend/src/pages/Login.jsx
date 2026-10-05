@@ -176,7 +176,7 @@ export default function Login() {
               <KeyRound className="w-3.5 h-3.5" />
               1-Click Demo Quick Login
             </p>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-3 xs-grid-cols-1 gap-1.5">
               <button
                 type="button"
                 onClick={() => handleQuickFill('patient')}

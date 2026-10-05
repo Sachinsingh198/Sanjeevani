@@ -10,7 +10,7 @@ export default function BackButton({
   fallback = '/mitra',
   label = 'वापस जाएं (Back)',
   className = '',
-  showLabel = true,
+  showLabel = false,
   onClick,
 }) {
   const navigate = useNavigate();
@@ -31,12 +31,14 @@ export default function BackButton({
     <button
       type="button"
       onClick={handleBack}
-      className={`touch-target inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-card/80 hover:bg-mist dark:hover:bg-gray-800 text-primary border border-gray-200 dark:border-gray-700/80 shadow-2xs hover:border-sage/40 transition-all active:scale-95 cursor-pointer text-xs font-bold shrink-0 ${className}`}
+      className={`touch-target p-1 -ml-1 text-primary hover:text-sage dark:hover:text-booti-glow transition-colors active:scale-90 cursor-pointer flex items-center justify-center shrink-0 ${
+        showLabel ? 'gap-1' : ''
+      } ${className}`}
       aria-label="Previous Page"
-      title="Peechhe jayein / Go back"
+      title={label || "Peechhe jayein / Go back"}
     >
-      <ArrowLeft className="w-4 h-4 text-sage dark:text-booti-glow shrink-0" />
-      {showLabel && <span className="truncate">{label}</span>}
+      <ArrowLeft className="w-5 h-5 text-primary hover:text-sage dark:hover:text-booti-glow transition-colors" />
+      {showLabel && <span className="text-xs font-bold truncate text-primary">{label}</span>}
     </button>
   );
 }

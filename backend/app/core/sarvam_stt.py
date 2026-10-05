@@ -8,6 +8,7 @@ import os
 from typing import Optional, Dict, Any
 import httpx
 from app.config import settings
+from app.core.logger import logger
 
 
 class SarvamNotConfiguredError(RuntimeError):
@@ -71,7 +72,7 @@ class SarvamSTTClient:
         if not self.is_configured:
             raise SarvamNotConfiguredError("SARVAM_API_KEY is not configured in environment or settings.")
 
-        if not audio_bytes or len(audio_bytes) < 100:
+        if not audio_bytes or len(audio_bytes) < 10:
             return {"transcript": "", "language_code": language_code or "hi-IN", "language_probability": 0.0}
 
         # Determine safe file extension and clean MIME type
@@ -119,6 +120,15 @@ class SarvamSTTClient:
             )
         except Exception as net_err:
             raise SarvamSTTRequestError(f"Network error connecting to Sarvam STT: {net_err}") from net_err
+
+        if response.status_code == 400:
+            # Sarvam returns 400 when audio format cannot be parsed (e.g. empty or corrupted opus chunks)
+            logger.warning(f"[Sarvam STT] Audio format unreadable by Sarvam (status 400): {response.text}")
+            return {
+                "transcript": "",
+                "language_code": language_code or "hi-IN",
+                "language_probability": 0.0,
+            }
 
         if response.status_code != 200:
             err_msg = f"Sarvam STT failed with status {response.status_code}: {response.text}"

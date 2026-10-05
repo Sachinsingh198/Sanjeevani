@@ -18,8 +18,8 @@ import React from 'react';
 
 const STATE_PALETTE = {
   idle: {
-    core: ['#8ED14C', '#5A7855', '#2B4A30'],
-    ring: '#5A7855',
+    core: ['#8ED14C', '#4A6845', '#2B4A30'],
+    ring: '#4A6845',
     halo: '#8ED14C',
     particles: '#8ED14C',
   },
@@ -42,7 +42,7 @@ const STATE_PALETTE = {
     particles: '#6B8DB5',
   },
   speaking: {
-    core: ['#C3F08C', '#8ED14C', '#5A7855'],
+    core: ['#C3F08C', '#8ED14C', '#4A6845'],
     ring: '#8ED14C',
     halo: '#8ED14C',
     particles: '#8ED14C',

@@ -171,6 +171,8 @@ export const registerUser = async (registrationData, ...legacyArgs) => {
 };
 
 export const fetchCurrentUser = async () => {
+  const token = localStorage.getItem('sanjeevani_token');
+  if (!token) return null;
   const res = await authApi.get('/auth/me');
   return res.data;
 };

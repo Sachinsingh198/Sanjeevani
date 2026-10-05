@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -6,7 +6,8 @@ import {
   PhoneCall, AlertCircle, Plus, CheckCircle2, ChevronRight,
   ShieldAlert, BookOpen, ChevronDown, ChevronUp, Sparkles, Navigation,
   Wind, Activity, HeartHandshake, ArrowRight, Stethoscope, Hospital,
-  Volume2, Home, FileText, Bandage, ArrowLeft
+  Volume2, VolumeX, Square, Home, FileText, Bandage, ArrowLeft, FileDown, Share2, RefreshCw, Printer,
+  Bell, QrCode
 } from 'lucide-react';
 import LiveVoiceRoom from '../components/LiveVoiceRoom';
 import NearbyFacilityFinder from '../components/NearbyFacilityFinder';
@@ -14,9 +15,12 @@ import SanjeevaniOrb from '../components/SanjeevaniOrb';
 import MountainRidge from '../components/MountainRidge';
 import SessionHistoryDrawer from '../components/SessionHistoryDrawer';
 import SkeletonLoader from '../components/SkeletonLoader';
+import ReferralQRModal from '../components/ReferralQRModal';
+import FamilyProfileSelector from '../components/FamilyProfileSelector';
 import { listSessions } from '../lib/sessionStore';
 import { getChatHistory } from '../api/client';
-import { speakCue } from '../lib/audioSynthesizer';
+import { downloadConsultationReport } from '../api/reportsClient';
+import { speakCue, stopCue } from '../lib/audioSynthesizer';
 import PageVoiceGuide from '../components/PageVoiceGuide';
 import toast from 'react-hot-toast';
 
@@ -39,6 +43,17 @@ export default function PatientDashboard() {
   // Dynamic Consultation History
   const [consultations, setConsultations] = useState([]);
   const [loadingConsultations, setLoadingConsultations] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [selectedReferral, setSelectedReferral] = useState(null);
+  const [activeFamilyMember, setActiveFamilyMember] = useState(null);
+
+  const handlePlayRemedyReminder = (remedy) => {
+    const text = `${remedy.name} lene ka samay ho gaya hai! Kripya gungune paani ya nirdeshit matra ke sath lein.`;
+    speakCue(text);
+    toast.success(`Dawa / Kadha Reminder: ${remedy.name} 🔔`, { icon: '🌿' });
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+  };
 
   // District Health Advisory
   const [advisory, setAdvisory] = useState('');
@@ -71,6 +86,105 @@ export default function PatientDashboard() {
       { conversationId: 'demo-2', updatedAt: '2026-09-12T14:15:00.000Z', summary: 'Do din se bukhar aur thakan (Mild Fever)', tier: 'Yellow' },
     ]);
     toast.success('Sample consultation records loaded.');
+  };
+
+  const refreshConsultations = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const historyData = await getChatHistory();
+      if (Array.isArray(historyData) && historyData.length > 0) {
+        setConsultations(historyData.map((item) => ({
+          conversationId: item.conversation_id,
+          summary: item.summary,
+          tier: item.tier,
+          updatedAt: item.updated_at || item.created_at,
+        })));
+        toast.success('Parcha itihas taaza ho gaya! 🔄');
+        setIsRefreshing(false);
+        return;
+      }
+    } catch (err) {
+      console.debug('Failed to fetch backend chat history, falling back to local storage:', err);
+    }
+    const stored = listSessions();
+    setConsultations(stored || []);
+    toast.success('Itihas taaza ho gaya! 🔄');
+    setIsRefreshing(false);
+  }, []);
+
+  const handleDownloadParcha = async (item, e) => {
+    e?.stopPropagation();
+    e?.preventDefault();
+    setDownloadingId(item.conversationId);
+    try {
+      await downloadConsultationReport({
+        conversationId: item.conversationId,
+        tier: item.tier || 'Green',
+        consultationSummary: item.summary || 'Consultation Summary',
+        format: 'pdf',
+      });
+      toast.success('Parcha (PDF) download ho gaya! 📄');
+    } catch (err) {
+      console.warn('Backend PDF download error, attempting browser printable parcha fallback:', err);
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Sanjeevani Parcha - ${item.conversationId}</title>
+            <style>
+              body { font-family: system-ui, sans-serif; padding: 24px; color: #1e2a43; }
+              .header { border-bottom: 2px solid #4a6845; padding-bottom: 12px; margin-bottom: 18px; }
+              .title { font-size: 20px; font-weight: bold; color: #4a6845; }
+              .tier { display: inline-block; padding: 4px 10px; border-radius: 9999px; font-weight: bold; color: white; background: ${item.tier === 'Red' ? '#b85042' : item.tier === 'Yellow' ? '#d4a359' : '#4a6845'}; }
+              .meta { font-size: 12px; color: #666; margin: 8px 0; }
+              .summary { background: #f4f6f0; padding: 16px; border-radius: 8px; margin-top: 14px; font-size: 14px; line-height: 1.6; }
+              .footer { margin-top: 30px; font-size: 11px; color: #888; border-top: 1px solid #ddd; padding-top: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="title">🌿 संजीवनी स्वास्थ्य परामर्श पर्चा (Sanjeevani Health Summary)</div>
+              <div class="meta">Uttarakhand Telehealth & Rural Clinical Advisory • Gopeshwar & Chamoli</div>
+            </div>
+            <p><strong>सत्र पहचान (Session ID):</strong> ${item.conversationId}</p>
+            <p><strong>दिनांक (Date):</strong> ${new Date(item.updatedAt || Date.now()).toLocaleDateString('hi-IN')}</p>
+            <p><strong>ट्राइएज स्तर (Triage Tier):</strong> <span class="tier">${item.tier || 'Green'}</span></p>
+            <div class="summary">
+              <strong>परामर्श विवरण (Summary):</strong><br/>
+              ${item.summary || 'डॉ. संजीवनी AI के साथ सामान्य परामर्श एवं स्वास्थ्य सलाह।'}
+            </div>
+            <div class="footer">
+              ⚠️ यह पर्चा Dr. Sanjeevani AI द्वारा उत्पन्न किया गया है। आपातकाल में तुरंत 108 डायल करें।
+            </div>
+            <script>window.onload = function() { window.print(); };</script>
+          </body>
+          </html>
+        `);
+        printWindow.document.close();
+      } else {
+        toast.error('PDF download nahi ho saka. Kripya dobara koshish karein.');
+      }
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleShareParcha = (item, e) => {
+    e?.stopPropagation();
+    e?.preventDefault();
+    const shareText = `*🌿 Sanjeevani Swasthya Parcha*\n*Tarikh:* ${new Date(item.updatedAt || Date.now()).toLocaleDateString()}\n*Triage:* ${item.tier || 'Green'}\n*Salah:* ${item.summary || 'Swasthya Paramarsh'}\n\nAapaatkaal mein 108 par call karein.`;
+    if (navigator.share) {
+      navigator.share({
+        title: 'Sanjeevani Consultation Parcha',
+        text: shareText,
+        url: window.location.origin + '/mitra/chat',
+      }).catch(() => {});
+    } else {
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+      window.open(waUrl, '_blank');
+    }
   };
 
   useEffect(() => {
@@ -142,8 +256,41 @@ export default function PatientDashboard() {
     toast.success('Naya gharelu nuskha schedule mein jud gaya');
   };
 
-  const handleAudioGuide = (text) => {
-    speakCue(text, 'hi-IN');
+  const [tabNarrationEnabled, setTabNarrationEnabled] = useState(() => {
+    return localStorage.getItem('sanjeevani_tab_narration') === 'true';
+  });
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const toggleTabNarration = () => {
+    if (tabNarrationEnabled) {
+      stopCue();
+      setIsSpeaking(false);
+      setTabNarrationEnabled(false);
+      localStorage.setItem('sanjeevani_tab_narration', 'false');
+      toast('आवाज़ी वाचन बंद किया गया (Audio Narration Off) 🔇', { icon: '🔇' });
+    } else {
+      setTabNarrationEnabled(true);
+      localStorage.setItem('sanjeevani_tab_narration', 'true');
+      toast.success('आवाज़ी वाचन चालू किया गया (Audio Narration On) 🔊');
+      speakCue('आवाज़ी मार्गदर्शन चालू है। टैब बदलने पर आवाज़ सुनाई देगी।', 'hi-IN', {
+        onStart: () => setIsSpeaking(true),
+        onEnd: () => setIsSpeaking(false),
+      });
+    }
+  };
+
+  const handleAudioGuide = (text, force = false) => {
+    if (!force && !tabNarrationEnabled) return;
+    if (isSpeaking) {
+      stopCue();
+      setIsSpeaking(false);
+      return;
+    }
+    setIsSpeaking(true);
+    speakCue(text, 'hi-IN', {
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false),
+    });
   };
 
   const firstAidGuides = [
@@ -188,45 +335,94 @@ export default function PatientDashboard() {
       <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 relative z-10">
 
         {/* ── TOP ICONIC NAVIGATION BAR (PAGE-INSIDE-PAGE TABS) ─────── */}
-        <div className="bg-white/95 dark:bg-card backdrop-blur-md rounded-2xl sm:rounded-3xl p-1.5 sm:p-2.5 border border-sage/20 dark:border-gray-800 shadow-xs flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="bg-white/95 dark:bg-card backdrop-blur-md rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 border border-sage/20 dark:border-gray-800 shadow-xs flex items-center justify-between gap-1 overflow-x-auto no-scrollbar flex-1">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    if (tabNarrationEnabled) {
+                      handleAudioGuide(`${tab.label} khula`);
+                    }
+                  }}
+                  className={`touch-target flex-1 min-w-[58px] sm:min-w-[85px] py-1.5 sm:py-2 px-1 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-sage text-white shadow-sm scale-102'
+                      : 'text-muted dark:text-muted hover:bg-black/5 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <div className="relative">
+                    <Icon className="w-4 h-4 sm:w-4.5 sm:h-4.5 mb-0.5" />
+                    {tab.badge && (
+                      <span className={`absolute -top-1.5 -right-2 text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                        isActive ? 'bg-white text-sage' : 'bg-sage/20 text-sage dark:text-booti-glow'
+                      }`}>
+                        {tab.badge}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] sm:text-xs font-bold leading-tight truncate">{tab.label}</span>
+                  <span className={`text-[10px] hidden sm:block leading-none mt-0.5 ${isActive ? 'text-white/80' : 'opacity-70'}`}>
+                    {tab.sub}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* User Control: Toggle Tab Narration On/Off or Stop Audio */}
+          {/* <div className="flex items-center justify-end gap-1.5 self-end sm:self-center shrink-0">
+            <button
+              type="button"
+              onClick={toggleTabNarration}
+              className={`touch-target inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                tabNarrationEnabled
+                  ? 'bg-sage/15 text-sage dark:text-booti-glow border-sage/40 hover:bg-sage/25'
+                  : 'bg-white/80 dark:bg-card/80 text-muted border-gray-200 dark:border-gray-700 hover:text-primary'
+              }`}
+              title={tabNarrationEnabled ? "आवाज़ी वाचन चालू है (टैब बदलते ही बोलेगा) - बंद करने हेतु दबाएं" : "आवाज़ी वाचन बंद है - चालू करने हेतु दबाएं"}
+              aria-label="Toggle Section Audio Narration"
+            >
+              {tabNarrationEnabled ? (
+                <>
+                  <Volume2 className="w-3.5 h-3.5 text-sage dark:text-booti-glow animate-pulse" />
+                  <span className="text-[11px] sm:text-xs">आवाज़ चालू</span>
+                </>
+              ) : (
+                <>
+                  <VolumeX className="w-3.5 h-3.5" />
+                  <span className="text-[11px] sm:text-xs">आवाज़ बंद</span>
+                </>
+              )}
+            </button>
+
+            {isSpeaking && (
               <button
-                key={tab.id}
+                type="button"
                 onClick={() => {
-                  setActiveTab(tab.id);
-                  handleAudioGuide(`${tab.label} khula`);
+                  stopCue();
+                  setIsSpeaking(false);
                 }}
-                className={`touch-target flex-1 min-w-[62px] sm:min-w-[90px] py-1.5 sm:py-2.5 px-1 sm:px-2 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-sage text-white shadow-sm scale-102'
-                    : 'text-muted dark:text-muted hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
+                className="touch-target inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-soft text-white text-xs font-bold cursor-pointer hover:bg-rose-soft/90 animate-pulse shadow-xs"
+                title="बोलना तुरंत रोकें / Stop Audio Now"
               >
-                <div className="relative">
-                  <Icon className="w-4 h-4 sm:w-5 sm:h-5 mb-0.5 sm:mb-1" />
-                  {tab.badge && (
-                    <span className={`absolute -top-1.5 -right-2 text-xs font-bold px-1.5 py-0.2 rounded-full ${
-                      isActive ? 'bg-white text-sage' : 'bg-sage/20 text-sage dark:text-booti-glow'
-                    }`}>
-                      {tab.badge}
-                    </span>
-                  )}
-                </div>
-                <span className="text-xs font-bold leading-tight truncate">{tab.label}</span>
-                <span className={`text-xs hidden sm:block leading-none mt-0.5 ${isActive ? 'text-white/80' : 'opacity-70'}`}>
-                  {tab.sub}
-                </span>
+                <Square className="w-3 h-3 fill-current" />
+                <span>रोकें</span>
               </button>
-            );
-          })}
+            )}
+          </div> */}
         </div>
 
         {/* ── TAB 1: MAIN HUB (ICONIC & AUDIO-FIRST CENTERPIECE) ───── */}
         {activeTab === 'hub' && (
           <div className="space-y-4 sm:space-y-6 animate-fadeIn">
+
+            {/* ── Family Profile Switcher ── */}
+            <FamilyProfileSelector onProfileChange={(member) => setActiveFamilyMember(member)} />
 
             {/* ── Page Voice Guide Banner ── */}
             <PageVoiceGuide pageKey="mitra" />
@@ -247,7 +443,7 @@ export default function PatientDashboard() {
                 </div>
 
                 <h1 className="font-serif text-xl sm:text-4xl font-bold text-primary">
-                  Namaste, {user?.name || 'Aadarniya Mitra'} 🙏
+                  Namaste, {activeFamilyMember?.name ? activeFamilyMember.name : (user?.name || 'Aadarniya Mitra')} 🙏
                 </h1>
 
                 <p className="text-[11px] sm:text-sm text-muted dark:text-muted mt-1 flex items-center justify-center gap-1 sm:gap-1.5">
@@ -269,7 +465,7 @@ export default function PatientDashboard() {
 
                   <button
                     type="button"
-                    onClick={() => handleAudioGuide('Namaste! Bolkar batayein button dabakar aap aawaz mein doctor se salah le sakte hain.')}
+                    onClick={() => handleAudioGuide('Namaste! Bolkar batayein button dabakar aap aawaz mein doctor se salah le sakte hain.', true)}
                     className="touch-target inline-flex items-center justify-center gap-1.5 bg-mist dark:bg-card text-sage dark:text-booti-glow border border-sage/30 px-3.5 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-bold hover:bg-sage/10 transition-all cursor-pointer"
                   >
                     <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -291,7 +487,7 @@ export default function PatientDashboard() {
                     </span>
                   </div>
                   <button
-                    onClick={() => handleAudioGuide(advisory)}
+                    onClick={() => handleAudioGuide(advisory, true)}
                     className="touch-target p-1 text-gold-warm dark:text-gold-warm hover:scale-110"
                     title="Advisory suniye"
                   >
@@ -483,7 +679,7 @@ export default function PatientDashboard() {
                 <h2 className="font-serif font-bold text-xl text-primary flex items-center gap-2">
                   <span>Ghar Ka Upchar & Remedy Routine (दवा व काढ़ा समय)</span>
                   <button
-                    onClick={() => handleAudioGuide('Yeh aapki rojana ki gharelu aushadhi aur dawaiyon ka time table hai.')}
+                    onClick={() => handleAudioGuide('Yeh aapki rojana ki gharelu aushadhi aur dawaiyon ka time table hai.', true)}
                     className="touch-target p-1 text-sage"
                     title="Audio sunein"
                   >
@@ -603,11 +799,25 @@ export default function PatientDashboard() {
                         <p className="text-xs text-muted dark:text-muted mt-0.5">{remedy.timing} • {remedy.note}</p>
                       </div>
                     </div>
-                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${
-                      remedy.completed ? 'bg-sage text-white' : 'bg-gray-200 dark:bg-gray-700 text-muted dark:text-gray-300'
-                    }`}>
-                      {remedy.completed ? 'Poora Hua ✓' : 'Lena Baqi Hai'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePlayRemedyReminder(remedy);
+                        }}
+                        className="touch-target p-2 rounded-xl text-sage hover:bg-sage/15 dark:text-booti-glow transition-all cursor-pointer"
+                        title="Dawa / Kadha reminder awaaz me sunein"
+                        aria-label={`Voice reminder for ${remedy.name}`}
+                      >
+                        <Bell className="w-4 h-4" />
+                      </button>
+                      <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${
+                        remedy.completed ? 'bg-sage text-white' : 'bg-gray-200 dark:bg-gray-700 text-muted dark:text-gray-300'
+                      }`}>
+                        {remedy.completed ? 'Poora Hua ✓' : 'Lena Baqi Hai'}
+                      </span>
+                    </div>
                   </div>
                 ))
               )}
@@ -615,18 +825,18 @@ export default function PatientDashboard() {
           </div>
         )}
 
-        {/* ── TAB 3: CONSULTATION HISTORY (पुराना पर्चा) ──────────── */}
+        {/* ── TAB 3: CONSULTATION HISTORY (पुराना पर्चा व स्वास्थ्य समयरेखा) ──────────── */}
         {activeTab === 'history' && (
           <div className="bg-white dark:bg-warm-indigo rounded-3xl p-6 sm:p-8 border border-sage/20 dark:border-gray-800 shadow-sm space-y-5 animate-fadeIn">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800 pb-4">
               <div>
                 <div className="inline-flex items-center gap-1.5 bg-sage/10 text-sage dark:text-booti-glow text-[10px] font-bold px-3 py-0.5 rounded-full mb-1">
-                  <FileText className="w-3.5 h-3.5" /> Parcha History
+                  <FileText className="w-3.5 h-3.5" /> Parcha Timeline & Reports
                 </div>
                 <h2 className="font-serif font-bold text-xl text-primary flex items-center gap-2">
-                  <span>Purana Parcha & Consultation Records (पुरानी जांच)</span>
+                  <span>Purana Parcha & Swasthya Yatra (परामर्श समयरेखा)</span>
                   <button
-                    onClick={() => handleAudioGuide('Aapki pichhli saari doctor baatcheet aur parcha yahan darz hai.')}
+                    onClick={() => handleAudioGuide('Aapki pichhli saari doctor baatcheet aur parcha yahan darz hai. Aap PDF parcha download bhi kar sakte hain.', true)}
                     className="touch-target p-1 text-sage"
                     title="Audio sunein"
                   >
@@ -634,11 +844,21 @@ export default function PatientDashboard() {
                   </button>
                 </h2>
                 <p className="text-xs text-muted dark:text-muted">
-                  Dr. Sanjeevani AI ke sath ki gayi paramarsh baatcheet ki suchi
+                  Dr. Sanjeevani AI dwara jaari parcha, triage sthiti aur referral vivaran
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={refreshConsultations}
+                  disabled={isRefreshing}
+                  className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-primary dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 px-3.5 py-2.5 rounded-2xl transition-all border border-gray-200 dark:border-gray-700 cursor-pointer"
+                  title="Taaza karein / Refresh"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-sage' : ''}`} />
+                  <span>{isRefreshing ? 'Taaza ho raha hai…' : 'Taaza Karein'}</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowHistoryDrawer(true)}
@@ -651,15 +871,15 @@ export default function PatientDashboard() {
                   to="/mitra/chat"
                   className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-white bg-sage hover:bg-sage/90 px-4 py-2.5 rounded-2xl transition-all shadow-xs"
                 >
-                  <span>Nayi Jaanch Shuru Karein</span>
+                  <span>Naya Paramarsh</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               {loadingConsultations ? (
-                <SkeletonLoader variant="card" count={2} />
+                <SkeletonLoader variant="card" count={3} />
               ) : consultations.length === 0 ? (
                 <div className="py-12 px-6 text-center flex flex-col items-center justify-center bg-mist/40 dark:bg-card/40 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
                   <div className="w-14 h-14 rounded-3xl bg-sage/10 text-sage flex items-center justify-center mb-3">
@@ -688,46 +908,124 @@ export default function PatientDashboard() {
                   </div>
                 </div>
               ) : (
-                consultations.map((item, idx) => (
-                  <Link
-                    key={idx}
-                    to="/mitra/chat"
-                    className="p-4 rounded-2xl bg-mist/60 dark:bg-card border border-gray-200/80 dark:border-gray-800 hover:border-sage/40 transition-all flex items-center justify-between gap-3 block"
-                  >
-                  <div className="flex items-center gap-3.5">
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white text-xs font-bold shadow-xs ${
-                      item.tier === 'Red' ? 'bg-rose-soft' :
-                      item.tier === 'Yellow' ? 'bg-gold-warm text-primary' :
-                      'bg-sage'
-                    }`}>
-                      {item.tier ? item.tier[0] : 'G'}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-primary line-clamp-1">
-                          {item.summary || 'Doctor Paramarsh'}
-                        </p>
-                        {String(item.conversationId).startsWith('demo-') && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300">
-                            Sample Data
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted dark:text-muted mt-0.5">
-                        {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'Haal hi mein'} • Session ID: {item.conversationId?.slice(0, 10)}...
-                      </p>
-                    </div>
-                  </div>
+                <div className="relative pl-6 sm:pl-8 space-y-4 before:absolute before:left-3 sm:before:left-4 before:top-3 before:bottom-3 before:w-0.5 before:bg-sage/20 dark:before:bg-gray-700">
+                  {consultations.map((item, idx) => {
+                    const isRed = item.tier === 'Red';
+                    const isYellow = item.tier === 'Yellow';
+                    const isGreen = !isRed && !isYellow;
+                    const tierLabel = isRed ? 'Red — तत्काल अस्पताल (Urgent)' : isYellow ? 'Yellow — आशा परामर्श (Review)' : 'Green — सामान्य (Self-Care)';
+                    const isDownloadingThis = downloadingId === item.conversationId;
 
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full shrink-0 ${
-                    item.tier === 'Red' ? 'bg-rose-soft text-white' :
-                    item.tier === 'Yellow' ? 'bg-gold-warm text-primary' :
-                    'bg-sage text-white'
-                  }`}>
-                    Tier {item.tier || 'Green'}
-                  </span>
-                </Link>
-              )))}
+                    return (
+                      <div
+                        key={item.conversationId || idx}
+                        className="relative p-4 sm:p-5 rounded-2xl bg-mist/60 dark:bg-card border border-gray-200/80 dark:border-gray-800 hover:border-sage/40 transition-all shadow-xs"
+                      >
+                        {/* Timeline Node Badge */}
+                        <div className={`absolute -left-6 sm:-left-8 top-5 w-6 h-6 rounded-full border-2 border-white dark:border-[#1A2433] flex items-center justify-center text-[10px] font-bold text-white shadow-xs ${
+                          isRed ? 'bg-rose-soft ring-2 ring-rose-soft/30' :
+                          isYellow ? 'bg-gold-warm ring-2 ring-gold-warm/30 text-primary' :
+                          'bg-sage ring-2 ring-sage/30'
+                        }`}>
+                          {idx + 1}
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                          <div className="space-y-1.5 flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                                isRed ? 'bg-rose-soft/15 text-rose-soft dark:bg-rose-soft/25 dark:text-rose-soft' :
+                                isYellow ? 'bg-gold-warm/20 text-yellow-800 dark:bg-gold-warm/30 dark:text-gold-warm' :
+                                'bg-sage/15 text-sage dark:bg-sage/25 dark:text-booti-glow'
+                              }`}>
+                                {tierLabel}
+                              </span>
+
+                              {String(item.conversationId).startsWith('demo-') && (
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300">
+                                  Sample Demo
+                                </span>
+                              )}
+
+                              <span className="text-[11px] text-muted dark:text-muted">
+                                {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('hi-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Haal hi mein'}
+                              </span>
+                            </div>
+
+                            <h3 className="font-serif font-bold text-sm sm:text-base text-primary leading-snug">
+                              {item.summary || 'Dr. Sanjeevani Swasthya Paramarsh'}
+                            </h3>
+
+                            <p className="text-[11px] text-muted dark:text-muted flex items-center gap-2">
+                              <span>Session ID: <code className="font-mono text-[10px] bg-black/5 dark:bg-white/5 px-1 py-0.5 rounded">{String(item.conversationId).slice(0, 16)}</code></span>
+                            </p>
+                          </div>
+
+                          {/* Quick Action Toolbar */}
+                          <div className="flex flex-wrap items-center gap-1.5 sm:self-center shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-200/50 dark:border-gray-800">
+                            {/* Download Parcha PDF */}
+                            <button
+                              type="button"
+                              onClick={(e) => handleDownloadParcha(item, e)}
+                              disabled={isDownloadingThis}
+                              className="touch-target inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 text-primary dark:text-gray-200 hover:border-sage hover:text-sage transition-all shadow-2xs cursor-pointer"
+                              title="Parcha (PDF) Download karein"
+                            >
+                              {isDownloadingThis ? (
+                                <>
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-sage" />
+                                  <span>Ban raha hai…</span>
+                                </>
+                              ) : (
+                                <>
+                                  <FileDown className="w-3.5 h-3.5 text-rose-soft" />
+                                  <span>Parcha (PDF)</span>
+                                </>
+                              )}
+                            </button>
+
+                            {/* Share via WhatsApp */}
+                            <button
+                              type="button"
+                              onClick={(e) => handleShareParcha(item, e)}
+                              className="touch-target inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-2 rounded-xl bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 text-primary dark:text-gray-200 hover:border-sage transition-all shadow-2xs cursor-pointer"
+                              title="Share on WhatsApp / Bhejein"
+                            >
+                              <Share2 className="w-3.5 h-3.5 text-sage" />
+                              <span className="hidden sm:inline">Bhejein</span>
+                            </button>
+
+                            {/* PHC Doctor Referral Pass QR */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                setSelectedReferral(item);
+                              }}
+                              className="touch-target inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-2 rounded-xl bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 text-primary dark:text-gray-200 hover:border-gold-warm hover:text-gold-warm transition-all shadow-2xs cursor-pointer"
+                              title="PHC Doctor Referral Pass (QR Code)"
+                            >
+                              <QrCode className="w-3.5 h-3.5 text-gold-warm" />
+                              <span>QR Pass</span>
+                            </button>
+
+                            {/* Reopen Consultation in Chat */}
+                            <Link
+                              to="/mitra/chat"
+                              className="touch-target inline-flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-xl bg-sage text-white hover:bg-sage/90 transition-all shadow-2xs"
+                              title="Chat me kholein"
+                            >
+                              <span>Kholein</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -749,7 +1047,7 @@ export default function PatientDashboard() {
               <h2 className="font-serif font-bold text-xl text-primary flex items-center gap-2">
                 <span>Pahadi Prathmik Upchar (Emergency First-Aid)</span>
                 <button
-                  onClick={() => handleAudioGuide('Pahad me aapaat sthiti hone par in prathmik upchar niyam ko sunein aur apnayein.')}
+                  onClick={() => handleAudioGuide('Pahad me aapaat sthiti hone par in prathmik upchar niyam ko sunein aur apnayein.', true)}
                   className="touch-target p-1 text-sage"
                   title="Audio sunein"
                 >
@@ -783,7 +1081,7 @@ export default function PatientDashboard() {
                       <div className="p-4 bg-white dark:bg-warm-indigo text-xs sm:text-sm text-muted dark:text-muted leading-relaxed border-t border-gray-100 dark:border-gray-800 animate-fadeIn space-y-3">
                         <p>{guide.content}</p>
                         <button
-                          onClick={() => handleAudioGuide(guide.audio || guide.content)}
+                          onClick={() => handleAudioGuide(guide.audio || guide.content, true)}
                           className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-sage dark:text-booti-glow bg-sage/10 px-3 py-1.5 rounded-xl hover:bg-sage/20"
                         >
                           <Volume2 className="w-4 h-4" />
@@ -800,6 +1098,16 @@ export default function PatientDashboard() {
 
       </div>
       <SessionHistoryDrawer open={showHistoryDrawer} onClose={() => setShowHistoryDrawer(false)} />
+
+      {/* PHC Doctor Referral QR Modal */}
+      {selectedReferral && (
+        <ReferralQRModal
+          isOpen={!!selectedReferral}
+          onClose={() => setSelectedReferral(null)}
+          consultation={selectedReferral}
+          patientName={activeFamilyMember?.name || user?.name}
+        />
+      )}
     </div>
   );
 }

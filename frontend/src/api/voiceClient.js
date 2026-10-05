@@ -43,7 +43,7 @@ export function base64ToAudioUrl(base64, format = 'mp3') {
  * Accepts any audio Blob recorded from MediaRecorder.
  */
 export const transcribeAudio = async (blob) => {
-  if (!blob || blob.size < 100) {
+  if (!blob || blob.size < 500) {
     return { transcript: '', language_code: 'hi-IN' };
   }
 

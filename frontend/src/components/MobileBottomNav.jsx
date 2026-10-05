@@ -45,6 +45,7 @@ export default function MobileBottomNav() {
     <nav
       aria-label="Mobile Bottom Navigation"
       className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#111A27]/95 backdrop-blur-lg border-t border-gray-200/80 dark:border-gray-800 shadow-lg px-2 py-1.5 transition-all select-none"
+      style={{ paddingBottom: 'calc(0.375rem + env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="flex items-center justify-around max-w-lg mx-auto">
         {navItems.map((item) => {

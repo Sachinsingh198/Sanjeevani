@@ -141,21 +141,15 @@ async def synthesize_speech(request: Request, req: TTSRequest):
     return await _synthesize_fallback(clean, req)
 
 
-@router.post("/tts/stream")
-@limiter.limit("60/minute")
-async def synthesize_speech_stream(request: Request, req: TTSRequest):
-    """
-    Streams synthesized audio chunks directly from active provider for low-latency playback.
-    """
-    clean = _voice_engine.format_tts_payload(req.text, target_lang=req.language)["clean_text"]
-    if not clean:
-        clean = "Namaste."
+def _create_tts_stream_response(clean_text: str, language: str, gender: str) -> StreamingResponse:
+    if not clean_text:
+        clean_text = "Namaste."
 
     return StreamingResponse(
         _indic_tts_engine.synthesize_stream(
-            text=clean,
-            language=req.language,
-            gender=req.gender,
+            text=clean_text,
+            language=language,
+            gender=gender,
         ),
         media_type="audio/mpeg",
         headers={
@@ -165,13 +159,29 @@ async def synthesize_speech_stream(request: Request, req: TTSRequest):
     )
 
 
+@router.post("/tts/stream")
+@limiter.limit("60/minute")
+async def synthesize_speech_stream(request: Request, req: TTSRequest):
+    """
+    Streams synthesized audio chunks directly from active provider for low-latency playback.
+    """
+    clean = _voice_engine.format_tts_payload(req.text, target_lang=req.language)["clean_text"]
+    return _create_tts_stream_response(clean, req.language, req.gender)
+
+
 @router.get("/tts/stream")
-async def synthesize_speech_stream_get(text: str = "Namaste", language: str = "hi", gender: str = "female"):
+@limiter.limit("60/minute")
+async def synthesize_speech_stream_get(
+    request: Request,
+    text: str = "Namaste",
+    language: str = "hi",
+    gender: str = "female",
+):
     """
     GET variant allowing native browser <audio> progressive stream buffering.
     """
-    req = TTSRequest(text=text, language=language, gender=gender)
-    return await synthesize_speech_stream(req)
+    clean = _voice_engine.format_tts_payload(text, target_lang=language)["clean_text"]
+    return _create_tts_stream_response(clean, language, gender)
 
 
 @router.post("/stt", response_model=STTResponse)
@@ -187,8 +197,13 @@ async def transcribe_speech(
     """
     try:
         audio_bytes = await file.read()
-        if not audio_bytes:
-            raise HTTPException(status_code=400, detail="Empty audio file received.")
+        if not audio_bytes or len(audio_bytes) < 10:
+            return STTResponse(
+                transcript="",
+                language_code="hi-IN",
+                confidence=0.0,
+                provider="empty",
+            )
 
         raw_ct = file.content_type or "audio/wav"
         clean_content_type = raw_ct.split(";")[0].strip().lower()

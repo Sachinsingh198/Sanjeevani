@@ -3,6 +3,18 @@ import { loginUser, registerUser, fetchCurrentUser, logoutUser } from '../api/au
 
 const AuthContext = createContext(null);
 
+const isTokenExpired = (jwtToken) => {
+  if (!jwtToken || typeof jwtToken !== 'string') return true;
+  try {
+    const parts = jwtToken.split('.');
+    if (parts.length < 2) return false;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload.exp ? (Date.now() >= payload.exp * 1000) : false;
+  } catch {
+    return false;
+  }
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem('sanjeevani_token'));
@@ -18,11 +30,24 @@ export function AuthProvider({ children }) {
     }
 
     if (token) {
+      const hasRefreshToken = Boolean(localStorage.getItem('sanjeevani_refresh_token'));
+      if (isTokenExpired(token) && !hasRefreshToken) {
+        localStorage.removeItem('sanjeevani_token');
+        localStorage.removeItem('sanjeevani_refresh_token');
+        localStorage.removeItem('sanjeevani_user_role');
+        setToken(null);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
       fetchCurrentUser()
         .then((profile) => {
-          setUser(profile);
-          if (profile?.role) {
-            localStorage.setItem('sanjeevani_user_role', profile.role);
+          if (profile) {
+            setUser(profile);
+            if (profile?.role) {
+              localStorage.setItem('sanjeevani_user_role', profile.role);
+            }
           }
         })
         .catch((err) => {

@@ -3,17 +3,26 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Mic, Eye, Heart, ShieldCheck, PhoneCall, Feather, Leaf,
-  LogIn, ArrowRight, Wind, Activity, HeartHandshake, Sparkles, MessageSquare, Compass
+  LogIn, ArrowRight, Wind, Activity, HeartHandshake, Sparkles, MessageSquare, Compass,
+  HelpCircle
 } from 'lucide-react';
 import LiveVoiceRoom from '../components/LiveVoiceRoom';
 import SanjeevaniOrb from '../components/SanjeevaniOrb';
 import MountainRidge from '../components/MountainRidge';
 import PageVoiceGuide from '../components/PageVoiceGuide';
+import OnboardingModal from '../components/OnboardingModal';
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [showLiveRoom, setShowLiveRoom] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try {
+      return !localStorage.getItem('sanjeevani_onboarding_completed');
+    } catch {
+      return false;
+    }
+  });
 
   const handleVoiceAction = () => {
     setShowLiveRoom(true);
@@ -46,11 +55,22 @@ export default function Home() {
             <SanjeevaniOrb state="idle" size={68} />
           </div>
 
-          {/* Alpine Trust Badge */}
-          <div className="inline-flex items-center gap-2.5 bg-card dark:bg-card backdrop-blur-md border border-sage/25 shadow-xs px-4 py-2 rounded-full text-xs sm:text-sm font-medium text-sage dark:text-[#A7C5A0] mb-6">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#8ED14C] animate-pulse" />
-            <Leaf className="w-3.5 h-3.5 text-gold-warm" /> 
-            <span>Uttarakhand Swasthya Sahyogi • Gopeshwar & Chamoli • 108 Se Juda</span>
+          {/* Alpine Trust Badge & Guide */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5 mb-6">
+            <div className="inline-flex items-center gap-2 bg-card dark:bg-card backdrop-blur-md border border-sage/25 shadow-xs px-3.5 py-1.5 rounded-full text-xs font-medium text-sage dark:text-[#A7C5A0]">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#8ED14C] animate-pulse" />
+              <Leaf className="w-3.5 h-3.5 text-gold-warm" /> 
+              <span>Uttarakhand Gopeshwar & Chamoli • 108 Se Juda</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowOnboarding(true)}
+              className="inline-flex items-center gap-1.5 bg-white/90 dark:bg-warm-indigo/90 hover:bg-white dark:hover:bg-warm-indigo border border-sage/35 hover:border-sage shadow-xs px-3.5 py-1.5 rounded-full text-xs font-bold text-primary dark:text-[#C8D4E0] transition-all cursor-pointer touch-target active:scale-95"
+              title="Sanjeevani kaise kaam karta hai"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-sage dark:text-booti-glow" />
+              <span>Kaise Kaam Karta Hai? (Guide)</span>
+            </button>
           </div>
 
           {/* Headline */}
@@ -288,6 +308,13 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* First-Time User Onboarding Guide */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onStartChat={() => navigate(isAuthenticated ? '/mitra/chat' : '/login')}
+      />
 
     </div>
   );

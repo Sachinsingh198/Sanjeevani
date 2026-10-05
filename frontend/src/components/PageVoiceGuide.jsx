@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, VolumeX, Play, Square, Sparkles, ChevronDown, ChevronUp, Languages } from 'lucide-react';
-import { speakCue, stopCue, isCueSpeaking } from '../lib/audioSynthesizer';
+import React, { useState, useEffect } from 'react';
+import { Volume2, VolumeX, Play, Square, Sparkles, ChevronDown, ChevronUp, Minimize2, Maximize2 } from 'lucide-react';
+import { speakCue, stopCue } from '../lib/audioSynthesizer';
 import { useLanguage } from '../context/LanguageContext';
 
 const DEFAULT_PAGE_GUIDES = {
@@ -57,6 +57,10 @@ export default function PageVoiceGuide({
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(() => {
+    return localStorage.getItem('sanjeevani_voice_guide_minimized') === 'true';
+  });
+
   const langCtx = useLanguage();
   const currentLang = langCtx?.lang || 'hi';
   const guideData = DEFAULT_PAGE_GUIDES[pageKey] || DEFAULT_PAGE_GUIDES.home;
@@ -72,7 +76,6 @@ export default function PageVoiceGuide({
 
   useEffect(() => {
     return () => {
-      // Clean up speech on unmount
       if (isPlaying) {
         stopCue();
       }
@@ -92,6 +95,14 @@ export default function PageVoiceGuide({
     }
   };
 
+  const handleToggleMinimize = (e) => {
+    e?.stopPropagation();
+    const next = !isMinimized;
+    setIsMinimized(next);
+    localStorage.setItem('sanjeevani_voice_guide_minimized', String(next));
+  };
+
+  // ── Render 1: Compact inline prop variant ──
   if (compact) {
     return (
       <div className={`inline-flex items-center gap-1.5 ${className}`}>
@@ -126,21 +137,74 @@ export default function PageVoiceGuide({
     );
   }
 
-  return (
-    <div
-      className={`relative overflow-hidden rounded-2xl sm:rounded-3xl border transition-all ${
+  // ── Render 2: Minimized ultra-low space pill ──
+  if (isMinimized) {
+    return (
+      <div className={`flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl border transition-all ${
         isPlaying
-          ? 'bg-gradient-to-r from-sage/15 via-gold-warm/10 to-sage/10 border-sage/40 shadow-md ring-2 ring-sage/30'
-          : 'bg-white/90 dark:bg-card/90 backdrop-blur-md border-sage/20 dark:border-gray-800 shadow-xs hover:border-sage/40'
-      } p-3.5 sm:p-4.5 ${className}`}
-    >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Left: Audio indicator & Title */}
-        <div className="flex items-start sm:items-center gap-3 min-w-0">
+          ? 'bg-gradient-to-r from-rose-soft/10 via-sage/15 to-rose-soft/10 border-rose-soft/40 shadow-xs'
+          : 'bg-white/80 dark:bg-card/80 backdrop-blur-xs border-sage/20 dark:border-gray-800 shadow-2xs hover:border-sage/40'
+      } ${className}`}>
+        <button
+          type="button"
+          onClick={handleTogglePlay}
+          className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer group"
+          title={isPlaying ? 'आवाज़ रोकें' : 'स्वर निर्देश सुनें'}
+        >
+          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
+            isPlaying ? 'bg-rose-soft text-white animate-pulse' : 'bg-sage/20 text-sage dark:text-booti-glow'
+          }`}>
+            {isPlaying ? <Square className="w-3 h-3 fill-current" /> : <Volume2 className="w-3.5 h-3.5" />}
+          </div>
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-primary truncate block">
+              {isPlaying ? 'वाचन चालू है... (रोकने हेतु टैप करें)' : 'स्वर निर्देश (Voice Guide)'}
+            </span>
+          </div>
+        </button>
+
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={handleTogglePlay}
-            className={`touch-target w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform active:scale-95 cursor-pointer shadow-xs ${
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              isPlaying
+                ? 'bg-rose-soft text-white'
+                : 'bg-sage text-white hover:bg-sage/90'
+            }`}
+          >
+            {isPlaying ? 'रोकें' : 'सुनें'}
+          </button>
+          <button
+            type="button"
+            onClick={handleToggleMinimize}
+            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-primary transition-colors cursor-pointer"
+            title="विस्तार करें (Expand Guide)"
+            aria-label="Expand Guide"
+          >
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Render 3: Standard Responsive View (Streamlined to consume minimal space) ──
+  return (
+    <div
+      className={`relative overflow-hidden rounded-2xl border transition-all ${
+        isPlaying
+          ? 'bg-gradient-to-r from-sage/15 via-gold-warm/10 to-sage/10 border-sage/40 shadow-sm ring-1 ring-sage/30'
+          : 'bg-white/90 dark:bg-card/90 backdrop-blur-md border-sage/20 dark:border-gray-800 shadow-2xs hover:border-sage/40'
+      } p-2.5 sm:p-3.5 ${className}`}
+    >
+      <div className="flex items-center justify-between gap-2.5">
+        {/* Left: Compact Icon & Title */}
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={handleTogglePlay}
+            className={`touch-target w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform active:scale-95 cursor-pointer shadow-2xs ${
               isPlaying
                 ? 'bg-rose-soft text-white hover:bg-rose-soft/90 shadow-rose-soft/30'
                 : 'bg-gradient-to-br from-sage to-[#4a6346] text-white hover:scale-105 shadow-sage/30'
@@ -148,36 +212,36 @@ export default function PageVoiceGuide({
             aria-label={isPlaying ? 'Stop Voice Guide' : 'Play Voice Guide'}
           >
             {isPlaying ? (
-              <Square className="w-4 h-4 fill-current" />
+              <Square className="w-3.5 h-3.5 fill-current" />
             ) : (
-              <Volume2 className="w-5 h-5" />
+              <Volume2 className="w-4 h-4" />
             )}
           </button>
 
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-sage/15 text-sage dark:text-booti-glow">
-                <Sparkles className="w-3 h-3 text-gold-warm" />
-                <span>Voice Guide • स्वर निर्देश</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full bg-sage/15 text-sage dark:text-booti-glow">
+                <Sparkles className="w-2.5 h-2.5 text-gold-warm" />
+                <span>Voice Guide</span>
               </span>
               {isPlaying && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-soft dark:text-[#FF7878] animate-pulse">
-                  ● वाचन चालू है (Speaking)
+                <span className="text-[10px] font-bold text-rose-soft animate-pulse">
+                  ● वाचन चालू
                 </span>
               )}
             </div>
-            <h3 className="font-serif font-bold text-sm sm:text-base text-primary truncate mt-0.5">
+            <h3 className="font-serif font-bold text-xs sm:text-sm text-primary truncate mt-0.5">
               {title}
             </h3>
           </div>
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={handleTogglePlay}
-            className={`touch-target inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs ${
+            className={`touch-target inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs ${
               isPlaying
                 ? 'bg-rose-soft hover:bg-rose-soft/90 text-white'
                 : 'bg-sage hover:bg-sage/90 text-white'
@@ -185,18 +249,13 @@ export default function PageVoiceGuide({
           >
             {isPlaying ? (
               <>
-                <Square className="w-3.5 h-3.5 fill-current" />
-                <span>रोकें (Stop)</span>
-                <div className="flex items-center gap-0.5 ml-1">
-                  <span className="w-1 h-3 bg-white rounded-full animate-bounce [animation-delay:-0.3s]" />
-                  <span className="w-1 h-4 bg-white rounded-full animate-bounce [animation-delay:-0.15s]" />
-                  <span className="w-1 h-2 bg-white rounded-full animate-bounce" />
-                </div>
+                <Square className="w-3 h-3 fill-current" />
+                <span>रोकें</span>
               </>
             ) : (
               <>
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>सुनें (Listen)</span>
+                <Play className="w-3 h-3 fill-current" />
+                <span>सुनें</span>
               </>
             )}
           </button>
@@ -204,25 +263,35 @@ export default function PageVoiceGuide({
           <button
             type="button"
             onClick={() => setShowTranscript(!showTranscript)}
-            className="touch-target p-2 rounded-xl bg-mist dark:bg-gray-800 text-muted hover:text-primary transition-colors cursor-pointer border border-gray-200 dark:border-gray-700"
-            title="बोलने वाले शब्द देखें / Toggle Transcript"
+            className="touch-target p-1.5 rounded-xl bg-mist dark:bg-gray-800 text-muted hover:text-primary transition-colors cursor-pointer border border-gray-200 dark:border-gray-700"
+            title="निर्देश पढ़ें / Toggle Transcript"
             aria-expanded={showTranscript}
           >
-            {showTranscript ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {showTranscript ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleToggleMinimize}
+            className="touch-target p-1.5 rounded-xl bg-mist dark:bg-gray-800 text-muted hover:text-primary transition-colors cursor-pointer border border-gray-200 dark:border-gray-700"
+            title="कम जगह करें (Minimize)"
+            aria-label="Minimize Guide"
+          >
+            <Minimize2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
       {/* Spoken Transcript / Text Drawer */}
-      {(showTranscript || isPlaying) && (
-        <div className="mt-3 pt-3 border-t border-sage/15 dark:border-gray-800 animate-fadeIn">
-          <div className="p-3 rounded-xl bg-mist/60 dark:bg-card border border-sage/15 text-xs text-primary leading-relaxed flex items-start gap-2">
-            <Volume2 className="w-4 h-4 text-sage shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <span className="font-semibold text-muted text-[11px] block uppercase tracking-wider mb-0.5">
+      {(showTranscript || (isPlaying && showTranscript)) && (
+        <div className="mt-2 pt-2 border-t border-sage/15 dark:border-gray-800 animate-fadeIn">
+          <div className="p-2 sm:p-2.5 rounded-xl bg-mist/60 dark:bg-card border border-sage/15 text-xs text-primary leading-relaxed flex items-start gap-2">
+            <Volume2 className="w-3.5 h-3.5 text-sage shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <span className="font-semibold text-muted text-[10px] block uppercase tracking-wider mb-0.5">
                 Spoken Guidance (बोले जा रहे शब्द):
               </span>
-              <p className="font-medium text-xs sm:text-sm text-primary">
+              <p className="font-medium text-xs text-primary leading-relaxed">
                 {guideText}
               </p>
             </div>

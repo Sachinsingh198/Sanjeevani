@@ -23,3 +23,16 @@ This document records architectural decisions, deferred items, and known operati
 - **Status:** Explicitly Out-of-Scope in Current Pass.
 - **Details:** The CV screening models (`backend/app/cv/`) for anemia conjunctival inspection and oral cavity screening remain in their initial capstone implementation, as requested.
 - **Next Step:** Retrain CV classifiers with clinical validation datasets from regional Uttarakhand district hospitals.
+
+### 5. UI/UX, Rural Accessibility & Mobile Client Status
+- **Status:** Production-Grade UI/UX Released (October 2026).
+- **Resolved Gaps:**
+  - **Responsive 320px–375px Base:** Enforced `viewport-fit=cover`, CSS safe-area insets (`env(safe-area-inset-bottom)`), and visual viewport keyboard handling across all 12 frontend pages.
+  - **WCAG 2.1 AA Contrast Compliance:** Darkened primary Sage Green token (`#4A6845`) to reach 4.8:1 contrast; added an outdoor sunlight high-contrast mode for high-altitude mountain pathways.
+  - **Clinical Interpretability & Trust:** Delivered the PHC Doctor Referral Pass (zero-dependency digital QR modal), transparent audio privacy consent dialog, and user feedback actions.
+  - **Rural Family Use:** Integrated multi-generational household profile switching (Self, Dadi Ji, Child) and audio remedy dosage reminder chimes.
+  - **First-Time User Onboarding:** Added a 3-step voice-guided interactive tutorial introducing Voice Consultations, Triage Severity, and AYUSH Remedies.
+- **Future Client Enhancements:**
+  - **Native Wrapper:** Package the PWA via Capacitor / React Native wrapper for Google Play Store and Apple App Store distribution with native audio push notifications.
+  - **Offline Indic Voice Model Preloading:** Pre-cache lightweight quantized ONNX models for offline text-to-speech without relying on cloud neural endpoints.
+

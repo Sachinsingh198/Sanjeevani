@@ -416,7 +416,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-8 animate-fadeIn">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-20 safe-bottom-nav space-y-6 sm:space-y-8 animate-fadeIn">
       {/* ── Universal Back Button for Mobile & Desktop ─────────────────── */}
       <div className="flex items-center justify-between pb-1">
         <BackButton fallback="/mitra" label="वापस जाएं (Back)" />

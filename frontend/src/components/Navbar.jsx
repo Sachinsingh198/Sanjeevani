@@ -268,7 +268,7 @@ export default function Navbar() {
           {/* Emergency 108 SOS Pill */}
           <a
             href="tel:108"
-            className="flex items-center gap-1 sm:gap-1.5 bg-rose-soft hover:bg-rose-soft/90 text-white text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-xs transition-transform active:scale-95 touch-target sm:min-h-0 sm:min-w-0"
+            className="flex items-center gap-1 sm:gap-1.5 bg-rose-soft hover:bg-rose-soft/90 text-white text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-full shadow-xs transition-transform active:scale-95 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0"
             title="Call 108 Emergency Ambulance"
           >
             <PhoneCall className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-pulse" />
@@ -278,7 +278,7 @@ export default function Navbar() {
           {/* Theme Switcher */}
           <button
             onClick={toggleTheme}
-            className="p-1.5 sm:p-2 text-muted dark:text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-all cursor-pointer"
+            className="p-2.5 sm:p-2 text-muted dark:text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-all cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label="Toggle theme"
           >
             {theme === 'dark' ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold-warm" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />}
@@ -325,7 +325,7 @@ export default function Navbar() {
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden text-primary hover:bg-black/5 dark:hover:bg-white/5 p-1.5 sm:p-2 rounded-xl"
+            className="md:hidden text-primary hover:bg-black/5 dark:hover:bg-white/5 p-2.5 rounded-xl min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label="Open mobile navigation menu"
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

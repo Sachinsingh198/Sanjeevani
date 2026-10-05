@@ -305,65 +305,59 @@ export default function Companion() {
 
   /* ── RENDER ─────────────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-mist dark:bg-card text-primary pb-20 transition-colors duration-300">
+    <div className="min-h-screen bg-mist dark:bg-card text-primary pb-20 safe-bottom-nav transition-colors duration-300">
 
-      {/* ── Page Header ──────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-b from-gold-warm/20 via-white/80 dark:via-card to-transparent border-b border-gray-200/60 dark:border-gray-800 pt-6 sm:pt-8 pb-5 sm:pb-6 px-4 sm:px-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center justify-between pb-3">
-            <BackButton fallback="/mitra" label="डैशबोर्ड (Dashboard)" />
+      {/* ── Sleek Static Top Bar (Compact, minimal screen footprint) ──────────────── */}
+      <div className="bg-white/90 dark:bg-card/90 border-b border-gray-200/60 dark:border-gray-800 py-2.5 px-3.5 sm:px-6">
+        <div className="max-w-3xl mx-auto flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <BackButton fallback="/mitra" />
+            <div className="min-w-0">
+              <h1 className="font-serif text-sm sm:text-base font-bold text-primary truncate flex items-center gap-1.5">
+                <span>संजीवनी साथी</span>
+                <span className="text-sm">🤝</span>
+              </h1>
+            </div>
             {activeTab !== 'ghar' && (
               <button
                 type="button"
                 onClick={() => navigate(basePath)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-gold-warm dark:text-gold-warm bg-gold-warm/10 hover:bg-gold-warm/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-2xs"
+                className="hidden xs:inline-flex items-center gap-1 text-[11px] font-bold text-gold-warm dark:text-gold-warm bg-gold-warm/10 hover:bg-gold-warm/20 px-2 py-1 rounded-lg transition-all cursor-pointer"
               >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>साथी हब (Saathi Hub)</span>
+                <ArrowLeft className="w-3 h-3" />
+                <span>हब</span>
               </button>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-gold-warm/20 text-gold-warm dark:text-gold-warm px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
-                <HeartHandshake className="w-3.5 h-3.5" />
-                <span>Apno Sa Saathi</span>
-              </div>
-              <h1 className="font-serif text-2xl md:text-3xl font-bold text-primary">
-                संजीवनी साथी 🤝
-              </h1>
-              <p className="text-xs text-muted dark:text-muted mt-1">
-                Sunnae wala, baat karnae wala, apna dost
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <a
-                href="tel:14416"
-                className="flex items-center gap-2 bg-rose-soft hover:bg-rose-soft/90 text-white text-xs font-bold px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all shadow-sm"
-              >
-                <PhoneCall className="w-4 h-4" />
-                <span>14416 Madad</span>
-              </a>
-              <button
-                onClick={() => setAutoSpeak(!autoSpeak)}
-                className={`p-2 sm:p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                  autoSpeak
-                    ? 'bg-sage/15 text-sage dark:text-booti-glow border-sage/30'
-                    : 'bg-white dark:bg-warm-indigo text-muted border-gray-300 dark:border-gray-700'
-                }`}
-                title="Toggle Voice"
-                aria-label="Toggle Voice"
-              >
-                {autoSpeak ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              </button>
-            </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <a
+              href="tel:14416"
+              className="touch-target inline-flex items-center gap-1.5 bg-rose-soft hover:bg-rose-soft/90 text-white text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-xl transition-all shadow-2xs"
+              title="14416 Tele-MANAS Helpline"
+            >
+              <PhoneCall className="w-3.5 h-3.5" />
+              <span>14416</span>
+            </a>
+            <button
+              type="button"
+              onClick={() => setAutoSpeak(!autoSpeak)}
+              className={`touch-target p-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                autoSpeak
+                  ? 'bg-sage/15 text-sage dark:text-booti-glow border-sage/30'
+                  : 'bg-white dark:bg-warm-indigo text-muted border-gray-300 dark:border-gray-700'
+              }`}
+              title={autoSpeak ? "आवाज़ चालू है / Voice On" : "आवाज़ बंद है / Voice Muted"}
+              aria-label="Toggle Voice"
+            >
+              {autoSpeak ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* ── Sub-Nav Tabs (Synchronized with URL hierarchy) ─────────────── */}
-      <div className="sticky top-0 z-20 bg-card/95 dark:bg-card/95 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-800">
+      {/* ── Sub-Nav Tabs (Static, scrolls naturally without sticking to screen) ─────────────── */}
+      <div className="relative z-10 bg-card/95 dark:bg-card/95 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-800">
         <div className="max-w-3xl mx-auto flex">
           {TABS.map((tab) => {
             const active = activeTab === tab.id;
@@ -371,13 +365,13 @@ export default function Companion() {
               <button
                 key={tab.id}
                 onClick={() => navigateToTab(tab.id)}
-                className={`flex-1 flex flex-col items-center gap-0.5 sm:gap-1 py-2.5 sm:py-3 transition-all relative cursor-pointer ${
+                className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-all relative cursor-pointer ${
                   active
                     ? 'text-gold-warm dark:text-gold-warm'
                     : 'text-muted dark:text-muted hover:text-primary'
                 }`}
               >
-                <span className="text-xl sm:text-2xl leading-none">{tab.icon}</span>
+                <span className="text-lg sm:text-xl leading-none">{tab.icon}</span>
                 <span className="text-[10px] sm:text-xs font-bold tracking-wide">{tab.label}</span>
                 <span className="text-[9px] text-gray-500 dark:text-gray-400 hidden xs:inline">{tab.sub}</span>
                 {active && (

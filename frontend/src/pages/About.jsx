@@ -44,7 +44,7 @@ export default function About() {
   ];
 
   return (
-    <div className="min-h-screen bg-mist text-primary py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-300 relative overflow-hidden">
+    <div className="min-h-screen bg-mist text-primary py-10 pb-24 safe-bottom-nav px-4 sm:px-6 lg:px-8 transition-colors duration-300 relative overflow-hidden">
       
       {/* Background Mountain Motif */}
       <div className="absolute top-12 left-0 right-0 pointer-events-none opacity-30 dark:opacity-15 z-0">
