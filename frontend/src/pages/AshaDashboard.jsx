@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -64,13 +64,15 @@ export default function AshaDashboard() {
     }
   }, [offlineQueue]);
 
+  const handleSyncAllRef = useRef(null);
+
   // Auto-replay queued encounters when connection is restored
   useEffect(() => {
     const handleOnlineAutoSync = () => {
       const pending = offlineQueue.filter((p) => !p.synced);
       if (pending.length > 0) {
         toast('Network wapas aa gaya. Records sync ho rahe hain...', { icon: '🌐' });
-        handleSyncAll();
+        handleSyncAllRef.current?.();
       }
     };
     window.addEventListener('online', handleOnlineAutoSync);
@@ -148,6 +150,7 @@ export default function AshaDashboard() {
       setIsSyncing(false);
     }
   };
+  handleSyncAllRef.current = handleSyncAll;
 
   const handleMarkFollowedUp = (patientId) => {
     setOfflineQueue((prev) =>

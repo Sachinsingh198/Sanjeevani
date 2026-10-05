@@ -183,15 +183,16 @@ export default function Chat() {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return; // Not supported — graceful fallback
+    const container = chatContainerRef.current;
 
     const handleResize = () => {
-      const container = chatContainerRef.current;
-      if (!container) return;
+      const currentContainer = chatContainerRef.current;
+      if (!currentContainer) return;
       // On mobile, when keyboard opens, visualViewport.height shrinks
       // We set the container height to match so the input stays visible
-      const offsetTop = container.getBoundingClientRect().top;
+      const offsetTop = currentContainer.getBoundingClientRect().top;
       const availableHeight = vv.height - offsetTop;
-      container.style.height = `${Math.max(availableHeight, 200)}px`;
+      currentContainer.style.height = `${Math.max(availableHeight, 200)}px`;
     };
 
     vv.addEventListener('resize', handleResize);
@@ -203,8 +204,8 @@ export default function Chat() {
       vv.removeEventListener('resize', handleResize);
       vv.removeEventListener('scroll', handleResize);
       // Reset height on unmount
-      if (chatContainerRef.current) {
-        chatContainerRef.current.style.height = '';
+      if (container) {
+        container.style.height = '';
       }
     };
   }, []);

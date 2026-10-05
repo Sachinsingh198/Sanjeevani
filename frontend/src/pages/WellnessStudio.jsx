@@ -487,10 +487,13 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
   });
 
   const saveStats = (updated) => {
-    setWellnessStats(updated);
-    try {
-      localStorage.setItem('sanjeevani_wellness_stats', JSON.stringify(updated));
-    } catch {}
+    setWellnessStats((prev) => {
+      const next = typeof updated === 'function' ? updated(prev) : updated;
+      try {
+        localStorage.setItem('sanjeevani_wellness_stats', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   const handleDrinkWater = (glassIndex) => {
@@ -661,11 +664,11 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 }
                 return nextC;
               });
-              saveStats({
-                ...wellnessStats,
-                breathCyclesToday: wellnessStats.breathCyclesToday + 1,
-                mindfulMinutesToday: wellnessStats.mindfulMinutesToday + 1,
-              });
+              saveStats((prev) => ({
+                ...prev,
+                breathCyclesToday: prev.breathCyclesToday + 1,
+                mindfulMinutesToday: prev.mindfulMinutesToday + 1,
+              }));
             }
             return nextStep.dur;
           }
@@ -793,10 +796,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
             setMarmaPressing(false);
             playTempleBell(852, 4);
             toast.success(`${selectedMarma.name} मर्म उद्दीपन सफल रहा!`, { icon: '✨' });
-            saveStats({
-              ...wellnessStats,
-              mindfulMinutesToday: wellnessStats.mindfulMinutesToday + 1,
-            });
+            saveStats((prevStats) => ({
+              ...prevStats,
+              mindfulMinutesToday: prevStats.mindfulMinutesToday + 1,
+            }));
             return selectedMarma.idealHoldSec;
           }
           if (prev % 5 === 0) playHapticPulse();
@@ -1002,11 +1005,11 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
             setIsHoldingPose(false);
             playMeditationChime('start');
             setShowCompletionModal(true);
-            saveStats({
-              ...wellnessStats,
-              mindfulMinutesToday: wellnessStats.mindfulMinutesToday + Math.round(selectedAsana.targetHoldsSec / 60),
-              asanasCompletedToday: wellnessStats.asanasCompletedToday + 1,
-            });
+            saveStats((prevStats) => ({
+              ...prevStats,
+              mindfulMinutesToday: prevStats.mindfulMinutesToday + Math.round(selectedAsana.targetHoldsSec / 60),
+              asanasCompletedToday: prevStats.asanasCompletedToday + 1,
+            }));
             return 0;
           }
           return prev - 1;
@@ -1294,7 +1297,13 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
             2. DEDICATED SEPARATE SUB-VIEW HEADER (When activeTab !== 'hub')
             Clean, zero-clutter header with Back to Hub button, title & switcher
         ══════════════════════════════════════════════════════════════ */}
-        {activeTab !== 'hub' && (
+        {/* ══════════════════════════════════════════════════════════════
+            2. DEDICATED SEPARATE SUB-VIEW HEADER
+            - When on other tabs: Clean header with Back to Hub & Pillar Switcher
+            - When on Pranayama (Meditation): Ultra-clean, distraction-free bar
+              WITHOUT other feature pills to prevent losing focus!
+        ══════════════════════════════════════════════════════════════ */}
+        {activeTab !== 'hub' && activeTab !== 'pranayama' && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/95 dark:bg-card p-3 sm:p-4 rounded-2xl border border-sage/20 dark:border-gray-800 shadow-xs animate-fadeIn">
             <div className="flex items-center gap-3">
               <button
@@ -1304,7 +1313,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 title="आरोग्यशाला हब पर वापस जाएं"
               >
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                <span>← आरोग्यशाला हब (Hub)</span>
+                <span>आरोग्यशाला हब (Hub)</span>
               </button>
               {currentPillar && (
                 <span className="text-xs sm:text-sm font-serif font-bold text-primary border-l border-gray-300 dark:border-gray-700 pl-3">
@@ -1347,20 +1356,26 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
 
         {/* ══════════════════════════════════════════════════════════════
             TAB 1: DEDICATED SACRED PRANAYAMA & MEDITATION (MATCHING IMAGE)
+            - Completely isolated page with zero distractions from other tabs
+            - Fits entirely on screen without requiring scrolling
         ══════════════════════════════════════════════════════════════ */}
         {activeTab === 'pranayama' && (
-          <div className="space-y-4 animate-fadeIn max-w-3xl mx-auto">
-            {/* Top Rhythm Selector Bar */}
-            <div className="bg-white/95 dark:bg-[#111A24] border border-sage/20 dark:border-[#1E2E40] rounded-2xl p-3 shadow-xs">
-              <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted dark:text-gray-400">
-                  श्वास लय चुनें (Select Rhythm):
-                </span>
-                <span className="text-[10px] text-sage dark:text-booti-glow font-bold">
-                  {selectedPranayama.benefits}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
+          <div className="animate-fadeIn max-w-xl mx-auto space-y-2">
+            
+            {/* Minimal Distraction-Free Header Bar */}
+            <div className="flex items-center justify-between gap-2 bg-[#111A24] border border-[#1E2E40] px-3.5 py-2 rounded-2xl shadow-md">
+              <button
+                type="button"
+                onClick={() => handleTabChange('hub')}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 hover:text-white transition-colors cursor-pointer group shrink-0"
+                title="आरोग्यशाला हब पर वापस जाएं"
+              >
+                <ArrowLeft className="w-4 h-4 text-emerald-400 group-hover:-translate-x-1 transition-transform" />
+                <span>आरोग्यशाला हब (Hub)</span>
+              </button>
+
+              {/* Minimal Rhythm Switcher (Right) */}
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
                 {PRANAYAMA_PATTERNS.map((p) => {
                   const isSel = selectedPranayama.id === p.id;
                   return (
@@ -1373,16 +1388,14 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                         stopCue();
                         playMeditationChime('inhale');
                       }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                      className={`px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                         isSel
                           ? 'bg-[#5b8257] text-white shadow-xs'
-                          : 'bg-mist dark:bg-[#182332] text-gray-700 dark:text-gray-300 hover:border-sage/40 border border-gray-200 dark:border-[#26374a]'
+                          : 'bg-[#182332] text-gray-400 hover:text-gray-200 border border-[#26374a]'
                       }`}
+                      title={p.benefits}
                     >
-                      <span>{p.hindiName.split(' ')[0]}</span>
-                      <span className={`text-[10px] px-1 py-0.2 rounded-md ${isSel ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-black/30 text-gray-500'}`}>
-                        {p.inhaleSec}-{p.holdInSec}-{p.exhaleSec}
-                      </span>
+                      {p.hindiName.split(' ')[0]} ({p.inhaleSec}-{p.holdInSec}-{p.exhaleSec})
                     </button>
                   );
                 })}
@@ -1390,17 +1403,17 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
             </div>
 
             {/* DEDICATED IMMERSIVE SACRED BREATHING MANDALA CARD (MATCHING USER'S IMAGE) */}
-            <div className="bg-[#111A24] border border-[#1E2E40] rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-2xl relative overflow-hidden min-h-[480px]">
+            <div className="bg-[#111A24] border border-[#1E2E40] rounded-3xl p-4 sm:p-6 flex flex-col items-center justify-center text-center shadow-2xl relative overflow-hidden">
               
               {/* Subtle dynamic background aura */}
-              <div className={`absolute w-72 h-72 sm:w-88 sm:h-88 rounded-full bg-gradient-to-tr ${mandalaVisuals.glow} blur-3xl opacity-40 transition-all duration-1000 pointer-events-none`} />
+              <div className={`absolute w-64 h-64 sm:w-80 sm:h-80 rounded-full bg-gradient-to-tr ${mandalaVisuals.glow} blur-3xl opacity-35 transition-all duration-1000 pointer-events-none`} />
 
               {/* Top Controls: Spoken Voice Guide Toggle Pill */}
               <div className="relative z-10 mb-2 flex items-center justify-center gap-2">
                 <button
                   type="button"
                   onClick={toggleVoiceGuide}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                  className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
                     voiceGuideEnabled
                       ? 'bg-[#5b8257]/25 border-[#5b8257]/50 text-emerald-300 hover:bg-[#5b8257]/35'
                       : 'bg-gray-800/80 border-gray-700 text-gray-400 hover:text-gray-200'
@@ -1415,7 +1428,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
               </div>
 
               {/* SACRED MANDALA CONTAINER (MATCHING USER'S IMAGE) */}
-              <div className="relative w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center my-4 sm:my-6">
+              <div className="relative w-52 h-52 sm:w-60 sm:h-60 flex items-center justify-center my-2 sm:my-3">
                 
                 {/* Rotating 8 Golden-Olive Spikes (Lotus Sunburst as in image) */}
                 <svg
@@ -1441,28 +1454,28 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 </svg>
 
                 {/* Dark circular border ring enclosing inner disc */}
-                <div className="absolute w-48 h-48 sm:w-52 sm:h-52 rounded-full border-[7px] border-[#182635] shadow-2xl pointer-events-none" />
+                <div className="absolute w-40 h-40 sm:w-46 sm:h-46 rounded-full border-[6px] border-[#182635] shadow-2xl pointer-events-none" />
 
                 {/* Circular Stroke Progress Countdown Ring */}
                 <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
                   <circle
                     cx="50%"
                     cy="50%"
-                    r="80"
+                    r="70"
                     fill="none"
                     stroke="#182635"
-                    strokeWidth="5"
+                    strokeWidth="4"
                   />
                   {isBreathingActive && (
                     <circle
                       cx="50%"
                       cy="50%"
-                      r="80"
+                      r="70"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="6"
-                      strokeDasharray={502}
-                      strokeDashoffset={502 - (502 * (phaseSecondsLeft / Math.max(1, breathPhase === 'inhale' ? selectedPranayama.inhaleSec : breathPhase === 'hold-in' ? selectedPranayama.holdInSec : breathPhase === 'exhale' ? selectedPranayama.exhaleSec : selectedPranayama.holdOutSec || 1)))}
+                      strokeWidth="5"
+                      strokeDasharray={440}
+                      strokeDashoffset={440 - (440 * (phaseSecondsLeft / Math.max(1, breathPhase === 'inhale' ? selectedPranayama.inhaleSec : breathPhase === 'hold-in' ? selectedPranayama.holdInSec : breathPhase === 'exhale' ? selectedPranayama.exhaleSec : selectedPranayama.holdOutSec || 1)))}
                       strokeLinecap="round"
                       className={`transition-all duration-1000 ${
                         breathPhase === 'inhale'
@@ -1479,9 +1492,9 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
 
                 {/* Central Mandala Nucleus (Green Disc matching user's image) */}
                 <div
-                  className={`w-36 h-36 sm:w-40 sm:h-40 rounded-full shadow-2xl flex flex-col items-center justify-center transition-all duration-1000 z-10 bg-[#5b8257] border-2 border-[#6f9c6c] text-white`}
+                  className={`w-32 h-32 sm:w-36 sm:h-36 rounded-full shadow-2xl flex flex-col items-center justify-center transition-all duration-1000 z-10 bg-[#5b8257] border-2 border-[#6f9c6c] text-white`}
                 >
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/90">
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white/90">
                     {breathPhase === 'inhale'
                       ? 'श्वास लें'
                       : breathPhase === 'hold-in'
@@ -1493,21 +1506,21 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                       : 'आरंभ'}
                   </span>
 
-                  <span className="text-4xl sm:text-5xl font-serif font-extrabold my-0.5 leading-none text-white drop-shadow-sm select-none">
+                  <span className="text-3xl sm:text-4xl font-serif font-extrabold my-0.5 leading-none text-white drop-shadow-sm select-none">
                     ॐ
                   </span>
 
-                  <span className="text-[11px] font-semibold text-white/90">
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-white/90">
                     {isBreathingActive ? `${phaseSecondsLeft}s • Cycle: ${breathCyclesDone}` : `Cycle: ${breathCyclesDone}`}
                   </span>
                 </div>
               </div>
 
               {/* Subtitle & Phase Cue */}
-              <h3 className="text-lg sm:text-xl font-serif font-bold text-white mb-1">
+              <h3 className="text-base sm:text-lg font-serif font-bold text-white mb-0.5">
                 {isBreathingActive ? `${mandalaVisuals.label} (${phaseSecondsLeft}s)` : 'तैयार रहें (Ready)'}
               </h3>
-              <p className="text-xs sm:text-sm text-gray-300 dark:text-gray-400 max-w-md mb-6 leading-relaxed">
+              <p className="text-xs text-gray-300 dark:text-gray-400 max-w-sm mb-4 leading-normal">
                 {isBreathingActive
                   ? (voiceGuideEnabled
                       ? 'अपनी आँखें बंद रखें • बोलकर निर्देश दिए जा रहे हैं (Eyes closed • Voice guide active)'
@@ -1515,24 +1528,24 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                   : 'Press Start to begin guided sacred breathing'}
               </p>
 
-              {/* Bottom Action Controls: Big Green Button + Reset Button */}
-              <div className="flex items-center justify-center gap-3 w-full max-w-sm mb-4">
+              {/* Bottom Action Controls: Big Green Button + Reset Button (MATCHING USER'S IMAGE) */}
+              <div className="flex items-center justify-center gap-3 w-full max-w-sm mb-2">
                 {!isBreathingActive ? (
                   <button
                     type="button"
                     onClick={handleStartBreathwork}
-                    className="flex-1 bg-[#5b8257] hover:bg-[#4d7049] text-white py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+                    className="flex-1 bg-[#5b8257] hover:bg-[#4d7049] text-white py-3 px-5 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
                   >
-                    <Play className="w-5 h-5 fill-current" />
+                    <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
                     <span>प्राणायाम शुरू करें (Start Breathwork)</span>
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={handleStopBreathwork}
-                    className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3.5 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+                    className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 px-5 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
                   >
-                    <Pause className="w-5 h-5 fill-current" />
+                    <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
                     <span>विश्राम दें (Pause)</span>
                   </button>
                 )}
@@ -1545,22 +1558,22 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     setBreathCyclesDone(0);
                     toast('चक्र रीसेट किए गए (Cycles reset)', { icon: '🔄' });
                   }}
-                  className="w-13 h-13 rounded-2xl bg-[#182332] hover:bg-[#203044] border border-[#26374a] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0"
+                  className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#182332] hover:bg-[#203044] border border-[#26374a] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0"
                   title="चक्र रीसेट करें (Reset cycles)"
                 >
-                  <RotateCcw className="w-5 h-5" />
+                  <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
 
               {/* Compact Ambient Acoustic Soundscapes */}
-              <div className="pt-3 border-t border-[#1E2E40] w-full flex items-center justify-center gap-2 flex-wrap text-xs">
-                <span className="text-[11px] text-gray-400 font-semibold flex items-center gap-1">
-                  <Music className="w-3.5 h-3.5 text-sage" /> नाद तरंग:
+              <div className="pt-2.5 mt-2 border-t border-[#1E2E40] w-full flex items-center justify-center gap-2 flex-wrap text-xs">
+                <span className="text-[10px] sm:text-[11px] text-gray-400 font-semibold flex items-center gap-1">
+                  <Music className="w-3 h-3 text-sage" /> नाद तरंग:
                 </span>
                 <button
                   type="button"
                   onClick={() => toggleAmbientSound('river')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  className={`px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer ${
                     ambientTrack === 'river'
                       ? 'bg-sage text-white'
                       : 'bg-[#182332] text-gray-300 hover:bg-[#223247] border border-[#26374a]'
@@ -1571,7 +1584,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <button
                   type="button"
                   onClick={() => toggleAmbientSound('om')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  className={`px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer ${
                     ambientTrack === 'om'
                       ? 'bg-gold-warm text-primary'
                       : 'bg-[#182332] text-gray-300 hover:bg-[#223247] border border-[#26374a]'
@@ -1582,7 +1595,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <button
                   type="button"
                   onClick={() => playSingingBowl(216, 4)}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#182332] text-gray-300 hover:bg-[#223247] border border-[#26374a] transition-all cursor-pointer"
+                  className="px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold bg-[#182332] text-gray-300 hover:bg-[#223247] border border-[#26374a] transition-all cursor-pointer"
                 >
                   🥣 कांस्य कटोरा
                 </button>

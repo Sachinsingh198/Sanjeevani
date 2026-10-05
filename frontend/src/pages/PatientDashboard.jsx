@@ -149,7 +149,7 @@ export default function PatientDashboard() {
               <div class="meta">Uttarakhand Telehealth & Rural Clinical Advisory • Gopeshwar & Chamoli</div>
             </div>
             <p><strong>सत्र पहचान (Session ID):</strong> ${item.conversationId}</p>
-            <p><strong>दिनांक (Date):</strong> ${new Date(item.updatedAt || Date.now()).toLocaleDateString('hi-IN')}</p>
+            <p><strong>दिनांक (Date):</strong> ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('hi-IN') : 'सक्रिय परामर्श'}</p>
             <p><strong>ट्राइएज स्तर (Triage Tier):</strong> <span class="tier">${item.tier || 'Green'}</span></p>
             <div class="summary">
               <strong>परामर्श विवरण (Summary):</strong><br/>
@@ -174,7 +174,8 @@ export default function PatientDashboard() {
   const handleShareParcha = (item, e) => {
     e?.stopPropagation();
     e?.preventDefault();
-    const shareText = `*🌿 Sanjeevani Swasthya Parcha*\n*Tarikh:* ${new Date(item.updatedAt || Date.now()).toLocaleDateString()}\n*Triage:* ${item.tier || 'Green'}\n*Salah:* ${item.summary || 'Swasthya Paramarsh'}\n\nAapaatkaal mein 108 par call karein.`;
+    const parchaDate = item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : '';
+    const shareText = `*🌿 Sanjeevani Swasthya Parcha*\n*Tarikh:* ${parchaDate}\n*Triage:* ${item.tier || 'Green'}\n*Salah:* ${item.summary || 'Swasthya Paramarsh'}\n\nAapaatkaal mein 108 par call karein.`;
     if (navigator.share) {
       navigator.share({
         title: 'Sanjeevani Consultation Parcha',

@@ -930,7 +930,7 @@ def _has_sufficient_info(notes: str) -> bool:
 
     # (d) Distinct symptom domains (avoids counting 'naak' and 'naak band' as 2 distinct symptoms)
     symptom_domains = {
-        "nasal": ["naak", "zukaam", "zukam", "jukham", "jukhaam", "chheenk", "sneezing", "congestion"],
+        "nasal": ["naak", "zukaam", "zukam", "jukham", "jukhaam", "chheenk", "sneezing", "congestion", "sardi", "cold"],
         "throat": ["gala", "gale", "kharash", "sore throat"],
         "cough": ["khansi", "cough"],
         "fever": ["bukhar", "fever", "taap", "thand"],
@@ -1291,7 +1291,7 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
 
         has_sufficient = _has_sufficient_info(updated_notes) or profile.is_clinically_sufficient()
         can_conclude = (has_sufficient or turn_count >= 2) and has_actual_symptoms
-        force_conclude = (turn_count >= 4) and has_actual_symptoms
+        force_conclude = (turn_count >= 5) and has_actual_symptoms
 
         sym_data = get_symptom_data(updated_notes)
 
@@ -1385,7 +1385,10 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
 
         # Deterministic fallback when no LLM
         if not should_conclude:
-            if has_sufficient:
+            if turn_count >= 5 or force_conclude:
+                should_conclude = True
+                conclude_llm = None
+            elif has_sufficient:
                 should_conclude = True
                 conclude_llm = None
             elif not has_actual_symptoms:
@@ -1398,7 +1401,8 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                 else:
                     base_intake = "आपको क्या तकलीफ या लक्षण महसूस हो रहे हैं? कृपया बताएं (जैसे बुखार, सर्दी, सिर दर्द, या पेट दर्द) ताकि मैं सही जांच कर सकूं।"
                     reply = localize_clinical_text(base_intake, lang, is_devanagari)
-            elif not profile.has_duration():
+            elif turn_count <= 1:
+                # Turn 1: Probe duration
                 if lang == "garhwali":
                     reply = sym_data["t1_garh_dev"] if is_devanagari else sym_data["t1_garh_rom"]
                 elif lang == "english":
@@ -1407,16 +1411,38 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                     reply = sym_data["t1_hin"]
                 else:
                     reply = localize_clinical_text(sym_data["t1_hin"], lang, is_devanagari)
-            elif not profile.has_associated_symptoms() and turn_count <= 2:
+            elif turn_count == 2:
+                # Turn 2: Probe key warning / associated symptoms (e.g. ulti / dast / vomit)
                 if lang == "garhwali":
-                    reply = sym_data["t2_garh_dev"] if is_devanagari else sym_data["t2_garh_rom"]
+                    reply = sym_data.get("t2_garh_dev", "क्या दगड़ मा उलटी या दस्त भी छ?") if is_devanagari else sym_data.get("t2_garh_rom", "Kya dagad ma ulti ya dast bhi chha?")
                 elif lang == "english":
-                    reply = sym_data["t2_eng"]
+                    reply = sym_data.get("t2_eng", "Do you also have nausea, vomiting, or loose motions?")
                 elif lang == "hindi":
-                    reply = sym_data["t2_hin"]
+                    reply = sym_data.get("t2_hin", "Kya iske sath ulti, dast ya bukhar bhi hai?")
                 else:
-                    reply = localize_clinical_text(sym_data["t2_hin"], lang, is_devanagari)
+                    reply = localize_clinical_text(sym_data.get("t2_hin", "क्या इसके साथ उल्टी, दस्त या बुखार भी है?"), lang, is_devanagari)
+            elif turn_count == 3:
+                # Turn 3: Probe continuity / pattern (checks for lagatar)
+                if lang == "garhwali":
+                    reply = "क्या यै तकलीफ लगातार बणी रयी छ या कभिक-कभि होंदी छ?" if is_devanagari else "Kya yai takleef lagatar bani rayi chha ya kabhik-kabhi hondi chha?"
+                elif lang == "english":
+                    reply = "Is this discomfort continuous throughout the day or does it come and go?"
+                elif lang == "hindi":
+                    reply = "Kya yeh takleef lagatar bani rehti hai ya ruk-ruk kar aati hai?"
+                else:
+                    reply = localize_clinical_text("क्या यह तकलीफ लगातार बनी रहती है या रुक-रुक कर आती है?", lang, is_devanagari)
+            elif turn_count == 4:
+                # Turn 4: Probe appetite / weakness (checks for kamzori or khana)
+                if lang == "garhwali":
+                    reply = "क्या भूख नी लगणी छ या बहुत कमजोरी महसूस होणी छ?" if is_devanagari else "Kya bhookh ni lagni chha ya bahut kamzori mehsoos honi chha?"
+                elif lang == "english":
+                    reply = "Are you experiencing severe weakness or difficulty eating food?"
+                elif lang == "hindi":
+                    reply = "Kya khana khane mein pareshani hai ya bahut kamzori mehsoos ho rahi hai?"
+                else:
+                    reply = localize_clinical_text("क्या खाना खाने में परेशानी है या बहुत कमजोरी महसूस हो रही है?", lang, is_devanagari)
             else:
+                # Turn >= 5: Hard cap reached -> must conclude
                 should_conclude = True
                 conclude_llm = None
 
@@ -1424,14 +1450,6 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                 state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"
                 state["final_reply_text"] = reply
                 return state
-
-                if not should_conclude:
-                    state["consultation_notes"] = f"{updated_notes}\nDoctor: {reply}"
-                    state["final_reply_text"] = reply
-                    return state
-            else:
-                should_conclude = True
-                conclude_llm = None
 
         if should_conclude:
             # DESIGN EXCEPTION (Task 9): responder_node owns exactly ONE phase transition:
