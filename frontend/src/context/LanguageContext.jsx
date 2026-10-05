@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { t as translate, LANGS } from '../lib/i18n';
+import { t as translate, LANGS, localText, toEnglishDigits, formatDate } from '../lib/i18n';
 
 const LanguageContext = createContext();
 
@@ -72,17 +72,29 @@ export const LanguageProvider = ({ children }) => {
     setTextScaleState(clamped);
   };
 
+  const isHindi = lang === 'hi' || lang === 'garh' || lang === 'garhwali';
+  const isEnglish = lang === 'en';
+  const isGarhwali = lang === 'garh' || lang === 'garhwali';
+
   const t = (key) => translate(key, lang);
+  const l = (hi, en, garh) => localText(lang, hi, en, garh);
+  const fmtDate = (d) => formatDate(d, lang);
 
   return (
     <LanguageContext.Provider
       value={{
         lang,
         language: lang,
+        isHindi,
+        isEnglish,
+        isGarhwali,
         setLang,
         setLanguage: setLang,
         toggleLang,
         t,
+        l,
+        toEnglishDigits,
+        formatDate: fmtDate,
         textScale,
         setTextScale,
       }}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import FollowUpPanel from '../components/FollowUpPanel';
 import SkeletonLoader from '../components/SkeletonLoader';
 import {
@@ -27,6 +28,7 @@ const DEFAULT_PATIENTS = [
 
 export default function AshaDashboard() {
   const { user } = useAuth();
+  const { l, isHindi, toEnglishDigits } = useLanguage();
 
   const [offlineQueue, setOfflineQueue] = useState(() => {
     try {
@@ -229,8 +231,8 @@ export default function AshaDashboard() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         {/* ── Universal Back Button for Mobile & Desktop ─────────────────── */}
         <div className="flex items-center justify-between pb-1">
-          <BackButton fallback="/mitra" label="वापस जाएं (Back)" />
-          <span className="text-xs text-muted font-medium hidden sm:inline">आशा कार्यकर्ता पोर्टल • Field Desk</span>
+          <BackButton fallback="/mitra" label={l('वापस जाएं', 'Back')} />
+          <span className="text-xs text-muted font-medium hidden sm:inline">{l('आशा कार्यकर्ता फील्ड डेस्क', 'ASHA Field Desk')}</span>
         </div>
 
         {/* ── Mode B Header Banner ────────────────────────────────────────── */}
@@ -238,54 +240,54 @@ export default function AshaDashboard() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
               <div className="inline-flex items-center gap-1.5 bg-gold-warm text-primary text-[10px] font-extrabold px-3.5 py-1 rounded-full uppercase tracking-wider mb-2.5 shadow-xs">
-                <Users className="w-3.5 h-3.5" /> ASHA Field Portal • आशा सहायिका
+                <Users className="w-3.5 h-3.5" /> {l('आशा सहायिका फील्ड पोर्टल', 'ASHA Field Portal')}
               </div>
               <h1 className="font-serif text-2xl sm:text-3xl font-bold leading-tight">
-                Namaste, {user?.name || 'ASHA Karyakarti'} 🌿
+                {l('नमस्ते', 'Welcome')}, {user?.name || (isHindi ? 'आशा कार्यकर्ता' : 'ASHA Worker')} 🌿
               </h1>
               <p className="text-xs text-white/80 mt-1 flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-gold-warm" />
-                <span>{user?.village || 'Chamoli District'} • Zero-Connectivity Offline Triage Enabled</span>
+                <span>{user?.village || (isHindi ? 'चमोली जिला' : 'Chamoli District')} • {l('शून्य-कनेक्टिविटी ऑफ़लाइन ट्राइएज सक्रिय', 'Zero-Connectivity Offline Triage Enabled')}</span>
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
               <button
                 onClick={() => setShowSosCard(!showSosCard)}
-                className={`touch-target flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-xs shadow-sm transition-all ${
+                className={`touch-target flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-xs shadow-sm transition-all cursor-pointer ${
                   showSosCard ? 'bg-white text-rose-soft' : 'bg-rose-soft hover:bg-rose-soft/90 text-white'
                 }`}
               >
                 <PhoneCall className="w-4 h-4" />
-                <span>108 SOS Dispatch</span>
+                <span>{l('108 आपातकालीन सहायता', '108 SOS Dispatch')}</span>
               </button>
               
               <button
                 onClick={() => setShowAddForm(!showAddForm)}
-                className={`touch-target flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-xs shadow-sm transition-all ${
+                className={`touch-target flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-xs shadow-sm transition-all cursor-pointer ${
                   showAddForm ? 'bg-white text-primary' : 'bg-gold-warm hover:bg-gold-warm/90 text-primary'
                 }`}
               >
                 <UserPlus className="w-4 h-4" />
-                <span>Naya Marij (New)</span>
+                <span>{l('नया मरीज जोड़ें', 'Add New Patient')}</span>
               </button>
               
               <button
                 onClick={handleSyncAll}
                 disabled={isSyncing || pendingCount === 0}
-                className="touch-target flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-2xl font-bold text-xs transition-all disabled:opacity-40 border border-white/10"
+                className="touch-target flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-2xl font-bold text-xs transition-all disabled:opacity-40 border border-white/10 cursor-pointer"
               >
                 <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span>{isSyncing ? 'Syncing...' : `Sync (${pendingCount})`}</span>
+                <span>{isSyncing ? l('सिंक हो रहा है...', 'Syncing...') : l(`सिंक (${toEnglishDigits(pendingCount)})`, `Sync (${toEnglishDigits(pendingCount)})`)}</span>
               </button>
 
               <Link
                 to="/profile"
                 className="touch-target flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-2xl font-bold text-xs transition-all border border-white/10"
-                title="ASHA Profile & Field Activities"
+                title={l('आशा प्रोफ़ाइल व फील्ड गतिविधियां', 'ASHA Profile & Field Activities')}
               >
                 <User className="w-4 h-4 text-gold-warm" />
-                <span>Field Profile & Logs</span>
+                <span>{l('फील्ड प्रोफ़ाइल व रिकॉर्ड', 'Field Profile & Logs')}</span>
               </Link>
             </div>
           </div>
@@ -296,8 +298,8 @@ export default function AshaDashboard() {
               {pendingCount > 0 ? <WifiOff className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
               <span>
                 {pendingCount > 0
-                  ? `${pendingCount} encounters queued for sync (${pendingCount} records offline me surakshit hain)`
-                  : 'Sabhi records PHC server par sync ho chuke hain (0 encounters queued for sync)'}
+                  ? l(`${toEnglishDigits(pendingCount)} रिकॉर्ड्स ऑफ़लाइन सुरक्षित हैं (सिंक प्रतीक्षित)`, `${toEnglishDigits(pendingCount)} encounters queued for PHC sync`)
+                  : l('सभी रिकॉर्ड्स PHC सर्वर पर सिंक हो चुके हैं', 'All records synchronized with PHC server')}
               </span>
             </div>
           </div>
@@ -317,14 +319,14 @@ export default function AshaDashboard() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-serif font-bold text-base text-rose-600 dark:text-rose-400">
-                      आपातकालीन अलर्ट • Active Red-Tier Emergency ({alerts.filter(a => !a.acknowledged).length})
+                      {l('आपातकालीन अलर्ट', 'Emergency Alert')} • {l('सक्रिय लाल श्रेणी आपातकाल', 'Active Red-Tier Emergency')} ({toEnglishDigits(alerts.filter(a => !a.acknowledged).length)})
                     </h3>
                     <span className="text-[10px] bg-rose-500 text-white font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
-                      Action Required
+                      {l('कार्रवाई आवश्यक', 'Action Required')}
                     </span>
                   </div>
                   <p className="text-xs text-rose-700/80 dark:text-rose-300/80 mt-0.5">
-                    Critical hypoxia or severe symptoms reported in your sector. Coordinate 108 ambulance dispatch.
+                    {l('आपके क्षेत्र में गंभीर हाइपोक्सिया या लक्षण मिले हैं। 108 एम्बुलेंस से समन्वय करें।', 'Critical hypoxia or severe symptoms reported in your sector. Coordinate 108 ambulance dispatch.')}
                   </p>
                 </div>
               </div>
@@ -335,19 +337,19 @@ export default function AshaDashboard() {
                 <div key={alert.id} className="bg-white dark:bg-warm-indigo p-4 rounded-2xl border border-rose-200 dark:border-rose-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-primary">{alert.patient_name || 'Citizen Patient'}</span>
-                      <span className="text-xs text-muted dark:text-muted">• {alert.village || user?.village || 'Local Sector'}</span>
-                      {alert.phone && <span className="text-xs font-mono text-muted dark:text-muted">• 📞 {alert.phone}</span>}
+                      <span className="font-bold text-sm text-primary">{alert.patient_name || (isHindi ? 'नागरिक मरीज़' : 'Citizen Patient')}</span>
+                      <span className="text-xs text-muted dark:text-muted">• {alert.village || user?.village || (isHindi ? 'स्थानीय क्षेत्र' : 'Local Sector')}</span>
+                      {alert.phone && <span className="text-xs font-mono text-muted dark:text-muted">• 📞 {toEnglishDigits(alert.phone)}</span>}
                     </div>
                     <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">
-                      लक्षण / Lakshan: {alert.symptoms}
+                      {l('लक्षण:', 'Symptoms:')} {alert.symptoms}
                     </p>
                   </div>
                   <button
                     onClick={() => handleAcknowledgeAlert(alert.id)}
                     className="touch-target bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs self-start sm:self-auto cursor-pointer"
                   >
-                    108 Dispatch / संभाल लिया ✓
+                    {l('108 भेजा / संभाल लिया ✓', '108 Dispatched / Handled ✓')}
                   </button>
                 </div>
               ))}
@@ -362,15 +364,15 @@ export default function AshaDashboard() {
               <div className="flex items-center gap-2.5 text-rose-soft dark:text-rose-soft">
                 <ShieldAlert className="w-6 h-6 shrink-0" />
                 <h3 className="font-serif font-bold text-base sm:text-lg text-primary">
-                  Uttarakhand Emergency 108 Ambulance Dispatcher
+                  {l('उत्तराखंड 108 आपातकालीन एम्बुलेंस डिस्पैचर', 'Uttarakhand Emergency 108 Ambulance Dispatcher')}
                 </h3>
               </div>
               <span className="text-[10px] bg-rose-soft text-white px-3 py-1 rounded-full font-bold uppercase tracking-wider">
-                Emergency Hotline
+                {l('आपातकालीन हेल्पलाइन', 'Emergency Hotline')}
               </span>
             </div>
             <p className="text-xs text-muted dark:text-muted leading-relaxed">
-              Red-tier gambhir marijon ko turant 108 ambulance dispatch karne ke liye helpline ya dispatch copy ka upyog karein.
+              {l('लाल श्रेणी के गंभीर मरीजों को तुरंत 108 एम्बुलेंस से भेजने के लिए हेल्पलाइन या डिस्पैच नोट्स का उपयोग करें।', 'Use hotline or dispatch notes to immediately dispatch 108 ambulance for red-tier critical patients.')}
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <a
@@ -378,21 +380,21 @@ export default function AshaDashboard() {
                 className="touch-target inline-flex items-center gap-2 bg-rose-soft hover:bg-rose-soft/90 text-white px-5 py-3 rounded-2xl text-xs font-bold transition-all shadow-sm"
               >
                 <PhoneCall className="w-4 h-4" />
-                <span>Call 108 Ambulance</span>
+                <span>{l('108 एम्बुलेंस कॉल करें', 'Call 108 Ambulance')}</span>
               </a>
               <a
                 href="tel:104"
                 className="touch-target inline-flex items-center gap-2 bg-warm-indigo hover:bg-warm-indigo text-white px-5 py-3 rounded-2xl text-xs font-bold transition-all shadow-sm"
               >
                 <PhoneCall className="w-4 h-4" />
-                <span>Call 104 Health Advice</span>
+                <span>{l('104 स्वास्थ्य सलाह', 'Call 104 Health Advice')}</span>
               </a>
               <button
                 onClick={handleCopySosDetails}
-                className="touch-target inline-flex items-center gap-2 bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary px-5 py-3 rounded-2xl text-xs font-bold hover:bg-gray-100 transition-all shadow-xs"
+                className="touch-target inline-flex items-center gap-2 bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary px-5 py-3 rounded-2xl text-xs font-bold hover:bg-gray-100 transition-all shadow-xs cursor-pointer"
               >
                 {copiedSos ? <Check className="w-4 h-4 text-sage" /> : <Copy className="w-4 h-4 text-muted" />}
-                <span>{copiedSos ? 'Copied!' : 'Copy Dispatch Notes'}</span>
+                <span>{copiedSos ? l('कॉपी हो गया!', 'Copied!') : l('डिस्पैच नोट्स कॉपी करें', 'Copy Dispatch Notes')}</span>
               </button>
             </div>
           </div>
@@ -409,47 +411,47 @@ export default function AshaDashboard() {
               <form onSubmit={handleAddPatient} className="bg-white dark:bg-warm-indigo rounded-3xl p-5 sm:p-7 border border-gold-warm/50 shadow-sm space-y-4 animate-fadeIn">
                 <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
                   <h3 className="font-serif font-bold text-base text-primary flex items-center gap-2">
-                    <UserPlus className="w-4 h-4 text-gold-warm" /> Naya Field Record (New Patient Encounter)
+                    <UserPlus className="w-4 h-4 text-gold-warm" /> {l('नया फील्ड मरीज रिकॉर्ड', 'New Field Patient Encounter')}
                   </h3>
                   <span className={`text-xs font-bold px-3 py-1 rounded-full text-white ${
                     newPatient.tier === 'Red' ? 'bg-rose-soft' : newPatient.tier === 'Yellow' ? 'bg-gold-warm text-primary' : 'bg-sage'
                   }`}>
-                    Auto Triage: Tier {newPatient.tier}
+                    {l('ऑटो ट्राइएज:', 'Auto Triage:')} Tier {newPatient.tier}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                   <div>
-                    <label className="text-[11px] font-bold uppercase text-primary mb-1.5 block">Marij Ka Naam *</label>
+                    <label className="text-[11px] font-bold uppercase text-primary mb-1.5 block">{l('मरीज का नाम *', 'Patient Name *')}</label>
                     <input
                       type="text"
                       value={newPatient.name}
                       onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })}
-                      placeholder="Jaise: Kamala Rawat"
+                      placeholder={l('जैसे: कमला रावत', 'e.g. Kamala Rawat')}
                       required
                       className="w-full bg-gray-50 dark:bg-card text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sage"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold uppercase text-primary mb-1.5 block">Gaon / Ward</label>
+                    <label className="text-[11px] font-bold uppercase text-primary mb-1.5 block">{l('गाँव / वार्ड', 'Village / Ward')}</label>
                     <input
                       type="text"
                       value={newPatient.village}
                       onChange={(e) => setNewPatient({ ...newPatient, village: e.target.value })}
-                      placeholder={user?.village || "Mandal / Ward 3"}
+                      placeholder={user?.village || (isHindi ? 'मंडल / वार्ड 3' : 'Mandal / Ward 3')}
                       className="w-full bg-gray-50 dark:bg-card text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sage"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold uppercase text-primary mb-1.5 block">Triage Tier</label>
+                    <label className="text-[11px] font-bold uppercase text-primary mb-1.5 block">{l('ट्राइएज श्रेणी', 'Triage Tier')}</label>
                     <select
                       value={newPatient.tier}
                       onChange={(e) => setNewPatient({ ...newPatient, tier: e.target.value })}
                       className="w-full bg-gray-50 dark:bg-card text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sage"
                     >
-                      <option value="Green">Green (Gharelu Upchar / Samanya)</option>
-                      <option value="Yellow">Yellow (PHC Doctor Review)</option>
-                      <option value="Red">Red (Urgent / Hospital Referral)</option>
+                      <option value="Green">{l('हरा — सामान्य / घरेलू उपचार', 'Green — Mild / Home Remedies')}</option>
+                      <option value="Yellow">{l('पीला — PHC डॉक्टर परामर्श', 'Yellow — PHC Doctor Review')}</option>
+                      <option value="Red">{l('लाल — तत्काल अस्पताल रेफरल', 'Red — Urgent / Hospital Referral')}</option>
                     </select>
                   </div>
                 </div>
@@ -457,7 +459,7 @@ export default function AshaDashboard() {
                 {/* Vitals Assistant */}
                 <div className="bg-mist dark:bg-card p-4 rounded-2xl border border-sage/20 dark:border-gray-800">
                   <span className="text-[11px] font-bold uppercase text-muted dark:text-muted tracking-wider block mb-2.5">
-                    Field Vitals Assistant (SpO2 & Temp Auto-Calculates Risk)
+                    {l('फील्ड वाइटल्स सहायक (SpO2 व तापमान से स्वतः जोखिम गणना)', 'Field Vitals Assistant (SpO2 & Temp Auto-Calculates Risk)')}
                   </span>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
@@ -501,11 +503,11 @@ export default function AshaDashboard() {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold uppercase text-primary mb-1.5 block">Takleef / Lakshan (Chief Complaint) *</label>
+                  <label className="text-[11px] font-bold uppercase text-primary mb-1.5 block">{l('तकलीफ या मुख्य लक्षण *', 'Chief Complaint & Symptoms *')}</label>
                   <textarea
                     value={newPatient.symptom}
                     onChange={(e) => setNewPatient({ ...newPatient, symptom: e.target.value })}
-                    placeholder="Jaise: 3 din se tez bukhar hai, sharir dard aur thand lagna"
+                    placeholder={l('जैसे: 3 दिन से तेज बुखार है, शरीर दर्द और ठंड लगना', 'e.g. High fever for 3 days, body ache and chills')}
                     rows={2}
                     required
                     className="w-full bg-gray-50 dark:bg-card text-primary border border-gray-300 dark:border-gray-700 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sage"
@@ -515,37 +517,40 @@ export default function AshaDashboard() {
                 {/* Quick symptom presets */}
                 <div className="flex flex-wrap gap-2 pt-1">
                   {[
-                    'Cold & Dry Cough',
-                    'Fever > 3 Days',
-                    'Acute Hypoxia / Breathlessness',
-                    'Diarrhea & Dehydration',
-                    'Joint Pain / Arthritis',
-                  ].map((s) => (
-                    <button
-                      type="button"
-                      key={s}
-                      onClick={() => setNewPatient((prev) => ({ ...prev, symptom: prev.symptom ? `${prev.symptom}, ${s}` : s }))}
-                      className="touch-target text-xs bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-sage/15 text-primary px-3.5 py-1.5 rounded-full transition-colors"
-                    >
-                      + {s}
-                    </button>
-                  ))}
+                    { en: 'Cold & Dry Cough', hi: 'सर्दी व सूखी खांसी' },
+                    { en: 'Fever > 3 Days', hi: '3 दिन से तेज बुखार' },
+                    { en: 'Acute Hypoxia / Breathlessness', hi: 'सांस फूलना / हाइपोक्सिया' },
+                    { en: 'Diarrhea & Dehydration', hi: 'दस्त व निर्जलीकरण' },
+                    { en: 'Joint Pain / Arthritis', hi: 'जोड़ों का दर्द / गठिया' },
+                  ].map((s) => {
+                    const label = isHindi ? s.hi : s.en;
+                    return (
+                      <button
+                        type="button"
+                        key={s.en}
+                        onClick={() => setNewPatient((prev) => ({ ...prev, symptom: prev.symptom ? `${prev.symptom}, ${label}` : label }))}
+                        className="touch-target text-xs bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-sage/15 text-primary px-3.5 py-1.5 rounded-full transition-colors cursor-pointer"
+                      >
+                        + {label}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div className="flex items-center gap-3 pt-3">
                   <button
                     type="submit"
                     disabled={!newPatient.name || !newPatient.symptom}
-                    className="touch-target bg-sage hover:bg-sage/90 text-white text-xs sm:text-sm font-bold px-7 py-3.5 rounded-2xl disabled:opacity-40 transition-all shadow-sm"
+                    className="touch-target bg-sage hover:bg-sage/90 text-white text-xs sm:text-sm font-bold px-7 py-3.5 rounded-2xl disabled:opacity-40 transition-all shadow-sm cursor-pointer"
                   >
-                    Offline Record Darz Karein
+                    {l('ऑफ़लाइन रिकॉर्ड दर्ज करें', 'Save Field Record (Offline)')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowAddForm(false)}
-                    className="touch-target text-xs font-semibold text-muted dark:text-muted hover:text-primary px-4 py-3"
+                    className="touch-target text-xs font-semibold text-muted dark:text-muted hover:text-primary px-4 py-3 cursor-pointer"
                   >
-                    Radd Karein (Cancel)
+                    {l('रद्द करें', 'Cancel')}
                   </button>
                 </div>
               </form>
@@ -557,15 +562,15 @@ export default function AshaDashboard() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-serif font-bold text-base sm:text-lg text-primary">
-                      Offline Field Log ({filteredPatients.length} of {offlineQueue.length})
+                      {l(`ऑफ़लाइन फील्ड लॉग (${toEnglishDigits(filteredPatients.length)} / ${toEnglishDigits(offlineQueue.length)})`, `Offline Field Log (${toEnglishDigits(filteredPatients.length)} of ${toEnglishDigits(offlineQueue.length)})`)}
                     </h3>
                     {offlineQueue === DEFAULT_PATIENTS && (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300">
-                        Sample data — connect backend for live numbers
+                        {l('नमूना डेटा — वास्तविक संख्या के लिए बैकएंड से जुड़ें', 'Sample data — connect backend for live numbers')}
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] text-muted dark:text-muted">Auto-persisted to local browser storage</span>
+                  <span className="text-[11px] text-muted dark:text-muted">{l('ब्राउज़र स्टोरेज में स्थानीय रूप से सुरक्षित', 'Auto-persisted to local browser storage')}</span>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -575,7 +580,7 @@ export default function AshaDashboard() {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Naam ya gaon..."
+                      placeholder={l('नाम या गाँव...', 'Name or village...')}
                       className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 rounded-2xl pl-9 pr-3.5 py-2 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-sage w-36 sm:w-48"
                     />
                   </div>
@@ -585,11 +590,11 @@ export default function AshaDashboard() {
                     onChange={(e) => setTierFilter(e.target.value)}
                     className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary rounded-2xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sage"
                   >
-                    <option value="all">Sabhi Tiers</option>
-                    <option value="needsFollowUp">Follow-Up Chahiye</option>
-                    <option value="Red">Red Only (Aapaat)</option>
-                    <option value="Yellow">Yellow Only (Madhyam)</option>
-                    <option value="Green">Green Only (Samanya)</option>
+                    <option value="all">{l('सभी श्रेणियां', 'All Tiers')}</option>
+                    <option value="needsFollowUp">{l('फॉलो-अप आवश्यक', 'Follow-Up Required')}</option>
+                    <option value="Red">{l('लाल श्रेणी (आपातकाल)', 'Red Tier (Emergency)')}</option>
+                    <option value="Yellow">{l('पीली श्रेणी (मध्यम)', 'Yellow Tier (Moderate)')}</option>
+                    <option value="Green">{l('हरी श्रेणी (सामान्य)', 'Green Tier (Mild)')}</option>
                   </select>
                 </div>
               </div>
@@ -602,28 +607,28 @@ export default function AshaDashboard() {
                       <Users className="w-7 h-7" />
                     </div>
                     <h4 className="font-serif font-bold text-base text-primary mb-1">
-                      कोई मरीज़ रिकॉर्ड नहीं है • No Patient Records Yet
+                      {l('कोई मरीज़ रिकॉर्ड नहीं है', 'No Patient Records Yet')}
                     </h4>
                     <p className="text-xs text-muted max-w-sm mb-5 leading-relaxed">
-                      गाँव के भ्रमण के दौरान नए मरीज़ का विवरण दर्ज करें, या परीक्षण के लिए नमूना डेटा लोड करें।
+                      {l('गाँव के भ्रमण के दौरान नए मरीज़ का विवरण दर्ज करें, या परीक्षण के लिए नमूना डेटा लोड करें।', 'Record new patient details during field visits, or load sample data for testing.')}
                     </p>
                     <div className="flex flex-wrap items-center justify-center gap-3">
                       <button
                         onClick={() => setShowAddForm(true)}
-                        className="touch-target bg-sage hover:bg-sage/90 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+                        className="touch-target bg-sage hover:bg-sage/90 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                       >
-                        <Plus className="w-4 h-4" /> नया मरीज़ जोड़ें / + Record Patient
+                        <Plus className="w-4 h-4" /> {l('नया मरीज़ जोड़ें', 'Add New Patient')}
                       </button>
                       <button
                         onClick={handleLoadSamplePatients}
-                        className="touch-target bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-primary font-bold text-xs px-4 py-2.5 rounded-xl transition-all border border-gray-200 dark:border-gray-700"
+                        className="touch-target bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-primary font-bold text-xs px-4 py-2.5 rounded-xl transition-all border border-gray-200 dark:border-gray-700 cursor-pointer"
                       >
-                        Load Sample Data / नमूना डेटा
+                        {l('नमूना डेटा लोड करें', 'Load Sample Data')}
                       </button>
                     </div>
                   </div>
                 ) : filteredPatients.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-gray-400">फ़िल्टर के अनुसार कोई रिकॉर्ड नहीं मिला। / No matching records found.</div>
+                  <div className="p-8 text-center text-xs text-gray-400">{l('फ़िल्टर के अनुसार कोई रिकॉर्ड नहीं मिला।', 'No matching records found.')}</div>
                 ) : (
                   filteredPatients.map((patient) => (
                     <div key={patient.id} className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors">
@@ -641,18 +646,18 @@ export default function AshaDashboard() {
                             <span className="text-xs font-normal text-muted dark:text-muted">• {patient.village}</span>
                             {patient.followedUp && (
                               <span className="text-[10px] bg-sage/15 text-sage dark:text-booti-glow px-2 py-0.5 rounded-full font-bold">
-                                Followed Up ✓
+                                {l('फॉलो-अप पूर्ण ✓', 'Followed Up ✓')}
                               </span>
                             )}
                           </div>
                           <div className="text-xs text-muted dark:text-muted mt-0.5">
-                            Lakshan: <span className="font-medium text-primary">{patient.symptom}</span>
+                            {l('लक्षण:', 'Symptoms:')} <span className="font-medium text-primary">{patient.symptom}</span>
                           </div>
                           {patient.vitals && (
                             <div className="flex items-center gap-3 text-[11px] text-muted dark:text-muted mt-1 font-mono">
-                              {patient.vitals.spo2 !== '--' && <span>SpO2: <b className="text-primary">{patient.vitals.spo2}%</b></span>}
-                              {patient.vitals.temp !== '--' && <span>Temp: <b className="text-primary">{patient.vitals.temp}°F</b></span>}
-                              {patient.vitals.pulse !== '--' && <span>Pulse: <b className="text-primary">{patient.vitals.pulse} bpm</b></span>}
+                              {patient.vitals.spo2 !== '--' && <span>SpO2: <b className="text-primary">{toEnglishDigits(patient.vitals.spo2)}%</b></span>}
+                              {patient.vitals.temp !== '--' && <span>Temp: <b className="text-primary">{toEnglishDigits(patient.vitals.temp)}°F</b></span>}
+                              {patient.vitals.pulse !== '--' && <span>Pulse: <b className="text-primary">{toEnglishDigits(patient.vitals.pulse)} bpm</b></span>}
                             </div>
                           )}
                         </div>
@@ -669,7 +674,7 @@ export default function AshaDashboard() {
 
                         <span className={`inline-flex items-center gap-1 text-xs font-bold ${patient.synced ? 'text-sage dark:text-booti-glow' : 'text-gold-warm'}`}>
                           {patient.synced ? <CheckCircle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-                          <span>{patient.synced ? 'Synced' : 'Pending'}</span>
+                          <span>{patient.synced ? l('सिंक पूर्ण', 'Synced') : l('प्रतीक्षित', 'Pending')}</span>
                         </span>
                       </div>
                     </div>
@@ -694,16 +699,16 @@ export default function AshaDashboard() {
               <div className="flex items-center gap-2">
                 <Leaf className="w-4 h-4 text-sage" />
                 <h4 className="font-serif font-bold text-sm text-primary">
-                  Offline Field Triage Protocol
+                  {l('ऑफ़लाइन फील्ड ट्राइएज प्रोटोकॉल', 'Offline Field Triage Protocol')}
                 </h4>
               </div>
               <p className="text-xs text-muted dark:text-muted leading-relaxed">
-                ASHA Karyakarti tablet ya mobile par darz kiye gaye encounters bina internet ke browser local storage mein surakshit rehte hain.
+                {l('आशा कार्यकर्ता टैबलेट या मोबाइल पर दर्ज रिकॉर्ड बिना इंटरनेट के ब्राउज़र में सुरक्षित रहते हैं।', 'Encounters recorded by ASHA workers on tablets or mobiles remain securely stored offline in browser local storage.')}
               </p>
               <div className="bg-mist dark:bg-card p-3.5 rounded-2xl border border-sage/15 text-xs text-muted dark:text-muted space-y-1">
-                <p>• <strong>Red Tier:</strong> Turant 108 SOS dispatch karein ya nazdeeki Sub-Centre le jayein.</p>
-                <p>• <strong>Yellow Tier:</strong> 24 ghante ke bheetar PHC doctor ya CHC se paramarsh karein.</p>
-                <p>• <strong>Green Tier:</strong> Sanjeevani gharelu upchar v dhyan routine follow karein.</p>
+                <p>• <strong>{l('लाल श्रेणी:', 'Red Tier:')}</strong> {l('तुरंत 108 एम्बुलेंस बुलाएं या नजदीकी उप-केंद्र ले जाएं।', 'Immediately dispatch 108 SOS or transfer to nearest health sub-centre.')}</p>
+                <p>• <strong>{l('पीली श्रेणी:', 'Yellow Tier:')}</strong> {l('24 घंटे के भीतर PHC डॉक्टर या CHC से परामर्श कराएं।', 'Consult PHC doctor or CHC within 24 hours.')}</p>
+                <p>• <strong>{l('हरी श्रेणी:', 'Green Tier:')}</strong> {l('संजीवनी घरेलू उपचार व दिनचर्या का पालन करें।', 'Follow Sanjeevani home remedies and wellness routine.')}</p>
               </div>
             </div>
 

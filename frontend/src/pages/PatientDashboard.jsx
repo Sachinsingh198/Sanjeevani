@@ -7,7 +7,7 @@ import {
   ShieldAlert, BookOpen, ChevronDown, ChevronUp, Sparkles, Navigation,
   Wind, Activity, HeartHandshake, ArrowRight, Stethoscope, Hospital,
   Volume2, VolumeX, Square, Home, FileText, Bandage, ArrowLeft, FileDown, Share2, RefreshCw, Printer,
-  Bell, QrCode
+  Bell, QrCode, Trash2
 } from 'lucide-react';
 import LiveVoiceRoom from '../components/LiveVoiceRoom';
 import NearbyFacilityFinder from '../components/NearbyFacilityFinder';
@@ -17,11 +17,12 @@ import SessionHistoryDrawer from '../components/SessionHistoryDrawer';
 import SkeletonLoader from '../components/SkeletonLoader';
 import ReferralQRModal from '../components/ReferralQRModal';
 import FamilyProfileSelector from '../components/FamilyProfileSelector';
-import { listSessions } from '../lib/sessionStore';
+import { listSessions, deleteSession, clearSessionHistory } from '../lib/sessionStore';
 import { getChatHistory } from '../api/client';
 import { downloadConsultationReport } from '../api/reportsClient';
 import { speakCue, stopCue } from '../lib/audioSynthesizer';
 import PageVoiceGuide from '../components/PageVoiceGuide';
+import { useLanguage } from '../context/LanguageContext';
 import toast from 'react-hot-toast';
 
 const REMEDIES_STORAGE_KEY = 'sanjeevani_patient_remedies_v1';
@@ -35,6 +36,7 @@ const DEFAULT_REMEDIES = [
 
 export default function PatientDashboard() {
   const { user } = useAuth();
+  const { lang, l, isHindi, toEnglishDigits, formatDate } = useLanguage();
   const [activeTab, setActiveTab] = useState('hub'); // 'hub' | 'remedies' | 'history' | 'facilities' | 'firstaid'
   const [showLiveRoom, setShowLiveRoom] = useState(false);
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
@@ -112,6 +114,36 @@ export default function PatientDashboard() {
     setIsRefreshing(false);
   }, []);
 
+  const handleDeleteConsultation = async (conversationId, e) => {
+    e?.stopPropagation();
+    e?.preventDefault();
+    if (!window.confirm(l('क्या आप इस परामर्श रिकॉर्ड को हटाना चाहते हैं?', 'Are you sure you want to delete this consultation record?'))) {
+      return;
+    }
+    try {
+      await deleteSession(conversationId, user?.id);
+      setConsultations((prev) => prev.filter((c) => c.conversationId !== conversationId));
+      toast.success(l('परामर्श इतिहास हटा दिया गया 🗑️', 'Consultation deleted 🗑️'));
+    } catch (err) {
+      console.warn('Failed to delete consultation:', err);
+      toast.error(l('परामर्श हटाने में विफल', 'Failed to delete consultation'));
+    }
+  };
+
+  const handleClearAllConsultations = async () => {
+    if (!window.confirm(l('क्या आप सभी परामर्श इतिहास हटाना चाहते हैं? यह वापस नहीं लाया जा सकता।', 'Are you sure you want to delete all consultation history? This cannot be undone.'))) {
+      return;
+    }
+    try {
+      await clearSessionHistory(user?.id);
+      setConsultations([]);
+      toast.success(l('संपूर्ण परामर्श इतिहास साफ कर दिया गया 🗑️', 'All consultation history cleared 🗑️'));
+    } catch (err) {
+      console.warn('Failed to clear consultations:', err);
+      toast.error(l('इतिहास साफ करने में विफल', 'Failed to clear history'));
+    }
+  };
+
   const handleDownloadParcha = async (item, e) => {
     e?.stopPropagation();
     e?.preventDefault();
@@ -145,18 +177,18 @@ export default function PatientDashboard() {
           </head>
           <body>
             <div class="header">
-              <div class="title">🌿 संजीवनी स्वास्थ्य परामर्श पर्चा (Sanjeevani Health Summary)</div>
+              <div class="title">🌿 ${isHindi ? 'संजीवनी स्वास्थ्य परामर्श पर्चा' : 'Sanjeevani Health Summary'}</div>
               <div class="meta">Uttarakhand Telehealth & Rural Clinical Advisory • Gopeshwar & Chamoli</div>
             </div>
-            <p><strong>सत्र पहचान (Session ID):</strong> ${item.conversationId}</p>
-            <p><strong>दिनांक (Date):</strong> ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('hi-IN') : 'सक्रिय परामर्श'}</p>
-            <p><strong>ट्राइएज स्तर (Triage Tier):</strong> <span class="tier">${item.tier || 'Green'}</span></p>
+            <p><strong>${isHindi ? 'सत्र पहचान:' : 'Session ID:'}</strong> ${item.conversationId}</p>
+            <p><strong>${isHindi ? 'दिनांक:' : 'Date:'}</strong> ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : (isHindi ? 'सक्रिय परामर्श' : 'Active Session')}</p>
+            <p><strong>${isHindi ? 'ट्राइएज स्तर:' : 'Triage Tier:'}</strong> <span class="tier">${item.tier || 'Green'}</span></p>
             <div class="summary">
-              <strong>परामर्श विवरण (Summary):</strong><br/>
-              ${item.summary || 'डॉ. संजीवनी AI के साथ सामान्य परामर्श एवं स्वास्थ्य सलाह।'}
+              <strong>${isHindi ? 'परामर्श सारांश:' : 'Consultation Summary:'}</strong><br/>
+              ${item.summary || (isHindi ? 'डॉ. संजीवनी AI के साथ सामान्य परामर्श एवं स्वास्थ्य सलाह।' : 'General wellness consultation and advice with Dr. Sanjeevani AI.')}
             </div>
             <div class="footer">
-              ⚠️ यह पर्चा Dr. Sanjeevani AI द्वारा उत्पन्न किया गया है। आपातकाल में तुरंत 108 डायल करें।
+              ${isHindi ? '⚠️ यह पर्चा Dr. Sanjeevani AI द्वारा उत्पन्न किया गया है। आपातकाल में तुरंत 108 डायल करें।' : '⚠️ This summary was generated by Dr. Sanjeevani AI. In medical emergencies, dial 108 immediately.'}
             </div>
             <script>window.onload = function() { window.print(); };</script>
           </body>
@@ -268,15 +300,19 @@ export default function PatientDashboard() {
       setIsSpeaking(false);
       setTabNarrationEnabled(false);
       localStorage.setItem('sanjeevani_tab_narration', 'false');
-      toast('आवाज़ी वाचन बंद किया गया (Audio Narration Off) 🔇', { icon: '🔇' });
+      toast(l('आवाज़ी वाचन बंद किया गया 🔇', 'Audio Narration Off 🔇'), { icon: '🔇' });
     } else {
       setTabNarrationEnabled(true);
       localStorage.setItem('sanjeevani_tab_narration', 'true');
-      toast.success('आवाज़ी वाचन चालू किया गया (Audio Narration On) 🔊');
-      speakCue('आवाज़ी मार्गदर्शन चालू है। टैब बदलने पर आवाज़ सुनाई देगी।', 'hi-IN', {
-        onStart: () => setIsSpeaking(true),
-        onEnd: () => setIsSpeaking(false),
-      });
+      toast.success(l('आवाज़ी वाचन चालू किया गया 🔊', 'Audio Narration On 🔊'));
+      speakCue(
+        l('आवाज़ी मार्गदर्शन चालू है। टैब बदलने पर आवाज़ सुनाई देगी।', 'Audio guidance enabled. You will hear cues when switching tabs.'),
+        isHindi ? 'hi-IN' : 'en-IN',
+        {
+          onStart: () => setIsSpeaking(true),
+          onEnd: () => setIsSpeaking(false),
+        }
+      );
     }
   };
 
@@ -296,18 +332,27 @@ export default function PatientDashboard() {
 
   const firstAidGuides = [
     {
-      title: 'High-Altitude Sickness & Hypothermia (उंचाई पर चक्कर / ठंड लगना)',
-      content: 'Immediately halt ascent. Keep the patient warm and dry with woolen blankets. Sip warm liquids with ginger or jaggery. If breathing is labored or lips turn pale/blue (SpO2 < 90%), dial 108 for descent support immediately.',
+      title: l('उंचाई पर चक्कर या ठंड लगना (हाइपोथर्मिया)', 'High-Altitude Sickness & Hypothermia'),
+      content: l(
+        'चढ़ाई तुरंत रोकें। रोगी को ऊनी कंबल से गर्म और सूखा रखें। अदरक या गुड़ का गुनगुना पेय दें। यदि सांस लेने में कठिनाई हो या होंठ नीले पड़ने लगें (SpO2 < 90%), तो तुरंत 108 पर कॉल करें।',
+        'Immediately halt ascent. Keep the patient warm and dry with woolen blankets. Sip warm liquids with ginger or jaggery. If breathing is labored or lips turn pale/blue (SpO2 < 90%), dial 108 for descent support immediately.'
+      ),
       audio: 'Uunchai par chhatpatana ya thand lagne par chadhai turant rokein, garam kambal odhein aur 108 ko call karein.',
     },
     {
-      title: 'ORS Rehydration for Diarrhea & Vomiting (दस्त और पानी की कमी)',
-      content: 'Mix 1 liter of clean/boiled water with 6 level teaspoons of sugar and 1/2 level teaspoon of salt. Give small frequent sips throughout the day. Continue breast milk for infants.',
+      title: l('दस्त और उल्टी में ओआरएस (ORS)', 'ORS Rehydration for Diarrhea & Vomiting'),
+      content: l(
+        '1 लीटर साफ या उबले पानी में 6 चम्मच चीनी और 1/2 चम्मच नमक मिलाएं। दिनभर छोटे-छोटे घूंट पिलाते रहें। शिशुओं को मां का दूध जारी रखें।',
+        'Mix 1 liter of clean/boiled water with 6 level teaspoons of sugar and 1/2 level teaspoon of salt. Give small frequent sips throughout the day. Continue breast milk for infants.'
+      ),
       audio: 'Dast ya ulti hone par ek liter uble paani me chhah chammach cheeni aur aadha chammach namak milakar piyen.',
     },
     {
-      title: 'Bleeding & Cuts on Mountain Terrain (चोट और घाव)',
-      content: 'Apply firm direct pressure with clean cloth for 5 full minutes without lifting. Elevate limb above heart level. Wash gently with boiled water once bleeding slows.',
+      title: l('पहाड़ी रास्तों पर चोट और रक्तस्राव', 'Bleeding & Cuts on Mountain Terrain'),
+      content: l(
+        'साफ कपड़े से 5 मिनट तक बिना हटाए सीधा दबाव बनाएं। अंग को दिल के स्तर से ऊपर उठाएं। खून रुकने पर उबले पानी से धीरे-धीरे धोएं।',
+        'Apply firm direct pressure with clean cloth for 5 full minutes without lifting. Elevate limb above heart level. Wash gently with boiled water once bleeding slows.'
+      ),
       audio: 'Chot lagne par saaf kapde se paanch minute tak dabaav banaye rakhein.',
     },
   ];
@@ -315,11 +360,11 @@ export default function PatientDashboard() {
   const completedRemediesCount = remedies.filter(r => r.completed).length;
 
   const tabs = [
-    { id: 'hub', label: 'मुख्य सेवा', sub: 'Main Hub', icon: Home },
-    { id: 'remedies', label: 'दवा व काढ़ा', sub: 'Remedies', icon: Leaf, badge: `${completedRemediesCount}/${remedies.length}` },
-    { id: 'history', label: 'पुराना पर्चा', sub: 'Records', icon: FileText, badge: `${consultations.length}` },
-    { id: 'facilities', label: 'अस्पताल', sub: 'Hospitals', icon: Hospital },
-    { id: 'firstaid', label: 'प्राथमिक उपचार', sub: 'First-Aid', icon: Bandage },
+    { id: 'hub', label: l('मुख्य सेवा', 'Main Services'), sub: l('डैशबोर्ड', 'Dashboard'), icon: Home },
+    { id: 'remedies', label: l('दवा व काढ़ा', 'Remedies'), sub: l('दिनचर्या', 'Routine'), icon: Leaf, badge: `${completedRemediesCount}/${remedies.length}` },
+    { id: 'history', label: l('पुराना पर्चा', 'Records'), sub: l('परामर्श इतिहास', 'History'), icon: FileText, badge: `${consultations.length}` },
+    { id: 'facilities', label: l('अस्पताल', 'Hospitals'), sub: l('निकटतम केंद्र', 'Nearby Care'), icon: Hospital },
+    { id: 'firstaid', label: l('प्राथमिक उपचार', 'First-Aid'), sub: l('आपातकालीन गाइड', 'Emergency'), icon: Bandage },
   ];
 
   return (
@@ -385,18 +430,18 @@ export default function PatientDashboard() {
                   ? 'bg-sage/15 text-sage dark:text-booti-glow border-sage/40 hover:bg-sage/25'
                   : 'bg-white/80 dark:bg-card/80 text-muted border-gray-200 dark:border-gray-700 hover:text-primary'
               }`}
-              title={tabNarrationEnabled ? "आवाज़ी वाचन चालू है (टैब बदलते ही बोलेगा) - बंद करने हेतु दबाएं" : "आवाज़ी वाचन बंद है - चालू करने हेतु दबाएं"}
-              aria-label="Toggle Section Audio Narration"
+              title={tabNarrationEnabled ? l('आवाज़ी वाचन चालू - बंद करने हेतु दबाएं', 'Audio narration on - click to disable') : l('आवाज़ी वाचन बंद - चालू करने हेतु दबाएं', 'Audio narration off - click to enable')}
+              aria-label={l('आवाज़ी वाचन बदलें', 'Toggle Section Audio Narration')}
             >
               {tabNarrationEnabled ? (
                 <>
                   <Volume2 className="w-3.5 h-3.5 text-sage dark:text-booti-glow animate-pulse" />
-                  <span className="text-[11px] sm:text-xs">आवाज़ चालू</span>
+                  <span className="text-[11px] sm:text-xs">{l('आवाज़ चालू', 'Voice On')}</span>
                 </>
               ) : (
                 <>
                   <VolumeX className="w-3.5 h-3.5" />
-                  <span className="text-[11px] sm:text-xs">आवाज़ बंद</span>
+                  <span className="text-[11px] sm:text-xs">{l('आवाज़ बंद', 'Voice Off')}</span>
                 </>
               )}
             </button>
@@ -440,16 +485,16 @@ export default function PatientDashboard() {
 
                 <div className="inline-flex items-center gap-1.5 sm:gap-2 bg-sage/10 dark:bg-sage/25 text-sage dark:text-booti-glow px-3 sm:px-4 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold mb-1.5 sm:mb-2">
                   <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold-warm" />
-                  <span>Sanjeevani Mitra • संजीवनी मित्र</span>
+                  <span>{l('संजीवनी मित्र', 'Sanjeevani Mitra')}</span>
                 </div>
 
                 <h1 className="font-serif text-xl sm:text-4xl font-bold text-primary">
-                  Namaste, {activeFamilyMember?.name ? activeFamilyMember.name : (user?.name || 'Aadarniya Mitra')} 🙏
+                  {l('नमस्ते', 'Namaste')}, {activeFamilyMember?.name ? activeFamilyMember.name : (user?.name || l('आदरणीय मित्र', 'Friend'))} 🙏
                 </h1>
 
                 <p className="text-[11px] sm:text-sm text-muted dark:text-muted mt-1 flex items-center justify-center gap-1 sm:gap-1.5">
                   <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold-warm" />
-                  <span>{user?.village || 'Chamoli, Uttarakhand'} • Digital Swasthya Kendra</span>
+                  <span>{user?.village || l('चमोली, उत्तराखंड', 'Chamoli, Uttarakhand')} • {l('डिजिटल स्वास्थ्य केंद्र', 'Digital Health Center')}</span>
                 </p>
 
                 {/* Primary Voice Consultation Trigger */}
@@ -461,16 +506,16 @@ export default function PatientDashboard() {
                     <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
                       <Mic className="w-4 h-4 sm:w-5 sm:h-5 animate-bounce" />
                     </div>
-                    <span>🎙 बोलकर बताएं (Speak Now)</span>
+                    <span>{l('🎙 बोलकर बताएं', '🎙 Speak Now')}</span>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => handleAudioGuide('Namaste! Bolkar batayein button dabakar aap aawaz mein doctor se salah le sakte hain.', true)}
+                    onClick={() => handleAudioGuide(l('नमस्ते! बोलकर बताएं बटन दबाकर आप आवाज में डॉक्टर से सलाह ले सकते हैं।', 'Namaste! Click speak now to start voice consultation with Dr. Sanjeevani.'), true)}
                     className="touch-target inline-flex items-center justify-center gap-1.5 bg-mist dark:bg-card text-sage dark:text-booti-glow border border-sage/30 px-3.5 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-bold hover:bg-sage/10 transition-all cursor-pointer"
                   >
                     <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span>निर्देश सुनें</span>
+                    <span>{l('निर्देश सुनें', 'Voice Guide')}</span>
                   </button>
                 </div>
               </div>
@@ -481,7 +526,7 @@ export default function PatientDashboard() {
                   <AlertCircle className="w-4 h-4 text-gold-warm dark:text-gold-warm shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <strong className="block font-bold text-gold-warm dark:text-gold-warm uppercase tracking-wider text-xs">
-                      District CMO Health Advisory:
+                      {l('मुख्य चिकित्सा अधिकारी (CMO) स्वास्थ्य परामर्श:', 'District CMO Health Advisory:')}
                     </strong>
                     <span className="text-xs text-primary leading-relaxed font-medium">
                       {advisory}
@@ -490,7 +535,7 @@ export default function PatientDashboard() {
                   <button
                     onClick={() => handleAudioGuide(advisory, true)}
                     className="touch-target p-1 text-gold-warm dark:text-gold-warm hover:scale-110"
-                    title="Advisory suniye"
+                    title={l('परामर्श सुनें', 'Listen to Advisory')}
                   >
                     <Volume2 className="w-4 h-4" />
                   </button>
@@ -511,17 +556,17 @@ export default function PatientDashboard() {
                     <Stethoscope className="w-5 h-5 sm:w-7 sm:h-7" />
                   </div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-sage dark:text-booti-glow block truncate">
-                    Doctor Sahyog
+                    {l('चिकित्सक सहयोग', 'Doctor Consultation')}
                   </span>
                   <h3 className="font-serif font-bold text-sm sm:text-lg text-primary mt-0.5 leading-snug">
-                    Sehat (स्वास्थ्य)
+                    {l('स्वास्थ्य', 'Doctor Clinic')}
                   </h3>
                   <p className="text-xs text-muted dark:text-muted mt-1 hidden sm:block">
-                    Dr. Sanjeevani se lakshan jaanch aur clinical triage advice.
+                    {l('लक्षण जांच, प्राथमिक निदान एवं डॉक्टर से परामर्श लें।', 'Symptom triage, primary diagnosis and clinical advice.')}
                   </p>
                 </div>
                 <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-xs font-bold text-sage dark:text-booti-glow pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>Paramarsh</span>
+                  <span>{l('परामर्श लें', 'Consult Now')}</span>
                   <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
@@ -536,17 +581,17 @@ export default function PatientDashboard() {
                     <Sparkles className="w-5 h-5 sm:w-7 sm:h-7" />
                   </div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-gold-warm dark:text-gold-warm block truncate">
-                    Yoga • Dhyan • Naad
+                    {l('योग • ध्यान • नाद', 'Yoga • Dhyan • Naad')}
                   </span>
                   <h3 className="font-serif font-bold text-sm sm:text-lg text-primary mt-0.5 leading-snug">
-                    Arogya (आरोग्यशाला)
+                    {l('आरोग्यशाला', 'Wellness Studio')}
                   </h3>
                   <p className="text-xs text-muted dark:text-muted mt-1 hidden sm:block">
-                    Pose AI, 5 Vedic Pranayama, audio dhyan katha aur soundscapes.
+                    {l('मुद्रा एआई, 5 वैदिक प्राणायाम, ध्यान कथा और सुखद ध्वनियां।', 'Pose AI, 5 Vedic Pranayamas, guided meditation and soundscapes.')}
                   </p>
                 </div>
                 <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-xs font-bold text-gold-warm dark:text-gold-warm pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>Studio</span>
+                  <span>{l('स्टूडियो खोलें', 'Open Studio')}</span>
                   <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
@@ -561,17 +606,17 @@ export default function PatientDashboard() {
                     <HeartHandshake className="w-5 h-5 sm:w-7 sm:h-7" />
                   </div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-rose-soft dark:text-rose-soft block truncate">
-                    Apno Jaisa Sathi
+                    {l('सदा आपके साथ', 'Elder Companion')}
                   </span>
                   <h3 className="font-serif font-bold text-sm sm:text-lg text-primary mt-0.5 leading-snug">
-                    Saathi (साथी)
+                    {l('साथी', 'Saathi Companion')}
                   </h3>
                   <p className="text-xs text-muted dark:text-muted mt-1 hidden sm:block">
-                    Akelepan me dukh-sukh ki baatein, purane kisse aur snehi saath.
+                    {l('अकेलेपन में आत्मीय बातचीत, पुराने किस्से और स्नेहपूर्ण सम्बल।', 'Warm comforting conversations, storytelling, and emotional support.')}
                   </p>
                 </div>
                 <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-xs font-bold text-rose-soft dark:text-rose-soft pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>Baat Karein</span>
+                  <span>{l('बातचीत करें', 'Talk to Saathi')}</span>
                   <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
@@ -586,17 +631,17 @@ export default function PatientDashboard() {
                     <Eye className="w-5 h-5 sm:w-7 sm:h-7" />
                   </div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-primary dark:text-muted block truncate">
-                    Netra Jaanch
+                    {l('नेत्र जांच', 'Eye Screening')}
                   </span>
                   <h3 className="font-serif font-bold text-sm sm:text-lg text-primary mt-0.5 leading-snug">
-                    Screening (नेत्र जांच)
+                    {l('स्क्रीनिंग', 'Eye Health Scan')}
                   </h3>
                   <p className="text-xs text-muted dark:text-muted mt-1 hidden sm:block">
-                    Camera se palak ki tasveer lekar Anemia v Peeliya sanket dekhein.
+                    {l('कैमरे से पलक की तस्वीर लेकर एनीमिया व पीलिया के संकेत जांचें।', 'Scan eyelid image to detect signs of anemia and jaundice.')}
                   </p>
                 </div>
                 <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-[11px] sm:text-xs font-bold text-primary dark:text-muted pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>Jaanch Karein</span>
+                  <span>{l('जांच शुरू करें', 'Start Screening')}</span>
                   <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
@@ -612,15 +657,15 @@ export default function PatientDashboard() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] sm:text-xs bg-sage text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                      Daily Sadhana
+                      {l('दैनिक साधना', 'Daily Sadhana')}
                     </span>
-                    <span className="text-[11px] text-gold-warm dark:text-gold-warm font-bold">15 Mins • Himalayan Vitality</span>
+                    <span className="text-[11px] text-gold-warm dark:text-gold-warm font-bold">{l('15 मिनट • हिमालयी स्फूर्ति', '15 Mins • Himalayan Vitality')}</span>
                   </div>
                   <h3 className="font-serif font-bold text-base sm:text-xl text-primary mt-1">
-                    Himalayan Morning Flow (सुबह की ऊर्जा साधना)
+                    {l('सुबह की ऊर्जा साधना', 'Himalayan Morning Flow')}
                   </h3>
                   <p className="text-xs sm:text-sm text-muted dark:text-muted mt-0.5">
-                    Anulom Vilom breathwork + Tadasana & Vrikshasana posture check + Singing bowls.
+                    {l('अनुलोम विलोम प्राणायाम + ताड़ासन व वृक्षासन मुद्रा जांच + गायन पात्र नाद।', 'Anulom Vilom breathwork + Tadasana & Vrikshasana posture check + Singing bowls.')}
                   </p>
                 </div>
               </div>
@@ -628,7 +673,7 @@ export default function PatientDashboard() {
                 to="/mitra/wellness?tab=flow"
                 className="touch-target w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-extrabold text-white bg-sage hover:bg-sage/90 px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl transition-all shadow-sm hover:scale-102 cursor-pointer"
               >
-                <span>आरंभ करें (Start Flow)</span>
+                <span>{l('आरंभ करें', 'Start Flow')}</span>
                 <ArrowRight className="w-4 h-4 ml-0.5" />
               </Link>
             </div>
@@ -641,10 +686,10 @@ export default function PatientDashboard() {
                 </div>
                 <div>
                   <h4 className="font-serif font-bold text-xs sm:text-base text-primary">
-                    Aapaatkaal (Emergency Hotline)
+                    {l('आपातकालीन हेल्पलाइन', 'Emergency Hotline')}
                   </h4>
                   <p className="text-[10px] sm:text-xs text-muted dark:text-muted">
-                    Gambhir sthiti mein turant 108 par call karein
+                    {l('गंभीर स्थिति में तुरंत 108 पर संपर्क करें', 'In critical condition, call 108 immediately')}
                   </p>
                 </div>
               </div>
@@ -655,13 +700,13 @@ export default function PatientDashboard() {
                   className="touch-target flex-1 sm:flex-initial justify-center bg-rose-soft hover:bg-rose-soft/90 text-white text-xs sm:text-sm font-bold px-3.5 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-xs flex items-center gap-1.5"
                 >
                   <PhoneCall className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span>108 Ambulance</span>
+                  <span>{l('108 एम्बुलेंस', '108 Ambulance')}</span>
                 </a>
                 <a
                   href="tel:104"
                   className="touch-target bg-warm-indigo hover:bg-warm-indigo text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-xs"
                 >
-                  <span>104 Salah</span>
+                  <span>{l('104 स्वास्थ्य सलाह', '104 Health Advice')}</span>
                 </a>
               </div>
             </div>
@@ -675,20 +720,20 @@ export default function PatientDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-4">
               <div>
                 <div className="inline-flex items-center gap-1.5 bg-sage/10 text-sage dark:text-booti-glow text-[10px] font-bold px-3 py-0.5 rounded-full mb-1">
-                  <Leaf className="w-3.5 h-3.5" /> AYUSH Routine Tracker
+                  <Leaf className="w-3.5 h-3.5" /> {l('आयुष दिनचर्या ट्रैकर', 'AYUSH Routine Tracker')}
                 </div>
                 <h2 className="font-serif font-bold text-xl text-primary flex items-center gap-2">
-                  <span>Ghar Ka Upchar & Remedy Routine (दवा व काढ़ा समय)</span>
+                  <span>{l('दवा व काढ़ा समय सारणी', 'Remedy & Care Routine')}</span>
                   <button
-                    onClick={() => handleAudioGuide('Yeh aapki rojana ki gharelu aushadhi aur dawaiyon ka time table hai.', true)}
+                    onClick={() => handleAudioGuide(l('यह आपकी दैनिक घरेलू औषधि और दवाइयों की समय सारणी है।', 'This is your daily home remedy and medicine schedule.'), true)}
                     className="touch-target p-1 text-sage"
-                    title="Audio sunein"
+                    title={l('ऑडियो सुनें', 'Listen to Audio')}
                   >
                     <Volume2 className="w-4 h-4" />
                   </button>
                 </h2>
                 <p className="text-xs text-muted dark:text-muted">
-                  Subah, dophar aur raat ke samay gharelu nuskhe aur dawaiyan lena na bhoolein
+                  {l('सुबह, दोपहर और रात के समय घरेलू नुस्खे व दवाइयां लेना न भूलें', 'Remember to take your prescribed remedies and medicines on time')}
                 </p>
               </div>
 
@@ -697,7 +742,7 @@ export default function PatientDashboard() {
                 className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-white bg-sage hover:bg-sage/90 px-4 py-2.5 rounded-2xl transition-all shadow-xs cursor-pointer self-start sm:self-center"
               >
                 <Plus className="w-4 h-4" />
-                <span>Nuskha Jodein (Add Remedy)</span>
+                <span>{l('नया नुस्खा जोड़ें', 'Add Remedy')}</span>
               </button>
             </div>
 
@@ -706,27 +751,27 @@ export default function PatientDashboard() {
               <form onSubmit={handleAddRemedy} className="p-4 sm:p-5 bg-mist/80 dark:bg-card rounded-2xl border border-sage/20 dark:border-gray-700 space-y-3.5 animate-fadeIn">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold uppercase text-primary mb-1 block">Aushadhi Ka Naam *</label>
+                    <label className="text-[11px] font-bold uppercase text-primary mb-1 block">{l('औषधि का नाम *', 'Remedy / Medicine Name *')}</label>
                     <input
                       type="text"
                       value={newRemedyName}
                       onChange={(e) => setNewRemedyName(e.target.value)}
-                      placeholder="e.g. Tulsi Adrak kadha ya Giloy"
+                      placeholder={l('जैसे: तुलसी अदरक काढ़ा या गिलोय', 'e.g. Tulsi Ginger Kadha or Giloy')}
                       className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-sage"
                       required
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold uppercase text-primary mb-1 block">Lene Ka Samay *</label>
+                    <label className="text-[11px] font-bold uppercase text-primary mb-1 block">{l('लेने का समय *', 'Timing *')}</label>
                     <select
                       value={newRemedyTiming}
                       onChange={(e) => setNewRemedyTiming(e.target.value)}
                       className="w-full bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-sage"
                     >
-                      <option value="Subah (Morning)">Subah (Morning)</option>
-                      <option value="Dophar (Afternoon)">Dophar (Afternoon)</option>
-                      <option value="Raat (Night)">Raat (Night)</option>
-                      <option value="As Needed">Jarurat padne par (As Needed)</option>
+                      <option value="Subah">{l('सुबह', 'Morning')}</option>
+                      <option value="Dophar">{l('दोपहर', 'Afternoon')}</option>
+                      <option value="Raat">{l('रात', 'Night')}</option>
+                      <option value="As Needed">{l('जरूरत पड़ने पर', 'As Needed')}</option>
                     </select>
                   </div>
                 </div>
@@ -735,14 +780,14 @@ export default function PatientDashboard() {
                     type="submit"
                     className="touch-target bg-sage hover:bg-sage/90 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer"
                   >
-                    Schedule Mein Jodein
+                    {l('शेड्यूल में जोड़ें', 'Add to Schedule')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowAddRemedy(false)}
-                    className="touch-target text-xs text-muted dark:text-muted hover:text-primary px-3 py-2"
+                    className="touch-target text-xs text-muted dark:text-muted hover:text-primary px-3 py-2 cursor-pointer"
                   >
-                    Cancel
+                    {l('रद्द करें', 'Cancel')}
                   </button>
                 </div>
               </form>
@@ -756,23 +801,23 @@ export default function PatientDashboard() {
                     <Leaf className="w-6 h-6" />
                   </div>
                   <h4 className="font-serif font-bold text-sm text-primary mb-1">
-                    कोई दवा या काढ़ा शेड्यूल नहीं है • No Active Remedy Schedule
+                    {l('कोई दवा या काढ़ा शेड्यूल नहीं है', 'No Active Remedy Schedule')}
                   </h4>
                   <p className="text-xs text-muted max-w-sm mb-4 leading-relaxed">
-                    दैनिक स्वास्थ्य दिनचर्या के लिए नया नुस्खा जोड़ें या परीक्षण हेतु नमूना शेड्यूल लोड करें।
+                    {l('दैनिक स्वास्थ्य दिनचर्या के लिए नया नुस्खा जोड़ें या परीक्षण हेतु नमूना शेड्यूल लोड करें।', 'Add a new remedy for your daily health routine or load sample schedule for testing.')}
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2.5">
                     <button
                       onClick={() => setShowAddRemedy(true)}
                       className="touch-target bg-sage hover:bg-sage/90 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Nuskha Jodein
+                      <Plus className="w-3.5 h-3.5" /> {l('नुस्खा जोड़ें', 'Add Remedy')}
                     </button>
                     <button
                       onClick={handleLoadSampleRemedies}
                       className="touch-target bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-primary font-bold text-xs px-3.5 py-2 rounded-xl transition-all border border-gray-200 dark:border-gray-700 cursor-pointer"
                     >
-                      Load Sample Remedies
+                      {l('नमूना शेड्यूल लोड करें', 'Load Sample Remedies')}
                     </button>
                   </div>
                 </div>
@@ -808,7 +853,7 @@ export default function PatientDashboard() {
                           handlePlayRemedyReminder(remedy);
                         }}
                         className="touch-target p-2 rounded-xl text-sage hover:bg-sage/15 dark:text-booti-glow transition-all cursor-pointer"
-                        title="Dawa / Kadha reminder awaaz me sunein"
+                        title={l('आवाज़ में रिमाइंडर सुनें', 'Play Voice Reminder')}
                         aria-label={`Voice reminder for ${remedy.name}`}
                       >
                         <Bell className="w-4 h-4" />
@@ -816,7 +861,7 @@ export default function PatientDashboard() {
                       <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${
                         remedy.completed ? 'bg-sage text-white' : 'bg-gray-200 dark:bg-gray-700 text-muted dark:text-gray-300'
                       }`}>
-                        {remedy.completed ? 'Poora Hua ✓' : 'Lena Baqi Hai'}
+                        {remedy.completed ? l('पूरा हुआ ✓', 'Completed ✓') : l('लेना बाकी है', 'Pending')}
                       </span>
                     </div>
                   </div>
@@ -832,20 +877,20 @@ export default function PatientDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800 pb-4">
               <div>
                 <div className="inline-flex items-center gap-1.5 bg-sage/10 text-sage dark:text-booti-glow text-[10px] font-bold px-3 py-0.5 rounded-full mb-1">
-                  <FileText className="w-3.5 h-3.5" /> Parcha Timeline & Reports
+                  <FileText className="w-3.5 h-3.5" /> {l('पर्चा व रिपोर्ट', 'Consultation Records')}
                 </div>
                 <h2 className="font-serif font-bold text-xl text-primary flex items-center gap-2">
-                  <span>Purana Parcha & Swasthya Yatra (परामर्श समयरेखा)</span>
+                  <span>{l('परामर्श इतिहास', 'Consultation History')}</span>
                   <button
-                    onClick={() => handleAudioGuide('Aapki pichhli saari doctor baatcheet aur parcha yahan darz hai. Aap PDF parcha download bhi kar sakte hain.', true)}
+                    onClick={() => handleAudioGuide(l('आपकी पिछली डॉक्टर बातचीत और पर्चे यहां दर्ज हैं। आप पर्चा डाउनलोड भी कर सकते हैं।', 'All your past doctor consultations and prescriptions are stored here. You can also download PDF records.'), true)}
                     className="touch-target p-1 text-sage"
-                    title="Audio sunein"
+                    title={l('ऑडियो सुनें', 'Listen to Audio')}
                   >
                     <Volume2 className="w-4 h-4" />
                   </button>
                 </h2>
                 <p className="text-xs text-muted dark:text-muted">
-                  Dr. Sanjeevani AI dwara jaari parcha, triage sthiti aur referral vivaran
+                  {l('डॉ. संजीवनी एआई द्वारा जारी पर्चा, ट्राइएज स्थिति एवं विवरण', 'Clinical prescriptions, triage status, and referral details issued by Dr. Sanjeevani AI')}
                 </p>
               </div>
 
@@ -855,10 +900,10 @@ export default function PatientDashboard() {
                   onClick={refreshConsultations}
                   disabled={isRefreshing}
                   className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-primary dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 px-3.5 py-2.5 rounded-2xl transition-all border border-gray-200 dark:border-gray-700 cursor-pointer"
-                  title="Taaza karein / Refresh"
+                  title={l('ताज़ा करें', 'Refresh')}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-sage' : ''}`} />
-                  <span>{isRefreshing ? 'Taaza ho raha hai…' : 'Taaza Karein'}</span>
+                  <span>{isRefreshing ? l('ताज़ा हो रहा है...', 'Refreshing...') : l('ताज़ा करें', 'Refresh')}</span>
                 </button>
                 <button
                   type="button"
@@ -866,13 +911,24 @@ export default function PatientDashboard() {
                   className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-sage dark:text-booti-glow bg-sage/10 hover:bg-sage/20 px-3.5 py-2.5 rounded-2xl transition-all"
                 >
                   <Clock className="w-3.5 h-3.5" />
-                  <span>Quick Drawer</span>
+                  <span>{l('त्वरित सूची', 'Quick Drawer')}</span>
                 </button>
+                {consultations.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearAllConsultations}
+                    className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-rose-500 hover:text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 px-3.5 py-2.5 rounded-2xl transition-all border border-rose-200 dark:border-rose-900/50 cursor-pointer"
+                    title={l('इतिहास साफ करें', 'Clear History')}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{l('इतिहास साफ करें', 'Clear History')}</span>
+                  </button>
+                )}
                 <Link
                   to="/mitra/chat"
                   className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-white bg-sage hover:bg-sage/90 px-4 py-2.5 rounded-2xl transition-all shadow-xs"
                 >
-                  <span>Naya Paramarsh</span>
+                  <span>{l('नया परामर्श', 'New Consultation')}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -887,24 +943,24 @@ export default function PatientDashboard() {
                     <FileText className="w-7 h-7" />
                   </div>
                   <h4 className="font-serif font-bold text-base text-primary mb-1">
-                    कोई पुराना पर्चा नहीं है • No Consultation History
+                    {l('कोई पुराना पर्चा नहीं है', 'No Consultation History')}
                   </h4>
                   <p className="text-xs text-muted max-w-sm mb-5 leading-relaxed">
-                    AI डॉक्टर से अपने लक्षणों पर सलाह लें, या इंटरफेस देखने के लिए नमूना परामर्श लोड करें।
+                    {l('एआई डॉक्टर से अपने लक्षणों पर सलाह लें, या इंटरफेस देखने के लिए नमूना परामर्श लोड करें।', 'Consult the AI doctor about your symptoms, or load sample records to test the interface.')}
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-3">
                     <Link
                       to="/mitra/chat"
                       className="touch-target bg-sage hover:bg-sage/90 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
                     >
-                      <span>नया परामर्श शुरू करें / Start Chat</span>
+                      <span>{l('नया परामर्श शुरू करें', 'Start Consultation')}</span>
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                     <button
                       onClick={handleLoadSampleConsultations}
                       className="touch-target bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-primary font-bold text-xs px-4 py-2.5 rounded-xl transition-all border border-gray-200 dark:border-gray-700 cursor-pointer"
                     >
-                      Load Sample Consultations
+                      {l('नमूना परामर्श लोड करें', 'Load Sample Consultations')}
                     </button>
                   </div>
                 </div>
@@ -913,8 +969,11 @@ export default function PatientDashboard() {
                   {consultations.map((item, idx) => {
                     const isRed = item.tier === 'Red';
                     const isYellow = item.tier === 'Yellow';
-                    const isGreen = !isRed && !isYellow;
-                    const tierLabel = isRed ? 'Red — तत्काल अस्पताल (Urgent)' : isYellow ? 'Yellow — आशा परामर्श (Review)' : 'Green — सामान्य (Self-Care)';
+                    const tierLabel = isRed 
+                      ? l('तत्काल अस्पताल', 'Urgent Hospital Referral')
+                      : isYellow 
+                        ? l('आशा परामर्श', 'ASHA Consultation')
+                        : l('घरेलू देखभाल', 'Self-Care Guidance');
                     const isDownloadingThis = downloadingId === item.conversationId;
 
                     return (
@@ -922,7 +981,7 @@ export default function PatientDashboard() {
                         key={item.conversationId || idx}
                         className="relative p-4 sm:p-5 rounded-2xl bg-mist/60 dark:bg-card border border-gray-200/80 dark:border-gray-800 hover:border-sage/40 transition-all shadow-xs"
                       >
-                        {/* Timeline Node Badge */}
+                        {/* Timeline Node Badge - English numbers always */}
                         <div className={`absolute -left-6 sm:-left-8 top-5 w-6 h-6 rounded-full border-2 border-white dark:border-[#1A2433] flex items-center justify-center text-[10px] font-bold text-white shadow-xs ${
                           isRed ? 'bg-rose-soft ring-2 ring-rose-soft/30' :
                           isYellow ? 'bg-gold-warm ring-2 ring-gold-warm/30 text-primary' :
@@ -944,21 +1003,21 @@ export default function PatientDashboard() {
 
                               {String(item.conversationId).startsWith('demo-') && (
                                 <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300">
-                                  Sample Demo
+                                  {l('नमूना डेटा', 'Sample Demo')}
                                 </span>
                               )}
 
                               <span className="text-[11px] text-muted dark:text-muted">
-                                {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('hi-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Haal hi mein'}
+                                {item.updatedAt ? formatDate(item.updatedAt, lang) : l('हाल ही में', 'Recently')}
                               </span>
                             </div>
 
                             <h3 className="font-serif font-bold text-sm sm:text-base text-primary leading-snug">
-                              {item.summary || 'Dr. Sanjeevani Swasthya Paramarsh'}
+                              {item.summary || l('डॉ. संजीवनी स्वास्थ्य परामर्श', 'Dr. Sanjeevani Health Consultation')}
                             </h3>
 
                             <p className="text-[11px] text-muted dark:text-muted flex items-center gap-2">
-                              <span>Session ID: <code className="font-mono text-[10px] bg-black/5 dark:bg-white/5 px-1 py-0.5 rounded">{String(item.conversationId).slice(0, 16)}</code></span>
+                              <span>{l('सत्र आईडी', 'Session ID')}: <code className="font-mono text-[10px] bg-black/5 dark:bg-white/5 px-1 py-0.5 rounded">{String(item.conversationId).slice(0, 16)}</code></span>
                             </p>
                           </div>
 
@@ -970,17 +1029,17 @@ export default function PatientDashboard() {
                               onClick={(e) => handleDownloadParcha(item, e)}
                               disabled={isDownloadingThis}
                               className="touch-target inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 text-primary dark:text-gray-200 hover:border-sage hover:text-sage transition-all shadow-2xs cursor-pointer"
-                              title="Parcha (PDF) Download karein"
+                              title={l('पर्चा (PDF) डाउनलोड करें', 'Download Prescription PDF')}
                             >
                               {isDownloadingThis ? (
                                 <>
                                   <RefreshCw className="w-3.5 h-3.5 animate-spin text-sage" />
-                                  <span>Ban raha hai…</span>
+                                  <span>{l('तैयार हो रहा है...', 'Generating...')}</span>
                                 </>
                               ) : (
                                 <>
                                   <FileDown className="w-3.5 h-3.5 text-rose-soft" />
-                                  <span>Parcha (PDF)</span>
+                                  <span>{l('पर्चा (PDF)', 'Prescription')}</span>
                                 </>
                               )}
                             </button>
@@ -990,10 +1049,10 @@ export default function PatientDashboard() {
                               type="button"
                               onClick={(e) => handleShareParcha(item, e)}
                               className="touch-target inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-2 rounded-xl bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 text-primary dark:text-gray-200 hover:border-sage transition-all shadow-2xs cursor-pointer"
-                              title="Share on WhatsApp / Bhejein"
+                              title={l('व्हाट्सएप पर भेजें', 'Share via WhatsApp')}
                             >
                               <Share2 className="w-3.5 h-3.5 text-sage" />
-                              <span className="hidden sm:inline">Bhejein</span>
+                              <span className="hidden sm:inline">{l('भेजें', 'Share')}</span>
                             </button>
 
                             {/* PHC Doctor Referral Pass QR */}
@@ -1005,21 +1064,32 @@ export default function PatientDashboard() {
                                 setSelectedReferral(item);
                               }}
                               className="touch-target inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-2 rounded-xl bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 text-primary dark:text-gray-200 hover:border-gold-warm hover:text-gold-warm transition-all shadow-2xs cursor-pointer"
-                              title="PHC Doctor Referral Pass (QR Code)"
+                              title={l('रेफरल पास (QR कोड)', 'Referral Pass (QR Code)')}
                             >
                               <QrCode className="w-3.5 h-3.5 text-gold-warm" />
-                              <span>QR Pass</span>
+                              <span>{l('क्यूआर पास', 'QR Pass')}</span>
                             </button>
 
                             {/* Reopen Consultation in Chat */}
                             <Link
                               to="/mitra/chat"
                               className="touch-target inline-flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-xl bg-sage text-white hover:bg-sage/90 transition-all shadow-2xs"
-                              title="Chat me kholein"
+                              title={l('चैट में खोलें', 'Open in Chat')}
                             >
-                              <span>Kholein</span>
+                              <span>{l('खोलें', 'Open')}</span>
                               <ChevronRight className="w-3.5 h-3.5" />
                             </Link>
+
+                            {/* Delete Consultation */}
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteConsultation(item.conversationId, e)}
+                              className="touch-target inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-2 rounded-xl bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-300 dark:hover:border-rose-800 transition-all shadow-2xs cursor-pointer"
+                              title={l('परामर्श हटाएं', 'Delete Consultation')}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">{l('हटाएं', 'Delete')}</span>
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1043,20 +1113,20 @@ export default function PatientDashboard() {
           <div className="bg-white dark:bg-warm-indigo rounded-3xl p-6 sm:p-8 border border-sage/20 dark:border-gray-800 shadow-sm space-y-4 animate-fadeIn">
             <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
               <div className="inline-flex items-center gap-1.5 bg-sage/10 text-sage dark:text-booti-glow text-[10px] font-bold px-3 py-0.5 rounded-full mb-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> Jeevan-Rakshak Niyam
+                <ShieldCheck className="w-3.5 h-3.5" /> {l('जीवन रक्षक नियम', 'Life-Saving Rules')}
               </div>
               <h2 className="font-serif font-bold text-xl text-primary flex items-center gap-2">
-                <span>Pahadi Prathmik Upchar (Emergency First-Aid)</span>
+                <span>{l('पहाड़ी प्राथमिक उपचार', 'Mountain Emergency First-Aid')}</span>
                 <button
-                  onClick={() => handleAudioGuide('Pahad me aapaat sthiti hone par in prathmik upchar niyam ko sunein aur apnayein.', true)}
+                  onClick={() => handleAudioGuide(l('पहाड़ में आपात स्थिति होने पर इन प्राथमिक उपचार नियमों को सुनें और अपनाएं।', 'Listen to and follow these emergency first-aid guidelines in mountain terrain.'), true)}
                   className="touch-target p-1 text-sage"
-                  title="Audio sunein"
+                  title={l('ऑडियो सुनें', 'Listen to Audio')}
                 >
                   <Volume2 className="w-4 h-4" />
                 </button>
               </h2>
               <p className="text-xs text-muted dark:text-muted">
-                Hospital pahunchne tak zaroori gharelu prathmik sahayata
+                {l('अस्पताल पहुंचने तक जरूरी प्राथमिक सहायता', 'Critical first-aid support until medical help arrives')}
               </p>
             </div>
 
@@ -1070,7 +1140,7 @@ export default function PatientDashboard() {
                   >
                     <button
                       onClick={() => setOpenFirstAidIndex(isOpen ? null : idx)}
-                      className="touch-target w-full text-left p-4 flex items-center justify-between gap-3 bg-mist/40 dark:bg-card/50 hover:bg-sage/10 text-xs sm:text-sm font-bold text-primary"
+                      className="touch-target w-full text-left p-4 flex items-center justify-between gap-3 bg-mist/40 dark:bg-card/50 hover:bg-sage/10 text-xs sm:text-sm font-bold text-primary cursor-pointer"
                     >
                       <span className="flex items-center gap-2">
                         <Bandage className="w-4 h-4 text-sage shrink-0" />
@@ -1083,10 +1153,10 @@ export default function PatientDashboard() {
                         <p>{guide.content}</p>
                         <button
                           onClick={() => handleAudioGuide(guide.audio || guide.content, true)}
-                          className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-sage dark:text-booti-glow bg-sage/10 px-3 py-1.5 rounded-xl hover:bg-sage/20"
+                          className="touch-target inline-flex items-center gap-1.5 text-xs font-bold text-sage dark:text-booti-glow bg-sage/10 px-3 py-1.5 rounded-xl hover:bg-sage/20 cursor-pointer"
                         >
                           <Volume2 className="w-4 h-4" />
-                          <span>Yeh Niyam Suniye (Audio)</span>
+                          <span>{l('नियम सुनें (ऑडियो)', 'Listen to Guide (Audio)')}</span>
                         </button>
                       </div>
                     )}

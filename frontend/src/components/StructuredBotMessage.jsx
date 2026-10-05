@@ -13,6 +13,7 @@ import {
   VolumeX,
 } from 'lucide-react';
 import { sendChatFeedback } from '../api/client';
+import { useLanguage } from '../context/LanguageContext';
 
 /**
  * Parses inline formatting like **bold** and *italic* and highlights phone numbers (104, 108)
@@ -333,6 +334,7 @@ export default function StructuredBotMessage({
   isSpeaking = false,
   onStopSpeaking = null,
 }) {
+  const { l, isHindi } = useLanguage();
   const [feedbackStatus, setFeedbackStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -373,10 +375,10 @@ export default function StructuredBotMessage({
         <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
           {feedbackStatus ? (
             <span className="text-sage dark:text-booti-glow font-bold flex items-center gap-1">
-              ✓ Dhanyawad! Feedback darj ho gaya.
+              ✓ {l('धन्यवाद! आपकी प्रतिक्रिया दर्ज हो गई।', 'Thank you! Feedback recorded.')}
             </span>
           ) : (
-            <span>Kya yeh nuskha aur salah upyogi rahi? (Was this helpful?)</span>
+            <span>{l('क्या यह नुस्खा और सलाह उपयोगी रही?', 'Was this remedy and advice helpful?')}</span>
           )}
         </div>
         {!feedbackStatus && (
@@ -386,20 +388,20 @@ export default function StructuredBotMessage({
               onClick={() => handleFeedback(true)}
               disabled={submitting}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-sage/10 hover:bg-sage/20 text-sage dark:text-booti-glow transition-all cursor-pointer disabled:opacity-50"
-              title="Haan, upyogi raha"
+              title={l('हाँ, उपयोगी रहा', 'Yes, it was helpful')}
             >
               <ThumbsUp className="w-3.5 h-3.5" />
-              <span>Haan (Yes)</span>
+              <span>{l('हाँ', 'Yes')}</span>
             </button>
             <button
               type="button"
               onClick={() => handleFeedback(false)}
               disabled={submitting}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-soft/10 hover:bg-rose-soft/20 text-rose-soft dark:text-red-300 transition-all cursor-pointer disabled:opacity-50"
-              title="Nahi, aaram nahi aaya"
+              title={l('नहीं, आराम नहीं आया', 'No, not helpful')}
             >
               <ThumbsDown className="w-3.5 h-3.5" />
-              <span>Nahi (No)</span>
+              <span>{l('नहीं', 'No')}</span>
             </button>
           </div>
         )}
@@ -503,7 +505,7 @@ export default function StructuredBotMessage({
           <div className="p-3 rounded-xl bg-white dark:bg-[#15202E] border border-gray-200 dark:border-gray-700/80 shadow-xs space-y-2">
             <div className="flex items-center gap-1.5 text-xs font-bold text-primary dark:text-[#E2E8F0]">
               <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
-              <span>Kaise Banayein (How to Prepare)</span>
+              <span>{l('बनाने की विधि', 'How to Prepare')}</span>
             </div>
             <div className="space-y-1.5 pl-1">
               {steps.map((st, i) => {
@@ -538,7 +540,7 @@ export default function StructuredBotMessage({
         <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 space-y-1.5">
           <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
             <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>Kab Tak Lein (Dosage & Timing)</span>
+            <span>{l('खुराक व समय', 'Dosage & Timing')}</span>
           </div>
           <div className="space-y-1 pl-1">
             {summary.dosage.map((d, i) => (
@@ -556,7 +558,7 @@ export default function StructuredBotMessage({
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <div className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-              Dhyan Rakhein (Precautions)
+              {l('सावधानियां व परहेज', 'Precautions')}
             </div>
           </div>
           <div className="space-y-1.5 pl-1">
@@ -591,7 +593,7 @@ export default function StructuredBotMessage({
               <ShieldAlert className="w-5 h-5 shrink-0 text-red-600 dark:text-red-400 mt-0.5 animate-pulse" />
               <div className="space-y-1">
                 <div className="text-[11px] sm:text-xs font-extrabold uppercase tracking-wide text-red-700 dark:text-red-300">
-                  Tatkaal Savdhani (Emergency Alert)
+                  {l('तत्काल चेतावनी', 'Emergency Alert')}
                 </div>
                 <div className="text-xs sm:text-sm font-medium">{renderInlineText(block.text)}</div>
               </div>
@@ -671,10 +673,10 @@ export default function StructuredBotMessage({
                       type="button"
                       onClick={onReadAloud}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sage/10 hover:bg-sage/20 text-sage dark:text-booti-glow text-xs font-semibold border border-sage/20 transition-all cursor-pointer"
-                      title="Pura nuskha aawaaz me sunein"
+                      title={l('पूरा नुस्खा आवाज़ में सुनें', 'Listen to full remedy aloud')}
                     >
                       <Volume2 className="w-3.5 h-3.5" />
-                      <span>पूरा नुस्खा आवाज़ में सुनें (Listen Aloud)</span>
+                      <span>{l('पूरा नुस्खा आवाज़ में सुनें', 'Listen to full remedy')}</span>
                     </button>
                   </div>
                 )}

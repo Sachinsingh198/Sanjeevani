@@ -28,6 +28,7 @@ import {
 import toast from 'react-hot-toast';
 import PageVoiceGuide from '../components/PageVoiceGuide';
 import BackButton from '../components/BackButton';
+import { useLanguage } from '../context/LanguageContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -35,6 +36,7 @@ const VALID_TABS = ['surveillance', 'system-config', 'broadcast', 'users', 'audi
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const { l } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get('tab');
   const activeTab = VALID_TABS.includes(rawTab) ? rawTab : 'surveillance';
@@ -603,7 +605,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
-              <BackButton fallback="/mitra" label="वापस जाएं (Back)" />
+              <BackButton fallback="/mitra" label={l('वापस जाएं', 'Back')} />
             </div>
           </div>
         </div>
@@ -616,7 +618,7 @@ export default function AdminDashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 text-xs text-muted font-medium mb-1">
-                <span>प्रशासन केंद्र (Admin)</span>
+                <span>{l('प्रशासन केंद्र', 'Admin Center')}</span>
                 <ChevronRight className="w-3.5 h-3.5 text-muted/60" />
                 <span className="font-bold text-primary">{pageInfo.title}</span>
               </div>

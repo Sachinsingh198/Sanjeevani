@@ -89,12 +89,49 @@ export function recordSessionTurn({ conversationId, summary, tier, userId }) {
   }
 }
 
-export function clearSessionHistory(userId) {
+export async function clearSessionHistory(userId) {
   try {
     localStorage.removeItem(getStorageKey(userId));
     localStorage.removeItem('sanjeevani_session_history_v1');
     sessionStorage.removeItem('sanjeevani_conv_id');
   } catch {
     /* no-op */
+  }
+
+  // Also clear on backend so records do not return upon page refresh
+  try {
+    const { clearAllChatHistory } = await import('../api/client');
+    await clearAllChatHistory();
+  } catch (err) {
+    console.debug('[SessionStore] Backend history clear error (offline/guest):', err);
+  }
+}
+
+export async function deleteSession(conversationId, userId) {
+  if (!conversationId) return listSessions(userId);
+
+  try {
+    const key = getStorageKey(userId);
+    const all = listSessions(userId);
+    const updated = all.filter((s) => s.conversationId !== conversationId);
+    localStorage.setItem(key, JSON.stringify(updated));
+
+    // If active session was the deleted one, clear active session id
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('sanjeevani_conv_id') === conversationId) {
+      sessionStorage.removeItem('sanjeevani_conv_id');
+    }
+
+    // Call backend delete
+    try {
+      const { deleteConversation } = await import('../api/client');
+      await deleteConversation(conversationId);
+    } catch (err) {
+      console.debug('[SessionStore] Backend single session delete notice:', err);
+    }
+
+    return updated;
+  } catch (err) {
+    console.warn('[SessionStore] deleteSession error:', err);
+    return listSessions(userId);
   }
 }

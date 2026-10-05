@@ -620,6 +620,119 @@ async def get_consultation_history_detail(
     }
 
 
+@router.delete("/history/{conversation_id}")
+async def delete_single_consultation(
+    request: Request,
+    conversation_id: str,
+    user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
+):
+    """
+    Deletes a single consultation record by conversation_id.
+    Removes matching rows from consultations_table, conversation_index_table,
+    consultation_feedback_table, and checkpointer state.
+    """
+    from app.db import (
+        get_db_connection,
+        consultations_table,
+        conversation_index_table,
+        consultation_feedback_table,
+    )
+    from sqlalchemy import and_
+
+    client_ip = request.client.host if request and request.client else None
+
+    with get_db_connection() as conn:
+        if user and user.get("role") in ("admin", "asha"):
+            c_filter = consultations_table.c.conversation_id == conversation_id
+            i_filter = conversation_index_table.c.conversation_id == conversation_id
+            f_filter = consultation_feedback_table.c.conversation_id == conversation_id
+        elif user:
+            c_filter = and_(
+                consultations_table.c.conversation_id == conversation_id,
+                consultations_table.c.user_id == user["id"],
+            )
+            i_filter = and_(
+                conversation_index_table.c.conversation_id == conversation_id,
+                conversation_index_table.c.user_id == user["id"],
+            )
+            f_filter = and_(
+                consultation_feedback_table.c.conversation_id == conversation_id,
+                consultation_feedback_table.c.user_id == user["id"],
+            )
+        else:
+            c_filter = consultations_table.c.conversation_id == conversation_id
+            i_filter = conversation_index_table.c.conversation_id == conversation_id
+            f_filter = consultation_feedback_table.c.conversation_id == conversation_id
+
+        conn.execute(consultations_table.delete().where(c_filter))
+        conn.execute(conversation_index_table.delete().where(i_filter))
+        conn.execute(consultation_feedback_table.delete().where(f_filter))
+        conn.commit()
+
+    # Also clean up checkpointer thread state if available
+    try:
+        from app.agents.graph import checkpointer
+        conn_raw = getattr(checkpointer, "conn", None)
+        if conn_raw:
+            conn_raw.execute("DELETE FROM checkpoints WHERE thread_id = ?", (conversation_id,))
+            conn_raw.execute("DELETE FROM checkpoint_blobs WHERE thread_id = ?", (conversation_id,))
+            conn_raw.execute("DELETE FROM checkpoint_writes WHERE thread_id = ?", (conversation_id,))
+            conn_raw.commit()
+    except Exception as cp_err:
+        logger.debug(f"[Chat] Non-critical checkpointer cleanup notice: {cp_err}")
+
+    # Log audit
+    log_access(
+        resource_type="chat_history",
+        user=user,
+        resource_id=conversation_id,
+        action="DELETE",
+        ip_address=client_ip,
+    )
+
+    return {"status": "deleted", "conversation_id": conversation_id}
+
+
+@router.delete("/history")
+async def clear_consultation_history(
+    request: Request,
+    user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
+):
+    """
+    Clears all consultation records for the authenticated user (or guest sessions if unauthenticated).
+    """
+    from app.db import (
+        get_db_connection,
+        consultations_table,
+        conversation_index_table,
+        consultation_feedback_table,
+    )
+
+    client_ip = request.client.host if request and request.client else None
+
+    with get_db_connection() as conn:
+        if user:
+            u_id = user["id"]
+            conn.execute(consultations_table.delete().where(consultations_table.c.user_id == u_id))
+            conn.execute(conversation_index_table.delete().where(conversation_index_table.c.user_id == u_id))
+            conn.execute(consultation_feedback_table.delete().where(consultation_feedback_table.c.user_id == u_id))
+        else:
+            conn.execute(consultations_table.delete().where(consultations_table.c.user_id.is_(None)))
+            conn.execute(conversation_index_table.delete().where(conversation_index_table.c.user_id.is_(None)))
+            conn.execute(consultation_feedback_table.delete().where(consultation_feedback_table.c.user_id.is_(None)))
+        conn.commit()
+
+    log_access(
+        resource_type="chat_history",
+        user=user,
+        resource_id="all",
+        action="DELETE_ALL",
+        ip_address=client_ip,
+    )
+
+    return {"status": "cleared"}
+
+
 @router.post("/tts")
 async def generate_speech(req: TTSRequest):
     """

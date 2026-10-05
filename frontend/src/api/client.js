@@ -330,6 +330,26 @@ export const getConversationDetails = async (conversationId, token = null) => {
 };
 
 /**
+ * Deletes a single consultation session record from the backend.
+ */
+export const deleteConversation = async (conversationId, token = null) => {
+  const authToken = token || (typeof localStorage !== 'undefined' ? localStorage.getItem('sanjeevani_token') : null);
+  const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+  const res = await api.delete(`/chat/history/${conversationId}`, { headers });
+  return res.data;
+};
+
+/**
+ * Clears all consultation history for the authenticated user from the backend.
+ */
+export const clearAllChatHistory = async (token = null) => {
+  const authToken = token || (typeof localStorage !== 'undefined' ? localStorage.getItem('sanjeevani_token') : null);
+  const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+  const res = await api.delete('/chat/history', { headers });
+  return res.data;
+};
+
+/**
  * Synchronizes batch encounters from ASHA workers to the health center backend.
  */
 export const syncAshaBatch = async (encounters, token = null) => {

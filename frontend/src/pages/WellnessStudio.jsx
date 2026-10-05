@@ -37,8 +37,8 @@ const PRANAYAMA_PATTERNS = [
   },
   {
     id: 'box-breathing',
-    name: 'Box Breathing (Samavritti)',
-    hindiName: 'समवृत्ति (बॉक्स ब्रीदिंग)',
+    name: 'Box Breathing',
+    hindiName: 'समवृत्ति प्राणायाम',
     description: 'Equal 4-part rhythmic breath used by yogis to enter a state of deep calm under stress.',
     inhaleSec: 4,
     holdInSec: 4,
@@ -62,7 +62,7 @@ const PRANAYAMA_PATTERNS = [
   {
     id: 'relax-478',
     name: '4-7-8 Deep Sleep Breathing',
-    hindiName: '४-७-८ सुखद निद्रा श्वास',
+    hindiName: '4-7-8 सुखद निद्रा श्वास',
     description: 'Scientifically proven sedative breath pattern to calm runaway thoughts and drift into peaceful sleep.',
     inhaleSec: 4,
     holdInSec: 7,
@@ -73,8 +73,8 @@ const PRANAYAMA_PATTERNS = [
   },
   {
     id: 'sahaj',
-    name: 'Sahaj Dhyan (Natural Flow)',
-    hindiName: 'सहज ध्यान (प्राकृतिक श्वास)',
+    name: 'Sahaj Dhyan',
+    hindiName: 'सहज ध्यान',
     description: 'Gentle, natural wave of breath that requires no force. Perfect for beginners and elderly folks.',
     inhaleSec: 5,
     holdInSec: 0,
@@ -89,38 +89,42 @@ const PRANAYAMA_PATTERNS = [
 const DOSHA_QUESTIONS = [
   {
     id: 'energy',
-    question: 'How does your daily energy feel? (आपकी शारीरिक ऊर्जा कैसी रहती है?)',
+    questionEn: 'How does your daily physical energy feel?',
+    questionHi: 'आपकी शारीरिक ऊर्जा सामान्यतः कैसी रहती है?',
     options: [
-      { label: 'Fast, variable, gets tired quickly (चंचल, जल्दी थकने वाली)', dosha: 'vata' },
-      { label: 'Intense, strong, goal-oriented (तीव्र, केंद्रित और उत्साही)', dosha: 'pitta' },
-      { label: 'Calm, steady, slow to start (धीमी, स्थिर और टिकाऊ)', dosha: 'kapha' },
+      { labelEn: 'Fast, variable, gets tired quickly', labelHi: 'चंचल, जल्दी थकने वाली', dosha: 'vata' },
+      { labelEn: 'Intense, strong, goal-oriented', labelHi: 'तीव्र, केंद्रित और उत्साही', dosha: 'pitta' },
+      { labelEn: 'Calm, steady, slow to start', labelHi: 'धीमी, स्थिर और टिकाऊ', dosha: 'kapha' },
     ],
   },
   {
     id: 'digestion',
-    question: 'How is your appetite & digestion? (आपकी भूख और पाचन क्रिया कैसी है?)',
+    questionEn: 'How is your appetite & digestion?',
+    questionHi: 'आपकी भूख और पाचन क्रिया कैसी है?',
     options: [
-      { label: 'Irregular, prone to gas/bloating (अनियमित, गैस की समस्या)', dosha: 'vata' },
-      { label: 'Strong, irritable if meals delayed (तीव्र भूख, पित्त/एसिडिटी)', dosha: 'pitta' },
-      { label: 'Slow, feels heavy after food (धीमी, भारीपन महसूस होना)', dosha: 'kapha' },
+      { labelEn: 'Irregular, prone to gas or bloating', labelHi: 'अनियमित, गैस की समस्या', dosha: 'vata' },
+      { labelEn: 'Strong, irritable if meals delayed', labelHi: 'तीव्र भूख, पित्त या एसिडिटी', dosha: 'pitta' },
+      { labelEn: 'Slow, feels heavy after food', labelHi: 'धीमी, भोजन के बाद भारीपन', dosha: 'kapha' },
     ],
   },
   {
     id: 'mind',
-    question: 'How is your mind & sleep rhythm? (मन की स्थिति और नींद कैसी है?)',
+    questionEn: 'How is your mind & sleep rhythm?',
+    questionHi: 'मन की स्थिति और नींद कैसी रहती है?',
     options: [
-      { label: 'Overthinking, light/broken sleep (ज्यादा सोचना, कच्ची नींद)', dosha: 'vata' },
-      { label: 'Sharp mind, intense/vivid dreams (सक्रिय बुद्धि, गहरी पर छोटी नींद)', dosha: 'pitta' },
-      { label: 'Peaceful, heavy, loves long sleep (गहरी नींद, सुबह उठने में आलस्य)', dosha: 'kapha' },
+      { labelEn: 'Overthinking, light and broken sleep', labelHi: 'अधिक सोचना, कच्ची नींद', dosha: 'vata' },
+      { labelEn: 'Sharp mind, intense and vivid dreams', labelHi: 'सक्रिय बुद्धि, गहरी पर छोटी नींद', dosha: 'pitta' },
+      { labelEn: 'Peaceful, heavy, loves long sleep', labelHi: 'गहरी नींद, उठने में भारीपन', dosha: 'kapha' },
     ],
   },
   {
     id: 'climate',
-    question: 'What mountain weather suits your body best? (आपको कैसा मौसम अनुकूल लगता है?)',
+    questionEn: 'What mountain weather suits your body best?',
+    questionHi: 'आपको कैसा मौसम सबसे अनुकूल लगता है?',
     options: [
-      { label: 'Craves warmth & sun, sensitive to cold wind (धूप व गर्माहट पसंद)', dosha: 'vata' },
-      { label: 'Craves cool breeze, easily feels overheated (ठंडी हवा व छांव पसंद)', dosha: 'pitta' },
-      { label: 'Craves dry warmth, dislikes damp chilly fog (सूखा व गर्म मौसम पसंद)', dosha: 'kapha' },
+      { labelEn: 'Craves warmth & sun, sensitive to cold wind', labelHi: 'धूप व गर्माहट पसंद, ठंडी हवा से परेशानी', dosha: 'vata' },
+      { labelEn: 'Craves cool breeze, easily feels overheated', labelHi: 'ठंडी हवा व छांव पसंद, जल्दी गर्मी लगना', dosha: 'pitta' },
+      { labelEn: 'Craves dry warmth, dislikes damp chilly fog', labelHi: 'सूखा व गर्म मौसम पसंद, कोहरे से असुविधा', dosha: 'kapha' },
     ],
   },
 ];
@@ -129,47 +133,72 @@ const DOSHA_QUESTIONS = [
 const MARMA_POINTS = [
   {
     id: 'adhipati',
-    name: 'Adhipati Marma (अधिपति मर्म)',
-    location: 'Crown of Head (सिर का शीर्ष)',
+    name: 'Adhipati Marma',
+    nameHi: 'अधिपति मर्म',
+    location: 'Crown of Head',
+    locationHi: 'सिर का शीर्ष',
     category: 'Cerebral Calm & Insomnia',
+    categoryHi: 'मानसिक शांति व अनिद्रा निवारण',
     instruction: 'Place your palm on the crown. Apply gentle circular pressure with your middle three fingers.',
+    instructionHi: 'हथेली को सिर के शीर्ष पर रखें। बीच की तीन उंगलियों से हल्के गोलाकार दबाव दें।',
     benefits: 'Calms sensory overload, relieves mountain headaches, and induces deep alpha brainwave stillness.',
+    benefitsHi: 'सिरदर्द और मानसिक तनाव को दूर कर शांति प्रदान करता है।',
     idealHoldSec: 30,
   },
   {
     id: 'kshipra',
-    name: 'Kshipra Marma (क्षिप्र मर्म)',
-    location: 'Hand Web (अंगूठे व तर्जनी के मध्य)',
+    name: 'Kshipra Marma',
+    nameHi: 'क्षिप्र मर्म',
+    location: 'Hand Web',
+    locationHi: 'अंगूठे व तर्जनी के मध्य',
     category: 'Rapid Tension & Joint Relief',
+    categoryHi: 'तनाव व जोड़ों का दर्द निवारण',
     instruction: 'Pinch the webbing between thumb and index finger firmly with the opposite thumb.',
+    instructionHi: 'अंगूठे और तर्जनी के बीच के भाग को दूसरे हाथ के अंगूठे से दृढ़ता से दबाएं।',
     benefits: 'Releases shoulder tension, reduces altitude nausea, and relieves acute neck stiffness.',
+    benefitsHi: 'कंधों और गर्दन की जकड़न दूर करता है और ऊंचाई पर होने वाली मतली घटाता है।',
     idealHoldSec: 30,
   },
   {
     id: 'hridaya',
-    name: 'Hridaya Marma (हृदय मर्म)',
-    location: 'Center of Sternum (छाती का केंद्र)',
+    name: 'Hridaya Marma',
+    nameHi: 'हृदय मर्म',
+    location: 'Center of Sternum',
+    locationHi: 'छाती का केंद्र',
     category: 'Emotional Courage & Anahata',
+    categoryHi: 'धैर्य व अनाहत चक्र शांति',
     instruction: 'Place right palm flat over sternum center. Breathe deeply and tap or apply gentle warmth.',
+    instructionHi: 'दाहिनी हथेली छाती के मध्य पर रखें। गहरी सांस लें और हल्का स्पर्श या गर्माहट दें।',
     benefits: 'Steadies palpitations, dispels grief and loneliness, and opens respiratory breath capacity.',
+    benefitsHi: 'घबराहट व दिल की धड़कन संतुलित करता है और श्वसन क्षमता बढ़ाता है।',
     idealHoldSec: 30,
   },
   {
     id: 'nabhi',
-    name: 'Nabhi Marma (नाभि मर्म)',
-    location: 'Navel Center (नाभि केंद्र)',
+    name: 'Nabhi Marma',
+    nameHi: 'नाभि मर्म',
+    location: 'Navel Center',
+    locationHi: 'नाभि केंद्र',
     category: 'Digestive Fire (Samana Vayu)',
+    categoryHi: 'पाचन अग्नि व समान वायु',
     instruction: 'Lie down gently. Place fingertips around the navel and apply soft rhythmic pulsing.',
+    instructionHi: 'पीठ के बल लेटें। नाभि के चारों ओर उंगलियां रखें और हल्का लयबद्ध दबाव दें।',
     benefits: 'Kindles metabolic agni, reduces stomach cramping, and anchors scattered vitality.',
+    benefitsHi: 'पाचन अग्नि तेज करता है, पेट दर्द घटाता है और ऊर्जा को संतुलित करता है।',
     idealHoldSec: 30,
   },
   {
     id: 'janu',
-    name: 'Janu Marma (जानु मर्म)',
-    location: 'Knee Joint Crease (घुटने का जोड़)',
+    name: 'Janu Marma',
+    nameHi: 'जानु मर्म',
+    location: 'Knee Joint Crease',
+    locationHi: 'घुटने का जोड़',
     category: 'Mountain Trail Mobility',
+    categoryHi: 'पहाड़ी चढ़ाई गतिशीलता',
     instruction: 'Cup both palms over the kneecap while seated. Massage clockwise with warm gentle pressure.',
+    instructionHi: 'बैठकर दोनों हथेलियों से घुटने को ढकें। दक्षिणावर्त हल्के दबाव से मालिश करें।',
     benefits: 'Essential for Pahadi villagers climbing steep terraced slopes; lubricates synovial fluid.',
+    benefitsHi: 'सीधी चढ़ाई चढ़ने में घुटनों के जोड़ों को चिकनाई और शक्ति प्रदान करता है।',
     idealHoldSec: 30,
   },
 ];
@@ -178,57 +207,77 @@ const MARMA_POINTS = [
 const HIMALAYAN_HERBS = [
   {
     id: 'tulsi',
-    name: 'Himalayan Krishna Tulsi (तुलसी)',
+    name: 'Himalayan Krishna Tulsi',
+    nameHi: 'कृष्ण तुलसी',
     botanical: 'Ocimum sanctum',
     icon: '🌿',
     benefit: 'Powerful adaptogen that lowers cortisol and shields against altitude lung irritation.',
+    benefitHi: 'रोग-प्रतिरोधक क्षमता बढ़ाती है और फेफड़ों को सर्दी से बचाती है।',
     tag: 'Immunity & Breath',
+    tagHi: 'प्रतिरोधक व श्वसन',
     flavor: 'Peppery, warm, sacred herbal note',
     recipe: 'Boil 5-6 fresh leaves with crushed ginger and honey for 3 minutes.',
+    recipeHi: '5-6 ताजी पत्तियां अदरक और शहद के साथ 3 मिनट तक उबालें।',
     hindiSpoken: 'Krishna Tulsi: Pahaadi sardi, kaph aur gala kharab hone par sabse uttam hai. Paani mein ubaal kar piyein.',
   },
   {
     id: 'buransh',
-    name: 'Wild Buransh Petals (बुरांश)',
+    name: 'Wild Buransh Petals',
+    nameHi: 'जंगली बुरांश पंखुड़ियां',
     botanical: 'Rhododendron arboreum',
     icon: '🌺',
     benefit: 'State flower of Uttarakhand. Rich in flavonoids, supports heart health and reduces inflammation.',
+    benefitHi: 'उत्तराखंड का राज्य फूल। हृदय को शक्ति देता है और सूजन कम करता है।',
     tag: 'Heart & Vitality',
+    tagHi: 'हृदय व जीवनी शक्ति',
     flavor: 'Tangy, floral, refreshing nectar note',
     recipe: 'Steep dried crimson petals in hot mountain spring water with a hint of rock sugar.',
+    recipeHi: 'सूखी लाल पंखुड़ियों को गर्म पानी और मिश्री के साथ उबालें।',
     hindiSpoken: 'Buransh Phool: Uttarakhand ka rajya phool. Yeh dil ko taazgi aur takat deta hai aur jalan shaant karta hai.',
   },
   {
     id: 'giloy',
-    name: 'Pahadi Giloy / Amrita (गिलोय)',
+    name: 'Pahadi Giloy',
+    nameHi: 'पहाड़ी गिलोय',
     botanical: 'Tinospora cordifolia',
     icon: '🌱',
     benefit: 'The divine nectar vine. Cleanses deep metabolic toxins and strengthens systemic immunity.',
+    benefitHi: 'दिव्य अमृत बेल। शरीर से विषैले तत्व बाहर कर रोग-प्रतिरोधक क्षमता बढ़ाती है।',
     tag: 'Immunity Shield',
+    tagHi: 'रोग-प्रतिरोधक ढाल',
     flavor: 'Deeply bitter, purifying earthy tonic',
     recipe: 'Crush a 2-inch stem and boil down until water reduces to half. Drink warm.',
+    recipeHi: '2 इंच तने को कूटकर पानी आधा रहने तक उबालें। गुनगुना पिएं।',
     hindiSpoken: 'Pahadi Giloy: Shareer ki rog-pratirodhak kshamta badhati hai aur bukhar mein shanti deti hai.',
   },
   {
     id: 'timur',
-    name: 'Chamoli Timur Berry (तिम्मूर)',
+    name: 'Chamoli Timur Berry',
+    nameHi: 'चमोली तिम्मूर',
     botanical: 'Zanthoxylum armatum',
     icon: '🌶️',
     benefit: 'High-altitude wild prickly ash. Warms peripheral circulation and relieves joint stiffness.',
+    benefitHi: 'पर्वतीय जड़ी। शरीर में गर्माहट लाती है और जोड़ों की जकड़न दूर करती है।',
     tag: 'Warmth & Joints',
+    tagHi: 'ऊष्मा व जोड़ राहत',
     flavor: 'Citrusy, tingling, invigorating aroma',
     recipe: 'Lightly crush 3-4 seeds into hot black tea during freezing winter mornings.',
+    recipeHi: 'कड़ाके की ठंड में 3-4 दाने कूटकर गर्म चाय में डालकर पिएं।',
     hindiSpoken: 'Chamoli Timur: Thand mein shareer ko garmi deta hai aur jodon ke dard mein turant aaram deta hai.',
   },
   {
     id: 'jatamansi',
-    name: 'Alpine Jatamansi (जटामांसी)',
+    name: 'Alpine Jatamansi',
+    nameHi: 'हिमालयी जटामांसी',
     botanical: 'Nardostachys jatamansi',
     icon: '🪵',
     benefit: 'Rare Himalayan rhizome. Renowned in Charaka Samhita as the premier natural neural sedative.',
+    benefitHi: 'दुर्लभ पर्वतीय औषधि। चरक संहिता के अनुसार मस्तिष्क को शांत कर गहरी नींद लाती है।',
     tag: 'Deep Sleep & Mind',
+    tagHi: 'गहरी नींद व मन शांति',
     flavor: 'Woody, earthy, deeply grounded scent',
     recipe: 'Infuse a pinch with warm milk or chamomile 30 minutes before sleep.',
+    recipeHi: 'सोने से 30 मिनट पहले एक चुटकी गर्म दूध के साथ लें।',
     hindiSpoken: 'Alpine Jatamansi: Mann ko shaant karti hai aur gehri sukhad neend laane mein madad karti hai.',
   },
 ];
@@ -267,46 +316,58 @@ const TEA_RECIPES = [
 const WELLNESS_JOURNEYS = [
   {
     id: 'morning-vitality',
-    title: 'Himalayan Morning Vitality (प्रातःकालीन ऊर्जा)',
+    title: 'Himalayan Morning Vitality',
+    titleHi: 'प्रातःकालीन ऊर्जा साधना',
     duration: '15 Mins',
     icon: Sun,
-    badge: 'Best for Morning',
+    badge: 'Morning Vitality',
+    badgeHi: 'सुबह की साधना',
     tag: 'ऊर्जा व प्राण',
+    tagEn: 'Vitality & Prana',
     description: 'Awaken your spine, kindle digestive fire, and center your mind for the day ahead in the hills.',
+    descriptionHi: 'रीढ़ को सक्रिय करें, पाचन अग्नि प्रज्वलित करें और दिन की शुरुआत शांति से करें।',
     steps: [
-      { type: 'pranayama', title: 'Anulom Vilom (3 Mins)' },
-      { type: 'yoga', title: 'Tadasana Alignment (4 Mins)' },
-      { type: 'herbs', title: 'Timur Morning Tea Brew' },
-      { type: 'sound', title: 'Singing Bowl Centering' },
+      { type: 'pranayama', title: 'Anulom Vilom • 3 Mins', titleHi: 'अनुलोम विलोम • 3 मिनट' },
+      { type: 'yoga', title: 'Tadasana Alignment • 4 Mins', titleHi: 'ताड़ासन मुद्रा जांच • 4 मिनट' },
+      { type: 'herbs', title: 'Timur Morning Tea Brew', titleHi: 'तिम्मूर हर्बल चाय' },
+      { type: 'sound', title: 'Singing Bowl Centering', titleHi: 'कांस्य पात्र नाद' },
     ],
   },
   {
     id: 'joint-relief',
-    title: 'Mountain Joint & Back Relief (जोड़ों व कमर का सुख)',
+    title: 'Mountain Joint & Back Relief',
+    titleHi: 'जोड़ों व कमर का सुख',
     duration: '12 Mins',
     icon: Mountain,
     badge: 'Gentle & Safe',
+    badgeHi: 'सुगम व सुरक्षित',
     tag: 'कमर व घुटने',
+    tagEn: 'Joints & Back',
     description: 'Special low-impact mobility asanas and warming breathwork designed for rural arthritis & back ache.',
+    descriptionHi: 'पहाड़ी चढ़ाई से जोड़ों और कमर के दर्द में राहत देने वाले सुगम आसन व वार्मिंग प्राणायाम।',
     steps: [
-      { type: 'marma', title: 'Janu Knee Marma Stimulation' },
-      { type: 'yoga', title: 'Bhadrasana Hip Opening (5 Mins)' },
-      { type: 'pranayama', title: 'Sahaj Flow Breath (3 Mins)' },
+      { type: 'marma', title: 'Janu Knee Marma Stimulation', titleHi: 'जानु मर्म उद्दीपन' },
+      { type: 'yoga', title: 'Bhadrasana Hip Opening • 5 Mins', titleHi: 'भद्रासन • 5 मिनट' },
+      { type: 'pranayama', title: 'Sahaj Flow Breath • 3 Mins', titleHi: 'सहज श्वास • 3 मिनट' },
     ],
   },
   {
     id: 'evening-nidra',
-    title: 'Evening Calm & Restful Sleep (संध्या शांति व निद्रा)',
+    title: 'Evening Calm & Restful Sleep',
+    titleHi: 'संध्या शांति व सुखद निद्रा',
     duration: '14 Mins',
     icon: Moon,
     badge: 'Night Care',
+    badgeHi: 'रात्रि विश्राम',
     tag: 'तनाव मुक्ति',
+    tagEn: 'Stress Relief',
     description: 'Release physical fatigue from climbing steep village paths and soothe runaway thoughts.',
+    descriptionHi: 'दिनभर की शारीरिक थकान दूर करें, मन को शांत करें और सुखद गहरी नींद प्राप्त करें।',
     steps: [
-      { type: 'pranayama', title: 'Bhramari Humming Breath (4 Mins)' },
-      { type: 'marma', title: 'Adhipati Crown Pressure Point' },
-      { type: 'herbs', title: 'Alpine Nidra Tea Brew' },
-      { type: 'sound', title: 'Alaknanda Stream Soundscape' },
+      { type: 'pranayama', title: 'Bhramari Humming Breath • 4 Mins', titleHi: 'भ्रामरी प्राणायाम • 4 मिनट' },
+      { type: 'marma', title: 'Adhipati Crown Pressure Point', titleHi: 'अधिपति मर्म बिंदु' },
+      { type: 'herbs', title: 'Alpine Nidra Tea Brew', titleHi: 'जटामांसी निद्रा पेय' },
+      { type: 'sound', title: 'Alaknanda Stream Soundscape', titleHi: 'अलकनंदा शांत धारा' },
     ],
   },
 ];
@@ -315,100 +376,135 @@ const WELLNESS_JOURNEYS = [
 const WELLNESS_PILLARS = [
   {
     id: 'pranayama',
-    title: 'प्राणायाम व ध्यान (Sacred Breathing Mandala)',
-    shortTitle: 'प्राणायाम (Pranayama)',
-    hindiName: 'श्वास चक्र व शांति',
-    tag: 'श्वास व ध्यान • Breathwork',
+    title: 'वैदिक प्राणायाम व ध्यान',
+    titleEn: 'Sacred Breathwork & Meditation',
+    shortTitle: 'प्राणायाम',
+    shortTitleEn: 'Breathwork',
+    tag: 'श्वास व ध्यान',
+    tagEn: 'Breath & Meditation',
     duration: '5-15 Mins',
     icon: Wind,
-    badge: 'Most Loved',
+    badge: 'सर्वाधिक प्रिय',
+    badgeEn: 'Most Loved',
     badgeColor: 'bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-500/30',
-    description: 'Expanding sacred geometric mandala with 5 authentic Himalayan techniques: Anulom-Vilom, 4-7-8 Deep Sleep, Bhramari Bee Breath, and Box Breathing with audio cues.',
-    actionText: 'श्वास अभ्यास करें (Start Breath)',
+    description: '5 प्रामाणिक हिमालयी श्वास विधियां: अनुलोम-विलोम, 4-7-8 सुखद निद्रा, भ्रामरी और समवृत्ति प्राणायाम।',
+    descriptionEn: '5 authentic Himalayan breathing techniques: Anulom-Vilom, 4-7-8 Deep Sleep, Bhramari, and Box Breathing with audio cues.',
+    actionText: 'श्वास अभ्यास करें',
+    actionTextEn: 'Start Breathwork',
     speakPrompt: 'Praanaayaam aur dhyaan kaksh: Yahaan saans lene ke pahaadi abhyaas hain jo mann ko turant shaant karte hain.',
   },
   {
     id: 'dosha',
-    title: 'त्रि-दोष प्रकृति परीक्षण (Tri-Dosha Assessment)',
-    shortTitle: 'दोष परीक्षण (Dosha)',
-    hindiName: 'वात, पित्त व कफ संतुलन',
-    tag: 'आयुर्वेद • Ayurvedic Type',
+    title: 'त्रि-दोष प्रकृति परीक्षण',
+    titleEn: 'Tri-Dosha Assessment',
+    shortTitle: 'दोष परीक्षण',
+    shortTitleEn: 'Dosha Scan',
+    tag: 'आयुर्वेद',
+    tagEn: 'Ayurveda',
     duration: '3 Mins',
     icon: Compass,
-    badge: 'Self-Discovery',
+    badge: 'आत्म-ज्ञान',
+    badgeEn: 'Self-Discovery',
     badgeColor: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30',
-    description: 'Discover your unique body constitution (Vata, Pitta, Kapha) through 4 intuitive lifestyle questions with tailored Himalayan dietary and seasonal advice.',
-    actionText: 'दोष परीक्षण करें (Scan Dosha)',
+    description: '4 सरल जीवनशैली प्रश्नों से अपनी वात, पित्त और कफ प्रकृति पहचानें और अनुकूल आहार जानें।',
+    descriptionEn: 'Discover your unique body constitution (Vata, Pitta, Kapha) through 4 intuitive lifestyle questions with tailored Himalayan dietary advice.',
+    actionText: 'दोष परीक्षण करें',
+    actionTextEn: 'Scan Dosha',
     speakPrompt: 'Tri-dosha pareekshan: Chaar saral prashnon se jaanein ki aapka shareer Vaat, Pitta ya Kaph prakriti ka hai.',
   },
   {
     id: 'marma',
-    title: 'मर्म बिंदु चिकित्सा (Himalayan Marma Points)',
-    shortTitle: 'मर्म चिकित्सा (Marma)',
-    hindiName: 'एक्यूप्रेशर ऊर्जा केंद्र',
-    tag: 'ऊर्जा बिंदु • Acupressure',
+    title: 'मर्म बिंदु चिकित्सा',
+    titleEn: 'Himalayan Marma Points',
+    shortTitle: 'मर्म चिकित्सा',
+    shortTitleEn: 'Marma Points',
+    tag: 'ऊर्जा बिंदु',
+    tagEn: 'Acupressure',
     duration: '5 Mins',
     icon: Heart,
-    badge: 'Instant Relief',
+    badge: 'त्वरित राहत',
+    badgeEn: 'Instant Relief',
     badgeColor: 'bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/30',
-    description: '6 vital high-altitude acupressure points (Adhipati crown, Kshipra hand web, Hridaya heart center, Janu knee) with hold timers to dispel headaches and stress.',
-    actionText: 'मर्म बिंदु देखें (Explore Marma)',
+    description: 'सिरदर्द, थकान व जोड़ों के दर्द को दूर करने वाले 5 मुख्य पर्वतीय एक्यूप्रेशर मर्म बिंदु।',
+    descriptionEn: '5 vital high-altitude acupressure points (Adhipati crown, Kshipra hand web, Hridaya heart center, Janu knee) with hold timers.',
+    actionText: 'मर्म बिंदु देखें',
+    actionTextEn: 'Explore Marma',
     speakPrompt: 'Marma bindu chikitsa: Shareer ke mukhya dabaav binduon ko dabaakar sar dard, kamar aur jodon ka dard door karein.',
   },
   {
     id: 'herbs',
-    title: 'हिमालयी औषधि व चाय (Alpine Herbalist & Teas)',
-    shortTitle: 'औषधि व चाय (Herbal Teas)',
-    hindiName: 'पहाड़ी जड़ी-बूटी व काढ़ा',
-    tag: 'जड़ी-बूटी • Natural Herbs',
+    title: 'हिमालयी औषधि व चाय',
+    titleEn: 'Alpine Herbalist & Teas',
+    shortTitle: 'औषधि व चाय',
+    shortTitleEn: 'Herbal Teas',
+    tag: 'जड़ी-बूटी',
+    tagEn: 'Natural Herbs',
     duration: 'Kitchen Brew',
     icon: Coffee,
-    badge: 'Pahadi Remedies',
+    badge: 'पहाड़ी नुस्खे',
+    badgeEn: 'Mountain Teas',
     badgeColor: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
-    description: 'Timur pepper tea, Buransh (Rhododendron) heart nectar, Tulsi-Ginger mountain kadha and Haldi-Doodh traditional recipes for immunity and altitude vitality.',
-    actionText: 'हर्बल चाय बनाएं (Brew Teas)',
+    description: 'तिम्मूर चाय, बुरांश अमृत रस, तुलसी-अदरक काढ़ा और जटामांसी निद्रा पेय की पारंपरिक विधियां।',
+    descriptionEn: 'Timur pepper tea, Buransh heart nectar, Tulsi-Ginger mountain kadha and traditional recipes for altitude vitality.',
+    actionText: 'हर्बल चाय बनाएं',
+    actionTextEn: 'Brew Teas',
     speakPrompt: 'Pahaadi aushadhi aur chai: Tulsi, adrak, timur aur buransh ka garam kaadha banayein aur uski aawaz mein vidhi sunein.',
   },
   {
     id: 'sound',
-    title: 'ध्वनि चिकित्सा (Sound Healing & Bowls)',
-    shortTitle: 'ध्वनि ध्यान (Sound)',
-    hindiName: 'नाद योग व कांस्य घंटियां',
-    tag: 'ध्वनि तरंग • Acoustic Healing',
+    title: 'ध्वनि चिकित्सा व नाद',
+    titleEn: 'Sacred Sound Healing',
+    shortTitle: 'ध्वनि ध्यान',
+    shortTitleEn: 'Soundscapes',
+    tag: 'ध्वनि तरंग',
+    tagEn: 'Acoustic Waves',
     duration: 'Continuous',
     icon: Bell,
     badge: '136.1Hz Om / 528Hz',
+    badgeEn: '136.1Hz Om / 528Hz',
     badgeColor: 'bg-purple-500/15 text-purple-600 dark:text-purple-300 border-purple-500/30',
-    description: 'Tibetan singing bowls, pahadi temple bronze bells, Solfeggio 528Hz DNA tone, and pure Alaknanda river stream acoustic pink noise to calm the nervous system.',
-    actionText: 'ध्वनि ध्यान सुनें (Play Soundscapes)',
+    description: 'तिब्बती गायन पात्र, पहाड़ी मंदिर घंटियां, सोल्फेजियो 528Hz और अलकनंदा की शांत ध्वनियां।',
+    descriptionEn: 'Tibetan singing bowls, mountain temple bronze bells, Solfeggio 528Hz tone, and pure Alaknanda river stream acoustic noise.',
+    actionText: 'ध्वनि ध्यान सुनें',
+    actionTextEn: 'Play Soundscapes',
     speakPrompt: 'Dhwani dhyan: Mandir ki ghanti, alaknanda nadi aur kangsya katora ki pavitra dhwani sunein.',
   },
   {
     id: 'yoga',
-    title: 'योगाभ्यास व मुद्रा (AI Posture Coach)',
-    shortTitle: 'योगाभ्यास (AI Yoga)',
-    hindiName: 'कंप्यूटर विजन आसन मार्गदर्शन',
-    tag: 'आसन • Computer Vision',
+    title: 'योगाभ्यास व मुद्रा',
+    titleEn: 'AI Yoga & Posture Coach',
+    shortTitle: 'योगाभ्यास',
+    shortTitleEn: 'Yoga AI',
+    tag: 'आसन',
+    tagEn: 'Asana Practice',
     duration: '10 Mins',
     icon: Trophy,
-    badge: 'Camera AI',
+    badge: 'कैमरा एआई',
+    badgeEn: 'Camera AI',
     badgeColor: 'bg-gold-warm/20 text-gold-warm border-gold-warm/40',
-    description: 'Real-time on-device MediaPipe pose tracking for Tadasana, Bhadrasana, Vrikshasana & Virabhadrasana with auditory postural alignment cues.',
-    actionText: 'योगाभ्यास करें (Open Yoga AI)',
+    description: 'ताड़ासन, भद्रासन, वृक्षासन और वीरभद्रासन के लिए रीयल-टाइम कैमरा मुद्रा सुधार और ऑडियो निर्देश।',
+    descriptionEn: 'Real-time on-device MediaPipe pose tracking for Tadasana, Bhadrasana, Vrikshasana & Virabhadrasana with auditory cues.',
+    actionText: 'योगाभ्यास करें',
+    actionTextEn: 'Start Yoga AI',
     speakPrompt: 'Yogabhyas: Camera AI se aasanon ki sahi mudra seekhein aur shareer ko lacheela banayein.',
   },
   {
     id: 'flow',
-    title: 'दैनिक दिनचर्या (Curated Wellness Journeys)',
-    shortTitle: 'दैनिक यात्रा (Flows)',
-    hindiName: 'क्रमबद्ध दैनिक स्वास्थ्य यात्रा',
-    tag: 'दिनचर्या • Multi-step Flow',
+    title: 'दैनिक स्वास्थ्य दिनचर्या',
+    titleEn: 'Curated Wellness Journeys',
+    shortTitle: 'दैनिक यात्रा',
+    shortTitleEn: 'Daily Flows',
+    tag: 'दिनचर्या',
+    tagEn: 'Daily Flow',
     duration: '12-15 Mins',
     icon: Sparkles,
-    badge: 'Full Routines',
+    badge: 'सम्पूर्ण यात्रा',
+    badgeEn: 'Full Routine',
     badgeColor: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/30',
-    description: 'Holistic step-by-step journeys: Morning Vitality, Mountain Joint Relief, and Evening Nidra combining breathing, gentle movement, tea, and soundscapes.',
-    actionText: 'दैनिक यात्रा चुनें (View Flows)',
+    description: 'प्रातः ऊर्जा, जोड़ों का सुख और संध्या निद्रा के लिए प्राणायाम, आसन, चाय और नाद की मिली-जुली यात्रा।',
+    descriptionEn: 'Holistic step-by-step journeys: Morning Vitality, Mountain Joint Relief, and Evening Nidra combining breathing, movement, tea, and soundscapes.',
+    actionText: 'दैनिक यात्रा चुनें',
+    actionTextEn: 'Choose Journey',
     speakPrompt: 'Dainik dincharya yatra: Subah se raat tak ke poorna swasthya abhyaas ek sath karein.',
   },
 ];
@@ -418,7 +514,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const langCtx = useLanguage();
+  const { lang, l, isHindi, toEnglishDigits } = useLanguage();
 
   const basePath = location.pathname.startsWith('/patient') ? '/patient/wellness' : '/mitra/wellness';
 
@@ -556,7 +652,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
   const voiceGuideRef = useRef(voiceGuideEnabled);
   voiceGuideRef.current = voiceGuideEnabled;
 
-  const currentLang = langCtx?.lang || 'hi';
+  const currentLang = lang || 'hi';
   const langRef = useRef(currentLang);
   langRef.current = currentLang;
 
@@ -621,10 +717,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
     if (isBreathingActive) {
       const p = selectedPranayama;
       const sequence = [
-        { phase: 'inhale', dur: p.inhaleSec, text: 'श्वास लें (Inhale)' },
-        { phase: 'hold-in', dur: p.holdInSec, text: 'रोकें (Hold)' },
-        { phase: 'exhale', dur: p.exhaleSec, text: 'श्वास छोड़ें (Exhale)' },
-        { phase: 'hold-out', dur: p.holdOutSec, text: 'विश्राम (Hold)' },
+        { phase: 'inhale', dur: p.inhaleSec, text: l('श्वास लें', 'Inhale') },
+        { phase: 'hold-in', dur: p.holdInSec, text: l('रोकें', 'Hold') },
+        { phase: 'exhale', dur: p.exhaleSec, text: l('श्वास छोड़ें', 'Exhale') },
+        { phase: 'hold-out', dur: p.holdOutSec, text: l('विश्राम', 'Rest') },
       ].filter((s) => s.dur > 0);
 
       let currentSeqIdx = 0;
@@ -685,7 +781,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
       if (breathTimer) clearInterval(breathTimer);
       stopCue();
     };
-  }, [isBreathingActive, selectedPranayama]);
+  }, [isBreathingActive, selectedPranayama, l]);
 
   // Compute mandala scale & aura based on breath phase
   const getMandalaVisuals = () => {
@@ -695,40 +791,40 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
           scale: 'scale-115 sm:scale-120',
           glow: 'from-emerald-400/40 via-teal-300/30 to-sage/50',
           borderColor: 'border-emerald-400',
-          label: 'श्वास अंदर लें (Inhale Deeply)',
-          sub: 'धीमी और गहरी सांस अंदर भरें (Fill your lungs with pure prana)',
+          label: l('श्वास अंदर लें', 'Inhale Deeply'),
+          sub: l('धीमी और गहरी सांस अंदर भरें', 'Fill your lungs with pure prana'),
         };
       case 'hold-in':
         return {
           scale: 'scale-115 sm:scale-120',
           glow: 'from-amber-400/40 via-gold-warm/40 to-amber-500/50',
           borderColor: 'border-gold-warm',
-          label: 'सांस रोकें (Hold Still)',
-          sub: 'श्वास भीतर रोककर शांत रहें (Retain the sacred stillness inside)',
+          label: l('सांस रोकें', 'Hold Still'),
+          sub: l('श्वास भीतर रोककर शांत रहें', 'Retain the sacred stillness inside'),
         };
       case 'exhale':
         return {
           scale: 'scale-90 sm:scale-95',
           glow: 'from-indigo-400/30 via-slate-400/20 to-sky-500/40',
           borderColor: 'border-indigo-400',
-          label: 'धीरे-धीरे सांस छोड़ें (Exhale Calmly)',
-          sub: 'तनाव और चिंता को बाहर छोड़ें (Release all tension down to the earth)',
+          label: l('धीरे-धीरे सांस छोड़ें', 'Exhale Calmly'),
+          sub: l('तनाव और चिंता को बाहर छोड़ें', 'Release all tension down to the earth'),
         };
       case 'hold-out':
         return {
           scale: 'scale-90',
           glow: 'from-purple-400/20 via-pink-400/20 to-indigo-500/30',
           borderColor: 'border-purple-400',
-          label: 'विश्राम करें (Rest & Hold)',
-          sub: 'श्वास बाहर रोककर पूर्ण शांति महसूस करें (Rest in pure awareness)',
+          label: l('विश्राम करें', 'Rest & Hold'),
+          sub: l('श्वास बाहर रोककर पूर्ण शांति महसूस करें', 'Rest in pure awareness'),
         };
       default:
         return {
           scale: 'scale-100',
           glow: 'from-sage/20 via-gold-warm/15 to-sage/30',
           borderColor: 'border-[#5b8257]',
-          label: 'तैयार रहें (Ready)',
-          sub: 'Press Start to begin guided sacred breathing',
+          label: l('तैयार रहें', 'Ready to Begin'),
+          sub: l('प्रारंभ करें बटन दबाकर श्वास साधना शुरू करें', 'Press Start to begin guided sacred breathing'),
         };
     }
   };
@@ -1052,17 +1148,17 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <BackButton fallback="/mitra" />
                     <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-sage/15 text-sage dark:text-booti-glow">
-                      Sanjeevani Wellness Studio
+                      {l('संजीवनी आरोग्यशाला', 'Sanjeevani Wellness Studio')}
                     </span>
                     <span className="text-[10px] text-gray-500 flex items-center gap-1 font-medium">
-                      <Mountain className="w-3 h-3 text-gold-warm" /> Chamoli Hill Sanctuary
+                      <Mountain className="w-3 h-3 text-gold-warm" /> {l('चमोली हिमालयी साधना', 'Chamoli Hill Sanctuary')}
                     </span>
                   </div>
                   <h1 className="text-xl sm:text-2xl font-serif font-bold text-primary">
-                    आरोग्यशाला (Interactive Wellness Sanctuary)
+                    {l('आरोग्यशाला', 'Interactive Wellness Sanctuary')}
                   </h1>
                   <p className="text-xs sm:text-sm text-muted dark:text-muted mt-0.5">
-                    Sacred Breathing Mandala, Tri-Dosha Scanner, Marma Acupressure & Alpine Tea Herbalist.
+                    {l('वैदिक श्वास चक्र, त्रिदोष परीक्षण, मर्म चिकित्सा एवं हिमालयी जड़ी-बूटी ज्ञान।', 'Sacred Breathing Mandala, Tri-Dosha Scanner, Marma Acupressure & Alpine Tea Herbalist.')}
                   </p>
                 </div>
 
@@ -1071,9 +1167,9 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                   <div className="bg-mist dark:bg-card border border-sage/25 rounded-xl px-3 py-1.5 flex items-center gap-2">
                     <Clock className="w-4 h-4 text-sage dark:text-booti-glow" />
                     <div>
-                      <span className="text-[9px] text-gray-500 uppercase font-bold block leading-none">Mindful</span>
+                      <span className="text-[9px] text-gray-500 uppercase font-bold block leading-none">{l('सजग समय', 'Mindful')}</span>
                       <span className="text-xs sm:text-sm font-bold text-primary">
-                        {wellnessStats.mindfulMinutesToday} Mins
+                        {wellnessStats.mindfulMinutesToday} {l('मिनट', 'Mins')}
                       </span>
                     </div>
                   </div>
@@ -1081,7 +1177,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                   <div className="bg-mist dark:bg-card border border-gold-warm/30 rounded-xl px-3 py-1.5 flex items-center gap-2">
                     <Activity className="w-4 h-4 text-gold-warm" />
                     <div>
-                      <span className="text-[9px] text-gray-500 uppercase font-bold block leading-none">Breaths</span>
+                      <span className="text-[9px] text-gray-500 uppercase font-bold block leading-none">{l('श्वास चक्र', 'Breaths')}</span>
                       <span className="text-xs sm:text-sm font-bold text-primary">
                         {wellnessStats.breathCyclesToday}
                       </span>
@@ -1091,9 +1187,9 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                   <div className="bg-mist dark:bg-card border border-orange-500/30 rounded-xl px-3 py-1.5 flex items-center gap-2">
                     <Flame className="w-4 h-4 text-orange-500" />
                     <div>
-                      <span className="text-[9px] text-gray-500 uppercase font-bold block leading-none">Streak</span>
+                      <span className="text-[9px] text-gray-500 uppercase font-bold block leading-none">{l('साधना क्रम', 'Streak')}</span>
                       <span className="text-xs sm:text-sm font-bold text-primary">
-                        {wellnessStats.streakDays} Days 🔥
+                        {wellnessStats.streakDays} {l('दिन 🔥', 'Days 🔥')}
                       </span>
                     </div>
                   </div>
@@ -1105,10 +1201,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <div className="flex items-center gap-2">
                   <Droplet className="w-4 h-4 text-sky-500 animate-bounce" />
                   <span className="text-xs font-bold text-primary">
-                    Daily Mountain Hydration (जल साधना):
+                    {l('दैनिक जल साधना:', 'Daily Mountain Hydration:')}
                   </span>
                   <span className="text-xs font-semibold text-gray-500">
-                    {wellnessStats.waterGlassesToday}/8 Glasses ({wellnessStats.waterGlassesToday * 250}ml)
+                    {wellnessStats.waterGlassesToday}/8 {l('गिलास', 'Glasses')} ({wellnessStats.waterGlassesToday * 250}ml)
                   </span>
                 </div>
 
@@ -1136,10 +1232,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     type="button"
                     onClick={() => {
                       saveStats({ ...wellnessStats, waterGlassesToday: 0 });
-                      toast('Hydration reset for new day', { icon: '💧' });
+                      toast(l('जल गणना रीसेट की गई', 'Hydration reset for new day'), { icon: '💧' });
                     }}
                     className="text-[10px] text-gray-400 hover:text-gray-600 px-1 py-1 rounded-md cursor-pointer"
-                    title="Reset water log"
+                    title={l('जल ट्रैकर रीसेट करें', 'Reset water log')}
                   >
                     <RotateCcw className="w-3 h-3" />
                   </button>
@@ -1158,10 +1254,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 </div>
                 <div>
                   <span className="text-[10px] uppercase font-bold tracking-wider text-sage dark:text-booti-glow block leading-none">
-                    Himalayan Soundscape
+                    {l('हिमालयी नाद संगीत', 'Himalayan Soundscape')}
                   </span>
                   <span className="text-xs font-bold text-primary">
-                    {ambientTrack === 'river' ? 'Alaknanda Stream (Pink Noise)' : ambientTrack === 'om' ? '136.1Hz Cosmic Om' : ambientTrack === 'bowls' ? 'Tibetan Bowls' : ambientTrack === 'bells' ? 'Temple Bells' : ambientTrack === 'wind' ? 'Pine Wind' : 'Acoustics Off'}
+                    {ambientTrack === 'river' ? l('अलकनंदा धारा (शांत नाद)', 'Alaknanda Stream (Pink Noise)') : ambientTrack === 'om' ? l('136.1Hz ब्रह्मांडीय ॐ', '136.1Hz Cosmic Om') : ambientTrack === 'bowls' ? l('तिब्बती गायन पात्र', 'Tibetan Bowls') : ambientTrack === 'bells' ? l('मंदिर घंटियां', 'Temple Bells') : ambientTrack === 'wind' ? l('चीड़ वन वायु', 'Pine Wind') : l('ध्वनि बंद', 'Acoustics Off')}
                   </span>
                 </div>
               </div>
@@ -1171,25 +1267,25 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                   onClick={() => toggleAmbientSound('river')}
                   className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${ambientTrack === 'river' ? 'bg-sage text-white shadow-xs' : 'bg-white dark:bg-warm-indigo text-gray-700 dark:text-gray-300 hover:bg-sage/10'}`}
                 >
-                  🌊 Stream
+                  🌊 {l('अलकनंदा', 'Stream')}
                 </button>
                 <button
                   onClick={() => toggleAmbientSound('om')}
                   className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${ambientTrack === 'om' ? 'bg-gold-warm text-primary shadow-xs' : 'bg-white dark:bg-warm-indigo text-gray-700 dark:text-gray-300 hover:bg-gold-warm/10'}`}
                 >
-                  🕉️ Om 136Hz
+                  🕉️ 136Hz ॐ
                 </button>
                 <button
                   onClick={() => toggleAmbientSound('bowls')}
                   className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${ambientTrack === 'bowls' ? 'bg-sage text-white shadow-xs' : 'bg-white dark:bg-warm-indigo text-gray-700 dark:text-gray-300 hover:bg-sage/10'}`}
                 >
-                  🥣 Bowls
+                  🥣 {l('कांस्य पात्र', 'Bowls')}
                 </button>
                 {ambientTrack !== 'off' && (
                   <button
                     onClick={() => toggleAmbientSound(ambientTrack)}
                     className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl cursor-pointer"
-                    title="Mute Soundscape"
+                    title={l('ध्वनि बंद करें', 'Mute Soundscape')}
                   >
                     <VolumeX className="w-4 h-4" />
                   </button>
@@ -1203,26 +1299,26 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
                     <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sage text-white">
-                      🌿 7 दिव्य स्तंभ • 7 Wellness Pillars
+                      {l('🌿 7 दिव्य स्तंभ', '🌿 7 Wellness Pillars')}
                     </span>
-                    <span className="text-xs text-muted font-medium">समर्पित कक्ष (Dedicated Spaces)</span>
+                    <span className="text-xs text-muted font-medium">{l('समर्पित कक्ष', 'Dedicated Spaces')}</span>
                   </div>
                   <h2 className="text-lg sm:text-xl font-serif font-bold text-primary">
-                    आरोग्यशाला कक्ष चुनें (Select Wellness Practice)
+                    {l('आरोग्यशाला कक्ष चुनें', 'Select Wellness Practice')}
                   </h2>
                   <p className="text-xs sm:text-sm text-muted mt-1 leading-relaxed max-w-2xl">
-                    प्रत्येक स्तंभ एक स्वतंत्र आरोग्य कक्ष है। किसी भी अभ्यास पर टैप करें और समर्पित, ध्यान-केंद्रित पृष्ठ पर अभ्यास करें।
+                    {l('प्रत्येक स्तंभ एक स्वतंत्र आरोग्य कक्ष है। किसी भी अभ्यास पर टैप करें और समर्पित पृष्ठ पर अभ्यास करें।', 'Each pillar is an independent wellness sanctuary. Tap any practice to enter its dedicated focus space.')}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-muted font-bold">त्वरित यात्रा:</span>
+                  <span className="text-xs text-muted font-bold">{l('त्वरित यात्रा:', 'Quick Journey:')}</span>
                   <button
                     onClick={() => handleTabChange('flow')}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gold-warm text-primary font-bold text-xs shadow-xs hover:bg-gold-warm/90 transition-all cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>दैनिक यात्रा (Daily Flow)</span>
+                    <span>{l('दैनिक यात्रा', 'Daily Flow')}</span>
                   </button>
                 </div>
               </div>
@@ -1252,13 +1348,13 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                               if (pillar.speakPrompt) speakCue(pillar.speakPrompt, 'hi-IN');
                             }}
                             className="p-1.5 rounded-full bg-gold-warm/15 hover:bg-gold-warm/25 text-gold-warm transition-all cursor-pointer"
-                            title="आवाज़ में सुनें"
+                            title={l('आवाज़ में सुनें', 'Listen to Audio')}
                           >
                             <Volume2 className="w-3.5 h-3.5" />
                           </button>
                           <div className="flex flex-col items-end gap-1">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${pillar.badgeColor}`}>
-                              {pillar.badge}
+                              {isHindi ? pillar.badge : (pillar.badgeEn || pillar.badge)}
                             </span>
                             <span className="text-[10px] font-mono text-muted flex items-center gap-1">
                               <Clock className="w-3 h-3 text-gold-warm" /> {pillar.duration}
@@ -1267,21 +1363,21 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                         </div>
                       </div>
 
-                      {/* Titles & Hindi Subtitle */}
+                      {/* Titles & Subtitle */}
                       <span className="text-[10px] font-bold uppercase tracking-wider text-sage dark:text-booti-glow">
-                        {pillar.tag}
+                        {isHindi ? pillar.tag : (pillar.tagEn || pillar.tag)}
                       </span>
                       <h3 className="font-serif font-bold text-base sm:text-lg text-primary mt-0.5 leading-snug group-hover:text-sage dark:group-hover:text-booti-glow transition-colors">
-                        {pillar.title}
+                        {isHindi ? pillar.title : (pillar.titleEn || pillar.title)}
                       </h3>
                       <p className="text-xs text-muted mt-2 line-clamp-3 leading-relaxed">
-                        {pillar.description}
+                        {isHindi ? pillar.description : (pillar.descriptionEn || pillar.description)}
                       </p>
                     </div>
 
                     {/* Bottom Action CTA */}
                     <div className="mt-5 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs font-bold text-sage dark:text-booti-glow group-hover:translate-x-0.5 transition-transform">
-                      <span>{pillar.actionText}</span>
+                      <span>{isHindi ? pillar.actionText : (pillar.actionTextEn || pillar.actionText)}</span>
                       <div className="w-7 h-7 rounded-full bg-sage/10 dark:bg-sage/20 flex items-center justify-center group-hover:bg-sage group-hover:text-white transition-all">
                         <ArrowRight className="w-3.5 h-3.5" />
                       </div>
@@ -1293,10 +1389,6 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════════════════════
-            2. DEDICATED SEPARATE SUB-VIEW HEADER (When activeTab !== 'hub')
-            Clean, zero-clutter header with Back to Hub button, title & switcher
-        ══════════════════════════════════════════════════════════════ */}
         {/* ══════════════════════════════════════════════════════════════
             2. DEDICATED SEPARATE SUB-VIEW HEADER
             - When on other tabs: Clean header with Back to Hub & Pillar Switcher
@@ -1310,14 +1402,14 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 type="button"
                 onClick={() => handleTabChange('hub')}
                 className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-sage dark:text-booti-glow hover:underline cursor-pointer group"
-                title="आरोग्यशाला हब पर वापस जाएं"
+                title={l('आरोग्यशाला हब पर वापस जाएं', 'Return to Wellness Hub')}
               >
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                <span>आरोग्यशाला हब (Hub)</span>
+                <span>{l('आरोग्यशाला हब', 'Wellness Hub')}</span>
               </button>
               {currentPillar && (
                 <span className="text-xs sm:text-sm font-serif font-bold text-primary border-l border-gray-300 dark:border-gray-700 pl-3">
-                  {currentPillar.title}
+                  {isHindi ? currentPillar.title : (currentPillar.titleEn || currentPillar.title)}
                 </span>
               )}
             </div>
@@ -1329,7 +1421,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 onClick={() => handleTabChange('hub')}
                 className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-mist dark:bg-[#131E2B] text-muted hover:text-primary transition-all cursor-pointer"
               >
-                🏠 हब
+                🏠 {l('हब', 'Hub')}
               </button>
               {WELLNESS_PILLARS.map((p) => {
                 const Icon = p.icon;
@@ -1346,7 +1438,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     }`}
                   >
                     <Icon className="w-3 h-3" />
-                    <span>{p.shortTitle}</span>
+                    <span>{isHindi ? p.shortTitle : (p.shortTitleEn || p.shortTitle)}</span>
                   </button>
                 );
               })}
@@ -1371,7 +1463,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 title="आरोग्यशाला हब पर वापस जाएं"
               >
                 <ArrowLeft className="w-4 h-4 text-emerald-400 group-hover:-translate-x-1 transition-transform" />
-                <span>आरोग्यशाला हब (Hub)</span>
+                <span>{l('आरोग्यशाला हब', 'Wellness Hub')}</span>
               </button>
 
               {/* Minimal Rhythm Switcher (Right) */}
@@ -1395,7 +1487,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                       }`}
                       title={p.benefits}
                     >
-                      {p.hindiName.split(' ')[0]} ({p.inhaleSec}-{p.holdInSec}-{p.exhaleSec})
+                      {isHindi ? p.hindiName.split(' ')[0] : p.name.split(' ')[0]} ({p.inhaleSec}-{p.holdInSec}-{p.exhaleSec})
                     </button>
                   );
                 })}
@@ -1418,11 +1510,11 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                       ? 'bg-[#5b8257]/25 border-[#5b8257]/50 text-emerald-300 hover:bg-[#5b8257]/35'
                       : 'bg-gray-800/80 border-gray-700 text-gray-400 hover:text-gray-200'
                   }`}
-                  title="आँखें बंद होने पर बोलकर निर्देश सुनने के लिए टॉगल करें"
+                  title={l('आँखें बंद होने पर बोलकर निर्देश सुनने के लिए टॉगल करें', 'Toggle spoken voice instructions for closed eyes practice')}
                 >
                   <Volume2 className={`w-3.5 h-3.5 ${voiceGuideEnabled ? 'text-emerald-400 animate-pulse' : 'text-gray-500'}`} />
                   <span>
-                    {voiceGuideEnabled ? 'बोलकर निर्देश: चालू (Voice Guide ON)' : 'बोलकर निर्देश: बंद (Chime Only)'}
+                    {voiceGuideEnabled ? l('बोलकर निर्देश: चालू', 'Voice Guide: Active') : l('बोलकर निर्देश: बंद (केवल घंटी)', 'Voice Guide: Off (Chime Only)')}
                   </span>
                 </button>
               </div>
@@ -1496,14 +1588,14 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 >
                   <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white/90">
                     {breathPhase === 'inhale'
-                      ? 'श्वास लें'
+                      ? l('श्वास लें', 'Inhale')
                       : breathPhase === 'hold-in'
-                      ? 'रोकें'
+                      ? l('रोकें', 'Hold')
                       : breathPhase === 'exhale'
-                      ? 'श्वास छोड़ें'
+                      ? l('श्वास छोड़ें', 'Exhale')
                       : breathPhase === 'hold-out'
-                      ? 'विश्राम'
-                      : 'आरंभ'}
+                      ? l('विश्राम', 'Rest')
+                      : l('आरंभ', 'Begin')}
                   </span>
 
                   <span className="text-3xl sm:text-4xl font-serif font-extrabold my-0.5 leading-none text-white drop-shadow-sm select-none">
@@ -1511,21 +1603,21 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                   </span>
 
                   <span className="text-[10px] sm:text-[11px] font-semibold text-white/90">
-                    {isBreathingActive ? `${phaseSecondsLeft}s • Cycle: ${breathCyclesDone}` : `Cycle: ${breathCyclesDone}`}
+                    {isBreathingActive ? `${phaseSecondsLeft}s • ${l('चक्र', 'Cycle')}: ${breathCyclesDone}` : `${l('चक्र', 'Cycle')}: ${breathCyclesDone}`}
                   </span>
                 </div>
               </div>
 
               {/* Subtitle & Phase Cue */}
               <h3 className="text-base sm:text-lg font-serif font-bold text-white mb-0.5">
-                {isBreathingActive ? `${mandalaVisuals.label} (${phaseSecondsLeft}s)` : 'तैयार रहें (Ready)'}
+                {isBreathingActive ? `${mandalaVisuals.label} (${phaseSecondsLeft}s)` : l('तैयार रहें', 'Ready')}
               </h3>
               <p className="text-xs text-gray-300 dark:text-gray-400 max-w-sm mb-4 leading-normal">
                 {isBreathingActive
                   ? (voiceGuideEnabled
-                      ? 'अपनी आँखें बंद रखें • बोलकर निर्देश दिए जा रहे हैं (Eyes closed • Voice guide active)'
+                      ? l('अपनी आँखें बंद रखें • बोलकर निर्देश दिए जा रहे हैं', 'Keep eyes closed • Spoken guidance active')
                       : mandalaVisuals.sub)
-                  : 'Press Start to begin guided sacred breathing'}
+                  : l('निर्देशित श्वसन अभ्यास शुरू करने के लिए स्टार्ट दबाएं', 'Press Start to begin guided sacred breathing')}
               </p>
 
               {/* Bottom Action Controls: Big Green Button + Reset Button (MATCHING USER'S IMAGE) */}
@@ -1537,7 +1629,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     className="flex-1 bg-[#5b8257] hover:bg-[#4d7049] text-white py-3 px-5 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
                   >
                     <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
-                    <span>प्राणायाम शुरू करें (Start Breathwork)</span>
+                    <span>{l('प्राणायाम शुरू करें', 'Start Breathwork')}</span>
                   </button>
                 ) : (
                   <button
@@ -1546,7 +1638,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 px-5 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
                   >
                     <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
-                    <span>विश्राम दें (Pause)</span>
+                    <span>{l('विश्राम दें', 'Pause')}</span>
                   </button>
                 )}
 
@@ -1556,10 +1648,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     setIsBreathingActive(false);
                     stopCue();
                     setBreathCyclesDone(0);
-                    toast('चक्र रीसेट किए गए (Cycles reset)', { icon: '🔄' });
+                    toast(l('चक्र रीसेट किए गए', 'Cycles reset'), { icon: '🔄' });
                   }}
                   className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#182332] hover:bg-[#203044] border border-[#26374a] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0"
-                  title="चक्र रीसेट करें (Reset cycles)"
+                  title={l('चक्र रीसेट करें', 'Reset cycles')}
                 >
                   <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
@@ -1568,7 +1660,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
               {/* Compact Ambient Acoustic Soundscapes */}
               <div className="pt-2.5 mt-2 border-t border-[#1E2E40] w-full flex items-center justify-center gap-2 flex-wrap text-xs">
                 <span className="text-[10px] sm:text-[11px] text-gray-400 font-semibold flex items-center gap-1">
-                  <Music className="w-3 h-3 text-sage" /> नाद तरंग:
+                  <Music className="w-3 h-3 text-sage" /> {l('नाद तरंग:', 'Soundscapes:')}
                 </span>
                 <button
                   type="button"
@@ -1579,7 +1671,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                       : 'bg-[#182332] text-gray-300 hover:bg-[#223247] border border-[#26374a]'
                   }`}
                 >
-                  🌊 अलकनंदा
+                  🌊 {l('अलकनंदा', 'Alaknanda')}
                 </button>
                 <button
                   type="button"
@@ -1590,21 +1682,21 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                       : 'bg-[#182332] text-gray-300 hover:bg-[#223247] border border-[#26374a]'
                   }`}
                 >
-                  🕉️ 136Hz ॐ
+                  🕉️ 136Hz {l('ॐ', 'Om')}
                 </button>
                 <button
                   type="button"
                   onClick={() => playSingingBowl(216, 4)}
                   className="px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold bg-[#182332] text-gray-300 hover:bg-[#223247] border border-[#26374a] transition-all cursor-pointer"
                 >
-                  🥣 कांस्य कटोरा
+                  🥣 {l('कांस्य कटोरा', 'Singing Bowl')}
                 </button>
                 {ambientTrack !== 'off' && (
                   <button
                     type="button"
                     onClick={() => toggleAmbientSound(ambientTrack)}
                     className="p-1 text-red-400 hover:text-red-300 cursor-pointer"
-                    title="ध्वनि बंद करें"
+                    title={l('ध्वनि बंद करें', 'Mute audio')}
                   >
                     <VolumeX className="w-3.5 h-3.5" />
                   </button>
@@ -1625,10 +1717,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                   <Compass className="w-6 h-6" />
                 </div>
                 <h3 className="font-serif font-bold text-xl text-primary">
-                  त्रि-दोष संतुलन परीक्षण (Tri-Dosha Balance Scanner)
+                  {l('त्रि-दोष संतुलन परीक्षण', 'Tri-Dosha Balance Scanner')}
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                  Touch the dial for each symptom to discover your current Vata-Pitta-Kapha bio-energy balance and Himalayan remedies.
+                  {l('प्रत्येक लक्षण के लिए विकल्प चुनें और अपने वात-पित्त-कफ संतुलन को जानें।', 'Touch the dial for each symptom to discover your current Vata-Pitta-Kapha bio-energy balance and Himalayan remedies.')}
                 </p>
               </div>
 
@@ -1637,10 +1729,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 {DOSHA_QUESTIONS.map((q, qIdx) => (
                   <div key={q.id} className="bg-mist dark:bg-card border border-gray-200 dark:border-gray-800 rounded-2xl p-4 space-y-2.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-sage block">
-                      प्रश्न {qIdx + 1} of 4
+                      {l(`प्रश्न ${qIdx + 1} / 4`, `Question ${qIdx + 1} of 4`)}
                     </span>
                     <h4 className="text-xs sm:text-sm font-bold text-primary">
-                      {q.question}
+                      {isHindi ? q.questionHi : q.questionEn}
                     </h4>
 
                     <div className="space-y-1.5 pt-1">
@@ -1657,7 +1749,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                                 : 'bg-white dark:bg-warm-indigo border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-sage/50'
                             }`}
                           >
-                            <span>{opt.label}</span>
+                            <span>{isHindi ? opt.labelHi : opt.labelEn}</span>
                             {isChosen && <Check className="w-4 h-4 shrink-0 ml-2" />}
                           </button>
                         );
@@ -1673,17 +1765,17 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-serif font-bold text-base text-primary">
-                        Your Bio-Energy Profile (आपका प्रकृतिक संतुलन)
+                        {l('आपका प्रकृतिक संतुलन', 'Your Bio-Energy Profile')}
                       </h4>
                       <span className="text-xs text-gray-500">
-                        Dominant Dosha: <strong className="text-sage uppercase">{doshaResult.dominant}</strong>
+                        {l('प्रमुख दोष:', 'Dominant Dosha:')} <strong className="text-sage uppercase">{doshaResult.dominant}</strong>
                       </span>
                     </div>
                     <button
                       onClick={resetDosha}
                       className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 cursor-pointer"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" /> Re-scan
+                      <RotateCcw className="w-3.5 h-3.5" /> {l('पुनः जांचें', 'Re-scan')}
                     </button>
                   </div>
 
@@ -1707,9 +1799,9 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                       />
                     </div>
                     <div className="flex justify-between text-[11px] font-bold">
-                      <span className="text-sky-500">वात (Vata): {doshaResult.vataPct}%</span>
-                      <span className="text-amber-500">पित्त (Pitta): {doshaResult.pittaPct}%</span>
-                      <span className="text-emerald-500">कफ (Kapha): {doshaResult.kaphaPct}%</span>
+                      <span className="text-sky-500">{l('वात', 'Vata')}: {doshaResult.vataPct}%</span>
+                      <span className="text-amber-500">{l('पित्त', 'Pitta')}: {doshaResult.pittaPct}%</span>
+                      <span className="text-emerald-500">{l('कफ', 'Kapha')}: {doshaResult.kaphaPct}%</span>
                     </div>
                   </div>
 
@@ -1719,17 +1811,17 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     <div className="text-xs text-primary space-y-1">
                       <strong className="font-bold text-sage block">
                         {doshaResult.dominant === 'vata'
-                          ? 'Vata Grounding Protocol (वात शमन)':
-                          doshaResult.dominant === 'pitta'
-                          ? 'Pitta Cooling Protocol (पित्त शमन)':
-                          'Kapha Energizing Protocol (कफ जागरण)'}
+                          ? l('वात शमन मार्गदर्शन', 'Vata Grounding Protocol')
+                          : doshaResult.dominant === 'pitta'
+                          ? l('पित्त शमन मार्गदर्शन', 'Pitta Cooling Protocol')
+                          : l('कफ जागरण मार्गदर्शन', 'Kapha Energizing Protocol')}
                       </strong>
                       <p className="text-gray-600 dark:text-gray-300">
                         {doshaResult.dominant === 'vata'
-                          ? 'Warm sesame oil self-massage (Abhyanga), warm cooked grains, avoid chilly dry winds, and drink Tulsi-Ginger infusion. Practice Anulom-Vilom.'
+                          ? l('गुनगुने तिल के तेल से मालिश (अभ्यंग), गरम ताजा भोजन लें और ठंडी हवा से बचें। तुलसी-अदरक काढ़े का सेवन करें और अनुलोम-विलोम करें।', 'Warm sesame oil self-massage (Abhyanga), warm cooked grains, avoid chilly dry winds, and drink Tulsi-Ginger infusion. Practice Anulom-Vilom.')
                           : doshaResult.dominant === 'pitta'
-                          ? 'Cooling drinks like Buransh petal tea, sweet fruits, avoid excessive spicy chilies. Practice Bhramari pranayama and meditation.'
-                          : 'Warm spiced drinks with Timur and black pepper, brisk walking on village trails, avoid heavy oily dairy foods. Practice vigorous Kapalabhati.'}
+                          ? l('बुरांश पंखुड़ियों की चाय जैसे शीतल पेय और मीठे फल लें। अत्यधिक मिर्च-मसालों से बचें। भ्रामरी प्राणायाम और ध्यान करें।', 'Cooling drinks like Buransh petal tea, sweet fruits, avoid excessive spicy chilies. Practice Bhramari pranayama and meditation.')
+                          : l('तिमूर और काली मिर्च से बने गरम पेय लें, गांव की पगडंडियों पर तेज चलें और भारी चिकने भोजन से बचें। कपालभाति का अभ्यास करें।', 'Warm spiced drinks with Timur and black pepper, brisk walking on village trails, avoid heavy oily dairy foods. Practice vigorous Kapalabhati.')}
                       </p>
                     </div>
                   </div>
@@ -1749,7 +1841,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
               {/* Marma Point List */}
               <div className="lg:col-span-5 space-y-2.5">
                 <span className="text-xs font-bold uppercase tracking-wider text-gray-500 block">
-                  Select Himalayan Marma Point (मर्म बिंदु):
+                  {l('हिमालयी मर्म बिंदु चुनें:', 'Select Himalayan Marma Point:')}
                 </span>
                 <div className="space-y-2">
                   {MARMA_POINTS.map((m) => {
@@ -1765,16 +1857,16 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <h4 className="font-serif font-bold text-sm">{m.name}</h4>
+                          <h4 className="font-serif font-bold text-sm">{isHindi ? m.nameHi : m.name}</h4>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                            {m.location}
+                            {isHindi ? m.locationHi : m.location}
                           </span>
                         </div>
                         <span className={`text-[11px] block mt-0.5 ${isSelected ? 'text-white/80' : 'text-gold-warm'}`}>
-                          {m.category}
+                          {isHindi ? m.categoryHi : m.category}
                         </span>
                         <p className={`text-xs mt-1 line-clamp-2 ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
-                          {m.benefits}
+                          {isHindi ? m.benefitsHi : m.benefits}
                         </p>
                       </div>
                     );
@@ -1786,13 +1878,13 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
               <div className="lg:col-span-7 bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-800 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-xs relative overflow-hidden min-h-[460px]">
                 <div className="max-w-md mx-auto space-y-2 mb-6">
                   <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-sage/15 text-sage">
-                    {selectedMarma.location}
+                    {isHindi ? selectedMarma.locationHi : selectedMarma.location}
                   </span>
                   <h3 className="font-serif font-bold text-xl text-primary">
-                    {selectedMarma.name}
+                    {isHindi ? selectedMarma.nameHi : selectedMarma.name}
                   </h3>
                   <p className="text-xs text-gray-600 dark:text-gray-400">
-                    {selectedMarma.instruction}
+                    {isHindi ? selectedMarma.instructionHi : selectedMarma.instruction}
                   </p>
                 </div>
 
@@ -1822,10 +1914,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                   >
                     <Heart className={`w-8 h-8 mb-1 ${marmaPressing ? 'animate-pulse text-white' : 'text-primary'}`} />
                     <span className="text-2xl font-serif font-bold">
-                      {marmaPressing ? `${marmaTimeLeft}s` : 'Press & Hold'}
+                      {marmaPressing ? `${marmaTimeLeft}s` : l('दबाकर रखें', 'Press & Hold')}
                     </span>
                     <span className="text-[10px] font-bold uppercase opacity-85 mt-1">
-                      {marmaPressing ? 'Breathe Deeply' : 'Tap to Stimulate'}
+                      {marmaPressing ? l('गहरी सांस लें', 'Breathe Deeply') : l('उत्तेजित करने के लिए स्पर्श करें', 'Tap to Stimulate')}
                     </span>
                   </button>
                 </div>
@@ -1834,8 +1926,8 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <div className="bg-mist dark:bg-card border border-gray-200 dark:border-gray-800 rounded-2xl p-3.5 max-w-sm text-left flex items-start gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-sage shrink-0 mt-0.5" />
                   <div className="text-xs text-gray-600 dark:text-gray-300">
-                    <strong className="text-primary block font-bold">Clinical Benefit:</strong>
-                    {selectedMarma.benefits}
+                    <strong className="text-primary block font-bold">{l('चिकित्सीय लाभ:', 'Clinical Benefit:')}</strong>
+                    {isHindi ? selectedMarma.benefitsHi : selectedMarma.benefits}
                   </div>
                 </div>
               </div>
@@ -1854,19 +1946,18 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
               <div className="relative h-60 sm:h-72 w-full overflow-hidden group">
                 <img
                   src="/assets/wellness/herbal_brew.jpg"
-                  alt="हिमालयी पारंपरिक चाय व काढ़ा"
+                  alt={l('हिमालयी पारंपरिक चाय व काढ़ा', 'Himalayan Traditional Tea and Decoction')}
                   className="w-full h-full object-cover object-center filter brightness-95 contrast-105 group-hover:scale-105 transition-transform duration-700"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-4 sm:p-6">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-600/90 text-white text-[10px] sm:text-xs font-extrabold uppercase tracking-wider mb-1.5 w-fit shadow-md">
-                    <span>🫖 पहाड़ी रसोई काढ़ा</span>
-                    <span className="opacity-80">• Herbal Hearth Brew</span>
+                    <span>{l('🫖 पहाड़ी रसोई काढ़ा', '🫖 Mountain Hearth Brew')}</span>
                   </div>
                   <h3 className="text-xl sm:text-2xl md:text-3xl font-serif font-bold text-white leading-tight drop-shadow-md">
-                    {selectedTea.hindiTitle} ({selectedTea.title})
+                    {isHindi ? selectedTea.hindiTitle : selectedTea.title}
                   </h3>
                   <p className="text-xs sm:text-sm text-white/90 mt-1 max-w-xl leading-relaxed drop-shadow-sm">
-                    {selectedTea.benefits}
+                    {isHindi ? (selectedTea.benefitsHi || selectedTea.benefits) : selectedTea.benefits}
                   </p>
                 </div>
 
@@ -1874,10 +1965,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <button
                   onClick={() => speakCue(selectedTea.spokenGuide || `${selectedTea.title}. ${selectedTea.benefits}`, 'hi-IN')}
                   className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-lg active:scale-95 transition-all cursor-pointer"
-                  title="पूरी चाय विधि आवाज़ में सुनें"
+                  title={l('पूरी चाय विधि आवाज़ में सुनें', 'Listen to full recipe audio')}
                 >
                   <Volume2 className="w-4 h-4 animate-bounce" />
-                  <span>🔊 विधि सुनें (Listen)</span>
+                  <span>{l('🔊 विधि सुनें', '🔊 Listen Guide')}</span>
                 </button>
               </div>
 
@@ -1885,23 +1976,23 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
               <div className="p-3.5 sm:p-4 bg-white dark:bg-[#131E2B] text-primary dark:text-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-2.5 border-t border-amber-500/20 text-center">
                 <div className="p-2 sm:p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col items-center">
                   <span className="text-2xl sm:text-3xl mb-0.5">💧</span>
-                  <span className="text-xs font-bold text-primary dark:text-white">1. पानी उबालें</span>
-                  <span className="text-[10px] text-muted">1 कप पानी</span>
+                  <span className="text-xs font-bold text-primary dark:text-white">{l('1. पानी उबालें', '1. Boil Water')}</span>
+                  <span className="text-[10px] text-muted">{l('1 कप पानी', '1 Cup Water')}</span>
                 </div>
                 <div className="p-2 sm:p-2.5 rounded-xl bg-sage/10 border border-sage/20 flex flex-col items-center">
                   <span className="text-2xl sm:text-3xl mb-0.5">🌿</span>
-                  <span className="text-xs font-bold text-primary dark:text-white">2. पत्ती व अदरक</span>
-                  <span className="text-[10px] text-muted">जड़ी-बूटी डालें</span>
+                  <span className="text-xs font-bold text-primary dark:text-white">{l('2. जड़ी-बूटी डालें', '2. Add Herbs')}</span>
+                  <span className="text-[10px] text-muted">{l('पत्ती व अदरक', 'Leaves & Ginger')}</span>
                 </div>
                 <div className="p-2 sm:p-2.5 rounded-xl bg-gold-warm/10 border border-gold-warm/20 flex flex-col items-center">
                   <span className="text-2xl sm:text-3xl mb-0.5">⏱️</span>
-                  <span className="text-xs font-bold text-primary dark:text-white">3. धीमी आंच पर ढकें</span>
-                  <span className="text-[10px] text-muted">1-2 मिनट भाप</span>
+                  <span className="text-xs font-bold text-primary dark:text-white">{l('3. धीमी आंच पर ढकें', '3. Simmer & Cover')}</span>
+                  <span className="text-[10px] text-muted">{l('1-2 मिनट भाप', '1-2 Min Steam')}</span>
                 </div>
                 <div className="p-2 sm:p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex flex-col items-center">
                   <span className="text-2xl sm:text-3xl mb-0.5">☕</span>
-                  <span className="text-xs font-bold text-primary dark:text-white">4. गुनगुना पिएं</span>
-                  <span className="text-[10px] text-muted">सुकून का घूंट</span>
+                  <span className="text-xs font-bold text-primary dark:text-white">{l('4. गुनगुना पिएं', '4. Sip Warm')}</span>
+                  <span className="text-[10px] text-muted">{l('सुकून का घूंट', 'Sip of Peace')}</span>
                 </div>
               </div>
             </div>
@@ -1913,7 +2004,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 {/* Recipe Selection Tabs */}
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-muted block mb-2">
-                    काढ़ा या चाय का प्रकार चुनें (Select Recipe):
+                    {l('काढ़ा या चाय का प्रकार चुनें:', 'Select Tea or Decoction Recipe:')}
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
                     {TEA_RECIPES.map((recipe) => (
@@ -1926,7 +2017,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                             : 'bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gold-warm/50'
                         }`}
                       >
-                        {recipe.title}
+                        {isHindi ? recipe.hindiTitle : recipe.title}
                       </button>
                     ))}
                   </div>
@@ -1936,24 +2027,24 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-gray-200/60 dark:border-gray-800">
                   <div>
                     <h4 className="font-serif font-bold text-base sm:text-lg text-primary">
-                      {selectedTea.title} ({selectedTea.hindiTitle})
+                      {isHindi ? selectedTea.hindiTitle : selectedTea.title}
                     </h4>
                     <p className="text-xs text-muted dark:text-muted mt-0.5">
-                      {selectedTea.benefits}
+                      {isHindi ? (selectedTea.benefitsHi || selectedTea.benefits) : selectedTea.benefits}
                     </p>
                   </div>
                   <button
                     onClick={() => speakCue(selectedTea.spokenGuide || selectedTea.benefits, 'hi-IN')}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gold-warm/15 hover:bg-gold-warm/25 text-gold-warm font-bold text-xs w-fit cursor-pointer"
                   >
-                    <Volume2 className="w-4 h-4" /> <span>विधि सुनें</span>
+                    <Volume2 className="w-4 h-4" /> <span>{l('विधि सुनें', 'Listen')}</span>
                   </button>
                 </div>
 
                 {/* Interactive Ingredients Badges (Tap to Speak for Illiterate Users) */}
                 <div>
                   <span className="text-[11px] font-bold text-muted block mb-1.5">
-                    आवश्यक सामग्री (Tap any herb to hear in Hindi):
+                    {l('आवश्यक सामग्री (किसी भी जड़ी-बूटी को सुनकर जानें):', 'Required Ingredients (Tap any herb to listen):')}
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
                     {selectedTea.herbs.map((h, i) => (
@@ -1980,18 +2071,18 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     }`}
                   >
                     {teaBrewing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
-                    <span>{teaBrewing ? `उबाल आ रहा है (${teaSecondsLeft}s)` : `काढ़ा पकाना शुरू करें (${selectedTea.steepSeconds}s)`}</span>
+                    <span>{teaBrewing ? l(`उबाल आ रहा है (${teaSecondsLeft}s)`, `Steeping (${teaSecondsLeft}s)`) : l(`काढ़ा पकाना शुरू करें (${selectedTea.steepSeconds}s)`, `Start Brew (${selectedTea.steepSeconds}s)`)}</span>
                   </button>
 
                   <button
                     onClick={() => {
                       handleDrinkWater(wellnessStats.waterGlassesToday);
-                      toast.success('चाय पीकर जल साधना में दर्ज किया गया!', { icon: '☕' });
+                      toast.success(l('चाय पीकर जल साधना में दर्ज किया गया!', 'Tea logged to hydration log!'), { icon: '☕' });
                     }}
                     className="px-4 py-3 bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 rounded-2xl text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gold-warm/20 flex items-center gap-1.5 cursor-pointer active:scale-95 min-h-[44px]"
                   >
                     <Check className="w-4 h-4 text-emerald-500" />
-                    <span>कप पिएं (Log Cup)</span>
+                    <span>{l('कप पिएं', 'Log Cup')}</span>
                   </button>
                 </div>
               </div>
@@ -2002,10 +2093,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-serif font-bold text-base sm:text-lg text-primary">
-                    Sacred Himalayan Herbarium (हिमालयी जड़ी-बूटी ज्ञान)
+                    {l('हिमालयी जड़ी-बूटी ज्ञान', 'Sacred Himalayan Herbarium')}
                   </h3>
                   <p className="text-xs text-muted dark:text-muted">
-                    किसी भी जड़ी-बूटी के स्पीकर बटन को दबाकर उसकी उपयोगिता सुनें:
+                    {l('किसी भी जड़ी-बूटी के स्पीकर बटन को दबाकर उसकी उपयोगिता सुनें:', 'Tap speaker icon on any herb to listen to its benefits:')}
                   </p>
                 </div>
               </div>
@@ -2020,28 +2111,28 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                       <div className="flex items-center gap-1.5">
                         <span className="text-xl">{herb.icon || '🌿'}</span>
                         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-sage/15 text-sage dark:text-booti-glow">
-                          {herb.tag}
+                          {isHindi ? herb.tagHi : herb.tag}
                         </span>
                       </div>
                       <button
                         onClick={() => speakCue(herb.hindiSpoken || `${herb.name}. ${herb.benefit}. Pahaadi vidhi: ${herb.recipe}`, 'hi-IN')}
                         className="p-1.5 rounded-xl bg-gold-warm/15 hover:bg-gold-warm/25 text-gold-warm transition-all cursor-pointer"
-                        title="जड़ी-बूटी की जानकारी सुनें"
+                        title={l('जड़ी-बूटी की जानकारी सुनें', 'Listen to herb details')}
                       >
                         <Volume2 className="w-4 h-4" />
                       </button>
                     </div>
 
                     <div>
-                      <h4 className="font-serif font-bold text-sm sm:text-base text-primary">{herb.name}</h4>
+                      <h4 className="font-serif font-bold text-sm sm:text-base text-primary">{isHindi ? herb.nameHi : herb.name}</h4>
                       <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
-                        {herb.benefit}
+                        {isHindi ? herb.benefitHi : herb.benefit}
                       </p>
                     </div>
 
                     <div className="pt-2 border-t border-gray-100 dark:border-gray-800 text-[11px] space-y-1">
                       <div className="text-gold-warm font-semibold">
-                        🍵 <strong>Pahadi Method:</strong> {herb.recipe}
+                        🍵 <strong>{l('पहाड़ी विधि:', 'Pahadi Method:')}</strong> {isHindi ? herb.recipeHi : herb.recipe}
                       </div>
                     </div>
                   </div>
@@ -2062,10 +2153,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                   <Music className="w-6 h-6" />
                 </div>
                 <h3 className="font-serif font-bold text-xl text-primary">
-                  Vedic Naad Sanctuary Console (ध्वनि चिकित्सा मिक्सर)
+                  {l('ध्वनि चिकित्सा मिक्सर', 'Vedic Naad Sanctuary Console')}
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                  Pure acoustic harmonic frequencies generated directly in your browser without internet streaming.
+                  {l('बिना इंटरनेट के सीधे आपके ब्राउज़र में निर्मित शुद्ध ध्वनिक आवृत्तियाँ।', 'Pure acoustic harmonic frequencies generated directly in your browser without internet streaming.')}
                 </p>
               </div>
 
@@ -2076,14 +2167,14 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <div className="bg-mist dark:bg-card border border-gray-200 dark:border-gray-800 rounded-2xl p-4 text-center space-y-3">
                   <span className="text-3xl block">🌊</span>
                   <div>
-                    <h4 className="font-serif font-bold text-sm text-primary">Alaknanda Stream</h4>
-                    <p className="text-[11px] text-gray-500 mt-0.5">Low-pass filtered pink noise mimicking mountain waters.</p>
+                    <h4 className="font-serif font-bold text-sm text-primary">{l('अलकनंदा जलधारा', 'Alaknanda Stream')}</h4>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{l('पहाड़ी नदी की शांतिदायक कल-कल ध्वनि।', 'Low-pass filtered pink noise mimicking mountain waters.')}</p>
                   </div>
                   <button
                     onClick={() => toggleAmbientSound('river')}
                     className={`w-full py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${ambientTrack === 'river' ? 'bg-red-500 text-white' : 'bg-sage text-white hover:bg-sage/90'}`}
                   >
-                    {ambientTrack === 'river' ? 'Stop Stream' : 'Play Stream'}
+                    {ambientTrack === 'river' ? l('जलधारा बंद करें', 'Stop Stream') : l('जलधारा चलाएं', 'Play Stream')}
                   </button>
                 </div>
 
@@ -2091,14 +2182,14 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <div className="bg-mist dark:bg-card border border-gray-200 dark:border-gray-800 rounded-2xl p-4 text-center space-y-3">
                   <span className="text-3xl block">🕉️</span>
                   <div>
-                    <h4 className="font-serif font-bold text-sm text-primary">136.1Hz Cosmic Om</h4>
-                    <p className="text-[11px] text-gray-500 mt-0.5">Sanskrit planetary tuning frequency for somatic calm.</p>
+                    <h4 className="font-serif font-bold text-sm text-primary">136.1Hz {l('ब्रह्मांडीय ॐ', 'Cosmic Om')}</h4>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{l('मानसिक शांति और ध्यान के लिए ॐ नाद।', 'Sanskrit planetary tuning frequency for somatic calm.')}</p>
                   </div>
                   <button
                     onClick={() => toggleAmbientSound('om')}
                     className={`w-full py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${ambientTrack === 'om' ? 'bg-red-500 text-white' : 'bg-gold-warm text-primary hover:bg-gold-warm/90'}`}
                   >
-                    {ambientTrack === 'om' ? 'Stop Drone' : 'Continuous Om'}
+                    {ambientTrack === 'om' ? l('ध्वनि बंद करें', 'Stop Drone') : l('निरंतर ॐ', 'Continuous Om')}
                   </button>
                 </div>
 
@@ -2106,21 +2197,21 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <div className="bg-mist dark:bg-card border border-gray-200 dark:border-gray-800 rounded-2xl p-4 text-center space-y-3">
                   <span className="text-3xl block">🥣</span>
                   <div>
-                    <h4 className="font-serif font-bold text-sm text-primary">Tibetan Singing Bowl</h4>
-                    <p className="text-[11px] text-gray-500 mt-0.5">216Hz Anahata frequency with acoustic overtones.</p>
+                    <h4 className="font-serif font-bold text-sm text-primary">{l('तिब्बती कांस्य कटोरा', 'Tibetan Singing Bowl')}</h4>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{l('216Hz अनाहत चक्र आवृत्ति।', '216Hz Anahata frequency with acoustic overtones.')}</p>
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => playSingingBowl(216, 5.0)}
                       className="flex-1 bg-sage text-white py-2 rounded-xl text-xs font-bold hover:bg-sage/90 cursor-pointer"
                     >
-                      Strike Once
+                      {l('एक बार बजाएं', 'Strike Once')}
                     </button>
                     <button
                       onClick={() => toggleAmbientSound('bowls')}
                       className={`flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer ${ambientTrack === 'bowls' ? 'bg-red-500 text-white' : 'bg-sage/20 text-sage'}`}
                     >
-                      {ambientTrack === 'bowls' ? 'Stop' : 'Loop'}
+                      {ambientTrack === 'bowls' ? l('रोकें', 'Stop') : l('लूप पर चलाएं', 'Loop')}
                     </button>
                   </div>
                 </div>
@@ -2129,14 +2220,14 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <div className="bg-mist dark:bg-card border border-gray-200 dark:border-gray-800 rounded-2xl p-4 text-center space-y-3">
                   <span className="text-3xl block">🔔</span>
                   <div>
-                    <h4 className="font-serif font-bold text-sm text-primary">Brass Temple Bell</h4>
-                    <p className="text-[11px] text-gray-500 mt-0.5">Pure brass bell chime for awakening mental clarity.</p>
+                    <h4 className="font-serif font-bold text-sm text-primary">{l('पीतल की मंदिर घंटी', 'Brass Temple Bell')}</h4>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{l('मानसिक स्पष्टता और चेतना जागृति हेतु घंटी ध्वनि।', 'Pure brass bell chime for awakening mental clarity.')}</p>
                   </div>
                   <button
                     onClick={() => playTempleBell(852, 4.0)}
                     className="w-full bg-gold-warm text-primary py-2 rounded-xl text-xs font-bold hover:bg-gold-warm/90 cursor-pointer"
                   >
-                    Ring Bell (घंटी बजाएं)
+                    {l('घंटी बजाएं', 'Ring Bell')}
                   </button>
                 </div>
 
@@ -2144,14 +2235,14 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <div className="bg-mist dark:bg-card border border-gray-200 dark:border-gray-800 rounded-2xl p-4 text-center space-y-3">
                   <span className="text-3xl block">🌲</span>
                   <div>
-                    <h4 className="font-serif font-bold text-sm text-primary">Alpine Pine Wind</h4>
-                    <p className="text-[11px] text-gray-500 mt-0.5">Soft rustling pine needle breeze for insomnia.</p>
+                    <h4 className="font-serif font-bold text-sm text-primary">{l('देवदार की हवा', 'Alpine Pine Wind')}</h4>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{l('अनिद्रा और तनाव मुक्ति के लिए मंद बयार।', 'Soft rustling pine needle breeze for insomnia.')}</p>
                   </div>
                   <button
                     onClick={() => toggleAmbientSound('wind')}
                     className={`w-full py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${ambientTrack === 'wind' ? 'bg-red-500 text-white' : 'bg-sage text-white hover:bg-sage/90'}`}
                   >
-                    {ambientTrack === 'wind' ? 'Stop Wind' : 'Play Breeze'}
+                    {ambientTrack === 'wind' ? l('हवा बंद करें', 'Stop Wind') : l('हवा चलाएं', 'Play Breeze')}
                   </button>
                 </div>
               </div>
@@ -2169,11 +2260,17 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
               {/* Asana Selection Carousel */}
               <div className="lg:col-span-4 space-y-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-gray-500 block">
-                  Select Asana (मुद्रा चुनें):
+                  {l('आसन चुनें:', 'Select Asana:')}
                 </span>
                 <div className="space-y-2">
                   {YOGA_ASANAS.map((asana) => {
                     const isSelected = selectedAsana.id === asana.id;
+                    const asanaDisplayName = isHindi
+                      ? (asana.hindiName ? asana.hindiName.replace(/\s*\(.*?\)/, '') : asana.name)
+                      : asana.name.replace(/\s*\(.*?\)/, '');
+                    const diffText = isHindi
+                      ? (asana.difficulty === 'Beginner' ? 'सरल' : asana.difficulty === 'Intermediate' ? 'मध्यम' : 'उन्नत')
+                      : asana.difficulty;
                     return (
                       <div
                         key={asana.id}
@@ -2190,9 +2287,9 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                       >
                         <div>
                           <div className="flex items-center gap-2">
-                            <h4 className="font-serif font-bold text-sm">{asana.name}</h4>
+                            <h4 className="font-serif font-bold text-sm">{asanaDisplayName}</h4>
                             <span className={`text-[10px] px-1.5 py-0.2 rounded font-sans font-bold uppercase ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                              {asana.difficulty}
+                              {diffText}
                             </span>
                           </div>
                           <p className={`text-xs mt-0.5 line-clamp-1 ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
@@ -2211,7 +2308,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                 <div className="bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-800 rounded-2xl p-4 text-xs space-y-2.5">
                   <div>
                     <strong className="font-bold text-gray-700 dark:text-gray-300 block mb-0.5">
-                      Key Alignment Focus:
+                      {l('मुद्रा संरेखण मुख्य बिंदु:', 'Key Alignment Focus:')}
                     </strong>
                     <p className="text-gray-600 dark:text-gray-400 text-xs leading-relaxed">
                       {selectedAsana.keyFocus}
@@ -2220,7 +2317,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
 
                   {selectedAsana.precautions && (
                     <div className="pt-2 border-t border-gray-100 dark:border-gray-800 text-[11px] text-gold-warm">
-                      ⚠️ <strong>सावधानी (Precautions):</strong> {selectedAsana.precautions}
+                      ⚠️ <strong>{l('सावधानी:', 'Precautions:')}</strong> {selectedAsana.precautions}
                     </div>
                   )}
                 </div>
@@ -2248,10 +2345,10 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     <div className="absolute inset-0 bg-black/85 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 text-center text-white">
                       <div className="w-12 h-12 border-3 border-sage border-t-transparent rounded-full animate-spin mb-4" />
                       <h4 className="font-bold text-sm text-white font-serif">
-                        AI model load ho raha hai...
+                        {l('AI मॉडल लोड हो रहा है...', 'Loading AI model...')}
                       </h4>
                       <p className="text-xs text-white/70 mt-1 max-w-xs">
-                        Real-time skeletal tracking model initialize ho raha hai.
+                        {l('रीयल-टाइम कंकाल ट्रैकिंग मॉडल प्रारंभ हो रहा है...', 'Initializing real-time skeletal tracking model...')}
                       </p>
                     </div>
                   )}
@@ -2261,22 +2358,22 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                       <div className="w-16 h-16 rounded-3xl bg-white/10 mx-auto flex items-center justify-center text-white/70">
                         <Camera className="w-8 h-8" />
                       </div>
-                      <h4 className="text-white font-serif font-bold text-lg">AI Posture Camera</h4>
+                      <h4 className="text-white font-serif font-bold text-lg">{l('AI योग मुद्रा कैमरा', 'AI Posture Camera')}</h4>
                       <p className="text-xs text-white/60 max-w-sm mx-auto">
-                        Turn on your camera to check joint angles in real time, or test in simulated practice mode.
+                        {l('रीयल-टाइम में अपने जोड़ और मुद्राओं की जांच करने के लिए कैमरा चालू करें, या अभ्यास मोड आजमाएं।', 'Turn on your camera to check joint angles in real time, or test in simulated practice mode.')}
                       </p>
                       <div className="flex items-center justify-center gap-3 pt-2">
                         <button
                           onClick={startCamera}
                           className="bg-sage hover:bg-sage/90 text-white px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md"
                         >
-                          <Camera className="w-4 h-4" /> Start Camera
+                          <Camera className="w-4 h-4" /> {l('कैमरा चालू करें', 'Start Camera')}
                         </button>
                         <button
                           onClick={startSimulationMode}
                           className="bg-white/20 hover:bg-white/30 text-white px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer"
                         >
-                          <Eye className="w-4 h-4" /> Practice Mode
+                          <Eye className="w-4 h-4" /> {l('अभ्यास मोड', 'Practice Mode')}
                         </button>
                       </div>
                     </div>
@@ -2286,12 +2383,12 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
                       <div className="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl text-white flex items-center gap-2 border border-white/10">
                         <span className={`w-2 h-2 rounded-full ${alignmentScore >= 80 ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`} />
-                        <span className="text-xs font-bold">Accuracy: {alignmentScore}%</span>
+                        <span className="text-xs font-bold">{l('सटीकता', 'Accuracy')}: {alignmentScore}%</span>
                       </div>
 
                       <div className="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl text-white flex items-center gap-2 border border-white/10">
                         <Clock className="w-3.5 h-3.5 text-gold-warm" />
-                        <span className="text-xs font-bold">Hold: {holdTimerSec}s</span>
+                        <span className="text-xs font-bold">{l('ठहराव', 'Hold')}: {holdTimerSec}s</span>
                       </div>
                     </div>
                   )}
@@ -2299,7 +2396,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                   {isCameraActive && (
                     <div className="absolute bottom-3 left-3 right-3 z-20 bg-black/80 backdrop-blur-md p-3 rounded-2xl border border-white/15 text-white flex items-center justify-between gap-3">
                       <div className="text-xs">
-                        <span className="text-[10px] text-emerald-400 font-bold uppercase block">AI Instructor:</span>
+                        <span className="text-[10px] text-emerald-400 font-bold uppercase block">{l('AI प्रशिक्षक:', 'AI Instructor:')}</span>
                         <span className="leading-snug">{feedbackMessage}</span>
                       </div>
 
@@ -2312,20 +2409,20 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                             }}
                             className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Start Hold
+                            {l('ठहराव शुरू करें', 'Start Hold')}
                           </button>
                         ) : (
                           <button
                             onClick={() => setIsHoldingPose(false)}
                             className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer"
                           >
-                            Pause
+                            {l('रोकें', 'Pause')}
                           </button>
                         )}
                         <button
                           onClick={stopCamera}
                           className="bg-red-500/80 hover:bg-red-600 text-white p-1.5 rounded-xl cursor-pointer"
-                          title="Stop Camera"
+                          title={l('कैमरा बंद करें', 'Stop Camera')}
                         >
                           <CameraOff className="w-4 h-4" />
                         </button>
@@ -2372,7 +2469,7 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-[10px] font-bold uppercase tracking-wider bg-sage/15 text-sage dark:text-booti-glow px-2.5 py-1 rounded-full">
-                          {journey.badge}
+                          {isHindi ? journey.badgeHi : journey.badge}
                         </span>
                         <span className="text-xs font-bold text-gray-500 flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" /> {journey.duration}
@@ -2384,22 +2481,22 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                           <Icon className="w-5 h-5" />
                         </div>
                         <h3 className="font-serif font-bold text-base text-primary">
-                          {journey.title}
+                          {isHindi ? journey.titleHi : journey.title}
                         </h3>
                       </div>
 
                       <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 leading-relaxed">
-                        {journey.description}
+                        {isHindi ? journey.descriptionHi : journey.description}
                       </p>
 
                       <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 space-y-1.5">
-                        <span className="text-[10px] uppercase font-bold text-gray-400 block">Himalayan Protocol:</span>
+                        <span className="text-[10px] uppercase font-bold text-gray-400 block">{l('दैनिक अभ्यास क्रम:', 'Himalayan Protocol:')}</span>
                         {journey.steps.map((st, idx) => (
                           <div key={idx} className="flex items-center gap-2 text-xs text-primary dark:text-muted">
                             <span className="w-4 h-4 rounded-full bg-sage/20 text-sage text-[10px] font-bold flex items-center justify-center">
                               {idx + 1}
                             </span>
-                            <span>{st.title}</span>
+                            <span>{isHindi ? st.titleHi : st.title}</span>
                           </div>
                         ))}
                       </div>
@@ -2409,12 +2506,12 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
                       onClick={() => {
                         const firstStep = journey.steps[0];
                         handleTabChange(firstStep.type);
-                        toast.success(`Starting ${journey.title}!`);
+                        toast.success(`Starting ${isHindi ? journey.titleHi : journey.title}!`);
                       }}
                       className="mt-5 w-full bg-sage hover:bg-sage/90 text-white py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
-                      <span>यह अभ्यास शुरू करें</span>
+                      <span>{l('यह अभ्यास शुरू करें', 'Start Journey')}</span>
                     </button>
                   </div>
                 );
@@ -2427,14 +2524,14 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
         {activeTab !== 'hub' && (
           <div className="pt-6 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
             <p className="text-xs text-muted">
-              सत्र समाप्त हुआ? अन्य दिव्य अभ्यासों के लिए आरोग्यशाला हब पर लौटें।
+              {l('सत्र समाप्त हुआ? अन्य अभ्यासों के लिए आरोग्यशाला हब पर लौटें।', 'Session complete? Return to the Wellness Hub for more practices.')}
             </p>
             <button
               onClick={() => handleTabChange('hub')}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sage/10 hover:bg-sage/20 text-sage dark:text-booti-glow font-bold text-xs sm:text-sm transition-all cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>← आरोग्यशाला हब पर वापस जाएं (Back to Hub)</span>
+              <span>{l('← आरोग्यशाला हब पर वापस जाएं', '← Back to Wellness Hub')}</span>
             </button>
           </div>
         )}
@@ -2450,17 +2547,17 @@ export default function WellnessStudio({ defaultTab = 'hub' }) {
             </div>
             <div>
               <h3 className="font-serif font-bold text-xl text-primary">
-                अभ्यास पूर्ण हुआ!
+                {l('अभ्यास पूर्ण हुआ!', 'Session Complete!')}
               </h3>
               <p className="text-xs text-gray-500 mt-1">
-                You successfully held <strong>{selectedAsana.name}</strong> for {selectedAsana.targetHoldsSec} seconds.
+                {l(`आपने सफलतापूर्वक ${isHindi ? (selectedAsana.hindiName ? selectedAsana.hindiName.replace(/\s*\(.*?\)/, '') : selectedAsana.name) : selectedAsana.name.replace(/\s*\(.*?\)/, '')} का ${selectedAsana.targetHoldsSec} सेकंड तक अभ्यास किया।`, `You successfully held ${selectedAsana.name.replace(/\s*\(.*?\)/, '')} for ${selectedAsana.targetHoldsSec} seconds.`)}
               </p>
             </div>
             <button
               onClick={() => setShowCompletionModal(false)}
               className="w-full bg-sage text-white py-2.5 rounded-xl font-bold text-xs cursor-pointer shadow-md"
             >
-              धन्यवाद (Continue)
+              {l('जारी रखें', 'Continue')}
             </button>
           </div>
         </div>

@@ -25,8 +25,9 @@ import {
 } from '../api/client';
 import { speakText, transcribeAudio } from '../api/voiceClient';
 import { downloadConsultationReport } from '../api/reportsClient';
-import { listSessions, clearSessionHistory, recordSessionTurn, fetchServerSessions } from '../lib/sessionStore';
+import { listSessions, clearSessionHistory, deleteSession, recordSessionTurn, fetchServerSessions } from '../lib/sessionStore';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { evaluateLocalRedFlags } from '../lib/localTriageFallback';
 import { processOfflineConsultation } from '../lib/offlineTriageEngine';
 import { queueOfflineChat } from '../lib/offlineSyncManager';
@@ -57,6 +58,7 @@ const INITIAL_BOT_MESSAGE = {
    Main Chat Component
    ══════════════════════════════════════════════════════════════════ */
 export default function Chat() {
+  const { lang, l, isHindi, toEnglishDigits, formatDate } = useLanguage();
   const conversationIdRef = useRef(getOrCreateConversationId());
 
   /* State */
@@ -285,6 +287,40 @@ export default function Chat() {
     refreshSessions();
     toast.success('Naya paramarsh session shuru hua');
   }, [refreshSessions]);
+
+  const handleDeleteSession = useCallback(async (conversationId, e) => {
+    e?.stopPropagation();
+    e?.preventDefault();
+    if (!window.confirm(l('क्या आप इस परामर्श को हटाना चाहते हैं?', 'Are you sure you want to delete this consultation?'))) {
+      return;
+    }
+    try {
+      await deleteSession(conversationId, user?.id);
+      setSessions((prev) => prev.filter((s) => s.conversationId !== conversationId));
+      if (conversationIdRef.current === conversationId) {
+        handleNewSession();
+      }
+      toast.success(l('परामर्श हटा दिया गया 🗑️', 'Consultation deleted 🗑️'));
+    } catch (err) {
+      console.warn('Failed to delete session:', err);
+      toast.error(l('सत्र हटाने में विफल', 'Failed to delete session'));
+    }
+  }, [user, l, handleNewSession]);
+
+  const handleClearHistory = useCallback(async () => {
+    if (!window.confirm(l('क्या आप सभी परामर्श इतिहास हटाना चाहते हैं? यह वापस नहीं लाया जा सकता।', 'Are you sure you want to delete all consultation history? This cannot be undone.'))) {
+      return;
+    }
+    try {
+      await clearSessionHistory(user?.id);
+      setSessions([]);
+      handleNewSession();
+      toast.success(l('संपूर्ण बातचीत इतिहास साफ कर दिया गया 🗑️', 'All consultation history cleared 🗑️'));
+    } catch (err) {
+      console.warn('Failed to clear session history:', err);
+      toast.error(l('इतिहास साफ करने में विफल', 'Failed to clear history'));
+    }
+  }, [user, l, handleNewSession]);
 
   /* Fallback to browser SpeechRecognition if MediaRecorder or Sarvam STT is unavailable */
   const fallbackToWebSpeech = useCallback(() => {
@@ -571,7 +607,10 @@ export default function Chat() {
           const filtered = p.filter(m => !m.isLiveStreaming);
           return [...filtered, {
             sender: 'bot',
-            text: 'चेतावनी: आपातकालीन लक्षण पहचाने गए हैं। नेटवर्क उपलब्ध न होने के कारण कृपया तुरंत 108 एम्बुलेंस को कॉल करें। (Emergency symptoms detected — network unavailable, call 108 immediately.)',
+            text: l(
+              'चेतावनी: आपातकालीन लक्षण पहचाने गए हैं। नेटवर्क उपलब्ध न होने के कारण कृपया तुरंत 108 एम्बुलेंस को कॉल करें।',
+              'Warning: Emergency symptoms detected. Network unavailable, please call 108 ambulance immediately.'
+            ),
             tier: 'Red',
             flags: [fallbackCheck.flag || 'CLIENT_FALLBACK_FLAG: possible emergency — network unavailable, please call 108'],
             remedies: [],
@@ -701,12 +740,22 @@ export default function Chat() {
                   {sessions.map(s => (
                     <div key={s.conversationId}
                       onClick={() => handleSelectSession(s)}
-                      className="group flex items-start gap-2 px-2.5 py-2 rounded-xl hover:bg-sage/6 dark:hover:bg-sage/12 cursor-pointer transition-all">
-                      <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${s.tier === 'Red' ? 'bg-rose-soft' : s.tier === 'Yellow' ? 'bg-gold-warm' : 'bg-sage'}`} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs text-primary dark:text-[#C8D4E0] leading-snug line-clamp-2 group-hover:text-primary dark:group-hover:text-white">{s.summary || 'Consultation'}</p>
-                        <p className="text-[9px] text-gray-400 mt-0.5">{new Date(s.updatedAt).toLocaleDateString('hi-IN', { day: 'numeric', month: 'short' })}</p>
+                      className="group flex items-start justify-between gap-2 px-2.5 py-2 rounded-xl hover:bg-sage/6 dark:hover:bg-sage/12 cursor-pointer transition-all">
+                      <div className="flex items-start gap-2 min-w-0 flex-1">
+                        <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${s.tier === 'Red' ? 'bg-rose-soft' : s.tier === 'Yellow' ? 'bg-gold-warm' : 'bg-sage'}`} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-primary dark:text-[#C8D4E0] leading-snug line-clamp-2 group-hover:text-primary dark:group-hover:text-white">{s.summary || 'Consultation'}</p>
+                          <p className="text-[9px] text-gray-400 mt-0.5">{toEnglishDigits(new Date(s.updatedAt).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' }))}</p>
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteSession(s.conversationId, e)}
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all shrink-0 cursor-pointer"
+                        title={l('हटाएं', 'Delete')}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -717,13 +766,13 @@ export default function Chat() {
             <div className="shrink-0 border-t border-sage/10 dark:border-gray-800 px-3 py-3 space-y-2">
               {/* Comorbidities */}
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5">Aapki Sthitiyan</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5">{l('आपकी स्थितियां', 'Known Conditions')}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {COMORBIDITY_OPTIONS.map(opt => {
                     const on = knownConditions.includes(opt.value);
                     return (
                       <button key={opt.value} onClick={() => toggleCondition(opt.value)}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border transition-all ${on ? 'bg-sage text-white border-sage' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-sage/40'}`}>
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer ${on ? 'bg-sage text-white border-sage' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-sage/40'}`}>
                         {opt.icon} {on ? '✓ ' : ''}{opt.label}
                       </button>
                     );
@@ -733,15 +782,15 @@ export default function Chat() {
 
               {/* Clear History */}
               {sessions.length > 0 && (
-                <button onClick={() => { clearSessionHistory(user?.id); setSessions([]); }}
-                  className="w-full flex items-center justify-center gap-1.5 text-[11px] text-rose-soft/70 hover:text-rose-soft hover:bg-rose-soft/8 py-1.5 rounded-lg transition-all">
-                  <Trash2 className="w-3 h-3" /> Itihas Saaf Karein
+                <button onClick={handleClearHistory}
+                  className="w-full flex items-center justify-center gap-1.5 text-[11px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 py-1.5 rounded-lg transition-all cursor-pointer font-bold">
+                  <Trash2 className="w-3 h-3" /> {l('इतिहास साफ करें', 'Clear History')}
                 </button>
               )}
 
               {/* Emergency */}
               <a href="tel:108" className="w-full flex items-center justify-center gap-1.5 bg-rose-soft hover:bg-rose-soft/90 text-white py-2 rounded-xl text-xs font-bold transition-all shadow-sm">
-                <PhoneCall className="w-3.5 h-3.5" /> 108 Aapaatkaal
+                <PhoneCall className="w-3.5 h-3.5" /> {l('108 आपातकालीन सहायता', '108 Emergency Call')}
               </a>
             </div>
           </>
@@ -845,10 +894,10 @@ export default function Chat() {
             <WifiOff className="w-4 h-4 shrink-0 text-gold-warm mt-0.5" />
             <div>
               <strong className="block font-bold text-gold-warm">
-                ऑफ़लाइन डेमो मोड (Offline Demo Mode):
+                {l('ऑफ़लाइन मोड सक्रिय:', 'Offline Mode Active:')}
               </strong>
               <span>
-                सर्वर से संपर्क नहीं हो पा रहा है। यह अनुमानित ऑफ़लाइन सलाह है — पुष्टि हेतु नेटवर्क उपलब्ध होने पर पुनः जांचें।
+                {l('सर्वर से संपर्क नहीं हो पा रहा है। यह स्थानीय ऑफ़लाइन प्राथमिक सलाह है — नेटवर्क उपलब्ध होने पर पुनः जांचें।', 'Server unavailable. Providing offline estimated guidance — please verify once reconnected.')}
               </span>
             </div>
           </div>
@@ -981,10 +1030,10 @@ export default function Chat() {
                 const current = sttLangOverride || (detectedLanguage === 'english' ? 'en-IN' : 'hi-IN');
                 const next = current === 'en-IN' ? 'hi-IN' : 'en-IN';
                 setSttLangOverride(next);
-                toast.success(`Voice language: ${next === 'en-IN' ? 'English (en-IN)' : 'Hindi (hi-IN)'}`);
+                toast.success(l(`वॉइस भाषा: ${next === 'en-IN' ? 'अंग्रेज़ी' : 'हिंदी'}`, `Voice language: ${next === 'en-IN' ? 'English' : 'Hindi'}`));
               }}
-              className="shrink-0 h-9 sm:h-11 mb-0.5 px-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1A2538] text-[10px] sm:text-xs font-bold text-sage dark:text-booti-glow hover:bg-sage/10 transition-all flex items-center justify-center"
-              title="Voice Language Toggle (EN/HI)"
+              className="shrink-0 h-9 sm:h-11 mb-0.5 px-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1A2538] text-[10px] sm:text-xs font-bold text-sage dark:text-booti-glow hover:bg-sage/10 transition-all flex items-center justify-center cursor-pointer"
+              title={l('वॉइस भाषा बदलें (EN/HI)', 'Voice Language Toggle (EN/HI)')}
             >
               {(sttLangOverride || (detectedLanguage === 'english' ? 'en-IN' : 'hi-IN')) === 'en-IN' ? 'EN' : 'HI'}
             </button>
@@ -996,7 +1045,7 @@ export default function Chat() {
               value={inputText}
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isListening ? 'सुन रहा हूँ… 🎙️' : 'लक्षण लिखें या बोलें...'}
+              placeholder={isListening ? l('सुन रहा हूँ… 🎙️', 'Listening… 🎙️') : l('लक्षण लिखें या बोलें...', 'Type or speak your symptoms...')}
               disabled={loading}
               className="flex-1 min-w-0 bg-mist dark:bg-[#0F1521] border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage/50 disabled:opacity-60 placeholder-gray-400 dark:placeholder-gray-500 resize-none overflow-y-auto leading-normal min-h-[36px] max-h-[110px] transition-[height] duration-75 ease-out"
             />
@@ -1054,6 +1103,7 @@ function MessageBubble({
   onSubmitCorrection,
   onShowReferralQR,
 }) {
+  const { l, isHindi } = useLanguage();
   const isUser = msg.sender === 'user';
   // Typewriter streaming: only the latest bot message animates if not already streamed live
   const shouldStream = !isUser && isLatestBot && !msg.is_offline_fallback && !msg.isLiveStreaming;
@@ -1086,7 +1136,7 @@ function MessageBubble({
             {msg.tier === 'Red' ? (
               <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-600 text-white font-extrabold text-[11px] shadow-sm animate-pulse">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>EMERGENCY ALERT (108)</span>
+                <span>{l('आपातकालीन चेतावनी (108)', 'EMERGENCY ALERT (108)')}</span>
               </div>
             ) : (msg.tier === 'Yellow' || msg.remedies?.length > 0 || msg.phase === 'CONCLUDED') ? (
               <TierBadge tier={msg.tier} />
@@ -1100,16 +1150,16 @@ function MessageBubble({
                 type="button"
                 onClick={onStopSpeaking}
                 className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 text-[10px] font-bold border border-amber-500/30 transition-all cursor-pointer shadow-2xs"
-                title="Awaaz rokein aur screen par padhein"
+                title={l('आवाज़ रोकें और स्क्रीन पर पढ़ें', 'Stop audio and read on screen')}
               >
                 <VolumeX className="w-3 h-3 text-amber-500" />
-                <span>पढ़ना चाहते हैं? आवाज़ रोकें</span>
+                <span>{l('पढ़ना चाहते हैं? आवाज़ रोकें', 'Prefer reading? Stop audio')}</span>
               </button>
             ) : (
               <button onClick={onReadAloud}
-                className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-gray-400 hover:text-sage"
+                className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-gray-400 hover:text-sage cursor-pointer"
                 aria-label="Read aloud"
-                title="आवाज़ में सुनें">
+                title={l('आवाज़ में सुनें', 'Listen to audio')}>
                 <Volume2 className="w-3.5 h-3.5" />
               </button>
             )}
@@ -1118,7 +1168,7 @@ function MessageBubble({
         {!isUser && msg.is_offline_fallback && (
           <div className="mb-2 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-[11px] font-bold flex items-center gap-1.5 shadow-2xs">
             <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <span>Answered offline (unconfirmed) • ऑफ़लाइन उत्तर (अपुष्ट)</span>
+            <span>{l('ऑफ़लाइन उत्तर (अपुष्ट)', 'Answered offline (unconfirmed)')}</span>
           </div>
         )}
         <div className="leading-relaxed text-xs sm:text-sm">
@@ -1147,7 +1197,7 @@ function MessageBubble({
                       onClick={skipToEnd}
                       className="text-[10px] text-muted dark:text-muted hover:text-primary transition-colors cursor-pointer opacity-70 hover:opacity-100"
                     >
-                      Pura dikhayein ↓
+                      {l('पूरा दिखाएं ↓', 'Show full response ↓')}
                     </button>
                   )}
                 </div>
@@ -1163,16 +1213,16 @@ function MessageBubble({
               <button
                 type="button"
                 onClick={onStartCorrection}
-                className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400 hover:text-sage dark:hover:text-booti-glow transition-colors"
-                title="Pichla lakshan sudharein"
+                className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400 hover:text-sage dark:hover:text-booti-glow transition-colors cursor-pointer"
+                title={l('पिछला लक्षण सुधारें', 'Correct previous symptom')}
               >
                 <Edit3 className="w-3 h-3" />
-                <span>यह सही नहीं था / correct this</span>
+                <span>{l('सुधार करें', 'Correct this')}</span>
               </button>
             ) : (
               <form onSubmit={onSubmitCorrection} className="mt-1 space-y-1.5 animate-fadeIn">
                 <p className="text-[10px] font-semibold text-sage dark:text-booti-glow">
-                  Apna lakshan sahi karein:
+                  {l('अपना लक्षण सही करें:', 'Correct your symptom:')}
                 </p>
                 <div className="flex items-center gap-1.5">
                   <input
@@ -1180,21 +1230,21 @@ function MessageBubble({
                     value={correctionText}
                     onChange={(e) => onCorrectionChange(e.target.value)}
                     className="flex-1 px-2.5 py-1 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[#131E2B] text-primary focus:outline-none focus:ring-1 focus:ring-sage"
-                    placeholder="Sahi lakshan likhein..."
+                    placeholder={l('सही लक्षण लिखें...', 'Type corrected symptom...')}
                     autoFocus
                   />
                   <button
                     type="submit"
-                    className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-sage text-white hover:bg-sage/90 transition-colors"
+                    className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-sage text-white hover:bg-sage/90 transition-colors cursor-pointer"
                   >
-                    Bhejein
+                    {l('भेजें', 'Send')}
                   </button>
                   <button
                     type="button"
                     onClick={onCancelCorrection}
-                    className="px-2 py-1 text-[11px] font-semibold rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300"
+                    className="px-2 py-1 text-[11px] font-semibold rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 cursor-pointer"
                   >
-                    Radd
+                    {l('रद्द', 'Cancel')}
                   </button>
                 </div>
               </form>
@@ -1218,7 +1268,7 @@ function MessageBubble({
                 className="touch-target w-full flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-bold py-2 px-3 rounded-xl border border-rose-500/30 transition-all cursor-pointer shadow-xs"
               >
                 <QrCode className="w-3.5 h-3.5 text-rose-500" />
-                <span>Tatkal Doctor Referral Pass (QR Code)</span>
+                <span>{l('तत्काल डॉक्टर रेफरल पास (QR)', 'Emergency Doctor Referral Pass (QR)')}</span>
               </button>
             )}
           </div>
@@ -1226,11 +1276,11 @@ function MessageBubble({
         {!isUser && msg.phase === 'CONCLUDED' && msg.remedies?.length > 0 && (
           <div className="mt-2.5 sm:mt-3 space-y-2 pt-2 border-t border-sage/10 dark:border-gray-700/40">
             <div className="text-[10px] sm:text-[11px] font-bold text-sage dark:text-booti-glow uppercase tracking-wider">
-              Sarkari AYUSH Pramanit Parcha (Verified Clinical Records):
+              {l('आयुष प्रमाणित उपचार पर्चा:', 'AYUSH Verified Clinical Prescription:')}
             </div>
             {msg.remedies.map((r, i) => <RemedyCard key={i} remedy={r} index={i} />)}
             <div className="py-2 px-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-900 dark:text-amber-200 text-center font-medium italic">
-              Yeh AI ka anumaan hai, doctor ka nidaan nahi — This is an AI estimate, not a doctor's diagnosis
+              {l('यह AI का प्रारंभिक अनुमान है, डॉक्टर का निश्चित निदान नहीं।', "This is an AI estimation, not a doctor's definitive diagnosis.")}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
               <button
@@ -1240,9 +1290,9 @@ function MessageBubble({
                 className="touch-target flex items-center justify-center gap-1.5 sm:gap-2 bg-gold-warm/15 hover:bg-gold-warm/25 text-primary dark:text-gold-warm text-xs font-bold py-2 sm:py-2.5 px-3 rounded-xl border border-gold-warm/30 transition-all disabled:opacity-60 cursor-pointer"
               >
                 {isDownloading && downloadingFormat === 'docx' ? (
-                  <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Taiyar ho raha hai…</>
+                  <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> {l('तैयार हो रहा है…', 'Preparing…')}</>
                 ) : (
-                  <><FileDown className="w-3.5 h-3.5" /> Parcha (.docx)</>
+                  <><FileDown className="w-3.5 h-3.5" /> {l('उपचार पर्चा (.docx)', 'Prescription (.docx)')}</>
                 )}
               </button>
               <button
@@ -1252,9 +1302,9 @@ function MessageBubble({
                 className="touch-target flex items-center justify-center gap-1.5 sm:gap-2 bg-sage/15 hover:bg-sage/25 text-primary dark:text-booti-glow text-xs font-bold py-2 sm:py-2.5 px-3 rounded-xl border border-sage/30 transition-all disabled:opacity-60 cursor-pointer"
               >
                 {isDownloading && downloadingFormat === 'pdf' ? (
-                  <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> PDF ban raha hai…</>
+                  <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> {l('PDF बन रहा है…', 'Generating PDF…')}</>
                 ) : (
-                  <><FileDown className="w-3.5 h-3.5 text-rose-500" /> Parcha (PDF)</>
+                  <><FileDown className="w-3.5 h-3.5 text-rose-500" /> {l('उपचार पर्चा (PDF)', 'Prescription (PDF)')}</>
                 )}
               </button>
             </div>
@@ -1272,7 +1322,7 @@ function MessageBubble({
                 className="touch-target w-full flex items-center justify-center gap-2 bg-booti-dark/10 hover:bg-booti-dark/20 dark:bg-booti-glow/10 dark:hover:bg-booti-glow/20 text-booti-dark dark:text-booti-glow text-xs font-bold py-2 sm:py-2.5 px-3 rounded-xl border border-booti-dark/30 dark:border-booti-glow/30 transition-all cursor-pointer mt-1"
               >
                 <QrCode className="w-4 h-4" />
-                <span>PHC Doctor Referral Pass (QR Code)</span>
+                <span>{l('प्राथमिक स्वास्थ्य केंद्र रेफरल पास (QR)', 'PHC Doctor Referral Pass (QR)')}</span>
               </button>
             )}
           </div>
@@ -1281,39 +1331,39 @@ function MessageBubble({
         {/* Helpful Feedback row for Bot responses */}
         {!isUser && !isStreaming && (
           <div className="mt-2.5 pt-1.5 flex items-center justify-between gap-2 text-[10px] text-gray-400 border-t border-sage/10 dark:border-gray-800">
-            <span className="truncate">Kya yeh salah upyogi thi?</span>
+            <span className="truncate">{l('क्या यह सलाह उपयोगी रही?', 'Was this advice helpful?')}</span>
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
                 onClick={() => {
                   setFeedback('yes');
-                  toast.success('Dhanyawad! Pratikriya darz ki gayi. 🙏');
+                  toast.success(l('धन्यवाद! आपकी प्रतिक्रिया दर्ज की गई। 🙏', 'Thank you! Your feedback has been recorded. 🙏'));
                 }}
                 className={`px-2 py-0.5 rounded-full flex items-center gap-1 transition-all cursor-pointer ${
                   feedback === 'yes'
                     ? 'bg-sage text-white font-bold'
                     : 'hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400'
                 }`}
-                title="Haan, upyogi thi"
+                title={l('हाँ, उपयोगी रही', 'Yes, it was helpful')}
               >
                 <ThumbsUp className="w-3 h-3" />
-                <span>Haan</span>
+                <span>{l('हाँ', 'Yes')}</span>
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setFeedback('no');
-                  toast.success('Dhanyawad! Hum ise sudharenge.');
+                  toast.success(l('धन्यवाद! हम इसे और सुधारेंगे।', 'Thank you! We will improve this.'));
                 }}
                 className={`px-2 py-0.5 rounded-full flex items-center gap-1 transition-all cursor-pointer ${
                   feedback === 'no'
                     ? 'bg-rose-soft text-white font-bold'
                     : 'hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400'
                 }`}
-                title="Nahi"
+                title={l('नहीं', 'No')}
               >
                 <ThumbsDown className="w-3 h-3" />
-                <span>Nahi</span>
+                <span>{l('नहीं', 'No')}</span>
               </button>
             </div>
           </div>

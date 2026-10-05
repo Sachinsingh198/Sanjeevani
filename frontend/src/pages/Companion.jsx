@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import {
   HeartHandshake, Mic, MicOff, Send, Volume2, VolumeX,
   Sparkles, Heart, PhoneCall, BookOpen, ShieldAlert,
@@ -19,7 +20,7 @@ const MOOD_OPTIONS = [
   { id: 'sad',       label: 'Udas Hoon',         sub: 'उदास',       icon: '🌧️', speak: 'Udaasi mehsoos ho rahi hai. Saathi aapko sunne ke liye taiyaar hai.', color: 'bg-rose-soft/15 text-rose-soft dark:text-rose-soft border-rose-soft/30' },
   { id: 'nostalgic', label: 'Yaadein Aa Rahi',   sub: 'यादें',     icon: '💭', speak: 'Purani yaadein sataa rahi hain. Aaiye baatein karein.', color: 'bg-warm-indigo/15 text-primary dark:text-muted border-warm-indigo/30' },
   { id: 'anxious',   label: 'Chinta Hai',        sub: 'चिंता',     icon: '🍃', speak: 'Kisi baat ki chinta ya ghabrahat hai. Aaram se batayein.', color: 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border-amber-300' },
-  { id: 'peaceful',  label: 'Mann Shant Hai',    sub: 'शांत',      icon: '🌸', speak: 'Mann shaant aur prasann hai. Yeh bahut achhi baat hai.', color: 'bg-sage/15 text-sage dark:text-booti-glow border-sage/30' },
+  { id: 'peaceful',  label: 'Mann Shant Hai',    sub: 'शांत',      icon: '🌸', speak: 'Mann shaant aur prasann hai. Yeh bahut achhi बात hai.', color: 'bg-sage/15 text-sage dark:text-booti-glow border-sage/30' },
 ];
 
 /* ── Gateway Portals for Hierarchy (Pages inside Page) ─────────────────── */
@@ -27,49 +28,69 @@ const SAATHI_PORTALS = [
   {
     id: 'chat',
     slug: 'chat',
-    title: 'बातचीत कक्ष (Heart-to-Heart Chat)',
-    sub: 'साथी से अपने दिल की बात कहें',
-    desc: 'अकेलापन, मन का बोझ या कोई भी चिंता — साथी हमेशा बिना किसी झिझक के सुनने और सांत्वना देने के लिए तैयार है।',
+    titleHi: 'बातचीत कक्ष',
+    titleEn: 'Heart-to-Heart Chat',
+    subHi: 'साथी से अपने दिल की बात कहें',
+    subEn: 'Speak your heart out with your companion',
+    descHi: 'अकेलापन, मन का बोझ या कोई भी चिंता — साथी हमेशा बिना किसी झिझक के सुनने और सांत्वना देने के लिए तैयार है।',
+    descEn: 'Loneliness or worries — your companion is always here to listen and comfort you.',
     icon: '💬',
-    badge: '24x7 उपलब्ध',
+    badgeHi: '24x7 उपलब्ध',
+    badgeEn: '24x7 Available',
     badgeColor: 'bg-gold-warm/15 text-gold-warm border-gold-warm/30',
-    btnText: 'बातचीत कक्ष में प्रवेश करें →',
+    btnTextHi: 'बातचीत कक्ष में प्रवेश करें →',
+    btnTextEn: 'Enter Chat Room →',
     btnColor: 'bg-gold-warm text-primary hover:bg-gold-warm/90',
   },
   {
     id: 'voice',
     slug: 'chat?voice=1',
-    title: 'आवाज़ में संवाद (Live Voice Room)',
-    sub: 'बिना लिखे सिर्फ बोलकर बातें करें',
-    desc: 'टाइप करने की कोई आवश्यकता नहीं। बस बोलिए और साथी भाषिणी या सर्वम न्यूरल वाणी में आपसे सीधे बात करेगा।',
+    titleHi: 'आवाज़ में संवाद',
+    titleEn: 'Live Voice Room',
+    subHi: 'बिना लिखे सिर्फ बोलकर बातें करें',
+    subEn: 'Talk naturally without typing',
+    descHi: 'टाइप करने की कोई आवश्यकता नहीं। बस बोलिए और साथी भाषिणी या सर्वम न्यूरल वाणी में आपसे सीधे बात करेगा।',
+    descEn: 'No need to type. Just speak and your companion will respond in natural neural voice.',
     icon: '🎙️',
-    badge: 'न्यूरल वॉइस AI',
+    badgeHi: 'न्यूरल वॉइस AI',
+    badgeEn: 'Neural Voice AI',
     badgeColor: 'bg-sage/15 text-sage dark:text-booti-glow border-sage/30',
-    btnText: 'बोलकर बात शुरू करें →',
+    btnTextHi: 'बोलकर बात शुरू करें →',
+    btnTextEn: 'Start Speaking →',
     btnColor: 'bg-sage text-white hover:bg-sage/90',
   },
   {
     id: 'stories',
     slug: 'stories',
-    title: 'पहाड़ी लोक-कहानियां (Pahadi Stories & Folklore)',
-    sub: 'गढ़वाल और कुमाऊं की मिठास भरी प्रेरक कथाएं',
-    desc: 'उत्तराखंड की प्राचीन लोक-कहानियां, जो मन को सुकून देती हैं और प्रेरणा से भर देती हैं। ऑडियो में सुनें या पढ़ें।',
+    titleHi: 'पहाड़ी लोक-कहानियां',
+    titleEn: 'Pahadi Folk Stories',
+    subHi: 'गढ़वाल और कुमाऊं की मिठास भरी प्रेरक कथाएं',
+    subEn: 'Inspiring folklore from Garhwal & Kumaon',
+    descHi: 'उत्तराखंड की प्राचीन लोक-कहानियां, जो मन को सुकून देती हैं और प्रेरणा से भर देती हैं। ऑडियो में सुनें या पढ़ें।',
+    descEn: 'Traditional folk tales that bring calm and warmth. Listen aloud or read.',
     icon: '📖',
-    badge: 'ऑडियो वाचन',
+    badgeHi: 'ऑडियो वाचन',
+    badgeEn: 'Audio Narration',
     badgeColor: 'bg-purple-500/15 text-purple-600 dark:text-purple-300 border-purple-500/30',
-    btnText: 'कहानियां सुनें व पढ़ें →',
+    btnTextHi: 'कहानियां सुनें व पढ़ें →',
+    btnTextEn: 'Listen & Read Stories →',
     btnColor: 'bg-purple-600 text-white hover:bg-purple-700',
   },
   {
     id: 'help',
     slug: 'help',
-    title: 'सहायता व सुकून (Helpline & Self-Care)',
-    sub: 'Tele-MANAS, राष्ट्रीय हेल्पलाइन व 5 मिनट विश्राम',
-    desc: 'मुश्किल समय में तुरंत मदद के लिए 14416 व अन्य आपातकालीन नंबर, और मन को तुरंत शांत करने वाले सरल अभ्यास।',
+    titleHi: 'सहायता व सुकून',
+    titleEn: 'Helpline & Support',
+    subHi: 'Tele-MANAS, राष्ट्रीय हेल्पलाइन व 5 मिनट विश्राम',
+    subEn: 'Tele-MANAS, National Helpline & 5-min rest',
+    descHi: 'मुश्किल समय में तुरंत मदद के लिए 14416 व अन्य आपातकालीन नंबर, और मन को तुरंत शांत करने वाले सरल अभ्यास।',
+    descEn: 'Immediate toll-free help at 14416 and simple soothing exercises.',
     icon: '🆘',
-    badge: 'टोल-फ्री 14416',
+    badgeHi: 'टोल-फ्री 14416',
+    badgeEn: 'Toll-Free 14416',
     badgeColor: 'bg-rose-soft/15 text-rose-soft border-rose-soft/30',
-    btnText: 'सहायता केंद्र देखें →',
+    btnTextHi: 'सहायता केंद्र देखें →',
+    btnTextEn: 'View Help Center →',
     btnColor: 'bg-rose-soft text-white hover:bg-rose-soft/90',
   },
 ];
@@ -84,10 +105,10 @@ const QUICK_PROMPTS = [
 
 /* ── Tabs config ────────────────────────────────────────────────────────── */
 const TABS = [
-  { id: 'ghar',  icon: '🏠', label: 'Ghar',         sub: 'मुख्य द्वार' },
-  { id: 'baat',  icon: '💬', label: 'Baat Karein',  sub: 'बातचीत कक्ष' },
-  { id: 'kisse', icon: '📖', label: 'Kisse',         sub: 'कहानियां' },
-  { id: 'madad', icon: '🆘', label: 'Madad',         sub: 'सहायता' },
+  { id: 'ghar',  icon: '🏠', labelHi: 'मुख्य द्वार', labelEn: 'Home' },
+  { id: 'baat',  icon: '💬', labelHi: 'बातचीत कक्ष', labelEn: 'Chat Room' },
+  { id: 'kisse', icon: '📖', labelHi: 'कहानियां',     labelEn: 'Stories' },
+  { id: 'madad', icon: '🆘', labelHi: 'सहायता',       labelEn: 'Help & Care' },
 ];
 
 const INITIAL_MESSAGES = [
@@ -103,6 +124,7 @@ const INITIAL_MESSAGES = [
 
 export default function Companion() {
   const { user } = useAuth();
+  const { l, isHindi, toEnglishDigits } = useLanguage();
   const { subpage } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -347,7 +369,7 @@ export default function Companion() {
                   ? 'bg-sage/15 text-sage dark:text-booti-glow border-sage/30'
                   : 'bg-white dark:bg-warm-indigo text-muted border-gray-300 dark:border-gray-700'
               }`}
-              title={autoSpeak ? "आवाज़ चालू है / Voice On" : "आवाज़ बंद है / Voice Muted"}
+              title={autoSpeak ? l("आवाज़ चालू है", "Voice On") : l("आवाज़ बंद है", "Voice Muted")}
               aria-label="Toggle Voice"
             >
               {autoSpeak ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
@@ -372,8 +394,7 @@ export default function Companion() {
                 }`}
               >
                 <span className="text-lg sm:text-xl leading-none">{tab.icon}</span>
-                <span className="text-[10px] sm:text-xs font-bold tracking-wide">{tab.label}</span>
-                <span className="text-[9px] text-gray-500 dark:text-gray-400 hidden xs:inline">{tab.sub}</span>
+                <span className="text-[11px] sm:text-xs font-bold tracking-wide">{isHindi ? tab.labelHi : tab.labelEn}</span>
                 {active && (
                   <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-gold-warm rounded-full" />
                 )}
@@ -397,10 +418,10 @@ export default function Companion() {
               className="inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold text-gold-warm dark:text-gold-warm hover:underline cursor-pointer group"
             >
               <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:-translate-x-1 transition-transform" />
-              <span>← साथी मुख्य द्वार (Back to Saathi Hub)</span>
+              <span>{l('← साथी मुख्य द्वार', '← Back to Saathi Hub')}</span>
             </button>
             <span className="text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-full bg-gold-warm/15 text-gold-warm">
-              {activeTab === 'baat' ? '💬 बातचीत कक्ष (Chat Room)' : activeTab === 'kisse' ? '📖 लोक-कहानियां (Stories)' : '🆘 आपातकालीन मदद (Emergency)'}
+              {activeTab === 'baat' ? l('💬 बातचीत कक्ष', '💬 Chat Room') : activeTab === 'kisse' ? l('📖 लोक-कहानियां', '📖 Folk Stories') : l('🆘 आपातकालीन मदद', '🆘 Emergency Help')}
             </span>
           </div>
         )}
@@ -422,8 +443,7 @@ export default function Companion() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-4 sm:p-6">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-warm/90 text-primary text-[10px] sm:text-xs font-extrabold uppercase tracking-wider mb-1.5 w-fit shadow-md">
-                    <span>🍵 अपना पहाड़ी साथी</span>
-                    <span className="opacity-75">• Elder Companion</span>
+                    <span>🍵 {l('अपना पहाड़ी साथी', 'Elder Companion')}</span>
                   </div>
                   <h2 className="text-xl sm:text-2xl md:text-3xl font-serif font-bold text-white leading-tight drop-shadow-md">
                     "आओ बेटा, बैठो... मन का बोझ हल्का करो"
@@ -545,10 +565,10 @@ export default function Companion() {
                 <div>
                   <h2 className="font-serif text-base sm:text-lg font-bold text-primary flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-gold-warm" />
-                    साथी के मुख्य कक्ष व विभाग (Saathi Sub-Pages)
+                    {l('साथी के मुख्य कक्ष व विभाग', 'Saathi Dedicated Rooms')}
                   </h2>
                   <p className="text-[11px] sm:text-xs text-muted dark:text-muted">
-                    अपनी सुविधा अनुसार समर्पित कक्ष में प्रवेश करें:
+                    {l('अपनी सुविधा अनुसार समर्पित कक्ष में प्रवेश करें:', 'Enter the dedicated room of your choice:')}
                   </p>
                 </div>
               </div>
@@ -572,20 +592,20 @@ export default function Companion() {
                           {portal.icon}
                         </div>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${portal.badgeColor}`}>
-                          {portal.badge}
+                          {isHindi ? portal.badgeHi : portal.badgeEn}
                         </span>
                       </div>
                       <h3 className="font-serif font-bold text-sm sm:text-base text-primary mb-1">
-                        {portal.title}
+                        {isHindi ? portal.titleHi : portal.titleEn}
                       </h3>
                       <p className="text-xs text-muted dark:text-muted leading-relaxed mb-4">
-                        {portal.desc}
+                        {isHindi ? portal.descHi : portal.descEn}
                       </p>
                     </div>
 
                     <div className="pt-2 border-t border-gray-100 dark:border-gray-800/80 flex items-center justify-between">
                       <span className="text-xs font-bold text-gold-warm dark:text-gold-warm flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                        <span>{portal.btnText}</span>
+                        <span>{isHindi ? portal.btnTextHi : portal.btnTextEn}</span>
                       </span>
                     </div>
                   </div>
@@ -597,13 +617,13 @@ export default function Companion() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-serif text-base font-bold text-primary">
-                  💬 त्वरित शुरुआत (Quick Prompts)
+                  {l('💬 त्वरित शुरुआत', '💬 Quick Prompts')}
                 </h2>
                 <button
                   onClick={() => speakCue('Kisi ek tile ko dabaakar turant baat shuru karein.', 'hi-IN')}
                   className="flex items-center gap-1 text-xs text-gold-warm font-bold cursor-pointer"
                 >
-                  <Volume2 className="w-3.5 h-3.5" /> सुनें
+                  <Volume2 className="w-3.5 h-3.5" /> {l('सुनें', 'Listen')}
                 </button>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -630,7 +650,7 @@ export default function Companion() {
               className="w-full flex items-center justify-center gap-2.5 p-4 sm:p-5 rounded-2xl bg-gold-warm hover:bg-gold-warm/90 text-primary font-bold text-sm sm:text-base transition-all shadow-md active:scale-95 cursor-pointer"
             >
               <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
-              <span>साथी से सीधा संवाद शुरू करें (Enter Chat Room) →</span>
+              <span>{l('साथी से सीधा संवाद शुरू करें →', 'Enter Chat Room →')}</span>
             </button>
           </div>
         )}
@@ -658,11 +678,11 @@ export default function Companion() {
                   </div>
                   <div>
                     <h4 className="font-serif font-bold text-xs sm:text-sm text-primary leading-tight">
-                      संजीवनी साथी (Sanjeevani Saathi)
+                      {l('संजीवनी साथी', 'Sanjeevani Saathi')}
                     </h4>
                     <p className="text-[9px] sm:text-[10px] text-muted dark:text-muted flex items-center gap-1 mt-0.5">
                       <span className="w-2 h-2 rounded-full bg-sage inline-block animate-pulse" />
-                      हमेशा आपके साथ
+                      {l('हमेशा आपके साथ', 'Always with you')}
                     </p>
                   </div>
                 </div>
@@ -673,13 +693,13 @@ export default function Companion() {
                     onClick={() => handleSendMessage('Mujhe ek purani sundar kahani sunao.')}
                     className="hidden sm:inline-flex bg-white dark:bg-sand hover:bg-gray-100 dark:hover:bg-gray-700 px-2.5 py-1 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] transition-all cursor-pointer"
                   >
-                    📖 कहानी
+                    📖 {l('कहानी', 'Story')}
                   </button>
                   <button
                     onClick={() => navigate(`${basePath}/help`)}
                     className="bg-rose-soft/10 text-rose-soft hover:bg-rose-soft/20 px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer"
                   >
-                    🆘 मदद
+                    🆘 {l('मदद', 'Help')}
                   </button>
                 </div>
               </div>
@@ -703,12 +723,12 @@ export default function Companion() {
                         {!isUser && (
                           <div className="flex items-center justify-between gap-2 mb-1">
                             <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-gold-warm dark:text-gold-warm">
-                              साथी
+                              {l('साथी', 'Saathi')}
                             </span>
                             <button
                               onClick={() => speakCue(m.text, 'hi-IN')}
                               className="text-muted dark:text-muted hover:text-primary transition-colors p-0.5 cursor-pointer"
-                              title="बोलकर सुनाएं"
+                              title={l('बोलकर सुनाएं', 'Read aloud')}
                               aria-label="Speak aloud"
                             >
                               <Volume2 className="w-3.5 h-3.5" />
@@ -736,7 +756,7 @@ export default function Companion() {
                     <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-gold-warm text-primary flex items-center justify-center shrink-0 mr-1.5 sm:mr-2 text-xs sm:text-base">🤝</div>
                     <div className="bg-sand dark:bg-sand p-2.5 sm:p-3 rounded-2xl rounded-bl-none border border-gray-200 dark:border-gray-700 text-xs text-muted dark:text-muted flex items-center gap-2 animate-pulse">
                       <HeartHandshake className="w-4 h-4 text-gold-warm" />
-                      <span>स्नेह से सोच रहा हूँ...</span>
+                      <span>{l('स्नेह से सोच रहा हूँ...', 'Thinking warmly...')}</span>
                     </div>
                   </div>
                 )}
@@ -748,7 +768,7 @@ export default function Companion() {
                 {isListening && (
                   <div className="flex items-center justify-center gap-1.5 mb-1.5 text-rose-soft text-[11px] sm:text-xs font-bold animate-pulse">
                     <Mic className="w-3.5 h-3.5" />
-                    <span>आपकी आवाज़ सुन रहा हूँ... बोलिए (Listening)</span>
+                    <span>{l('आपकी आवाज़ सुन रहा हूँ... बोलिए', 'Listening... Please speak')}</span>
                   </div>
                 )}
                 <form
@@ -763,7 +783,7 @@ export default function Companion() {
                         ? 'bg-rose-soft text-white animate-pulse ring-2 ring-rose-400'
                         : 'bg-sage/15 text-sage dark:text-booti-glow border border-sage/30 hover:border-sage/60'
                     }`}
-                    title={isListening ? 'सुनना बंद करें' : 'बोलिए (Mic)'}
+                    title={isListening ? l('सुनना बंद करें', 'Stop listening') : l('बोलिए', 'Speak (Mic)')}
                     aria-label="Toggle Voice Input"
                   >
                     {isListening ? <MicOff className="w-4 h-4 text-white" /> : <Mic className="w-4 h-4" />}
@@ -779,7 +799,7 @@ export default function Companion() {
                         handleSendMessage();
                       }
                     }}
-                    placeholder={isListening ? 'आपकी आवाज़ सुन रहा हूँ...' : 'साथी से बात करें या बोलें...'}
+                    placeholder={isListening ? l('आपकी आवाज़ सुन रहा हूँ...', 'Listening...') : l('साथी से बात करें या बोलें...', 'Chat or speak with your companion...')}
                     className="flex-1 min-w-0 bg-gray-50 dark:bg-card border border-gray-300 dark:border-gray-700 rounded-xl sm:rounded-2xl px-3 py-1.5 sm:px-4 sm:py-2.5 text-xs sm:text-sm text-primary focus:outline-none focus:ring-2 focus:ring-gold-warm resize-none overflow-y-auto leading-normal min-h-[36px] max-h-[110px] transition-[height] duration-75"
                   />
                   <button
@@ -803,7 +823,7 @@ export default function Companion() {
                 className="inline-flex items-center gap-2 text-xs font-bold text-muted hover:text-gold-warm cursor-pointer transition-colors"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>← साथी मुख्य द्वार पर वापस जाएं (Back to Saathi Hub)</span>
+                <span>{l('← साथी मुख्य द्वार पर वापस जाएं', '← Back to Saathi Hub')}</span>
               </button>
             </div>
           </div>
@@ -843,11 +863,10 @@ export default function Companion() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent flex flex-col justify-end p-4 sm:p-6">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-600/90 text-white text-[10px] sm:text-xs font-extrabold uppercase tracking-wider mb-1.5 w-fit shadow-md">
-                    <span>🔥 पहाड़ी अलाव कथा</span>
-                    <span className="opacity-80">• Fireside Folklore</span>
+                    <span>🔥 {l('पहाड़ी अलाव कथा', 'Fireside Folklore')}</span>
                   </div>
                   <h3 className="text-xl sm:text-2xl md:text-3xl font-serif font-bold text-white leading-tight drop-shadow-md">
-                    पहाड़ों की मीठी कहानियां (Folk Stories Aloud)
+                    {l('पहाड़ों की मीठी कहानियां', 'Folk Stories Aloud')}
                   </h3>
                   <p className="text-xs sm:text-sm text-white/90 mt-1 max-w-xl leading-relaxed drop-shadow-sm">
                     पढ़ने की चिंता बिल्कुल छोड़िए! बस बटन दबाएं और अलाव की गर्माहट में दादी-नानी के किस्से सुनें।
@@ -870,7 +889,7 @@ export default function Companion() {
                     }`}
                   >
                     {playingStoryId === stories[0]?.id ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-                    <span>{playingStoryId === stories[0]?.id ? '⏸️ कहानी रोकें (Pause)' : '▶️ पहली कहानी सुनें (Listen First)'}</span>
+                    <span>{playingStoryId === stories[0]?.id ? l('⏸️ कहानी रोकें', '⏸️ Pause Story') : l('▶️ पहली कहानी सुनें', '▶️ Listen to First Story')}</span>
                   </button>
 
                   {playingStoryId && (
@@ -951,7 +970,7 @@ export default function Companion() {
                           }`}
                         >
                           {isPlaying ? <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-current" /> : <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />}
-                          <span>{isPlaying ? '⏸️ रोकें (Pause)' : '🔊 सुनें (Listen Aloud)'}</span>
+                          <span>{isPlaying ? l('⏸️ रोकें', '⏸️ Pause') : l('🔊 सुनें', '🔊 Listen Aloud')}</span>
                         </button>
                         <button
                           onClick={() => {
@@ -978,7 +997,7 @@ export default function Companion() {
                 className="inline-flex items-center gap-2 text-xs font-bold text-gold-warm hover:underline cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>← साथी मुख्य द्वार पर वापस जाएं (Back to Saathi Hub)</span>
+                <span>{l('← साथी मुख्य द्वार पर वापस जाएं', '← Back to Saathi Hub')}</span>
               </button>
             </div>
           </div>
@@ -1080,7 +1099,7 @@ export default function Companion() {
                 className="inline-flex items-center gap-2 text-xs font-bold text-gold-warm hover:underline cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>← साथी मुख्य द्वार पर वापस जाएं (Back to Saathi Hub)</span>
+                <span>{l('← साथी मुख्य द्वार पर वापस जाएं', '← Back to Saathi Hub')}</span>
               </button>
             </div>
           </div>

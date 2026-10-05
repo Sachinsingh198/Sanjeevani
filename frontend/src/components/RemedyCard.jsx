@@ -5,6 +5,7 @@ import {
   CheckCircle2, XCircle, Sparkles, AlertCircle, Info, Calendar
 } from 'lucide-react';
 import { speakText, stopAllVoiceAudio } from '../api/voiceClient';
+import { useLanguage } from '../context/LanguageContext';
 
 /**
  * Universal Botanical and Kitchen Ingredient Dictionary
@@ -167,6 +168,7 @@ const INGREDIENT_LOOKUP = [
 ];
 
 export default function RemedyCard({ remedy, index = 0 }) {
+  const { lang, l, isHindi, toEnglishDigits } = useLanguage();
   // Foldable sections to prevent the card from becoming oversized
   const [showRoutine, setShowRoutine] = useState(false);
   const [showSources, setShowSources] = useState(false);
@@ -222,8 +224,12 @@ export default function RemedyCard({ remedy, index = 0 }) {
         }
       );
     }
-    return matched;
-  }, [remedy]);
+    return matched.map(m => ({
+      ...m,
+      nameHi: isHindi ? m.nameHi.replace(/\s*\(.*?\)/, '') : (m.nameEn || m.nameHi.replace(/\s*\(.*?\)/, '')),
+      amount: toEnglishDigits(isHindi ? m.amount.replace(/\s*\(.*?\)/, '') : (m.amountEn || m.amount)),
+    }));
+  }, [remedy, isHindi, toEnglishDigits]);
 
   // 3. 3-Step Visual Preparation Pictograms
   const prepSteps = useMemo(() => {
@@ -235,21 +241,21 @@ export default function RemedyCard({ remedy, index = 0 }) {
     if (isNasya) {
       return [
         {
-          step: '१',
-          title: 'गुनगुना करें',
-          subtitle: 'तैल को हल्के गुनगुने पानी में रखकर कोसा करें',
+          step: '1',
+          title: isHindi ? 'गुनगुना करें' : 'Warm gently',
+          subtitle: isHindi ? 'तैल को हल्के गुनगुने पानी में रखकर कोसा करें' : 'Warm oil bottle in a cup of lukewarm water',
           icon: '💧',
         },
         {
-          step: '२',
-          title: 'सीधे लेटें',
-          subtitle: 'गर्दन पीछे झुकाकर आराम से लेटें',
+          step: '2',
+          title: isHindi ? 'सीधे लेटें' : 'Lie down comfortably',
+          subtitle: isHindi ? 'गर्दन पीछे झुकाकर आराम से लेटें' : 'Tilt head gently back and relax',
           icon: '🛌',
         },
         {
-          step: '३',
-          title: '२-२ बूंद डालें',
-          subtitle: 'दोनों नथुनों में २-२ बूंद डालें और सांस खींचें',
+          step: '3',
+          title: isHindi ? '2-2 बूंद डालें' : 'Instill 2 drops',
+          subtitle: isHindi ? 'दोनों नथुनों में 2-2 बूंद डालें और सांस खींचें' : 'Apply 2 drops in each nostril and inhale gently',
           icon: '🫒',
         }
       ];
@@ -258,21 +264,21 @@ export default function RemedyCard({ remedy, index = 0 }) {
     if (isSteam) {
       return [
         {
-          step: '१',
-          title: 'पानी उबालें',
-          subtitle: 'बर्तन में २ गिलास पानी खूब खौलाएं',
+          step: '1',
+          title: isHindi ? 'पानी उबालें' : 'Boil water',
+          subtitle: isHindi ? 'बर्तन में 2 गिलास पानी खूब खौलाएं' : 'Boil 2 glasses of fresh water in a pot',
           icon: '🫗',
         },
         {
-          step: '२',
-          title: 'सामग्री डालें',
-          subtitle: 'खौलते पानी में अजवाइन या चुटकीभर हल्दी डालें',
+          step: '2',
+          title: isHindi ? 'सामग्री डालें' : 'Add herbs',
+          subtitle: isHindi ? 'खौलते पानी में अजवाइन या चुटकीभर हल्दी डालें' : 'Add carom seeds or a pinch of turmeric',
           icon: '🟡',
         },
         {
-          step: '३',
-          title: 'भाप लें',
-          subtitle: 'सिर पर तौलिया ओढ़कर ५ से ७ मिनट भाप लें',
+          step: '3',
+          title: isHindi ? 'भाप लें' : 'Inhale steam',
+          subtitle: isHindi ? 'सिर पर तौलिया ओढ़कर 5 से 7 मिनट भाप लें' : 'Cover head with towel and inhale for 5-7 mins',
           icon: '♨️',
         }
       ];
@@ -281,21 +287,21 @@ export default function RemedyCard({ remedy, index = 0 }) {
     if (isLinctus) {
       return [
         {
-          step: '१',
-          title: 'चूर्ण लें',
-          subtitle: 'कटोरी में निर्धारित मात्रा में चूर्ण निकालें',
+          step: '1',
+          title: isHindi ? 'चूर्ण लें' : 'Measure powder',
+          subtitle: isHindi ? 'कटोरी में निर्धारित मात्रा में चूर्ण निकालें' : 'Take recommended herbal powder in a small bowl',
           icon: '🥣',
         },
         {
-          step: '२',
-          title: 'शहद मिलाएं',
-          subtitle: '१ चम्मच शहद डालकर अच्छी तरह लेह बनाएं',
+          step: '2',
+          title: isHindi ? 'शहद मिलाएं' : 'Mix with honey',
+          subtitle: isHindi ? '1 चम्मच शहद डालकर अच्छी तरह लेह बनाएं' : 'Add 1 tsp pure honey and mix thoroughly',
           icon: '🍯',
         },
         {
-          step: '३',
-          title: 'धीरे चाटें',
-          subtitle: 'उंगली से धीरे-धीरे चाटें, तुरंत पानी न पिएं',
+          step: '3',
+          title: isHindi ? 'धीरे चाटें' : 'Lick slowly',
+          subtitle: isHindi ? 'उंगली से धीरे-धीरे चाटें, तुरंत पानी न पिएं' : 'Lick slowly off spoon, avoid drinking water immediately',
           icon: '🥄',
         }
       ];
@@ -304,57 +310,60 @@ export default function RemedyCard({ remedy, index = 0 }) {
     // Default: Herbal Kwath / Kadha / Infusion
     return [
       {
-        step: '१',
-        title: 'पानी में मिलाएं',
-        subtitle: '२ कप पानी में सामग्री डालकर गैस पर रखें',
+        step: '1',
+        title: isHindi ? 'पानी में मिलाएं' : 'Combine in water',
+        subtitle: isHindi ? '2 कप पानी में सामग्री डालकर गैस पर रखें' : 'Add herbs to 2 cups of water on stove',
         icon: '🫗',
       },
       {
-        step: '२',
-        title: 'धीमी आंच पर उबालें',
-        subtitle: 'पानी १ कप (आधा) बचने तक धीमी आंच पर पकाएं',
+        step: '2',
+        title: isHindi ? 'धीमी आंच पर उबालें' : 'Simmer gently',
+        subtitle: isHindi ? 'पानी 1 कप (आधा) बचने तक धीमी आंच पर पकाएं' : 'Simmer until reduced to 1 cup',
         icon: '🔥',
       },
       {
-        step: '३',
-        title: 'छानकर गुनगुना पिएं',
-        subtitle: 'कप में छानकर घूंट-घूंट गुनगुना पिएं',
+        step: '3',
+        title: isHindi ? 'छानकर गुनगुना पिएं' : 'Strain and sip',
+        subtitle: isHindi ? 'कप में छानकर घूंट-घूंट गुनगुना पिएं' : 'Strain into cup and sip while comfortably warm',
         icon: '☕',
       }
     ];
-  }, [remedy]);
+  }, [remedy, isHindi]);
 
   // 4. Daily Routine Visual Schedule
   const routine = useMemo(() => {
     const dosage = remedy?.dosage || {};
-    const hindiDose = dosage.hindi || 'दिन में २ बार खाना खाने के ३० मिनट बाद गुनगुना पिएं';
-    const duration = dosage.duration || '३ से ५ दिन तक';
+    const rawHindiDose = dosage.hindi || 'दिन में 2 बार खाना खाने के 30 मिनट बाद गुनगुना पिएं';
+    const rawDuration = dosage.duration || '3 से 5 दिन तक';
+
+    const hindiDose = toEnglishDigits(rawHindiDose);
+    const duration = toEnglishDigits(rawDuration);
 
     return {
       morning: {
-        time: 'सुबह (Morning)',
-        desc: 'नाश्ते के ३० मिनट बाद',
-        dose: '१ कप गुनगुना',
+        time: isHindi ? 'सुबह' : 'Morning',
+        desc: isHindi ? 'नाश्ते के 30 मिनट बाद' : '30 mins after breakfast',
+        dose: isHindi ? '1 कप गुनगुना' : '1 warm cup',
         icon: Sun,
         color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800'
       },
       evening: {
-        time: 'शाम / रात (Evening/Night)',
-        desc: 'रात के भोजन के बाद',
-        dose: '१ कप गुनगुना',
+        time: isHindi ? 'शाम / रात' : 'Evening / Night',
+        desc: isHindi ? 'रात के भोजन के बाद' : 'After dinner',
+        dose: isHindi ? '1 कप गुनगुना' : '1 warm cup',
         icon: Moon,
         color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800'
       },
       duration: {
-        time: 'अवधि (Duration)',
+        time: isHindi ? 'अवधि' : 'Duration',
         desc: duration,
-        dose: '३-५ दिन नियम से लें',
+        dose: isHindi ? '3-5 दिन नियम से लें' : 'Take for 3-5 days',
         icon: Clock,
         color: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800'
       },
       summary: hindiDose
     };
-  }, [remedy]);
+  }, [remedy, isHindi, toEnglishDigits]);
 
   // 5. Dosha Balance Impact
   const doshaBadges = useMemo(() => {
@@ -519,7 +528,7 @@ export default function RemedyCard({ remedy, index = 0 }) {
         {/* ── 2. COMPACT INGREDIENTS SHELF (सामग्री) ────────────────── */}
         <div>
           <div className="text-[11px] uppercase font-extrabold tracking-wider text-sage dark:text-booti-glow flex items-center gap-1.5 mb-1.5">
-            <span>🌿</span> ज़रूरी सामान (Ingredients):
+            <span>🌿</span> {l('ज़रूरी सामग्री:', 'Key Ingredients:')}
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
@@ -547,7 +556,7 @@ export default function RemedyCard({ remedy, index = 0 }) {
         {/* ── 3. PICTOGRAPHIC 3-STEP PREPARATION (बनाने के कदम) ─────── */}
         <div>
           <div className="text-[11px] uppercase font-extrabold tracking-wider text-sage dark:text-booti-glow flex items-center gap-1.5 mb-1.5">
-            <span>🔥</span> बनाने के ३ आसान कदम (Preparation Steps):
+            <span>🔥</span> {l('बनाने के 3 आसान कदम:', '3-Step Preparation:')}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -561,7 +570,7 @@ export default function RemedyCard({ remedy, index = 0 }) {
                 </div>
                 <div>
                   <div className="flex items-center gap-1">
-                    <span className="text-[9px] font-extrabold px-1 py-0.2 rounded bg-sage/15 text-sage dark:text-booti-glow">
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-sage/15 text-sage dark:text-booti-glow">
                       {st.step}
                     </span>
                     <h4 className="font-bold text-xs text-primary dark:text-[#F4F6F0]">
@@ -580,7 +589,7 @@ export default function RemedyCard({ remedy, index = 0 }) {
         {/* ── 4. DOSHA IMPACT BADGES (दोष संतुलन) ───────────────────── */}
         <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
           <span className="text-[11px] font-bold text-muted dark:text-gray-400">
-            दोष असर:
+            {l('दोष प्रभाव:', 'Dosha Impact:')}
           </span>
           {doshaBadges.map((badge, bIdx) => {
             const IconComp = badge.icon;
@@ -606,11 +615,11 @@ export default function RemedyCard({ remedy, index = 0 }) {
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-sage dark:text-booti-glow" />
               <span className="text-xs font-bold text-primary dark:text-[#F4F6F0]">
-                ⏰ कब और कितना पीना है (Daily Routine & Timing)
+                ⏰ {l('दैनिक खुराक व समय', 'Daily Routine & Dosage Timing')}
               </span>
             </div>
             <div className="flex items-center gap-1 text-[11px] text-muted dark:text-gray-400 font-medium">
-              <span>{showRoutine ? 'छिपाएं' : 'देखें'}</span>
+              <span>{showRoutine ? l('छिपाएं', 'Hide') : l('देखें', 'View')}</span>
               {showRoutine ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </div>
           </button>
@@ -668,11 +677,11 @@ export default function RemedyCard({ remedy, index = 0 }) {
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span className="text-xs font-bold text-primary dark:text-[#F4F6F0]">
-                ⚖️ क्या करें और क्या न करें (Diet & Habits: Do's & Don'ts)
+                ⚖️ {l('आहार व परहेज (क्या करें / क्या न करें)', 'Diet & Habits (Do\'s & Don\'ts)')}
               </span>
             </div>
             <div className="flex items-center gap-1 text-[11px] text-muted dark:text-gray-400 font-medium">
-              <span>{showDiet ? 'छिपाएं' : 'देखें'}</span>
+              <span>{showDiet ? l('छिपाएं', 'Hide') : l('देखें', 'View')}</span>
               {showDiet ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </div>
           </button>
@@ -681,23 +690,23 @@ export default function RemedyCard({ remedy, index = 0 }) {
             <div className="p-2.5 bg-white dark:bg-[#121A24] border-t border-sage/10 dark:border-gray-700/60 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fadeIn">
               <div className="p-2 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
                 <div className="font-bold text-xs text-emerald-800 dark:text-emerald-300 mb-1 flex items-center gap-1">
-                  <span>✅</span> फ़ायदेमंद आदतें (Do's):
+                  <span>✅</span> {l('फ़ायदेमंद आदतें:', 'Beneficial Habits:')}
                 </div>
                 <ul className="text-[11px] text-emerald-900 dark:text-emerald-200 space-y-0.5">
-                  <li>• 💧 केवल गुनगुना पानी पिएं</li>
-                  <li>• 🥣 मूंग दाल या पतली खिचड़ी जैसा हल्का भोजन</li>
-                  <li>• 🛌 शरीर को पूरा आराम दें</li>
+                  <li>• 💧 {l('केवल गुनगुना पानी पिएं', 'Drink warm water only')}</li>
+                  <li>• 🥣 {l('मूंग दाल या पतली खिचड़ी जैसा हल्का भोजन', 'Light diet like moong dal or khichdi')}</li>
+                  <li>• 🛌 {l('शरीर को पूरा आराम दें', 'Get adequate rest')}</li>
                 </ul>
               </div>
 
               <div className="p-2 rounded-lg bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800">
                 <div className="font-bold text-xs text-rose-800 dark:text-rose-300 mb-1 flex items-center gap-1">
-                  <span>❌</span> परहेज़ (Don'ts):
+                  <span>❌</span> {l('परहेज़:', 'Avoid:')}
                 </div>
                 <ul className="text-[11px] text-rose-900 dark:text-rose-200 space-y-0.5">
-                  <li>• 🧊 फ्रिज का ठंडा पानी व बर्फ से बचें</li>
-                  <li>• 💨 ठंडी हवा, कूलर व धूल से बचें</li>
-                  <li>• 🌶️ बासी, तला-भुना या बहुत तीखा खाना न खाएं</li>
+                  <li>• 🧊 {l('फ्रिज का ठंडा पानी व बर्फ से बचें', 'Avoid chilled water and ice')}</li>
+                  <li>• 💨 {l('ठंडी हवा, कूलर व धूल से बचें', 'Protect from cold drafts and dust')}</li>
+                  <li>• 🌶️ {l('बासी, तला-भुना या बहुत तीखा खाना न खाएं', 'Avoid oily, stale or overly spicy food')}</li>
                 </ul>
               </div>
             </div>
@@ -714,11 +723,11 @@ export default function RemedyCard({ remedy, index = 0 }) {
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-sage dark:text-booti-glow" />
               <span className="text-xs font-bold text-primary dark:text-[#F4F6F0]">
-                🏛️ प्रामाणिक स्रोत व शास्त्रीय विवरण (Verified Sources & Rationale)
+                🏛️ {l('प्रामाणिक स्रोत व शास्त्रीय संदर्भ', 'Verified Ayurvedic References')}
               </span>
             </div>
             <div className="flex items-center gap-1 text-[11px] text-muted dark:text-gray-400 font-medium">
-              <span>{showSources ? 'छिपाएं' : 'देखें'}</span>
+              <span>{showSources ? l('छिपाएं', 'Hide') : l('देखें', 'View')}</span>
               {showSources ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </div>
           </button>
@@ -729,10 +738,10 @@ export default function RemedyCard({ remedy, index = 0 }) {
               {remedy.ayurvedic_note && (
                 <div>
                   <div className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-0.5">
-                    आयुर्वेदिक सम्प्राप्ति (Ayurvedic Rationale):
+                    {l('आयुर्वेदिक सम्प्राप्ति:', 'Ayurvedic Rationale:')}
                   </div>
                   <p className="text-xs text-[#1E2A43] dark:text-[#EAEFEA] leading-relaxed">
-                    {remedy.ayurvedic_note}
+                    {toEnglishDigits(remedy.ayurvedic_note)}
                   </p>
                 </div>
               )}
@@ -741,31 +750,31 @@ export default function RemedyCard({ remedy, index = 0 }) {
               {remedy.dosage && (
                 <div>
                   <div className="text-[10px] font-extrabold uppercase tracking-wider text-sage dark:text-booti-glow mb-1">
-                    उम्र अनुसार सटीक मात्रा (Age-Specific Dosage):
+                    {l('उम्र अनुसार सटीक मात्रा:', 'Age-Specific Dosage:')}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
                     {remedy.dosage.adult && (
                       <div className="p-1.5 rounded bg-mist/60 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
-                        <span className="font-bold text-gray-700 dark:text-gray-200">वयस्क (18+): </span>
-                        <span className="text-gray-600 dark:text-gray-400">{remedy.dosage.adult}</span>
+                        <span className="font-bold text-gray-700 dark:text-gray-200">{l('वयस्क (18+): ', 'Adults (18+): ')}</span>
+                        <span className="text-gray-600 dark:text-gray-400">{toEnglishDigits(remedy.dosage.adult)}</span>
                       </div>
                     )}
                     {remedy.dosage.elderly && (
                       <div className="p-1.5 rounded bg-mist/60 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
-                        <span className="font-bold text-gray-700 dark:text-gray-200">वरिष्ठ नागरिक: </span>
-                        <span className="text-gray-600 dark:text-gray-400">{remedy.dosage.elderly}</span>
+                        <span className="font-bold text-gray-700 dark:text-gray-200">{l('वरिष्ठ नागरिक: ', 'Elderly: ')}</span>
+                        <span className="text-gray-600 dark:text-gray-400">{toEnglishDigits(remedy.dosage.elderly)}</span>
                       </div>
                     )}
                     {remedy.dosage.child_6_12 && (
                       <div className="p-1.5 rounded bg-mist/60 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
-                        <span className="font-bold text-gray-700 dark:text-gray-200">बच्चे (6-12 वर्ष): </span>
-                        <span className="text-gray-600 dark:text-gray-400">{remedy.dosage.child_6_12}</span>
+                        <span className="font-bold text-gray-700 dark:text-gray-200">{l('बच्चे (6-12 वर्ष): ', 'Children (6-12 yrs): ')}</span>
+                        <span className="text-gray-600 dark:text-gray-400">{toEnglishDigits(remedy.dosage.child_6_12)}</span>
                       </div>
                     )}
                     {remedy.dosage.child_under_6 && (
                       <div className="p-1.5 rounded bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800">
-                        <span className="font-bold text-rose-700 dark:text-rose-300">६ वर्ष से कम: </span>
-                        <span className="text-rose-600 dark:text-rose-400">{remedy.dosage.child_under_6}</span>
+                        <span className="font-bold text-rose-700 dark:text-rose-300">{l('6 वर्ष से कम: ', 'Under 6 years: ')}</span>
+                        <span className="text-rose-600 dark:text-rose-400">{toEnglishDigits(remedy.dosage.child_under_6)}</span>
                       </div>
                     )}
                   </div>
@@ -776,10 +785,10 @@ export default function RemedyCard({ remedy, index = 0 }) {
               <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-700/60 text-xs">
                 <div className="flex items-center gap-1.5 text-muted dark:text-gray-400">
                   <BookOpen className="w-3.5 h-3.5 text-sage" />
-                  <span className="font-medium truncate max-w-[220px]">स्रोत: {remedy.source || 'CCRAS / AYUSH Formulary'}</span>
+                  <span className="font-medium truncate max-w-[220px]">{l('स्रोत:', 'Source:')} {remedy.source || 'CCRAS / AYUSH Formulary'}</span>
                 </div>
                 <span className="font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full text-[10px]">
-                  ✓ {remedy.safety_check || 'सुरक्षित'}
+                  ✓ {l('सुरक्षित', 'Verified Safe')}
                 </span>
               </div>
             </div>
@@ -790,9 +799,11 @@ export default function RemedyCard({ remedy, index = 0 }) {
         <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2 text-xs text-amber-900 dark:text-amber-200">
           <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div className="leading-tight text-[11px]">
-            <span className="font-bold">सलाह: </span>
-            यदि ३ से ५ दिन में आराम न मिले या तेज़ बुखार आए, तो तुरंत डॉक्टर को दिखाएं या{' '}
-            <strong className="underline">१०४ / १०८</strong> पर कॉल करें।
+            <span className="font-bold">{l('सलाह: ', 'Advisory: ')}</span>
+            {l(
+              'यदि 3 से 5 दिन में आराम न मिले या तेज़ बुखार आए, तो तुरंत डॉक्टर को दिखाएं या 104 / 108 पर कॉल करें।',
+              'If symptoms persist beyond 3-5 days or if high fever occurs, consult a doctor or call 104 / 108 immediately.'
+            )}
           </div>
         </div>
       </div>

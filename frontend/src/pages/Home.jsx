@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import {
   Mic, Eye, Heart, ShieldCheck, PhoneCall, Feather, Leaf,
   LogIn, ArrowRight, Wind, Activity, HeartHandshake, Sparkles, MessageSquare, Compass,
@@ -14,6 +15,7 @@ import OnboardingModal from '../components/OnboardingModal';
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
+  const { l, isHindi } = useLanguage();
   const navigate = useNavigate();
   const [showLiveRoom, setShowLiveRoom] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
@@ -60,31 +62,33 @@ export default function Home() {
             <div className="inline-flex items-center gap-2 bg-card dark:bg-card backdrop-blur-md border border-sage/25 shadow-xs px-3.5 py-1.5 rounded-full text-xs font-medium text-sage dark:text-[#A7C5A0]">
               <span className="w-2.5 h-2.5 rounded-full bg-[#8ED14C] animate-pulse" />
               <Leaf className="w-3.5 h-3.5 text-gold-warm" /> 
-              <span>Uttarakhand Gopeshwar & Chamoli • 108 Se Juda</span>
+              <span>{l('उत्तराखंड गोपेश्वर व चमोली • 108 से जुड़ा', 'Uttarakhand Gopeshwar & Chamoli • Linked with 108')}</span>
             </div>
             <button
               type="button"
               onClick={() => setShowOnboarding(true)}
               className="inline-flex items-center gap-1.5 bg-white/90 dark:bg-warm-indigo/90 hover:bg-white dark:hover:bg-warm-indigo border border-sage/35 hover:border-sage shadow-xs px-3.5 py-1.5 rounded-full text-xs font-bold text-primary dark:text-[#C8D4E0] transition-all cursor-pointer touch-target active:scale-95"
-              title="Sanjeevani kaise kaam karta hai"
+              title={l('संजीवनी कैसे काम करता है', 'How Sanjeevani works')}
             >
               <HelpCircle className="w-3.5 h-3.5 text-sage dark:text-booti-glow" />
-              <span>Kaise Kaam Karta Hai? (Guide)</span>
+              <span>{l('यह कैसे काम करता है?', 'How It Works')}</span>
             </button>
           </div>
 
           {/* Headline */}
           <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-primary leading-[1.14] mb-4">
-            Healthcare that speaks, <br />
+            {l('स्वास्थ्य सेवा जो बोलती है,', 'Healthcare that speaks,')} <br />
             <span className="italic font-serif font-normal text-sage dark:text-booti-glow">
-              listens and cares.
+              {l('सुनती है और परवाह करती है।', 'listens and cares.')}
             </span>
           </h1>
 
-          {/* Calming Subtitle in Hindi & English */}
+          {/* Calming Subtitle */}
           <p className="mt-4 text-base sm:text-lg text-muted dark:text-muted max-w-2xl mx-auto font-sans leading-relaxed">
-            Himalaya ke door-daraaz gaon ke liye surakshit clinical salah, dhyan, aur apnapan. 
-            Hindi ya Garhwali mein aaram se boliye — bina kisi jhijhak ke.
+            {l(
+              'हिमालय के दूरस्थ गांवों के लिए सुरक्षित चिकित्सीय सलाह, ध्यान और आत्मीयता। अपनी भाषा में आराम से बोलिए — बिना किसी झिझक के।',
+              'Safe clinical guidance, mindfulness, and care for remote Himalayan villages. Speak comfortably in your language — without hesitation.'
+            )}
           </p>
 
           {/* Voice Guide Audio Introduction */}
@@ -98,24 +102,24 @@ export default function Home() {
             <button
               onClick={handleVoiceAction}
               className="touch-target-lg group relative inline-flex items-center justify-center gap-3.5 px-8 py-5 rounded-full bg-gradient-to-r from-[#2B4A30] via-[#5A7855] to-[#2B4A30] text-white font-semibold text-lg sm:text-xl shadow-xl shadow-sage/30 hover:shadow-sage/45 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer"
-              aria-label="Sanjeevani se baat karein - Voice consultation shuru karein"
+              aria-label="Sanjeevani Voice consultation"
             >
               <span className="absolute -inset-1 rounded-full bg-[#8ED14C]/30 blur-md group-hover:blur-lg opacity-75 group-hover:opacity-100 transition-opacity animate-pulse pointer-events-none" />
               <div className="relative w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-mist">
                 <Mic className="w-5 h-5 animate-bounce" />
               </div>
-              <span className="relative tracking-wide">🎙 Bolkar Kahen (Speak Now)</span>
+              <span className="relative tracking-wide">{l('🎙 बोलकर कहें', '🎙 Speak Now')}</span>
             </button>
 
             {/* Fallback Text Input Option */}
             <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-muted dark:text-muted">
-              <span>Ya fir:</span>
+              <span>{l('या फिर:', 'Or:')}</span>
               <Link
                 to={isAuthenticated ? "/mitra/chat" : "/login"}
                 className="inline-flex items-center gap-1.5 font-medium text-sage dark:text-booti-glow hover:underline underline-offset-4 touch-target"
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>Likh kar batayein (Type your symptoms)</span>
+                <span>{l('लिखकर बताएं', 'Type your symptoms')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -128,7 +132,7 @@ export default function Home() {
                   className="inline-flex items-center gap-2 bg-white dark:bg-warm-indigo border border-sage/30 px-5 py-2.5 rounded-2xl font-medium text-sm text-primary shadow-xs hover:border-sage transition-all tactile-card"
                 >
                   <Compass className="w-4 h-4 text-sage" />
-                  <span>Apne Dashboard Par Jayein ({user?.role === 'admin' ? 'Admin' : user?.role === 'asha' ? 'ASHA' : 'Mitra'})</span>
+                  <span>{l('अपने डैशबोर्ड पर जाएं', 'Go to Dashboard')} ({user?.role === 'admin' ? 'Admin' : user?.role === 'asha' ? 'ASHA' : 'Mitra'})</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               ) : (
@@ -138,21 +142,21 @@ export default function Home() {
                     className="inline-flex items-center gap-2 bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 px-5 py-2.5 rounded-2xl text-sm font-medium text-primary dark:text-gray-200 hover:border-sage shadow-xs transition-all tactile-card"
                   >
                     <Compass className="w-4 h-4 text-sage" />
-                    <span>Explore Sanjeevani</span>
+                    <span>{l('संजीवनी का परिचय', 'Explore Sanjeevani')}</span>
                   </Link>
                   <Link
                     to="/login"
                     className="inline-flex items-center gap-2 bg-white dark:bg-warm-indigo border border-gray-200 dark:border-gray-700 px-5 py-2.5 rounded-2xl text-sm font-medium text-primary dark:text-gray-200 hover:border-sage shadow-xs transition-all tactile-card"
                   >
                     <LogIn className="w-4 h-4 text-sage" />
-                    <span>Login</span>
+                    <span>{l('लॉगिन करें', 'Login')}</span>
                   </Link>
                   <Link
                     to="/register"
                     className="inline-flex items-center gap-2 bg-sand dark:bg-sand border border-gold-warm/40 px-5 py-2.5 rounded-2xl text-sm font-medium text-gold-warm dark:text-gold-warm hover:border-gold-warm shadow-xs transition-all tactile-card"
                   >
                     <Heart className="w-4 h-4 text-gold-warm" />
-                    <span>Register</span>
+                    <span>{l('पंजीकरण करें', 'Register')}</span>
                   </Link>
                 </>
               )}
@@ -162,7 +166,7 @@ export default function Home() {
 
           <p className="text-xs text-muted dark:text-muted mt-6 flex items-center justify-center gap-1.5">
             <Feather className="w-3.5 h-3.5 text-gold-warm" /> 
-            Gopeshwar, Chamoli, Rudraprayag ke pahadi ilaqo ke liye 24/7 uplabdh
+            {l('गोपेश्वर, चमोली, रुद्रप्रयाग के पहाड़ी क्षेत्रों के लिए 24/7 उपलब्ध', 'Available 24/7 across Gopeshwar, Chamoli and Himalayan regions')}
           </p>
         </div>
       </section>
@@ -171,10 +175,10 @@ export default function Home() {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-16 relative z-10">
         <div className="text-center mb-8">
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-primary">
-            Char Stambh: Swasthya, Dhyan, Yoga aur Apno Ka Saath
+            {l('चार स्तंभ: स्वास्थ्य, ध्यान, योग और अपनों का साथ', 'Four Pillars: Health, Mindfulness, Yoga and Care')}
           </h2>
           <p className="text-xs sm:text-sm text-muted dark:text-muted mt-2 max-w-xl mx-auto">
-            Himalayi jeevan mein shaaririk arogya, aatmik shanti aur akelepan se mukti ke chaar aadhar.
+            {l('हिमालयी जीवन में शारीरिक आरोग्य, आत्मिक शांति और अकेलेपन से मुक्ति के चार आधार।', 'Four foundations for physical wellness, mental peace, and elder companionship in the hills.')}
           </p>
         </div>
 
@@ -190,17 +194,17 @@ export default function Home() {
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div className="text-[11px] font-bold tracking-wider uppercase text-sage dark:text-booti-glow mb-1">
-                Clinical Sahyog
+                {l('चिकित्सीय सहयोग', 'Clinical Care')}
               </div>
               <h3 className="font-serif font-bold text-lg text-primary">
-                Sehat (Swasthya Jaanch)
+                {l('स्वास्थ्य जांच व सलाह', 'Health Check & Triage')}
               </h3>
               <p className="text-xs text-muted dark:text-muted mt-2 leading-relaxed">
-                Apne lakshan batayein. AYUSH gharelu nuskhe, nazdeeki PHC salah aur 108 emergency madad.
+                {l('अपने लक्षण बताएं। आयुष घरेलू उपचार, नजदीकी प्राथमिक स्वास्थ्य केंद्र की सलाह और 108 आपातकालीन सहायता।', 'Share your symptoms for AYUSH home remedies, nearest PHC advice, and 108 emergency triage.')}
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800/80 flex items-center text-xs font-semibold text-sage dark:text-booti-glow group-hover:translate-x-1 transition-transform">
-              <span>Jaanch Shuru Karein</span>
+              <span>{l('जांच शुरू करें', 'Start Checkup')}</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
             </div>
           </Link>
@@ -215,17 +219,17 @@ export default function Home() {
                 <Wind className="w-6 h-6" />
               </div>
               <div className="text-[11px] font-bold tracking-wider uppercase text-gold-warm dark:text-gold-warm mb-1">
-                Aatmik Shanti
+                {l('आत्मिक शांति', 'Mental Calm')}
               </div>
               <h3 className="font-serif font-bold text-lg text-primary">
-                Dhyan Guru (Pranayama)
+                {l('प्राणायाम व ध्यान', 'Pranayama & Meditation')}
               </h3>
               <p className="text-xs text-muted dark:text-muted mt-2 leading-relaxed">
-                Anulom-Vilom, Bhramari saans kriya aur Tibetan singing bowls ki aawaz ke saath mann shant karein.
+                {l('अनुलोम-विलोम, भ्रामरी श्वास क्रिया और तिब्बती सिंगिंग बाउल्स की ध्वनि के साथ मन को शांत करें।', 'Calm your mind with Anulom-Vilom, Bhramari breathwork, and Tibetan singing bowl resonance.')}
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800/80 flex items-center text-xs font-semibold text-gold-warm dark:text-gold-warm group-hover:translate-x-1 transition-transform">
-              <span>Dhyan Lagayein</span>
+              <span>{l('ध्यान लगाएं', 'Begin Meditation')}</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
             </div>
           </Link>
@@ -240,17 +244,17 @@ export default function Home() {
                 <Activity className="w-6 h-6" />
               </div>
               <div className="text-[11px] font-bold tracking-wider uppercase text-primary dark:text-muted mb-1">
-                Sharir Ki Mudra
+                {l('शरीर की मुद्रा', 'Body Posture')}
               </div>
               <h3 className="font-serif font-bold text-lg text-primary">
-                Yogashala (AI Coach)
+                {l('योगशाला एआई कोच', 'Yogashala AI Coach')}
               </h3>
               <p className="text-xs text-muted dark:text-muted mt-2 leading-relaxed">
-                Camera se aasan ki jaanch. Reerh ki haddi ka posture sudharein aur aawaz dwara margdarshan payein.
+                {l('कैमरे से आसन की जांच करें। रीढ़ की हड्डी का पोस्चर सुधारें और वाणी द्वारा मार्गदर्शन पाएं।', 'Real-time camera posture tracking. Correct spinal alignment with audio guidance.')}
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800/80 flex items-center text-xs font-semibold text-primary dark:text-muted group-hover:translate-x-1 transition-transform">
-              <span>Aasan Shuru Karein</span>
+              <span>{l('आसन शुरू करें', 'Start Yoga')}</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
             </div>
           </Link>
@@ -265,17 +269,17 @@ export default function Home() {
                 <HeartHandshake className="w-6 h-6" />
               </div>
               <div className="text-[11px] font-bold tracking-wider uppercase text-rose-soft dark:text-rose-soft mb-1">
-                Mann Ka Haal
+                {l('मन का हाल', 'Heart-to-Heart')}
               </div>
               <h3 className="font-serif font-bold text-lg text-primary">
-                Sanjeevani Saathi
+                {l('संजीवनी साथी', 'Sanjeevani Companion')}
               </h3>
               <p className="text-xs text-muted dark:text-muted mt-2 leading-relaxed">
-                Akelepan se doori. Dil ki baat sunne wala sathi jo bhavnaon ka aadar kare aur kisse-kahaniyan sunaye.
+                {l('अकेलेपन से राहत। दिल की बात सुनने वाला साथी जो भावनाओं का आदर करे और कहानियां सुनाए।', 'A warm friend to talk to, hear folk stories, and overcome isolation.')}
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800/80 flex items-center text-xs font-semibold text-rose-soft dark:text-rose-soft group-hover:translate-x-1 transition-transform">
-              <span>Baat Shuru Karein</span>
+              <span>{l('बात शुरू करें', 'Start Conversation')}</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
             </div>
           </Link>
@@ -296,14 +300,14 @@ export default function Home() {
               className="inline-flex items-center gap-1.5 font-bold text-rose-soft dark:text-rose-soft hover:underline touch-target"
             >
               <PhoneCall className="w-3.5 h-3.5" />
-              <span>Aapaatkaal: Dial 108</span>
+              <span>{l('आपातकाल: 108 डायल करें', 'Emergency: Dial 108')}</span>
             </a>
             <span className="text-gray-300 dark:text-gray-700">|</span>
             <a 
               href="tel:104"
               className="hover:underline touch-target"
             >
-              Medical Helpline: 104
+              {l('स्वास्थ्य हेल्पलाइन: 104', 'Medical Helpline: 104')}
             </a>
           </div>
         </div>

@@ -12,8 +12,10 @@ import { runClientDiagnosticScreening } from '../lib/offlineScreeningEngine';
 import { queueOfflineScreening } from '../lib/offlineSyncManager';
 import PageVoiceGuide from '../components/PageVoiceGuide';
 import BackButton from '../components/BackButton';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Screening() {
+  const { l, isHindi, toEnglishDigits } = useLanguage();
   const [screeningType, setScreeningType] = useState('ANEMIA');
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -33,35 +35,35 @@ export default function Screening() {
   // Screening modalities metadata
   const modalities = {
     ANEMIA: {
-      title: 'Khoon Ki Kami (Anemia)',
-      subtitle: 'Palpebral Conjunctiva Pallor • CIELAB Erythema Index',
+      title: l('खून की कमी', 'Anemia Screening'),
+      subtitle: l('कंजंक्टिवा पेलोर • एरिथेमा इंडेक्स', 'Palpebral Conjunctiva Pallor • CIELAB Erythema Index'),
       icon: Eye,
       color: 'var(--rose-soft)',
-      guideText: 'Aankh ki neeche wali palak ko halke se neeche kheenchiye taaki laal/gulabi hissa saaf dikhe. Daylight mein bina flash ke photo kheinchein.',
+      guideText: l('आंख की नीचे वाली पलक को हल्के से नीचे खींचिए ताकि गुलाबी हिस्सा साफ दिखे। प्राकृतिक रोशनी में बिना फ्लैश के फोटो लें।', 'Gently pull down lower eyelid to expose the pink conjunctiva. Capture in natural daylight without flash.'),
       placeholderSample: 'anemia'
     },
     JAUNDICE: {
-      title: 'Peeliya (Jaundice)',
-      subtitle: 'Scleral Icterus • HSV Yellow-Shift & Bilirubin Estimation',
+      title: l('पीलिया जांच', 'Jaundice Screening'),
+      subtitle: l('स्क्लेरल इक्टेरस • बिलिरूबिन अनुमान', 'Scleral Icterus • Bilirubin Estimation'),
       icon: Activity,
       color: 'var(--gold-warm)',
-      guideText: 'Aankh ke safed bhaag (sclera) ki saaf tasveer lein. Suraj ki prakritik roshni mein camera ke samne seedhe dekhein.',
+      guideText: l('आंख के सफेद भाग की साफ तस्वीर लें। सूरज की प्राकृतिक रोशनी में कैमरे के सामने सीधे देखें।', 'Capture a clear image of the white of the eye. Look straight at the camera in natural daylight.'),
       placeholderSample: 'jaundice'
     },
     ORAL: {
-      title: 'Mukh Rog (Oral Lesions)',
-      subtitle: 'Leukoplakia White Patches & Tobacco Mucosa Screening',
+      title: l('मुख रोग', 'Oral Lesions Screening'),
+      subtitle: l('ल्यूकोप्लाकिया सफेद चकत्ते • म्यूकोसा जांच', 'Leukoplakia White Patches • Tobacco Mucosa Screening'),
       icon: FlaskConical,
       color: 'var(--gold-warm)',
-      guideText: 'Munh khol kar gaal ke andar ki deewar (buccal mucosa) ya jeebh par bane safed dhabbe par camera focus karein.',
+      guideText: l('मुंह खोल कर गाल के अंदर की दीवार या जीभ पर बने सफेद धब्बे पर कैमरा फोकस करें।', 'Open mouth and focus camera clearly on inner cheek or tongue lesion.'),
       placeholderSample: 'oral'
     },
     SKIN: {
-      title: 'Twacha Rog (Skin Lesions)',
-      subtitle: 'Cutaneous Erythema & Fungal Ringworm (Tinea) Screening',
+      title: l('त्वचा रोग', 'Skin Lesions Screening'),
+      subtitle: l('एरिथेमा व फंगल इन्फेक्शन जांच', 'Cutaneous Erythema & Fungal Ringworm Screening'),
       icon: Layers,
       color: 'var(--sage)',
-      guideText: 'Prabhavit twacha ke kshetra ko saaf roshni mein rakhein. Kharash ya daad ke ghere ko kendrit karein.',
+      guideText: l('प्रभावित त्वचा के क्षेत्र को साफ रोशनी में रखें। दाद या चकत्ते के घेरे को केंद्रित करें।', 'Keep the affected skin area in bright light. Center the lesion in frame.'),
       placeholderSample: 'skin'
     }
   };
@@ -253,7 +255,7 @@ export default function Screening() {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         console.warn('[Screening] Navigator offline — using client-side canvas engine');
         data = await runClientDiagnosticScreening(screeningType, fileToSend || selectedImage);
-        toast('ऑफ़लाइन AI जांच (On-Device CV Engine)', { icon: '👁️' });
+        toast(l('ऑन-डिवाइस ऑफ़लाइन AI जांच', 'On-Device Offline AI Screening'), { icon: '👁️' });
       } else {
         // 2. Online: Try backend first, gracefully fallback to on-device engine on error/timeout
         try {
@@ -270,18 +272,18 @@ export default function Screening() {
         } catch (serverErr) {
           console.warn('[Screening] Backend server unavailable — gracefully falling back to on-device CV engine:', serverErr);
           data = await runClientDiagnosticScreening(screeningType, fileToSend || selectedImage);
-          toast('सर्वर अनुपलब्ध: ऑन-डिवाइस AI जांच सक्रिय', { icon: '⚡' });
+          toast(l('सर्वर अनुपलब्ध: ऑन-डिवाइस AI जांच सक्रिय', 'Server offline: On-device AI screening active'), { icon: '⚡' });
         }
       }
 
       setResult({
         type: data.screening_type === 'ANEMIA'
-          ? 'Khoon Ki Kami (Anemia Screening)'
+          ? l('खून की कमी जांच', 'Anemia Screening')
           : data.screening_type === 'JAUNDICE'
-          ? 'Peeliya (Jaundice Screening)'
+          ? l('पीलिया जांच', 'Jaundice Screening')
           : data.screening_type === 'ORAL_MUCOSA'
-          ? 'Mukh Rog (Oral Leukoplakia Screening)'
-          : 'Twacha Rog (Skin Lesion Screening)',
+          ? l('मुख रोग जांच', 'Oral Leukoplakia Screening')
+          : l('त्वचा रोग जांच', 'Skin Lesion Screening'),
         biomarker: data.biomarker,
         score: data.calculated_index,
         threshold: data.cutoff_threshold,
@@ -348,15 +350,15 @@ export default function Screening() {
       
       {/* ── Universal Back Button for Mobile & Desktop ─────────────────── */}
       <div className="flex items-center justify-between pb-3 max-w-4xl mx-auto">
-        <BackButton fallback="/mitra" label="वापस जाएं (Back)" />
-        <span className="text-xs text-muted font-medium hidden sm:inline">डिजिटल स्वास्थ्य जांच • AI Screening</span>
+        <BackButton fallback="/mitra" label={l('वापस जाएं', 'Back')} />
+        <span className="text-xs text-muted font-medium hidden sm:inline">{l('डिजिटल स्वास्थ्य जांच', 'Digital AI Screening')}</span>
       </div>
 
       {/* ── Header ────────────────────────────────────────────── */}
       <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
         <div className="inline-flex items-center gap-2 bg-sage/10 dark:bg-sage/20 text-sage dark:text-booti-glow px-4 py-1.5 rounded-full text-xs font-bold mb-3 border border-sage/20">
           <Eye className="w-4 h-4 text-gold-warm" />
-          <span>Netra & Mukh Edge Jaanch • Non-Invasive Diagnostics</span>
+          <span>{l('नेत्र व मुख डिजिटल स्वास्थ्य जांच', 'Non-Invasive Vision & Oral Screening')}</span>
         </div>
         <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-primary leading-tight">
           Pahadi Kshetra Digital Swasthya Jaanch
@@ -618,10 +620,10 @@ export default function Screening() {
           <div className="bg-mist dark:bg-card p-4 rounded-2xl border border-sage/15 dark:border-gray-800 text-xs space-y-1.5 text-muted dark:text-muted">
             <div className="flex items-center gap-1.5 font-bold text-primary">
               <Info className="w-4 h-4 text-sage" />
-              <span>Sahi Tasveer Lene Ke Niyam ({modalities[screeningType].title}):</span>
+              <span>{l('सही तस्वीर लेने के निर्देश', 'Photography Guidelines')} — {modalities[screeningType].title}:</span>
             </div>
             <p>• {modalities[screeningType].guideText}</p>
-            <p>• Camera flash off rakhein taaki natural tissue color reflect ho.</p>
+            <p>• {l('कैमरा फ्लैश बंद रखें ताकि प्राकृतिक ऊतक रंग स्पष्ट दिखे।', 'Keep camera flash off to reflect natural tissue color.')}</p>
           </div>
 
           {/* Action Trigger Button */}
@@ -632,9 +634,9 @@ export default function Screening() {
             className="touch-target w-full bg-sage hover:bg-sage/90 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 shadow-md shadow-sage/20 transition-all"
           >
             {loading ? (
-              <><RefreshCw className="w-5 h-5 animate-spin" /> Biomarker Scan Ho Raha Hai…</>
+              <><RefreshCw className="w-5 h-5 animate-spin" /> {l('बायोमार्कर स्कैन जारी है...', 'Scanning Biomarkers...')}</>
             ) : (
-              <><CheckCircle2 className="w-5 h-5" /> AI Biomarker Jaanch Shuru Karein</>
+              <><CheckCircle2 className="w-5 h-5" /> {l('एआई बायोमार्कर जांच शुरू करें', 'Start AI Biomarker Screening')}</>
             )}
           </button>
         </div>
@@ -836,7 +838,7 @@ export default function Screening() {
                   className="px-4 py-2.5 bg-sage hover:bg-sage/90 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Try Again (पुनः प्रयास करें)</span>
+                  <span>{l('पुनः प्रयास करें', 'Try Again')}</span>
                 </button>
               </div>
             </div>

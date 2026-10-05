@@ -17,7 +17,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isAdmin, isAsha, isPatient, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { t } = useLanguage();
+  const { t, l } = useLanguage();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
@@ -46,9 +46,24 @@ export default function Navbar() {
   }, [location.pathname]);
 
   const morePatientLinks = [
-    { name: 'प्रोफाइल व सेटिंग्स (Profile & Settings)', path: '/profile', icon: User, desc: 'Personal details, ABHA ID, comorbidity & activity logs' },
-    { name: 'नेत्र जांच (Eye Screening)', path: '/mitra/screen', icon: Eye, desc: 'Non-invasive anemia & jaundice screening' },
-    { name: 'संजीवनी के बारे में (About)', path: '/about', icon: Info, desc: 'Project mission, team & ethical AI' },
+    {
+      name: l('प्रोफाइल व सेटिंग्स', 'Profile & Settings'),
+      path: '/profile',
+      icon: User,
+      desc: l('व्यक्तिगत विवरण, आभा आईडी व स्वास्थ्य सेटिंग्स', 'Personal details, ABHA ID & app settings')
+    },
+    {
+      name: l('नेत्र जांच', 'Eye Screening'),
+      path: '/mitra/screen',
+      icon: Eye,
+      desc: l('गैर-आक्रामक एनीमिया व पीलिया प्राथमिक जांच', 'Non-invasive anemia & jaundice screening')
+    },
+    {
+      name: l('संजीवनी के बारे में', 'About Sanjeevani'),
+      path: '/about',
+      icon: Info,
+      desc: l('परियोजना मिशन, टीम व सुरक्षित स्वास्थ्य एआई', 'Project mission, team & ethical health AI')
+    },
   ];
 
   const brandHomePath = !isAuthenticated
@@ -177,7 +192,7 @@ export default function Navbar() {
                     : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
               >
-                Home
+                {t('nav_home')}
               </Link>
 
               <Link
@@ -189,7 +204,7 @@ export default function Navbar() {
                 }`}
               >
                 <Stethoscope className="w-3.5 h-3.5 text-gold-warm" />
-                <span>Sehat</span>
+                <span>{l('स्वास्थ्य सलाह', 'Consultation')}</span>
               </Link>
 
               <Link
@@ -201,7 +216,7 @@ export default function Navbar() {
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
-                <span>Wellness (आरोग्य)</span>
+                <span>{l('आरोग्य', 'Wellness')}</span>
               </Link>
 
               <Link
@@ -213,7 +228,7 @@ export default function Navbar() {
                 }`}
               >
                 <HeartHandshake className="w-3.5 h-3.5 text-rose-soft" />
-                <span>Saathi</span>
+                <span>{l('साथी', 'Saathi')}</span>
               </Link>
 
               {/* More Dropdown */}
@@ -338,46 +353,48 @@ export default function Navbar() {
         <div className="md:hidden mt-3 pt-3 border-t border-gray-200 dark:border-gray-800 space-y-2 animate-fadeIn">
           {/* Mobile Accessibility & Language Bar */}
           <div className="bg-sage/10 dark:bg-card/60 p-2.5 rounded-2xl flex items-center justify-between gap-2 mb-2 border border-sage/20">
-            <span className="text-[11px] font-bold text-primary">भाषा व फॉन्ट (Lang & Size):</span>
+            <span className="text-[11px] font-bold text-primary">{l('भाषा व फॉन्ट:', 'Language & Font:')}</span>
             <AccessibilityBar />
           </div>
           {!isAuthenticated ? (
             <>
               <Link to="/" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                Home
+                {t('nav_home')}
               </Link>
               <Link to="/about" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                About
+                {t('nav_about')}
               </Link>
               <Link to="/login" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold bg-sage text-white shadow-xs">
-                <LogIn className="w-4 h-4" /> Sign In
+                <LogIn className="w-4 h-4" /> {t('login')}
               </Link>
               <Link to="/register" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold bg-gold-warm text-primary shadow-xs">
-                <Sparkles className="w-4 h-4" /> Sign Up (Naya Khata)
+                <Sparkles className="w-4 h-4" /> {t('register')}
               </Link>
             </>
           ) : (
             <>
               {isPatient && (
                 <>
-                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted dark:text-muted">Sanjeevani Mitra Seva</div>
+                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted dark:text-muted">
+                    {l('संजीवनी मित्र सेवा', 'Sanjeevani Mitra Services')}
+                  </div>
                   <Link to="/mitra" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                    <SanjeevaniOrb state="idle" size={24} /> Home (Mitra Hub)
+                    <SanjeevaniOrb state="idle" size={24} /> {l('मुख्य सेवा', 'Main Services')}
                   </Link>
                   <Link to="/mitra/chat" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                    <Stethoscope className="w-4 h-4 text-gold-warm" /> Sehat (Clinical Triage)
+                    <Stethoscope className="w-4 h-4 text-gold-warm" /> {l('स्वास्थ्य सलाह', 'Health Consultation')}
                   </Link>
                   <Link to="/mitra/wellness" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                    <Sparkles className="w-4 h-4 text-gold-warm" /> Wellness Studio (आरोग्यशाला)
+                    <Sparkles className="w-4 h-4 text-gold-warm" /> {l('आरोग्य स्टूडियो', 'Wellness Studio')}
                   </Link>
                   <Link to="/mitra/saathi" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                    <HeartHandshake className="w-4 h-4 text-rose-soft" /> Sanjeevani Saathi (Companionship)
+                    <HeartHandshake className="w-4 h-4 text-rose-soft" /> {l('संजीवनी साथी', 'Sanjeevani Saathi')}
                   </Link>
                   <Link to="/mitra/screen" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                    <Eye className="w-4 h-4 text-sage" /> Aankhon Ki Jaanch (Eye Screening)
+                    <Eye className="w-4 h-4 text-sage" /> {l('नेत्र जांच', 'Eye Screening')}
                   </Link>
                   <Link to="/about" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                    <Info className="w-4 h-4 text-gold-warm" /> About Sanjeevani
+                    <Info className="w-4 h-4 text-gold-warm" /> {l('संजीवनी के बारे में', 'About Sanjeevani')}
                   </Link>
                 </>
               )}
@@ -415,7 +432,7 @@ export default function Navbar() {
                   className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-primary hover:bg-black/5 dark:hover:bg-white/5"
                 >
                   <User className="w-4 h-4 text-sage" />
-                  <span>प्रोफाइल व सेटिंग्स (Profile & Settings)</span>
+                  <span>{l('प्रोफाइल व सेटिंग्स', 'Profile & Settings')}</span>
                 </Link>
 
                 <button
@@ -423,7 +440,7 @@ export default function Navbar() {
                   className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-bold text-rose-soft dark:text-rose-soft hover:bg-rose-soft/10 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out ({user.name})</span>
+                  <span>{l('लॉग आउट', 'Sign Out')} ({user.name})</span>
                 </button>
               </div>
             </>

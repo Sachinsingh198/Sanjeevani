@@ -27,49 +27,49 @@ import {
 } from '../api/voiceClient';
 
 const COMMON_CONDITIONS = [
-  'Hypertension (हाई बीपी)',
-  'Type 2 Diabetes (मधुमेह)',
-  'Asthma / Respiratory (दमा / सांस की दिक्कत)',
-  'Joint Pain / Arthritis (जोड़ों का दर्द)',
-  'Thyroid (थायराइड)',
-  'Acidity / GERD (गैस / पित्त)',
+  { id: 'hypertension', hi: 'उच्च रक्तचाप', en: 'Hypertension' },
+  { id: 'diabetes', hi: 'टाइप 2 मधुमेह', en: 'Type 2 Diabetes' },
+  { id: 'asthma', hi: 'दमा / सांस की समस्या', en: 'Asthma / Respiratory' },
+  { id: 'joint_pain', hi: 'जोड़ों का दर्द', en: 'Joint Pain / Arthritis' },
+  { id: 'thyroid', hi: 'थायराइड', en: 'Thyroid' },
+  { id: 'acidity', hi: 'अम्लता / पित्त', en: 'Acidity / GERD' },
 ];
 
-export const ALL_SUPPORTED_LANGUAGES = [
+const ALL_SUPPORTED_LANGUAGES = [
   // Hill & Core Languages
-  { code: 'hi', name: 'हिन्दी (Hindi)', native: 'हिन्दी', category: 'उत्तराखंड व मुख्य' },
-  { code: 'garh', name: 'गढ़वाली (Garhwali)', native: 'गढ़वाळी', category: 'उत्तराखंड व मुख्य' },
-  { code: 'ku', name: 'कुमाऊँनी (Kumaoni)', native: 'कुमाऊँनी', category: 'उत्तराखंड व मुख्य' },
-  { code: 'en', name: 'English (English)', native: 'English', category: 'उत्तराखंड व मुख्य' },
+  { code: 'hi', name: 'हिन्दी', nameEn: 'Hindi', native: 'हिन्दी', category: 'उत्तराखंड व मुख्य' },
+  { code: 'garh', name: 'गढ़वाली', nameEn: 'Garhwali', native: 'गढ़वाळी', category: 'उत्तराखंड व मुख्य' },
+  { code: 'ku', name: 'कुमाऊँनी', nameEn: 'Kumaoni', native: 'कुमाऊँनी', category: 'उत्तराखंड व मुख्य' },
+  { code: 'en', name: 'अंग्रेज़ी', nameEn: 'English', native: 'English', category: 'उत्तराखंड व मुख्य' },
 
   // All 22 Scheduled Indic Languages (Bhashini & Sarvam)
-  { code: 'as', name: 'असमिया (Assamese)', native: 'অসমীয়া', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'bn', name: 'बांग्ला (Bengali)', native: 'বাংলা', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'brx', name: 'बोडो (Bodo)', native: 'बड़ो', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'doi', name: 'डोगरी (Dogri)', native: 'डोगरी', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'gu', name: 'गुजराती (Gujarati)', native: 'ગુજરાતી', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'kn', name: 'कन्नड़ (Kannada)', native: 'ಕನ್ನಡ', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'ks', name: 'कश्मीरी (Kashmiri)', native: 'कॉशुर / كٲشُر', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'kok', name: 'कोंकणी (Konkani)', native: 'कोंकणी', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'mai', name: 'मैथिली (Maithili)', native: 'मैथिली', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'ml', name: 'मलयालम (Malayalam)', native: 'മലയാളം', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'mni', name: 'मणिपुरी / मैतेई (Manipuri)', native: 'মৈতৈলোন্', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'mr', name: 'मराठी (Marathi)', native: 'मराठी', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'ne', name: 'नेपाली (Nepali)', native: 'नेपाली', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'or', name: 'ओड़िया (Odia)', native: 'ଓଡ଼ିଆ', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'pa', name: 'पंजाबी (Punjabi)', native: 'ਪੰਜਾਬੀ', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'sa', name: 'संस्कृत (Sanskrit)', native: 'संस्कृतम्', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'sat', name: 'संथाली (Santali)', native: 'संताली / ᱥᱟᱱᱛᱟᱲᱤ', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'sd', name: 'सिंधी (Sindhi)', native: 'सिन्धी / سنڌي', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'ta', name: 'तमिल (Tamil)', native: 'தமிழ்', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'te', name: 'तेलुगु (Telugu)', native: 'తెలుగు', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
-  { code: 'ur', name: 'उर्दू (Urdu)', native: 'اردو', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'as', name: 'असमिया', nameEn: 'Assamese', native: 'অসমীয়া', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'bn', name: 'बांग्ला', nameEn: 'Bengali', native: 'বাংলা', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'brx', name: 'बोडो', nameEn: 'Bodo', native: 'बड़ो', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'doi', name: 'डोगरी', nameEn: 'Dogri', native: 'डोगरी', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'gu', name: 'गुजराती', nameEn: 'Gujarati', native: 'ગુજરાતી', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'kn', name: 'कन्नड़', nameEn: 'Kannada', native: 'ಕನ್ನಡ', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'ks', name: 'कश्मीरी', nameEn: 'Kashmiri', native: 'कॉशुर / كٲشُر', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'kok', name: 'कोंकणी', nameEn: 'Konkani', native: 'कोंकणी', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'mai', name: 'मैथिली', nameEn: 'Maithili', native: 'मैथिली', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'ml', name: 'मलयालम', nameEn: 'Malayalam', native: 'മലയാളം', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'mni', name: 'मणिपुरी', nameEn: 'Manipuri', native: 'মৈতৈলোন্', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'mr', name: 'मराठी', nameEn: 'Marathi', native: 'मराठी', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'ne', name: 'नेपाली', nameEn: 'Nepali', native: 'नेपाली', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'or', name: 'ओड़िया', nameEn: 'Odia', native: 'ଓଡ଼ିଆ', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'pa', name: 'पंजाबी', nameEn: 'Punjabi', native: 'ਪੰਜਾਬੀ', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'sa', name: 'संस्कृत', nameEn: 'Sanskrit', native: 'संस्कृतम्', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'sat', name: 'संथाली', nameEn: 'Santali', native: 'संताली / ᱥᱟᱱᱛᱟᱲᱤ', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'sd', name: 'सिंधी', nameEn: 'Sindhi', native: 'सिन्धी / سنڌي', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'ta', name: 'तमिल', nameEn: 'Tamil', native: 'தமிழ்', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'te', name: 'तेलुगु', nameEn: 'Telugu', native: 'తెలుగు', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
+  { code: 'ur', name: 'उर्दू', nameEn: 'Urdu', native: 'اردو', category: 'संविधान की 22 आधिकारिक भाषाएँ' },
 ];
 
 export default function Profile() {
   const { user, updateUser, isAdmin, isAsha, isPatient, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage, t, lang, l, isHindi, toEnglishDigits } = useLanguage();
 
   const [activeTab, setActiveTab] = useState('personal'); // personal, health_or_role, activity, settings
 
@@ -419,8 +419,8 @@ export default function Profile() {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 pb-20 safe-bottom-nav space-y-6 sm:space-y-8 animate-fadeIn">
       {/* ── Universal Back Button for Mobile & Desktop ─────────────────── */}
       <div className="flex items-center justify-between pb-1">
-        <BackButton fallback="/mitra" label="वापस जाएं (Back)" />
-        <span className="text-xs text-muted font-medium hidden sm:inline">खाता सेटिंग्स • Profile & Preferences</span>
+        <BackButton fallback="/mitra" label={l('वापस जाएं', 'Back')} />
+        <span className="text-xs text-muted font-medium hidden sm:inline">{l('खाता सेटिंग्स एवं प्राथमिकताएं', 'Account Profile & Preferences')}</span>
       </div>
 
       {/* ── 1. Hero Header & Identity Card ──────────────────────────────── */}
@@ -520,7 +520,7 @@ export default function Profile() {
           }`}
         >
           <User className="w-4 h-4 shrink-0" />
-          <span className="truncate">व्यक्तिगत (Personal)</span>
+          <span className="truncate">{l('व्यक्तिगत', 'Personal')}</span>
         </button>
 
         <button
@@ -532,7 +532,7 @@ export default function Profile() {
           }`}
         >
           {isAsha ? <Building2 className="w-4 h-4 shrink-0" /> : <HeartPulse className="w-4 h-4 shrink-0" />}
-          <span className="truncate">{isAsha ? 'कार्य क्षेत्र (Field)' : 'स्वास्थ्य (Health)'}</span>
+          <span className="truncate">{isAsha ? l('कार्य क्षेत्र', 'Field Work') : l('स्वास्थ्य', 'Health')}</span>
         </button>
 
         <button
@@ -544,7 +544,7 @@ export default function Profile() {
           }`}
         >
           <Activity className="w-4 h-4 shrink-0" />
-          <span className="truncate">गतिविधि (Activity)</span>
+          <span className="truncate">{l('गतिविधि', 'Activity')}</span>
         </button>
 
         <button
@@ -556,7 +556,7 @@ export default function Profile() {
           }`}
         >
           <KeyRound className="w-4 h-4 shrink-0" />
-          <span className="truncate">सेटिंग्स (Settings)</span>
+          <span className="truncate">{l('सेटिंग्स', 'Settings')}</span>
         </button>
       </div>
 
@@ -567,8 +567,8 @@ export default function Profile() {
         <form onSubmit={handleProfileSave} className="bg-white dark:bg-warm-indigo/40 rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-white/10 shadow-sm space-y-6">
           <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/10 pb-4">
             <div>
-              <h2 className="text-lg font-serif font-bold text-primary">व्यक्तिगत जानकारी (Personal Information)</h2>
-              <p className="text-xs text-muted mt-0.5">Manage your contact, residential, and account identity details.</p>
+              <h2 className="text-lg font-serif font-bold text-primary">{l('व्यक्तिगत जानकारी', 'Personal Information')}</h2>
+              <p className="text-xs text-muted mt-0.5">{l('संपर्क, आवासीय और खाता विवरण प्रबंधित करें।', 'Manage your contact, residential, and account identity details.')}</p>
             </div>
             <button
               type="submit"
@@ -576,14 +576,14 @@ export default function Profile() {
               className="flex items-center gap-1.5 bg-sage hover:bg-sage/90 text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
-              <span>{savingProfile ? 'सुरक्षित हो रहा है...' : 'सुरक्षित करें (Save)'}</span>
+              <span>{savingProfile ? l('सुरक्षित हो रहा है...', 'Saving...') : l('सुरक्षित करें', 'Save Changes')}</span>
             </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {/* Full Name */}
             <div>
-              <label className="block text-xs font-bold text-primary mb-1.5">पूरा नाम (Full Name) *</label>
+              <label className="block text-xs font-bold text-primary mb-1.5">{l('पूरा नाम *', 'Full Name *')}</label>
               <input
                 type="text"
                 required
@@ -595,7 +595,7 @@ export default function Profile() {
 
             {/* Username */}
             <div>
-              <label className="block text-xs font-bold text-primary mb-1.5">उपयोगकर्ता नाम (Username)</label>
+              <label className="block text-xs font-bold text-primary mb-1.5">{l('उपयोगकर्ता नाम', 'Username')}</label>
               <input
                 type="text"
                 value={profileForm.username}
@@ -607,9 +607,9 @@ export default function Profile() {
             {/* Mobile Number (Read-only badge) */}
             <div>
               <label className="block text-xs font-bold text-primary mb-1.5 flex items-center justify-between">
-                <span>मोबाइल नंबर (Phone)</span>
+                <span>{l('मोबाइल नंबर', 'Phone Number')}</span>
                 <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5">
-                  <CheckCircle2 className="w-3 h-3" /> सत्यापित (Verified)
+                  <CheckCircle2 className="w-3 h-3" /> {l('सत्यापित', 'Verified')}
                 </span>
               </label>
               <input
@@ -622,7 +622,7 @@ export default function Profile() {
 
             {/* Email Address */}
             <div>
-              <label className="block text-xs font-bold text-primary mb-1.5">ईमेल / जीमेल (Email)</label>
+              <label className="block text-xs font-bold text-primary mb-1.5">{l('ईमेल पता', 'Email Address')}</label>
               <input
                 type="email"
                 placeholder="name@example.com"
@@ -634,7 +634,7 @@ export default function Profile() {
 
             {/* Age */}
             <div>
-              <label className="block text-xs font-bold text-primary mb-1.5">आयु (Age in years)</label>
+              <label className="block text-xs font-bold text-primary mb-1.5">{l('आयु (वर्ष)', 'Age (years)')}</label>
               <input
                 type="number"
                 min="1"
@@ -648,28 +648,28 @@ export default function Profile() {
 
             {/* Gender */}
             <div>
-              <label className="block text-xs font-bold text-primary mb-1.5">लिंग (Gender)</label>
+              <label className="block text-xs font-bold text-primary mb-1.5">{l('लिंग', 'Gender')}</label>
               <select
                 value={profileForm.gender}
                 onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/15 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage"
               >
-                <option value="Not Specified">Not Specified (उल्लेख नहीं)</option>
-                <option value="Female">Female (महिला)</option>
-                <option value="Male">Male (पुरुष)</option>
-                <option value="Other">Other (अन्य)</option>
+                <option value="Not Specified">{l('उल्लेख नहीं', 'Not Specified')}</option>
+                <option value="Female">{l('महिला', 'Female')}</option>
+                <option value="Male">{l('पुरुष', 'Male')}</option>
+                <option value="Other">{l('अन्य', 'Other')}</option>
               </select>
             </div>
 
             {/* Blood Group */}
             <div>
-              <label className="block text-xs font-bold text-primary mb-1.5">रक्त समूह (Blood Group)</label>
+              <label className="block text-xs font-bold text-primary mb-1.5">{l('रक्त समूह', 'Blood Group')}</label>
               <select
                 value={profileForm.blood_group}
                 onChange={(e) => setProfileForm({ ...profileForm, blood_group: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/15 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage"
               >
-                <option value="">Select Blood Group</option>
+                <option value="">{l('रक्त समूह चुनें', 'Select Blood Group')}</option>
                 <option value="A+">A+</option>
                 <option value="A-">A-</option>
                 <option value="B+">B+</option>
@@ -683,7 +683,7 @@ export default function Profile() {
 
             {/* Village / Gram Panchayat */}
             <div>
-              <label className="block text-xs font-bold text-primary mb-1.5">गांव / कस्बा (Village / Town)</label>
+              <label className="block text-xs font-bold text-primary mb-1.5">{l('गांव / कस्बा', 'Village / Town')}</label>
               <input
                 type="text"
                 placeholder="e.g. Mandal, Gopeshwar Ward 3"
@@ -695,7 +695,7 @@ export default function Profile() {
 
             {/* District */}
             <div>
-              <label className="block text-xs font-bold text-primary mb-1.5">जनपद (District)</label>
+              <label className="block text-xs font-bold text-primary mb-1.5">{l('जनपद', 'District')}</label>
               <input
                 type="text"
                 value={profileForm.district}
@@ -715,8 +715,8 @@ export default function Profile() {
             <form onSubmit={handleProfileSave} className="bg-white dark:bg-warm-indigo/40 rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-white/10 shadow-sm space-y-6">
               <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/10 pb-4">
                 <div>
-                  <h2 className="text-lg font-serif font-bold text-primary">स्वास्थ्य व आपातकालीन विवरण (Health Profile)</h2>
-                  <p className="text-xs text-muted mt-0.5">Helps Dr. Sanjeevani provide clinically tailored remedies and prevents drug interactions.</p>
+                  <h2 className="text-lg font-serif font-bold text-primary">{l('स्वास्थ्य व आपातकालीन विवरण', 'Health Profile')}</h2>
+                  <p className="text-xs text-muted mt-0.5">{l('डॉ. संजीवनी को उपयुक्त परामर्श देने और दवा प्रतिक्रियाओं को रोकने में मदद करता है।', 'Helps Dr. Sanjeevani provide clinically tailored remedies and prevents drug interactions.')}</p>
                 </div>
                 <button
                   type="submit"
@@ -724,7 +724,7 @@ export default function Profile() {
                   className="flex items-center gap-1.5 bg-sage hover:bg-sage/90 text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
-                  <span>{savingProfile ? 'सुरक्षित हो रहा है...' : 'सुरक्षित करें'}</span>
+                  <span>{savingProfile ? l('सुरक्षित हो रहा है...', 'Saving...') : l('सुरक्षित करें', 'Save Changes')}</span>
                 </button>
               </div>
 
@@ -759,7 +759,7 @@ export default function Profile() {
                 <div>
                   <label className="block text-xs font-bold text-primary mb-1.5 flex items-center gap-1.5">
                     <Heart className="w-3.5 h-3.5 text-rose-soft" />
-                    <span>आपातकालीन संपर्क का नाम (Emergency Contact Name)</span>
+                    <span>{l('आपातकालीन संपर्क का नाम', 'Emergency Contact Name')}</span>
                   </label>
                   <input
                     type="text"
@@ -773,7 +773,7 @@ export default function Profile() {
                 <div>
                   <label className="block text-xs font-bold text-primary mb-1.5 flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-rose-soft" />
-                    <span>आपातकालीन फोन (Emergency Contact Phone)</span>
+                    <span>{l('आपातकालीन फोन', 'Emergency Contact Phone')}</span>
                   </label>
                   <input
                     type="tel"
@@ -788,30 +788,34 @@ export default function Profile() {
               {/* Comorbidities & Chronic Conditions */}
               <div>
                 <label className="block text-xs font-bold text-primary mb-2">
-                  पुरानी बीमारियां / शारीरिक स्थिति (Chronic Conditions / Comorbidities)
+                  {l('पुरानी बीमारियां / शारीरिक स्थिति', 'Chronic Conditions / Comorbidities')}
                 </label>
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {COMMON_CONDITIONS.map((cond) => {
-                    const isSelected = profileForm.comorbidities && profileForm.comorbidities.includes(cond);
+                  {COMMON_CONDITIONS.map((condObj) => {
+                    const label = isHindi ? condObj.hi : condObj.en;
+                    const isSelected = profileForm.comorbidities && (
+                      profileForm.comorbidities.includes(condObj.hi) ||
+                      profileForm.comorbidities.includes(condObj.en)
+                    );
                     return (
                       <button
-                        key={cond}
+                        key={condObj.id}
                         type="button"
-                        onClick={() => toggleCondition(cond)}
+                        onClick={() => toggleCondition(label)}
                         className={`text-xs px-3 py-1.5 rounded-full border transition-all cursor-pointer ${
                           isSelected
                             ? 'bg-sage text-white border-sage shadow-xs'
                             : 'bg-gray-50 dark:bg-white/5 text-muted hover:border-sage/40'
                         }`}
                       >
-                        {isSelected ? '✓ ' : '+ '} {cond}
+                        {isSelected ? '✓ ' : '+ '} {label}
                       </button>
                     );
                   })}
                 </div>
                 <textarea
                   rows="2"
-                  placeholder="अन्य चिकित्सीय स्थिति यहां लिखें (e.g. Heart surgery 2023, Kidney stones)..."
+                  placeholder={l('अन्य चिकित्सीय स्थिति यहां लिखें...', 'Write other medical conditions here...')}
                   value={profileForm.comorbidities}
                   onChange={(e) => setProfileForm({ ...profileForm, comorbidities: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/15 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage"
@@ -822,7 +826,7 @@ export default function Profile() {
               <div>
                 <label className="block text-xs font-bold text-primary mb-1.5 flex items-center gap-1.5">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                  <span>दवाओं से एलर्जी (Drug / Food Allergies)</span>
+                  <span>{l('दवाओं से एलर्जी', 'Drug / Food Allergies')}</span>
                 </label>
                 <input
                   type="text"
@@ -838,8 +842,8 @@ export default function Profile() {
             <form onSubmit={handleProfileSave} className="bg-white dark:bg-warm-indigo/40 rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-white/10 shadow-sm space-y-6">
               <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/10 pb-4">
                 <div>
-                  <h2 className="text-lg font-serif font-bold text-primary">ASHA कार्य क्षेत्र व प्रमाणन (Field Worker Credentials)</h2>
-                  <p className="text-xs text-muted mt-0.5">Government accredited village health activist assignment details.</p>
+                  <h2 className="text-lg font-serif font-bold text-primary">{l('ASHA कार्य क्षेत्र व प्रमाणन', 'Field Worker Credentials')}</h2>
+                  <p className="text-xs text-muted mt-0.5">{l('सरकारी मान्यता प्राप्त ग्राम स्वास्थ्य कार्यकर्ता विवरण।', 'Government accredited village health activist assignment details.')}</p>
                 </div>
                 <button
                   type="submit"
@@ -847,13 +851,13 @@ export default function Profile() {
                   className="flex items-center gap-1.5 bg-gold-warm text-primary font-bold text-xs sm:text-sm px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
-                  <span>{savingProfile ? 'सुरक्षित हो रहा है...' : 'सुरक्षित करें'}</span>
+                  <span>{savingProfile ? l('सुरक्षित हो रहा है...', 'Saving...') : l('सुरक्षित करें', 'Save Changes')}</span>
                 </button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-bold text-primary mb-1.5">ASHA पंजीकरण आईडी (Worker ID)</label>
+                  <label className="block text-xs font-bold text-primary mb-1.5">{l('ASHA पंजीकरण आईडी', 'ASHA Worker ID')}</label>
                   <input
                     type="text"
                     placeholder="e.g. ASHA-UK-CHAM-042"
@@ -864,7 +868,7 @@ export default function Profile() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-primary mb-1.5">संबद्ध प्राथमिक स्वास्थ्य केंद्र (Assigned PHC / Sub-Centre)</label>
+                  <label className="block text-xs font-bold text-primary mb-1.5">{l('संबद्ध प्राथमिक स्वास्थ्य केंद्र', 'Assigned PHC / Sub-Centre')}</label>
                   <input
                     type="text"
                     placeholder="e.g. PHC Mandal / CHC Gopeshwar"
@@ -875,7 +879,7 @@ export default function Profile() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-primary mb-1.5">कवरेज ग्राम पंचायत (Assigned Gram Panchayat)</label>
+                  <label className="block text-xs font-bold text-primary mb-1.5">{l('कवरेज ग्राम पंचायत', 'Assigned Gram Panchayat')}</label>
                   <input
                     type="text"
                     value={profileForm.village}
@@ -885,7 +889,7 @@ export default function Profile() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-primary mb-1.5">जिला चिकित्सालय (District Hospital Linkage)</label>
+                  <label className="block text-xs font-bold text-primary mb-1.5">{l('जिला चिकित्सालय संबद्धता', 'District Hospital Linkage')}</label>
                   <input
                     type="text"
                     disabled
@@ -899,8 +903,8 @@ export default function Profile() {
               <div className="p-4 rounded-2xl bg-gold-warm/15 border border-gold-warm/30 flex items-start gap-3">
                 <BadgeCheck className="w-5 h-5 text-gold-warm shrink-0 mt-0.5" />
                 <div className="text-xs text-primary space-y-1">
-                  <p className="font-bold">Offline-First Field Sync Active</p>
-                  <p className="text-muted">Encounters logged offline in remote Himalayan valleys are auto-stamped with your ASHA Worker ID and batch synced to the state NHM registry once cellular or WiFi signal is restored.</p>
+                  <p className="font-bold">{l('ऑफ़लाइन-प्रथम फील्ड सिंक सक्रिय', 'Offline-First Field Sync Active')}</p>
+                  <p className="text-muted">{l('रिमोट हिमालयी घाटियों में दर्ज डेटा आपके ASHA वर्कर आईडी से सुरक्षित रहता है और सिग्नल मिलने पर सिंक हो जाता है।', 'Encounters logged offline in remote Himalayan valleys are auto-stamped with your ASHA Worker ID and batch synced to the state NHM registry once cellular or WiFi signal is restored.')}</p>
                 </div>
               </div>
             </form>
@@ -914,12 +918,12 @@ export default function Profile() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-serif font-bold text-primary">गतिविधि इतिहास व ऑडिट ट्रेल (Activity Logs)</h2>
+                <h2 className="text-lg font-serif font-bold text-primary">{l('गतिविधि इतिहास व ऑडिट ट्रेल', 'Activity Logs')}</h2>
                 <span className="text-xs font-mono font-bold bg-sage/15 text-sage dark:text-booti-glow px-2 py-0.5 rounded-full">
-                  {activityTotal} Recorded
+                  {activityTotal} {l('दर्ज', 'Recorded')}
                 </span>
               </div>
-              <p className="text-xs text-muted mt-0.5">Chronological record of logins, consultations, eye screenings, and offline synchronizations.</p>
+              <p className="text-xs text-muted mt-0.5">{l('लॉगिन, परामर्श, जांच और ऑफ़लाइन सिंक्रोनाइज़ेशन का समयबद्ध रिकॉर्ड।', 'Chronological record of logins, consultations, eye screenings, and offline synchronizations.')}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -932,7 +936,7 @@ export default function Profile() {
                       ashaScope === 'my' ? 'bg-white dark:bg-warm-indigo text-primary shadow-xs' : 'text-muted'
                     }`}
                   >
-                    My Activity
+                    {l('मेरी गतिविधि', 'My Activity')}
                   </button>
                   <button
                     onClick={() => setAshaScope('village')}
@@ -940,7 +944,7 @@ export default function Profile() {
                       ashaScope === 'village' ? 'bg-gold-warm text-primary shadow-xs' : 'text-muted'
                     }`}
                   >
-                    Village Operations
+                    {l('ग्राम कार्य', 'Village Operations')}
                   </button>
                 </div>
               )}
@@ -977,26 +981,26 @@ export default function Profile() {
           {loadingActivity ? (
             <div className="py-12 flex flex-col items-center justify-center gap-3">
               <RefreshCw className="w-6 h-6 animate-spin text-sage" />
-              <p className="text-xs text-muted">गतिविधि लोड हो रही है...</p>
+              <p className="text-xs text-muted">{l('गतिविधि लोड हो रही है...', 'Loading activity...')}</p>
             </div>
           ) : activities.length === 0 ? (
             <div className="py-12 text-center text-muted text-xs bg-gray-50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
               <Activity className="w-8 h-8 mx-auto mb-2 text-muted/50" />
-              <p className="font-bold text-sm text-primary mb-1">कोई गतिविधि रिकॉर्ड नहीं मिली</p>
-              <p>No activity logs match the selected filter.</p>
+              <p className="font-bold text-sm text-primary mb-1">{l('कोई गतिविधि रिकॉर्ड नहीं मिली', 'No activity logs found')}</p>
+              <p>{l('चयनित फ़िल्टर के लिए कोई लॉग उपलब्ध नहीं है।', 'No activity logs match the selected filter.')}</p>
             </div>
           ) : (
             <div className="space-y-3">
               {activities.map((act) => {
                 const Icon = getActionIcon(act.action);
                 const colorClass = getActionBadgeColor(act.action);
-                const formattedTime = new Date(act.created_at).toLocaleString('hi-IN', {
+                const formattedTime = toEnglishDigits(new Date(act.created_at).toLocaleString('en-IN', {
                   day: '2-digit',
                   month: 'short',
                   year: 'numeric',
                   hour: '2-digit',
                   minute: '2-digit',
-                });
+                }));
 
                 return (
                   <div
@@ -1063,13 +1067,13 @@ export default function Profile() {
             <div className="border-b border-gray-200 dark:border-white/10 pb-3">
               <h2 className="text-base font-serif font-bold text-primary flex items-center gap-2">
                 <KeyRound className="w-4 h-4 text-gold-warm" />
-                <span>पासवर्ड बदलें (Change Password)</span>
+                <span>{l('पासवर्ड बदलें', 'Change Password')}</span>
               </h2>
-              <p className="text-xs text-muted mt-0.5">Ensure your account uses a strong, unique Himalayan health credential.</p>
+              <p className="text-xs text-muted mt-0.5">{l('सुनिश्चित करें कि आपका खाता एक मजबूत और अद्वितीय पासवर्ड का उपयोग करता है।', 'Ensure your account uses a strong, unique health credential.')}</p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-primary mb-1.5">वर्तमान पासवर्ड (Current Password) *</label>
+              <label className="block text-xs font-bold text-primary mb-1.5">{l('वर्तमान पासवर्ड *', 'Current Password *')}</label>
               <input
                 type="password"
                 required
@@ -1081,12 +1085,12 @@ export default function Profile() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-primary mb-1.5">नया पासवर्ड (New Password) *</label>
+              <label className="block text-xs font-bold text-primary mb-1.5">{l('नया पासवर्ड *', 'New Password *')}</label>
               <input
                 type="password"
                 required
                 minLength={6}
-                placeholder="Kam se kam 6 akshar"
+                placeholder={l('कम से कम 6 अक्षर', 'At least 6 characters')}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/15 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage"
@@ -1094,12 +1098,12 @@ export default function Profile() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-primary mb-1.5">नए पासवर्ड की पुष्टि (Confirm New Password) *</label>
+              <label className="block text-xs font-bold text-primary mb-1.5">{l('नए पासवर्ड की पुष्टि *', 'Confirm New Password *')}</label>
               <input
                 type="password"
                 required
                 minLength={6}
-                placeholder="Re-enter new password"
+                placeholder={l('नया पासवर्ड पुनः दर्ज करें', 'Re-enter new password')}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/15 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage"
@@ -1112,7 +1116,7 @@ export default function Profile() {
               className="w-full flex items-center justify-center gap-1.5 bg-sage hover:bg-sage/90 text-white text-xs sm:text-sm font-bold py-2.5 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
             >
               <Lock className="w-4 h-4" />
-              <span>{changingPassword ? 'पासवर्ड बदला जा रहा है...' : 'पासवर्ड अपडेट करें'}</span>
+              <span>{changingPassword ? l('पासवर्ड बदला जा रहा है...', 'Updating Password...') : l('पासवर्ड अपडेट करें', 'Update Password')}</span>
             </button>
           </form>
 
@@ -1122,22 +1126,22 @@ export default function Profile() {
               <div>
                 <h2 className="text-base font-serif font-bold text-primary flex items-center gap-2">
                   <Globe className="w-4 h-4 text-emerald-500" />
-                  <span>प्राथमिकताएं (App Preferences)</span>
+                  <span>{l('प्राथमिकताएं', 'App Preferences')}</span>
                 </h2>
-                <p className="text-xs text-muted mt-0.5">Customize audio, language and notification behaviors.</p>
+                <p className="text-xs text-muted mt-0.5">{l('ऑडियो, भाषा और सूचना प्राथमिकताएं अनुकूलित करें।', 'Customize audio, language and notification behaviors.')}</p>
               </div>
               <button
                 onClick={handleSettingsSave}
                 disabled={savingSettings}
                 className="text-xs bg-sage text-white font-bold px-3 py-1.5 rounded-xl shadow-xs cursor-pointer"
               >
-                {savingSettings ? '...' : 'Save'}
+                {savingSettings ? '...' : l('सहेजें', 'Save')}
               </button>
             </div>
 
             {/* Language Selection */}
             <div>
-              <label className="block text-xs font-bold text-primary mb-1.5">मुख्य भाषा (Default Language)</label>
+              <label className="block text-xs font-bold text-primary mb-1.5">{l('मुख्य भाषा', 'Default Language')}</label>
               <select
                 value={profileForm.language_preference}
                 onChange={(e) => {
@@ -1146,17 +1150,17 @@ export default function Profile() {
                 }}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/15 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage"
               >
-                <optgroup label="उत्तराखंड क्षेत्रीय व मुख्य भाषाएँ (Hill & Regional)">
-                  {ALL_SUPPORTED_LANGUAGES.filter((l) => l.category.includes('उत्तराखंड')).map((l) => (
-                    <option key={l.code} value={l.code}>
-                      {l.name}
+                <optgroup label={l('उत्तराखंड क्षेत्रीय व मुख्य भाषाएँ', 'Hill & Regional Languages')}>
+                  {ALL_SUPPORTED_LANGUAGES.filter((item) => item.category.includes('उत्तराखंड')).map((item) => (
+                    <option key={item.code} value={item.code}>
+                      {isHindi ? item.name : item.nameEn}
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="संविधान की 22 आधिकारिक भाषाएँ (All 22 Official Languages — Sarvam & Bhashini)">
-                  {ALL_SUPPORTED_LANGUAGES.filter((l) => l.category.includes('संविधान')).map((l) => (
-                    <option key={l.code} value={l.code}>
-                      {l.native} — {l.name}
+                <optgroup label={l('22 आधिकारिक भाषाएँ', '22 Official Languages')}>
+                  {ALL_SUPPORTED_LANGUAGES.filter((item) => item.category.includes('संविधान')).map((item) => (
+                    <option key={item.code} value={item.code}>
+                      {item.native} — {isHindi ? item.name : item.nameEn}
                     </option>
                   ))}
                 </optgroup>
@@ -1167,24 +1171,24 @@ export default function Profile() {
             <div>
               <label className="block text-xs font-bold text-primary mb-1.5 flex items-center gap-1.5">
                 <Volume2 className="w-3.5 h-3.5 text-sage" />
-                <span>डॉ. संजीवनी वाणी गति (Audio Voice Speed)</span>
+                <span>{l('डॉ. संजीवनी वाणी गति', 'Audio Voice Speed')}</span>
               </label>
               <select
                 value={ttsSpeed}
                 onChange={(e) => setTtsSpeed(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/15 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage"
               >
-                <option value="0.8">धीमी व स्पष्ट (0.8x - बुजुर्गों व पहाड़ी बोली के लिए उत्तम)</option>
-                <option value="1.0">सामान्य (1.0x Normal Speed)</option>
-                <option value="1.2">तीव्र (1.2x Fast Speed)</option>
+                <option value="0.8">{l('धीमी व स्पष्ट (0.8x)', 'Slow & Clear (0.8x)')}</option>
+                <option value="1.0">{l('सामान्य (1.0x)', 'Normal (1.0x)')}</option>
+                <option value="1.2">{l('तीव्र (1.2x)', 'Fast (1.2x)')}</option>
               </select>
             </div>
 
             {/* Dialect Translation Assistant Toggle */}
             <div className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
               <div>
-                <p className="text-xs font-bold text-primary">गढ़वाली / कुमाऊँनी अनुवादक (Dialect Assistant)</p>
-                <p className="text-[11px] text-muted">Auto-translates local hill terms (e.g. 'घण्ड' for throat, 'खोसी' for cough)</p>
+                <p className="text-xs font-bold text-primary">{l('पहाड़ी बोली अनुवादक', 'Hill Dialect Assistant')}</p>
+                <p className="text-[11px] text-muted">{l('स्थानीय पहाड़ी शब्दों का स्वचालित अनुवाद करता है', 'Auto-translates local hill terms')}</p>
               </div>
               <input
                 type="checkbox"
@@ -1197,8 +1201,8 @@ export default function Profile() {
             {/* Health SMS / Advisory Toggle */}
             <div className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
               <div>
-                <p className="text-xs font-bold text-primary">स्वास्थ्य सलाह सूचनाएं (District Advisories)</p>
-                <p className="text-[11px] text-muted">Receive alerts for seasonal waterborne shifts & vaccination drives</p>
+                <p className="text-xs font-bold text-primary">{l('स्वास्थ्य सलाह सूचनाएं', 'District Health Advisories')}</p>
+                <p className="text-[11px] text-muted">{l('मौसमी बदलाव और टीकाकरण अभियान के अलर्ट प्राप्त करें', 'Receive alerts for seasonal shifts & vaccination drives')}</p>
               </div>
               <input
                 type="checkbox"
@@ -1211,8 +1215,8 @@ export default function Profile() {
             {/* Session Management */}
             <div className="pt-2 border-t border-gray-200 dark:border-white/10 flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-primary">Active Device Session</p>
-                <p className="text-[11px] text-muted">Authenticated via Sanjeevani 2.0 Secure Token</p>
+                <p className="text-xs font-bold text-primary">{l('सक्रिय डिवाइस सत्र', 'Active Device Session')}</p>
+                <p className="text-[11px] text-muted">{l('संजीवनी 2.0 सुरक्षित टोकन द्वारा प्रमाणित', 'Authenticated via Sanjeevani 2.0 Secure Token')}</p>
               </div>
               <button
                 type="button"
@@ -1220,7 +1224,7 @@ export default function Profile() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Log Out</span>
+                <span>{l('लॉग आउट', 'Log Out')}</span>
               </button>
             </div>
           </div>
