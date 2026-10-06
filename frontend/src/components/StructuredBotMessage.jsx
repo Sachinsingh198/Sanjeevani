@@ -645,6 +645,9 @@ export default function StructuredBotMessage({
 
           // (c) Remedy / Nuskha
           if (secType === 'remedy') {
+            if (isConcluded && remedies && remedies.length > 0) {
+              return null;
+            }
             const bodyText = content.filter((c) => typeof c === 'string').join(' ');
             return (
               <div key={idx} className="space-y-1.5">
@@ -699,6 +702,9 @@ export default function StructuredBotMessage({
 
           // (d) Preparation / Kaise Banayein (Steps)
           if (secType === 'preparation') {
+            if (isConcluded && remedies && remedies.length > 0) {
+              return null;
+            }
             let stepCounter = 0;
             return (
               <div
@@ -748,6 +754,9 @@ export default function StructuredBotMessage({
 
           // (e) Dosage / Kab Tak Lein
           if (secType === 'dosage') {
+            if (isConcluded && remedies && remedies.length > 0) {
+              return null;
+            }
             const rawItems = content.filter((c) => typeof c === 'string');
             const items = extractBulletPoints(rawItems);
             return (

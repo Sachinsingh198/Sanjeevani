@@ -5,9 +5,16 @@ import urllib.request
 import logging
 from typing import Optional, Dict, Any, Tuple
 
-import mediapipe as mp
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
+try:
+    import mediapipe as mp
+    from mediapipe.tasks import python
+    from mediapipe.tasks.python import vision
+except ImportError:
+    mp = None
+    python = None
+    vision = None
+    logger = logging.getLogger("sanjeevani.face_landmarks")
+    logger.warning("MediaPipe is not installed; face landmark diagnostics will be disabled.")
 
 logger = logging.getLogger("sanjeevani.face_landmarks")
 
@@ -25,10 +32,13 @@ LIP_LANDMARKS = [
     0, 11, 12, 13, 14, 15, 16, 17
 ]
 
-_detector_instance: Optional[vision.FaceLandmarker] = None
+_detector_instance: Optional[Any] = None
 
 def _get_model_path() -> str:
     """Resolves local model file path, downloading to models_cache if absent."""
+    if vision is None or python is None:
+        raise RuntimeError("MediaPipe is not installed; face landmark detection is unavailable.")
+
     base_dir = os.getcwd()
     models_dir = os.path.join(base_dir, "models_cache")
     os.makedirs(models_dir, exist_ok=True)
@@ -44,9 +54,11 @@ def _get_model_path() -> str:
             raise
     return model_path
 
-def get_face_landmarker() -> Optional[vision.FaceLandmarker]:
+def get_face_landmarker() -> Optional[Any]:
     """Singleton getter for MediaPipe Face Landmarker."""
     global _detector_instance
+    if vision is None or python is None or mp is None:
+        return None
     if _detector_instance is not None:
         return _detector_instance
 

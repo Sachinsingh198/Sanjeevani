@@ -5,7 +5,7 @@ targeted follow-up questions, and differential diagnosis scoring.
 """
 
 import re
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, Set
 
 CLINICAL_SYMPTOM_REGISTRY: Dict[str, Dict[str, Any]] = {
     "allergic_rhinitis": {
@@ -554,12 +554,56 @@ PHRASE_WEIGHTS = {
     "ainthan": 8, "cramp": 8, "chot": 8, "ghav": 8, "ghabrahat": 8
 }
 
+def _is_symptom_negated(text: str, kw: str) -> bool:
+    """Checks if a symptom keyword is negated in the text (e.g. 'koi chot nahi', 'bukhar nahi hai', 'no cough')."""
+    # 1. Preceding negation words: "koi/koyi/bina/without/no/not ... kw"
+    pattern1 = rf"\b(?:koi|koyi|bina|without|no|not)\s+(?:\w+\s+){{0,2}}{re.escape(kw)}\b"
+    # 2. Succeeding negation words: "kw ... nahi/nahin/nhi/ni/na/none/zero"
+    pattern2 = rf"\b{re.escape(kw)}\s+(?:to\s+|bhi\s+|wagairah\s+|waghera\s+|kuch\s+)?(?:nahi|nahin|nhi|ni|na|koi\s+nahi|none)\b"
+    # 3. Preceding direct negative verbs: "nahi/nahin/nhi/ni/na [hai] kw"
+    pattern3 = rf"\b(?:nahi|nahin|nhi|ni|na)\s+(?:hai\s+)?{re.escape(kw)}\b"
+    # 4. Verb ending negation: "kw [kuch/bhi] nahi lagi/hua/aayi/aaya/tha/thi"
+    pattern4 = rf"\b{re.escape(kw)}\s+(?:\w+\s+){{0,2}}(?:nahi|nahin|nhi|ni)\s+(?:lagi|hua|aayi|aaya|tha|thi|hai)\b"
+    return bool(
+        re.search(pattern1, text)
+        or re.search(pattern2, text)
+        or re.search(pattern3, text)
+        or re.search(pattern4, text)
+    )
+
+VALID_DIFFERENTIALS: Dict[str, Set[str]] = {
+    "joint_pain": {"muscle_cramp", "back_pain"},
+    "back_pain": {"joint_pain", "muscle_cramp"},
+    "muscle_cramp": {"joint_pain", "back_pain"},
+    "cold_flu": {"cough", "allergic_rhinitis", "fever", "respiratory_wheeze"},
+    "cough": {"cold_flu", "allergic_rhinitis", "respiratory_wheeze"},
+    "allergic_rhinitis": {"cold_flu", "cough"},
+    "headache": {"hypertension_symptoms", "cold_flu", "anxiety_stress", "insomnia"},
+    "acidity_gerd": {"stomach", "constipation"},
+    "stomach": {"acidity_gerd", "loose_motion", "constipation"},
+    "loose_motion": {"stomach", "acidity_gerd"},
+    "constipation": {"stomach", "acidity_gerd"},
+    "skin_allergy": {"skin_fungal"},
+    "skin_fungal": {"skin_allergy"},
+    "anxiety_stress": {"insomnia", "hypertension_symptoms", "headache"},
+    "insomnia": {"anxiety_stress", "headache"},
+    "hypertension_symptoms": {"headache", "anxiety_stress"},
+    "urinary_issues": {"diabetes_symptoms"},
+    "diabetes_symptoms": {"urinary_issues"},
+    "wound_minor": set(),
+    "dental_pain": set(),
+    "ear_pain": set(),
+    "eye_problems": set(),
+    "menstrual_issues": {"stomach"},
+}
+
 def get_symptom_data(text: str, patient_context: Optional[dict] = None) -> Dict[str, Any]:
     """
     Retrieves clinical diagnosis and follow-up templates matching patient complaints.
     Provides differential diagnosis awareness:
-    - Identifies top matches and their clinical scores.
-    - If the top two categories have close scores, returns both primary and differential.
+    - Identifies top matches and their clinical scores, respecting negation.
+    - If the top two categories have close scores AND are clinically compatible differentials,
+      returns both primary and differential.
     - Seamlessly backward-compatible: dictionary contains all primary fields at top level.
     """
     text_lower = (text or "").lower()
@@ -570,6 +614,8 @@ def get_symptom_data(text: str, patient_context: Optional[dict] = None) -> Dict[
             continue
         score = 0
         for kw in data["keywords"]:
+            if _is_symptom_negated(text_lower, kw):
+                continue
             # Check whole word boundary match or substring for phrases
             if " " in kw:
                 if kw in text_lower:
@@ -578,20 +624,20 @@ def get_symptom_data(text: str, patient_context: Optional[dict] = None) -> Dict[
                 if re.search(rf"\b{re.escape(kw)}\b", text_lower):
                     score += PHRASE_WEIGHTS.get(kw, 3)
 
-        # Composite check: boost specific categories when key complaint indicators are present
-        if cat == "cold_flu" and any(w in text_lower for w in ["zukaam", "zukam", "jukham", "jukhaam", "sardi", "cold", "flu", "naak behna"]):
+        # Composite check: boost specific categories when key complaint indicators are present (and not negated)
+        if cat == "cold_flu" and any(w in text_lower and not _is_symptom_negated(text_lower, w) for w in ["zukaam", "zukam", "jukham", "jukhaam", "sardi", "cold", "flu", "naak behna"]):
             score += 10
-        elif cat == "allergic_rhinitis" and any(w in text_lower for w in ["allergic rhinitis", "chronic rhinitis", "nasal allergy", "dust allergy", "dhool se allergy", "purani allergy"]):
+        elif cat == "allergic_rhinitis" and any(w in text_lower and not _is_symptom_negated(text_lower, w) for w in ["allergic rhinitis", "chronic rhinitis", "nasal allergy", "dust allergy", "dhool se allergy", "purani allergy"]):
             score += 12
-        elif cat == "dental_pain" and (re.search(r"\bdaant\b|\bdant\b|\btooth\b", text_lower) and "dard" in text_lower):
+        elif cat == "dental_pain" and (re.search(r"\bdaant\b|\bdant\b|\btooth\b", text_lower) and "dard" in text_lower and not _is_symptom_negated(text_lower, "daant")):
             score += 8
-        elif cat == "back_pain" and (re.search(r"\bkamar\b|\bpeeth\b", text_lower) and "dard" in text_lower):
+        elif cat == "back_pain" and (re.search(r"\bkamar\b|\bpeeth\b", text_lower) and "dard" in text_lower and not _is_symptom_negated(text_lower, "kamar")):
             score += 8
-        elif cat == "ear_pain" and ("kaan" in text_lower and "dard" in text_lower):
+        elif cat == "ear_pain" and ("kaan" in text_lower and "dard" in text_lower and not _is_symptom_negated(text_lower, "kaan")):
             score += 8
-        elif cat == "urinary_issues" and ("peshab" in text_lower and ("jalan" in text_lower or "dard" in text_lower)):
+        elif cat == "urinary_issues" and ("peshab" in text_lower and ("jalan" in text_lower or "dard" in text_lower) and not _is_symptom_negated(text_lower, "peshab")):
             score += 8
-        elif cat == "headache" and (re.search(r"\bsir\b|\bsar\b|\bmund\b", text_lower) and "dard" in text_lower):
+        elif cat == "headache" and (re.search(r"\bsir\b|\bsar\b|\bmund\b", text_lower) and "dard" in text_lower and not _is_symptom_negated(text_lower, "sar dard")):
             score += 8
 
         if score > 0:
@@ -615,11 +661,17 @@ def get_symptom_data(text: str, patient_context: Optional[dict] = None) -> Dict[
     result_dict["primary"] = top_match["data"]
     result_dict["primary_category"] = top_match["category"]
 
-    # Differential diagnosis detection (close match within 70% threshold)
-    if len(matches) >= 2 and matches[1]["score"] >= (0.70 * top_match["score"]):
-        second_match = matches[1]
-        result_dict["differential"] = second_match["data"]
-        result_dict["differential_category"] = second_match["category"]
+    # Differential diagnosis detection (only from clinically valid differential pairs)
+    valid_diff_cats = VALID_DIFFERENTIALS.get(top_match["category"], set())
+    differential_match = None
+    for cand in matches[1:]:
+        if cand["category"] in valid_diff_cats and cand["score"] >= (0.70 * top_match["score"]) and cand["score"] >= 6:
+            differential_match = cand
+            break
+
+    if differential_match:
+        result_dict["differential"] = differential_match["data"]
+        result_dict["differential_category"] = differential_match["category"]
         result_dict["confidence"] = "moderate"
     else:
         result_dict["differential"] = None
@@ -627,3 +679,4 @@ def get_symptom_data(text: str, patient_context: Optional[dict] = None) -> Dict[
         result_dict["confidence"] = "high" if top_match["score"] >= 6 else "moderate"
 
     return result_dict
+

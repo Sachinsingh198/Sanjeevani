@@ -1278,7 +1278,7 @@ function MessageBubble({
             <div className="text-[10px] sm:text-[11px] font-bold text-sage dark:text-booti-glow uppercase tracking-wider">
               {l('आयुष प्रमाणित उपचार पर्चा:', 'AYUSH Verified Clinical Prescription:')}
             </div>
-            {msg.remedies.map((r, i) => <RemedyCard key={i} remedy={r} index={i} />)}
+            <RemedyCard remedies={msg.remedies} />
             <div className="py-2 px-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-900 dark:text-amber-200 text-center font-medium italic">
               {l('यह AI का प्रारंभिक अनुमान है, डॉक्टर का निश्चित निदान नहीं।', "This is an AI estimation, not a doctor's definitive diagnosis.")}
             </div>

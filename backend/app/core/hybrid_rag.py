@@ -176,6 +176,8 @@ class HybridRemedyStore:
                         if name_key and name_key not in seen_names:
                             seen_names.add(name_key)
                             item["safety_tier"] = "household_safe"
+                            item["is_primary_household"] = True
+                            item["is_household"] = True
                             all_remedies.append(item)
             except Exception as e:
                 logger.error(f"[Qdrant Error] Failed reading base remedies {self.data_path}: {e}")
@@ -617,6 +619,19 @@ class HybridRemedyStore:
                         lexical_hits += 2.0
 
                 hybrid_score = vec_score + (0.04 * lexical_hits)
+
+                # Prioritize proven CCRAS / AYUSH household remedies over rare single-herb botanical monographs
+                is_household = point.payload.get("is_primary_household") or point.payload.get("is_household") or (
+                    point.payload.get("source") in [
+                        "CCRAS / Ministry of AYUSH Guidelines",
+                        "AYUSH Ayurvedic Home Formularies",
+                        "AYUSH Home Formularies",
+                        "CCRAS Ayurvedic Home Formularies & Classical Treatise"
+                    ]
+                )
+                if is_household:
+                    hybrid_score += 0.45
+
                 enriched["similarity_score"] = vec_score
                 enriched["hybrid_score"] = hybrid_score
                 candidates.append((hybrid_score, enriched))

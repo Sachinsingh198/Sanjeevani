@@ -184,10 +184,13 @@ class BhashiniVoiceEngine:
                     garhwali_score += 2
 
         for key in self.lexicon.keys():
-            if key.lower() in lower_text:
-                garhwali_score += 3
+            if " " in key:
+                if key.lower() in lower_text:
+                    garhwali_score += 3
+            elif key.lower() in words:
+                garhwali_score += 2
 
-        if garhwali_score >= 2:
+        if garhwali_score >= 3:
             return "garhwali"
 
         # 3. Check for Marathi (Devanagari distinctive keywords)

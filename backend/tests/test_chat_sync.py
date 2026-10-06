@@ -1,8 +1,21 @@
+import importlib
+import sys
+
 import pytest
 from starlette.testclient import TestClient
 from app.main import app
 
 client = TestClient(app)
+
+
+def test_face_landmarks_module_handles_missing_mediapipe(monkeypatch):
+    sys.modules.pop("app.cv.face_landmarks", None)
+    monkeypatch.setitem(sys.modules, "mediapipe", None)
+
+    module = importlib.import_module("app.cv.face_landmarks")
+
+    assert module.mp is None
+    assert module.get_face_landmarker() is None
 
 def test_chat_sync_offline_endpoint():
     payload = {

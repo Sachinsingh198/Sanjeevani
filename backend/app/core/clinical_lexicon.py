@@ -43,30 +43,31 @@ SYMPTOM_KEYWORDS: List[str] = [
 # Garhwali Dialect Tokens, Morphological Markers, Postpositions & Anatomical Terms
 # ─────────────────────────────────────────────────────────────────────────────
 GARHWALI_TOKENS: Set[str] = {
-    # Pronouns & determiners
-    "miku", "twaku", "twari", "tyar", "tyeri", "hamuku", "wuku", "myaru", "meru", "meri", "hamaru", "hamru",
-    "kwahi", "kwai", "kakkh", "kakh", "kile", "kaba", "kab", "kanni", "kani", "katga", "kati",
+    # Pronouns & determiners (distinctly Garhwali)
+    "miku", "twaku", "twari", "tyar", "tyeri", "hamuku", "myaru", "meru", "hamaru", "hamru",
+    "kwahi", "kwai", "kakkh", "kakh", "kile", "kaba", "kanni", "kani", "katga", "kati",
     # Verbs & auxiliaries
     "chha", "chhi", "chhan", "chhe", "chhon", "chhou", "chhonh", "chhya", "huna", "hooni", "auna", "auni",
-    "karu", "kariya", "karnu", "leenu", "batava", "batawa", "hwe", "hwayu", "hwai", "ge", "gye", "ro", "rahyu",
+    "karu", "kariya", "karnu", "leenu", "batava", "batawa", "hwe", "hwayu", "hwai", "rahyu",
     "ho ro chha", "ho rahyu chha", "hooni chha", "huni chhe", "hwa chha", "lagyun", "lagyu", "lagni", "lagani",
-    "dukhnu", "dukhna", "dukhni", "aaundu", "aaundi", "peewa", "khawa", "rakha",
+    "dukhnu", "dukhna", "dukhni", "aaundu", "aaundi", "peewa", "khawa",
     # Particles, postpositions & adverbs
-    "dagad", "dagadi", "bati", "ma", "ni", "bal", "ghani", "ghano", "bhalu", "bhal", "theek ni",
-    "byali", "byakhani", "rati", "dhoor", "khali", "ekdam",
+    "dagad", "dagadi", "bati", "bal", "ghani", "ghano", "bhalu", "bhal", "theek ni",
+    "byali", "byakhani", "rati", "dhoor",
     # Symptoms & anatomy
-    "mund", "peed", "peer", "bhyo", "dhaad", "khutta", "khutti", "goda", "haat", "aankhi", "aankhiyo",
-    "syal", "krodh", "marod", "khang", "chhwaat", "bhaunr", "ghat", "ghaant", "kanth", "jyu",
+    "mund", "peed", "peer", "bhyo", "dhaad", "khutta", "khutti", "goda", "aankhi", "aankhiyo",
+    "syal", "khang", "chhwaat", "bhaunr", "ghat", "ghaant",
     # Greetings & cultural markers
     "dainu", "bhula", "bhuli", "daju", "dajyu", "bouji", "pailagon", "badri vishal",
 
-    # Devanagari tokens
+    # Devanagari tokens (distinctly Garhwali)
     "छ", "छा", "छो", "छन", "छौं", "छौ", "छी", "छ्या", "भ्यो", "मुंड", "पीर", "पीड", "पीड़", "दैणु", "दैन्यू",
     "पहिलागण", "भूला", "कनि", "भालु", "त्वकु", "मिकु", "त्वरि", "त्यर", "त्येरो", "मेरो", "म्यारु", "मेरि",
-    "हमुकु", "हमरु", "कख", "किले", "कब", "कबा", "कन्नि", "कतगा", "कति", "खुट्टा", "गोडा", "धड़", "धाड़",
-    "घाँट", "गाळ", "कंठ", "लग्यूँ", "लगणी", "औणा", "औणी", "औंदू", "हूण", "हूँदू", "हूँदी", "बतावा", "दगड़",
-    "दगड़ी", "बटि", "नी", "घणी", "घणो", "खंग", "छ्वाट", "भौंर", "दाज्यू", "बौजी", "ज्यू", "स्याल", "पैट", "मरोड़"
+    "हमुकु", "हमरु", "कख", "किले", "कबा", "कन्नि", "कतगा", "कति", "खुट्टा", "गोडा", "धड़", "धाड़",
+    "घाँट", "गाळ", "लग्यूँ", "लगणी", "औणा", "औणी", "औंदू", "हूण", "हूँदू", "हूँदी", "बतावा", "दगड़",
+    "दगड़ी", "बटि", "नी", "घणी", "घणो", "खंग", "छ्वाट", "भौंर", "दाज्यू", "बौजी", "स्याल", "पैट"
 }
+
 
 ENGLISH_COMMON_WORDS: Set[str] = {
     "i", "my", "me", "am", "have", "has", "had", "pain", "throat", "headache", "fever", "cough",
