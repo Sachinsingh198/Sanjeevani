@@ -70,6 +70,7 @@ def triage_node(state: AgentState) -> AgentState:
     state["detected_language"] = detected_language
     state["escalation_triggered"] = (tier.value == "Red")
     state["turn_count"] = turn_count
+    state["retrieval_attempted"] = False
 
     state["prev_dialogue_phase"] = current_phase
 

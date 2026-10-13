@@ -174,9 +174,6 @@ def get_checkpointer(db_url: str = None):
     Guarantees state persistence across turns by backing PostgresSaver with a persistent SqliteSaver.
     """
     fallback_saver = get_sqlite_saver()
-    if getattr(settings, "APP_ENV", "").lower() == "testing":
-        return ResilientCheckpointer(fallback_saver, fallback_saver)
-
     url = (db_url if db_url is not None else getattr(settings, "DATABASE_URL", "")).strip().lower()
 
     if url.startswith("postgresql://") or url.startswith("postgres://"):

@@ -47,6 +47,8 @@ def extract_active_symptoms(notes: str, normalized_msg: str, llm=None) -> str:
         # Differentiate Acute Cold vs Chronic Allergic Rhinitis
         if any(w in content_lower for w in ["allergic rhinitis", "chronic rhinitis", "dust allergy", "dhool se allergy", "purani allergy"]) or "allergic rhinitis" in spoken:
             canonical_anchor = "allergic rhinitis pratishyaya chronic allergy sneezing chheenk"
+        elif any(w in content_lower for w in ["khasi", "khansi", "cough", "kharash", "gale", "gala", "sore throat"]) or any(w in spoken for w in ["cough", "khasi", "khansi"]):
+            canonical_anchor = "cough khasi kasa kharash sore throat vasa tulsi"
         elif any(w in content_lower for w in ["cold", "zukaam", "zukam", "jukham", "jukhaam", "sardi", "naak behna", "runny nose"]) or "sardi aur zukaam" in spoken:
             canonical_anchor = "common cold zukaam sardi pratishyaya cough throat"
         elif "naak" in spoken:
@@ -87,18 +89,19 @@ def extract_active_symptoms(notes: str, normalized_msg: str, llm=None) -> str:
 
     # Deterministic Fallback: Scan CLINICAL_SYMPTOM_REGISTRY and SYMPTOM_KEYWORDS
     try:
+        import re
         from app.agents.nodes.responder_node import CLINICAL_SYMPTOM_REGISTRY
         from app.core.clinical_lexicon import SYMPTOM_KEYWORDS
 
         text_to_scan = f"{notes} {normalized_msg}".lower()
         matched_terms = []
 
-        # 1. Match against canonical symptom registry categories and their keywords
+        # 1. Match against canonical symptom registry categories and their keywords with whole-word regex
         for cat, data in CLINICAL_SYMPTOM_REGISTRY.items():
             if cat == "general":
                 continue
             for kw in data.get("keywords", ()):
-                if kw in text_to_scan:
+                if re.search(r'\b' + re.escape(kw) + r'\b', text_to_scan):
                     if kw not in matched_terms:
                         matched_terms.append(kw)
                     if cat not in matched_terms:
@@ -106,7 +109,7 @@ def extract_active_symptoms(notes: str, normalized_msg: str, llm=None) -> str:
 
         # 2. Match against clinical lexicon
         for kw in SYMPTOM_KEYWORDS:
-            if kw in text_to_scan and kw not in matched_terms:
+            if re.search(r'\b' + re.escape(kw) + r'\b', text_to_scan) and kw not in matched_terms:
                 matched_terms.append(kw)
 
         if matched_terms:
