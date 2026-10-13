@@ -63,7 +63,7 @@ class StructuredSymptomProfile:
             self.duration = dur_match.group(1).strip()
 
         # 2. Severity extraction
-        if any(w in text_lower for w in ["bahut tez", "bohot tez", "severe", "asahniya", "intense", "ghano peed", "high"]):
+        if any(w in text_lower for w in ["bahut tez", "bohot tez", "severe", "asahniya", "intense", "ghano peed", "high", "tez", "tezz"]):
             self.severity = "severe"
         elif any(w in text_lower for w in ["halka", "halki", "mild", "thoda", "thodi"]):
             if not self.severity:

@@ -1115,7 +1115,7 @@ def _has_sufficient_info(notes: str) -> bool:
         "nasal": ["naak", "zukaam", "zukam", "jukham", "jukhaam", "chheenk", "sneezing", "congestion", "sardi", "cold"],
         "throat": ["gala", "gale", "kharash", "sore throat"],
         "cough": ["khansi", "cough"],
-        "fever": ["bukhar", "fever", "taap", "thand"],
+        "fever": ["bukhar", "fever", "taap", "thand", "kapkapi", "chills", "shivering"],
         "head": ["sar dard", "sir dard", "headache", "mund"],
         "digestive": ["pet", "gas", "acidity", "apach", "ulti", "dast"],
         "body": ["badan dard", "thakan", "kamzori"]
@@ -1125,7 +1125,9 @@ def _has_sufficient_info(notes: str) -> bool:
         if any(re.search(rf"\b{re.escape(kw)}\b", notes_lower) for kw in kws):
             matched_domains.add(domain)
 
-    # Has duration AND (denied other symptoms OR multiple distinct domains) -> sufficient!
+    # Has duration AND (severity, confirmed denial of other symptoms, OR multiple distinct domains) -> clinically sufficient!
+    if has_duration and has_severity:
+        return True
     if has_denied_other and len(matched_domains) >= 1:
         return True
     if has_severity and has_denied_other:

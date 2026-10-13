@@ -175,6 +175,7 @@ def retriever_node_sync(state: AgentState) -> AgentState:
                 break
 
     state["retrieved_remedies"] = verified_remedies
+    state["retrieval_attempted"] = True
     return state
 
 
@@ -230,6 +231,7 @@ async def retriever_node(state: AgentState) -> AgentState:
                 break
 
     state["retrieved_remedies"] = verified_remedies
+    state["retrieval_attempted"] = True
     return state
 
 

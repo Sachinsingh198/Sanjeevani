@@ -174,6 +174,9 @@ def get_checkpointer(db_url: str = None):
     Guarantees state persistence across turns by backing PostgresSaver with a persistent SqliteSaver.
     """
     fallback_saver = get_sqlite_saver()
+    if getattr(settings, "APP_ENV", "").lower() == "testing":
+        return ResilientCheckpointer(fallback_saver, fallback_saver)
+
     url = (db_url if db_url is not None else getattr(settings, "DATABASE_URL", "")).strip().lower()
 
     if url.startswith("postgresql://") or url.startswith("postgres://"):
@@ -199,6 +202,7 @@ def get_checkpointer(db_url: str = None):
             return ResilientCheckpointer(fallback_saver, fallback_saver)
 
         # Try initializing PostgresSaver
+        pool = None
         try:
             import importlib
             pg_mod = importlib.import_module("langgraph.checkpoint.postgres")
@@ -221,6 +225,11 @@ def get_checkpointer(db_url: str = None):
             logger.info("[Graph Checkpoint] Successfully initialized PostgresSaver with SqliteSaver fallback.")
             return ResilientCheckpointer(primary_saver, fallback_saver)
         except Exception as e:
+            if pool is not None:
+                try:
+                    pool.close()
+                except Exception:
+                    pass
             logger.warning(f"[Graph Checkpoint] PostgresSaver unavailable ({e}). Using resilient local SqliteSaver.")
             return ResilientCheckpointer(fallback_saver, fallback_saver)
 
@@ -254,7 +263,8 @@ def route_clinical_flow(state: AgentState) -> str:
     if new_phase == "CONCLUDED":
         has_remedies = bool(state.get("retrieved_remedies"))
         has_vision = bool(state.get("vision_analysis"))
-        if not has_remedies and not has_vision:
+        already_retrieved = bool(state.get("retrieval_attempted"))
+        if not has_remedies and not has_vision and not already_retrieved:
             return "retriever_node"
         return "doctor_consultation_node"
 
@@ -271,7 +281,8 @@ def route_after_consultation(state: AgentState) -> str:
     phase = state.get("dialogue_phase")
     remedies = state.get("retrieved_remedies")
     has_vision = bool(state.get("vision_analysis"))
-    if phase == "CONCLUDED" and not remedies and not has_vision:
+    already_retrieved = bool(state.get("retrieval_attempted"))
+    if phase == "CONCLUDED" and not remedies and not has_vision and not already_retrieved:
         return "retriever_node"
     return END
 

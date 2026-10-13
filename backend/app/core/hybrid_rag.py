@@ -751,6 +751,12 @@ class HybridRemedyStore:
             except Exception as e:
                 logger.error(f"[Qdrant Error] Error reading {filename}: {e}")
 
+        # In testing environment, cap dataset to 50 chunks for fast CPU embeddings
+        if getattr(settings, "APP_ENV", "").lower() == "testing":
+            search_texts = search_texts[:50]
+            payloads = payloads[:50]
+            ids = ids[:50]
+
         # Batch upload to avoid memory/network issues
         batch_size = 100
         for i in range(0, len(search_texts), batch_size):

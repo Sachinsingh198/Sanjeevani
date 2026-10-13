@@ -62,4 +62,7 @@ class AgentState(_AgentStateRequired, total=False):
     consultation_summary: Optional[Dict[str, Any]]
 
     # Multimodal clinical vision analysis
-    vision_analysis: Optional[Dict[str, Any]]
+    vision_analysis: Optional[Dict[str, Any]]
+
+    # Retrieval guardrail flag to prevent cycle between retriever_node and doctor_consultation_node
+    retrieval_attempted: Optional[bool]

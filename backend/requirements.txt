@@ -32,6 +32,7 @@ ragas
 datasets
 pytest
 pytest-asyncio
+pytest-timeout
 httpx
 requests
 
@@ -56,4 +57,5 @@ sentry-sdk[fastapi]
 slowapi
 
 # PDF Generation
-reportlab
+reportlab
+

@@ -43,9 +43,13 @@ jobs:
 
       - name: Run pytest test suite
         run: |
-          pytest tests/ -v
+          pytest tests/ -v --timeout=60
         env:
           APP_ENV: testing
+          DATABASE_URL: sqlite:///./sanjeevani.db
+          QDRANT_URL: ""
+          SARVAM_API_KEY: ""
+          GROQ_API_KEY: ""
           JWT_SECRET_KEY: ci-test-secret-key-32-characters-minimum!
           JWT_REFRESH_SECRET_KEY: ci-test-refresh-key-32-characters-minimum!
           ENABLE_RATE_LIMITING: "false"
