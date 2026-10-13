@@ -50,12 +50,17 @@ frontend/
     │   └── LanguageContext.jsx    # App-wide UI language ('hi' / 'en') & text-scaling context
     ├── components/                # Modular Reusable UI Components
     │   ├── Navbar.jsx             # Responsive top bar with role badges and language switch
+    │   ├── ConfirmModal.jsx       # Portaled accessible in-app confirmation modal (z-[100])
+    │   ├── FamilySelector.jsx     # Family profile switcher with portaled member modal
+    │   ├── MedicalVisionModal.jsx # Multimodal camera/photo clinical inspection scanner
     │   ├── LiveVoiceRoom.jsx      # Fullscreen voice consultation experience
     │   ├── SanjeevaniOrb.jsx      # Animated voice visualizer orb (listening / speaking)
     │   ├── StructuredBotMessage.jsx # Parser & renderer for structured clinical responses
     │   ├── EscalationCard.jsx     # High-visibility 108 emergency card
     │   ├── NearbyFacilityFinder.jsx # GPS PHC/CHC distance calculator & locator
     │   ├── RemedyCard.jsx         # Card displaying CCRAS Ayurvedic remedy & disclaimer
+    │   ├── PathyaApathyaCard.jsx  # Dietary dos and don'ts for diagnosed condition
+    │   ├── JanAushadhiCard.jsx    # Generic medicine price estimator and alternatives
     │   ├── ProtectedRoute.jsx     # Role-based route authorization wrapper
     │   ├── FollowUpPanel.jsx      # Patient follow-up questions & symptom tracker
     │   ├── SessionHistoryDrawer.jsx # Drawer for switching previous consultation sessions
@@ -126,6 +131,21 @@ All authenticated routes are protected by `ProtectedRoute.jsx` verifying the JWT
   - Displays emergency 108 ambulance speed dial with high-contrast pulsing border.
   - Lists immediate first-aid steps (e.g., *Keep patient sitting upright*, *Do not offer solid food*).
   - Disables home remedy suggestions to ensure prompt emergency transport.
+
+### 5. `ConfirmModal.jsx`
+- **Purpose**: Replaces unstyled, blocking browser native dialogs (`window.confirm`) with an accessible, in-app themed confirmation experience.
+- **Features**:
+  - Mounted via `createPortal(..., document.body)` with `z-[100]` to avoid container clipping or lower-z-index parent obstruction.
+  - Styled with backdrop blur (`backdrop-blur-xs`), subtle animations (`animate-fadeIn`), dark/light theme tokens, and destructive red iconography.
+  - Handles keyboard navigation (`Escape` key to cancel) and clicks outside the modal.
+  - Integrated across consultation chat (`Chat.jsx`), drawer history (`SessionHistoryDrawer.jsx`), and patient dashboard (`PatientDashboard.jsx`).
+
+### 6. `FamilySelector.jsx`
+- **Purpose**: Enables rapid switching and addition of family members (Self, Elder, Child/Pediatric) during triage consultations.
+- **Features**:
+  - Automatically customizes clinical parameters (e.g., pediatric thresholds for ages < 12, elder considerations for ages > 60).
+  - The "+ Add Family Member" creation dialog uses `createPortal(..., document.body)` with `z-[100]`, completely eliminating stacking bugs where the modal was hidden behind the sticky navbar.
+  - Autofocuses inputs and persists member profiles into `familyStore.js`.
 
 ---
 

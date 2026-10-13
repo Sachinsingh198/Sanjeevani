@@ -63,8 +63,32 @@ export async function fetchServerSessions(userId) {
   return listSessions(userId);
 }
 
-export function recordSessionTurn({ conversationId, summary, tier, userId }) {
+export function saveSessionMessages(conversationId, messages, userId) {
+  if (!conversationId || !Array.isArray(messages)) return;
   try {
+    const key = `sanjeevani_session_msgs_${conversationId}`;
+    localStorage.setItem(key, JSON.stringify(messages));
+  } catch (e) {
+    console.debug('[SessionStore] Could not cache messages:', e);
+  }
+}
+
+export function loadSessionMessages(conversationId) {
+  if (!conversationId) return null;
+  try {
+    const key = `sanjeevani_session_msgs_${conversationId}`;
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function recordSessionTurn({ conversationId, summary, tier, userId, messages }) {
+  try {
+    if (messages && Array.isArray(messages)) {
+      saveSessionMessages(conversationId, messages, userId);
+    }
     const key = getStorageKey(userId);
     const all = listSessions(userId);
     const existingIdx = all.findIndex((s) => s.conversationId === conversationId);
@@ -91,6 +115,12 @@ export function recordSessionTurn({ conversationId, summary, tier, userId }) {
 
 export async function clearSessionHistory(userId) {
   try {
+    const all = listSessions(userId);
+    for (const s of all) {
+      if (s.conversationId) {
+        localStorage.removeItem(`sanjeevani_session_msgs_${s.conversationId}`);
+      }
+    }
     localStorage.removeItem(getStorageKey(userId));
     localStorage.removeItem('sanjeevani_session_history_v1');
     sessionStorage.removeItem('sanjeevani_conv_id');
@@ -111,6 +141,7 @@ export async function deleteSession(conversationId, userId) {
   if (!conversationId) return listSessions(userId);
 
   try {
+    localStorage.removeItem(`sanjeevani_session_msgs_${conversationId}`);
     const key = getStorageKey(userId);
     const all = listSessions(userId);
     const updated = all.filter((s) => s.conversationId !== conversationId);

@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Send, Mic, MicOff, RefreshCw, User, AlertTriangle, AlertCircle, RotateCcw,
   Volume2, VolumeX, Settings2, Wifi, WifiOff, FileDown, PhoneCall,
   Sparkles, Stethoscope, X, ChevronLeft, ChevronRight,
   MessageSquare, Plus, Clock, Trash2, Leaf, Edit3, ThumbsUp, ThumbsDown,
-  QrCode
+  QrCode, Camera, Share2, MessageCircle, Pill
 } from 'lucide-react';
 import useTypewriter from '../lib/useTypewriter';
 import toast from 'react-hot-toast';
@@ -20,52 +21,112 @@ import StructuredBotMessage from '../components/StructuredBotMessage';
 import BackButton from '../components/BackButton';
 import AudioConsentModal from '../components/AudioConsentModal';
 import ReferralQRModal from '../components/ReferralQRModal';
+import MedicalVisionModal from '../components/MedicalVisionModal';
+import ConfirmModal from '../components/ConfirmModal';
+import FamilySelector from '../components/FamilySelector';
+import PathyaApathyaCard from '../components/PathyaApathyaCard';
+import FollowUpBanner from '../components/FollowUpBanner';
+import LiveVoiceRoom from '../components/LiveVoiceRoom';
+import JanAushadhiCard from '../components/JanAushadhiCard';
+import { getActiveFamilyMember } from '../lib/familyStore';
+import { scheduleFollowUp } from '../lib/followUpStore';
 import {
   sendChatMessage, streamChatMessage, getOrCreateConversationId, resetConversationId, setStoredConversationId, getConversationDetails, checkBackendHealth,
 } from '../api/client';
 import { speakText, transcribeAudio } from '../api/voiceClient';
 import { downloadConsultationReport } from '../api/reportsClient';
-import { listSessions, clearSessionHistory, deleteSession, recordSessionTurn, fetchServerSessions } from '../lib/sessionStore';
+import { listSessions, clearSessionHistory, deleteSession, recordSessionTurn, fetchServerSessions, saveSessionMessages, loadSessionMessages } from '../lib/sessionStore';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { evaluateLocalRedFlags } from '../lib/localTriageFallback';
 import { processOfflineConsultation } from '../lib/offlineTriageEngine';
 import { queueOfflineChat } from '../lib/offlineSyncManager';
 
+const getComorbidityOptions = (l) => [
+  { label: l ? l('रक्तचाप (BP)', 'Blood Pressure (BP)', 'BP') : 'Blood Pressure (BP)', value: 'hypertension', icon: '❤️' },
+  { label: l ? l('अम्लता / पित्त', 'Acidity / GERD', 'Acidity') : 'Acidity / GERD', value: 'Hyperacidity/PepticUlcer', icon: '🫁' },
+  { label: l ? l('गर्भावस्था', 'Pregnancy', 'Pregnancy') : 'Pregnancy', value: 'Pregnancy', icon: '🤰' },
+  { label: l ? l('मधुमेह', 'Diabetes', 'Diabetes') : 'Diabetes', value: 'diabetes', icon: '💉' },
+];
+
 const COMORBIDITY_OPTIONS = [
-  { label: 'BP', value: 'hypertension', icon: '❤️' },
-  { label: 'Acidity', value: 'Hyperacidity/PepticUlcer', icon: '🫁' },
+  { label: 'Blood Pressure (BP)', value: 'hypertension', icon: '❤️' },
+  { label: 'Acidity / GERD', value: 'Hyperacidity/PepticUlcer', icon: '🫁' },
   { label: 'Pregnancy', value: 'Pregnancy', icon: '🤰' },
   { label: 'Diabetes', value: 'diabetes', icon: '💉' },
 ];
 
-const QUICK_SYMPTOMS = [
-  { emoji: '🌡️', label: 'Bukhar', value: 'Mujhe bukhar hai aur thakan lag rahi hai.' },
-  { emoji: '🫁', label: 'Khansi', value: 'Mujhe khansi aur seene mein dard hai.' },
-  { emoji: '🤕', label: 'Pet Dard', value: 'Mera pet dard ho raha hai.' },
-  { emoji: '😣', label: 'Sar Dard', value: 'Mujhe sar dard aur chakkar aa rahe hain.' },
-];
+const getQuickSymptoms = (lang) => {
+  if (lang === 'en') {
+    return [
+      { emoji: '🌡️', label: 'Fever', value: 'I have a fever and feel fatigued.' },
+      { emoji: '🫁', label: 'Cough', value: 'I have a persistent cough and chest congestion.' },
+      { emoji: '🤕', label: 'Stomach Pain', value: 'I am experiencing stomach pain.' },
+      { emoji: '😣', label: 'Headache', value: 'I have a headache and feel dizzy.' },
+    ];
+  }
+  if (lang === 'hi') {
+    return [
+      { emoji: '🌡️', label: 'बुखार', value: 'मुझे बुखार है और थकान लग रही है।' },
+      { emoji: '🫁', label: 'खांसी', value: 'मुझे खांसी और सीने में जकड़न है।' },
+      { emoji: '🤕', label: 'पेट दर्द', value: 'मेरा पेट दर्द हो रहा है।' },
+      { emoji: '😣', label: 'सिर दर्द', value: 'मुझे सिर दर्द और चक्कर आ रहे हैं।' },
+    ];
+  }
+  return [
+    { emoji: '🌡️', label: 'Bukhar', value: 'Mujhe bukhar hai aur thakan lag rahi hai.' },
+    { emoji: '🫁', label: 'Khansi', value: 'Mujhe khansi aur seene mein dard hai.' },
+    { emoji: '🤕', label: 'Pet Dard', value: 'Mera pet dard ho raha hai.' },
+    { emoji: '😣', label: 'Sar Dard', value: 'Mujhe sar dard aur chakkar aa rahe hain.' },
+  ];
+};
 
-const INITIAL_BOT_MESSAGE = {
-  sender: 'bot',
-  text: 'Namaste! Main Sanjeevani hoon — aapki shaant swasthya sahayak.\n\nAap apni takleef ya lakshan yahan bolkar ya likhkar bata sakte hain. Aaram se, jaldi ki koi baat nahi.',
-  tier: 'Green',
-  remedies: [],
-  phase: 'GREETING',
+const getInitialBotMessage = (lang) => {
+  if (lang === 'en') {
+    return {
+      sender: 'bot',
+      text: 'Hello! I am Dr. Sanjeevani — your calm clinical health companion.\n\nPlease describe what symptoms you are experiencing by typing or speaking. Take your time, there is no hurry.',
+      tier: 'Green',
+      remedies: [],
+      phase: 'GREETING',
+    };
+  }
+  if (lang === 'hi') {
+    return {
+      sender: 'bot',
+      text: 'नमस्ते! मैं डॉ. संजीवनी हूँ — आपकी शांत स्वास्थ्य सहायक।\n\nआप अपनी तकलीफ या लक्षण यहाँ बोलकर या लिखकर बता सकते हैं। आराम से, जल्दबाज़ी की कोई बात नहीं है।',
+      tier: 'Green',
+      remedies: [],
+      phase: 'GREETING',
+    };
+  }
+  return {
+    sender: 'bot',
+    text: 'Namaste! Main Dr. Sanjeevani hoon — aapki shaant swasthya sahayak.\n\nAap apni takleef ya lakshan yahan bolkar ya likhkar bata sakte hain. Aaram se, jaldi ki koi baat nahi.',
+    tier: 'Green',
+    remedies: [],
+    phase: 'GREETING',
+  };
 };
 
 /* ══════════════════════════════════════════════════════════════════════
    Main Chat Component
    ══════════════════════════════════════════════════════════════════ */
 export default function Chat() {
-  const { lang, l, isHindi, toEnglishDigits, formatDate } = useLanguage();
+  const { lang, setLang, l, t, isHindi, isEnglish, isHinglish, toEnglishDigits, formatDate, textScale, setTextScale } = useLanguage();
+  const [searchParams] = useSearchParams();
+  const convQueryParam = searchParams.get('conv');
   const conversationIdRef = useRef(getOrCreateConversationId());
 
   /* State */
-  const [messages, setMessages]             = useState([INITIAL_BOT_MESSAGE]);
+  const [messages, setMessages]             = useState(() => [getInitialBotMessage(lang)]);
   const [inputText, setInputText]           = useState('');
   const [isListening, setIsListening]       = useState(false);
   const [loading, setLoading]               = useState(false);
+  const [showVisionModal, setShowVisionModal] = useState(false);
+  const [showLiveRoom, setShowLiveRoom]     = useState(false);
+  const [showJanAushadhiModal, setShowJanAushadhiModal] = useState(false);
+  const [currentFamilyMember, setCurrentFamilyMember] = useState(getActiveFamilyMember);
   const [knownConditions, setKnownConditions] = useState(() => {
     try {
       const saved = localStorage.getItem('sanjeevani_known_conditions');
@@ -76,46 +137,16 @@ export default function Chat() {
   const [currentPhase, setCurrentPhase]     = useState('GREETING');
   const [error, setError]                   = useState(null);
   const [sidebarOpen, setSidebarOpen]       = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
-  const [textScale, setTextScale]           = useState(() => {
-    try {
-      const saved = localStorage.getItem('sanjeevani_text_scale');
-      return saved ? parseFloat(saved) : 1;
-    } catch {
-      return 1;
-    }
-  });
-  const [uiLang, setUiLang]                 = useState(() => {
-    try {
-      return localStorage.getItem('sanjeevani_ui_lang') || 'hi';
-    } catch {
-      return 'hi';
-    }
-  });
-  const [detectedLanguage, setDetectedLanguage] = useState('hindi');
+  const [detectedLanguage, setDetectedLanguage] = useState(lang === 'en' ? 'english' : 'hindi');
   const [sttLangOverride, setSttLangOverride]   = useState(null);
 
-  /* Persist accessibility & language settings to localStorage and DOM */
-  useEffect(() => {
-    try {
-      localStorage.setItem('sanjeevani_text_scale', textScale.toString());
-      localStorage.setItem('app_text_scale', textScale.toString());
-      const pct = Math.round(textScale * 100);
-      document.documentElement.style.fontSize = `${pct}%`;
-    } catch {}
-  }, [textScale]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('sanjeevani_ui_lang', uiLang);
-      localStorage.setItem('app_lang', uiLang);
-    } catch {}
-  }, [uiLang]);
-
+  /* Persist known conditions */
   useEffect(() => {
     try {
       localStorage.setItem('sanjeevani_known_conditions', JSON.stringify(knownConditions));
     } catch {}
   }, [knownConditions]);
+
   const [correctingIdx, setCorrectingIdx]       = useState(null);
   const [correctionText, setCorrectionText]     = useState('');
   const [backendOnline, setBackendOnline]   = useState(null);
@@ -124,17 +155,16 @@ export default function Chat() {
   const [sessions, setSessions]             = useState([]);
   const [settingsOpen, setSettingsOpen]     = useState(false);
 
-  /* Persist accessibility text-scale and UI language */
-  useEffect(() => {
-    try { localStorage.setItem('sanjeevani_text_scale', textScale); } catch { /* ignore */ }
-  }, [textScale]);
-
-  useEffect(() => {
-    try { localStorage.setItem('sanjeevani_ui_lang', uiLang); } catch { /* ignore */ }
-  }, [uiLang]);
 
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [qrModalData, setQrModalData] = useState(null);
+  const [deleteModalConfig, setDeleteModalConfig] = useState({
+    isOpen: false,
+    type: 'single',
+    targetId: null,
+    title: '',
+    message: '',
+  });
 
   /* Refs */
   const chatEndRef        = useRef(null);
@@ -227,6 +257,63 @@ export default function Chat() {
     refreshSessions();
   }, [user, refreshSessions]);
 
+  const handleFamilyMemberChange = useCallback((member) => {
+    setCurrentFamilyMember(member);
+    if (member?.knownConditions?.length) {
+      setKnownConditions(prev => Array.from(new Set([...prev, ...member.knownConditions])));
+    }
+  }, []);
+
+  const handleVisionScanComplete = useCallback((scanResult) => {
+    if (!scanResult) return;
+    const userMsg = {
+      sender: 'user',
+      text: l('मेडिकल स्कैन तस्वीर भेजी गई', 'Uploaded medical scan photo for analysis', 'Medical scan photo upload kiya'),
+      image: scanResult.image_url,
+      isDocument: true,
+    };
+    const botMsg = {
+      sender: 'bot',
+      text: scanResult.plain_language_summary,
+      tier: scanResult.recommended_tier || 'Green',
+      phase: 'CONCLUDED',
+      visionAnalysis: scanResult,
+      remedies: [],
+      flags: scanResult.safety_warnings || [],
+    };
+    setMessages(prev => {
+      const nextMsgs = [...prev, userMsg, botMsg];
+      recordSessionTurn({
+        conversationId: conversationIdRef.current,
+        summary: scanResult.title || 'Medical Vision Scan',
+        tier: scanResult.recommended_tier || 'Green',
+        userId: user?.id,
+        messages: nextMsgs,
+      });
+      return nextMsgs;
+    });
+    setCurrentPhase('CONCLUDED');
+    refreshSessions();
+  }, [l, user?.id, refreshSessions]);
+
+
+  const handleFollowUpEscalation = useCallback((followUpData) => {
+    const alertMsg = {
+      sender: 'bot',
+      text: l(
+        `ध्यान दें: 24 घंटे बाद भी ${followUpData.condition || 'लक्षण'} में सुधार नहीं हुआ है। यह स्थिति बिगड़ सकती है। कृपया तुरंत 104 या नजदीकी प्राथमिक स्वास्थ्य केंद्र (PHC) से संपर्क करें।`,
+        `Attention: No improvement in ${followUpData.condition || 'symptoms'} after 24 hours. Condition may escalate. Please consult a PHC doctor or call 104 immediately.`,
+        `Dhyan dein: 24 ghante baad bhi ${followUpData.condition || 'lakshan'} me sudhar nahi hua hai. Kripya turant 104 ya PHC doctor se sampark karein.`
+      ),
+      tier: 'Amber',
+      flags: ['PROACTIVE_FOLLOWUP_WORSENED: Symptoms unresolved after 24h follow-up check-in'],
+      phase: 'EMERGENCY',
+      remedies: [],
+    };
+    setMessages(p => [...p, alertMsg]);
+    setCurrentPhase('EMERGENCY');
+  }, [l]);
+
   /* ── Handlers ─────────────────────────────────────────────────── */
   const toggleCondition = useCallback(v => {
     setKnownConditions(p => p.includes(v) ? p.filter(c => c !== v) : [...p, v]);
@@ -238,89 +325,188 @@ export default function Chat() {
       setStoredConversationId(session.conversationId);
       conversationIdRef.current = session.conversationId;
       setError(null);
+
+      // 1. Immediately check and render local cached conversation history
+      const localCached = loadSessionMessages(session.conversationId);
+      if (localCached && Array.isArray(localCached) && localCached.length > 0) {
+        setMessages(localCached);
+        const lastBot = [...localCached].reverse().find(m => m.sender === 'bot');
+        if (lastBot?.phase) setCurrentPhase(lastBot.phase);
+        else setCurrentPhase('CONCLUDED');
+      }
+
+      // 2. Fetch server-side consultation details
       const detail = await getConversationDetails(session.conversationId).catch(() => null);
-      if (detail && (detail.final_reply_text || detail.summary)) {
-        setMessages([
-          INITIAL_BOT_MESSAGE,
-          {
-            sender: 'user',
-            text: `[Pichla Session ${session.conversationId.slice(0, 8)}...]`
-          },
+
+      if (detail && Array.isArray(detail.turns) && detail.turns.length > 0) {
+        const restored = [getInitialBotMessage(lang)];
+
+        detail.turns.forEach((turn) => {
+          const rawUser = turn.raw_user_message;
+          if (rawUser) {
+            const isScan = /मेडिकल स्कैन|medical scan|scan photo|skin rash/i.test(rawUser);
+            // Re-bind image preview from local cache if available
+            const localUserMatch = localCached?.find(
+              m => m.sender === 'user' && (m.text === rawUser || (isScan && m.image))
+            );
+            restored.push({
+              sender: 'user',
+              text: rawUser,
+              image: localUserMatch?.image || (isScan ? turn.image_url : null),
+              isDocument: isScan,
+            });
+          }
+
+          if (turn.final_reply_text) {
+            const isVision = (
+              turn.final_reply_text.includes('Visual Skin') ||
+              turn.final_reply_text.includes('Medical scan') ||
+              turn.final_reply_text.includes('Findings:') ||
+              /मेडिकल स्कैन|medical scan/i.test(rawUser || '')
+            );
+
+            const localBotMatch = localCached?.find(
+              m => m.sender === 'bot' && m.text === turn.final_reply_text
+            );
+
+            restored.push({
+              sender: 'bot',
+              text: turn.final_reply_text,
+              spoken_text: turn.final_reply_text,
+              tier: turn.tier || session.tier || 'Green',
+              flags: Array.isArray(turn.flags) ? turn.flags : [],
+              remedies: Array.isArray(turn.remedies_served) && turn.remedies_served.length > 0
+                ? turn.remedies_served
+                : (detail.remedies || []),
+              phase: turn.dialogue_phase || detail.phase || 'CONCLUDED',
+              visionAnalysis: localBotMatch?.visionAnalysis || (isVision ? (detail.vision_analysis || {
+                title: 'Visual Skin / Symptom Inspection',
+                plain_language_summary: turn.final_reply_text,
+                recommended_tier: turn.tier || 'Green',
+              }) : null),
+            });
+          }
+        });
+
+        setMessages(restored);
+        saveSessionMessages(session.conversationId, restored, user?.id);
+
+        const latestTurn = detail.turns[detail.turns.length - 1];
+        setCurrentPhase(latestTurn?.dialogue_phase || detail.phase || 'CONCLUDED');
+        toast.success(l(`सत्र ${session.conversationId.slice(0, 8)} लोड हुआ`, `Session ${session.conversationId.slice(0, 8)} loaded`, `Session ${session.conversationId.slice(0, 8)} load hua`));
+      } else if (!localCached && detail && (detail.final_recommendation || detail.final_reply_text || detail.summary)) {
+        const replyText = detail.final_recommendation || detail.final_reply_text || detail.summary;
+        const isVision = detail.vision_analysis || replyText.includes('Visual Skin') || replyText.includes('Medical scan');
+        const fallbackMsgs = [
+          getInitialBotMessage(lang),
           {
             sender: 'bot',
-            text: detail.final_reply_text || detail.summary,
+            text: replyText,
             tier: detail.tier || session.tier || 'Green',
             flags: detail.flags || [],
-            remedies: [],
-            phase: detail.phase || 'CONCLUDED'
+            remedies: detail.remedies || [],
+            phase: detail.phase || 'CONCLUDED',
+            visionAnalysis: detail.vision_analysis || (isVision ? {
+              title: 'Visual Skin / Symptom Inspection',
+              plain_language_summary: replyText,
+              recommended_tier: detail.tier || 'Green',
+            } : null),
           }
-        ]);
+        ];
+        setMessages(fallbackMsgs);
+        saveSessionMessages(session.conversationId, fallbackMsgs, user?.id);
         setCurrentPhase(detail.phase || 'CONCLUDED');
-        toast.success(`Session ${session.conversationId.slice(0, 8)} load hua`);
-      } else {
+        toast.success(l(`सत्र ${session.conversationId.slice(0, 8)} लोड हुआ`, `Session ${session.conversationId.slice(0, 8)} loaded`, `Session ${session.conversationId.slice(0, 8)} load hua`));
+      } else if (!localCached) {
         setMessages([
-          INITIAL_BOT_MESSAGE,
+          getInitialBotMessage(lang),
           {
             sender: 'bot',
-            text: `Pichla paramarsh sanchhipt: ${session.summary}`,
+            text: isEnglish
+              ? `Previous consultation summary: ${session.summary}`
+              : isHindi
+              ? `पिछला परामर्श सारांश: ${session.summary}`
+              : `Pichla paramarsh sanchhipt: ${session.summary}`,
             tier: session.tier || 'Green',
             remedies: [],
             phase: 'CONCLUDED'
           }
         ]);
         setCurrentPhase('CONCLUDED');
-        toast.success(`Session ${session.conversationId.slice(0, 8)} resume hua`);
       }
     } catch (err) {
       console.warn('Failed to load session details:', err);
     }
-  }, []);
+  }, [lang, isEnglish, isHindi, l, user?.id]);
+
+  /* Restore session from URL query param if present */
+  useEffect(() => {
+    if (convQueryParam) {
+      handleSelectSession({ conversationId: convQueryParam });
+    }
+  }, [convQueryParam, handleSelectSession]);
 
   const handleNewSession = useCallback(() => {
     resetConversationId();
     conversationIdRef.current = getOrCreateConversationId();
-    setMessages([INITIAL_BOT_MESSAGE]);
+    setMessages([getInitialBotMessage(lang)]);
     setCurrentPhase('GREETING');
     setKnownConditions([]);
     setError(null);
     inputRef.current?.focus();
     refreshSessions();
-    toast.success('Naya paramarsh session shuru hua');
-  }, [refreshSessions]);
+    toast.success(l('नया परामर्श सत्र शुरू हुआ', 'New consultation started', 'Naya paramarsh session shuru hua'));
+  }, [lang, l, refreshSessions]);
 
-  const handleDeleteSession = useCallback(async (conversationId, e) => {
+  const handleDeleteSession = useCallback((conversationId, e) => {
     e?.stopPropagation();
     e?.preventDefault();
-    if (!window.confirm(l('क्या आप इस परामर्श को हटाना चाहते हैं?', 'Are you sure you want to delete this consultation?'))) {
-      return;
-    }
-    try {
-      await deleteSession(conversationId, user?.id);
-      setSessions((prev) => prev.filter((s) => s.conversationId !== conversationId));
-      if (conversationIdRef.current === conversationId) {
-        handleNewSession();
-      }
-      toast.success(l('परामर्श हटा दिया गया 🗑️', 'Consultation deleted 🗑️'));
-    } catch (err) {
-      console.warn('Failed to delete session:', err);
-      toast.error(l('सत्र हटाने में विफल', 'Failed to delete session'));
-    }
-  }, [user, l, handleNewSession]);
+    setDeleteModalConfig({
+      isOpen: true,
+      type: 'single',
+      targetId: conversationId,
+      title: l('परामर्श हटाएं', 'Delete Consultation'),
+      message: l('क्या आप इस परामर्श को हटाना चाहते हैं?', 'Are you sure you want to delete this consultation?'),
+    });
+  }, [l]);
 
-  const handleClearHistory = useCallback(async () => {
-    if (!window.confirm(l('क्या आप सभी परामर्श इतिहास हटाना चाहते हैं? यह वापस नहीं लाया जा सकता।', 'Are you sure you want to delete all consultation history? This cannot be undone.'))) {
-      return;
+  const handleClearHistory = useCallback(() => {
+    setDeleteModalConfig({
+      isOpen: true,
+      type: 'all',
+      targetId: null,
+      title: l('संपूर्ण इतिहास साफ करें', 'Clear All Consultation History'),
+      message: l('क्या आप सभी परामर्श इतिहास हटाना चाहते हैं? यह वापस नहीं लाया जा सकता।', 'Are you sure you want to delete all consultation history? This cannot be undone.'),
+    });
+  }, [l]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (deleteModalConfig.type === 'single') {
+      const conversationId = deleteModalConfig.targetId;
+      if (!conversationId) return;
+      try {
+        await deleteSession(conversationId, user?.id);
+        setSessions((prev) => prev.filter((s) => s.conversationId !== conversationId));
+        if (conversationIdRef.current === conversationId) {
+          handleNewSession();
+        }
+        toast.success(l('परामर्श हटा दिया गया 🗑️', 'Consultation deleted 🗑️'));
+      } catch (err) {
+        console.warn('Failed to delete session:', err);
+        toast.error(l('सत्र हटाने में विफल', 'Failed to delete session'));
+      }
+    } else if (deleteModalConfig.type === 'all') {
+      try {
+        await clearSessionHistory(user?.id);
+        setSessions([]);
+        handleNewSession();
+        toast.success(l('संपूर्ण बातचीत इतिहास साफ कर दिया गया 🗑️', 'All consultation history cleared 🗑️'));
+      } catch (err) {
+        console.warn('Failed to clear session history:', err);
+        toast.error(l('इतिहास साफ करने में विफल', 'Failed to clear history'));
+      }
     }
-    try {
-      await clearSessionHistory(user?.id);
-      setSessions([]);
-      handleNewSession();
-      toast.success(l('संपूर्ण बातचीत इतिहास साफ कर दिया गया 🗑️', 'All consultation history cleared 🗑️'));
-    } catch (err) {
-      console.warn('Failed to clear session history:', err);
-      toast.error(l('इतिहास साफ करने में विफल', 'Failed to clear history'));
-    }
-  }, [user, l, handleNewSession]);
+  }, [deleteModalConfig, user?.id, handleNewSession, l]);
 
   /* Fallback to browser SpeechRecognition if MediaRecorder or Sarvam STT is unavailable */
   const fallbackToWebSpeech = useCallback(() => {
@@ -455,12 +641,12 @@ export default function Chat() {
       .trim();
 
     stopSpeakingRef.current = speakText(candidateText, {
-      language: detectedLanguage || (uiLang === 'hi' ? 'hi' : 'en'),
+      language: detectedLanguage === 'english' || lang === 'en' ? 'en' : 'hi',
       gender: 'female',
       onStart: () => setSpeakingMsgIdx(idx),
       onEnd: () => setSpeakingMsgIdx(cur => cur === idx ? null : cur),
     });
-  }, [detectedLanguage, uiLang]);
+  }, [detectedLanguage, lang]);
 
   const handleDownloadReport = useCallback(async (msg, idx, format = 'docx') => {
     setDownloadingIdx(`${idx}-${format}`);
@@ -473,11 +659,11 @@ export default function Chat() {
         consultationSummary: msg.text,
         format,
       });
-      toast.success(`Doctor ke liye parcha download ho gaya (${format.toUpperCase()})`);
+      toast.success(l(`डॉक्टर के लिए पर्चा डाउनलोड हो गया (${format.toUpperCase()})`, `Prescription downloaded successfully (${format.toUpperCase()})`, `Doctor ke liye parcha download ho gaya (${format.toUpperCase()})`));
     } catch (err) {
-      toast.error(err?.response?.data?.detail || 'Parcha taiyar nahi ho saka.');
+      toast.error(err?.response?.data?.detail || l('पर्चा तैयार नहीं हो सका।', 'Failed to generate prescription.', 'Parcha taiyar nahi ho saka.'));
     } finally { setDownloadingIdx(null); }
-  }, []);
+  }, [l]);
 
   const inferPhase = response => {
     if (response.phase === 'GUARDRAIL_BLOCKED' || response.guardrail_blocked) return 'GUARDRAIL_BLOCKED';
@@ -521,9 +707,31 @@ export default function Chat() {
       });
 
       const streamingPromise = streamChatMessage(
-        conversationIdRef.current,
-        trimmed,
-        knownConditions,
+        {
+          conversation_id: conversationIdRef.current,
+          message: trimmed,
+          patient_context: {
+            known_conditions: knownConditions,
+            age: currentFamilyMember?.age,
+            gender: currentFamilyMember?.gender,
+          },
+          language_hint: /\b(?:hindi|devanagari)\b/i.test(trimmed)
+            ? 'hi'
+            : /\b(?:garhwali|pahadi)\b/i.test(trimmed)
+            ? 'garhwali'
+            : /\b(?:english|angrezi)\b/i.test(trimmed)
+            ? 'en'
+            : lang === 'en'
+            ? 'en'
+            : lang === 'hinglish'
+            ? 'hinglish'
+            : 'hi',
+
+          include_audio: false,
+          voice_gender: 'female',
+        },
+        null,
+        [],
         'auto',
         false,
         'female',
@@ -587,16 +795,34 @@ export default function Chat() {
 
       setMessages(p => {
         const last = p[p.length - 1];
+        let nextMsgs;
         if (last && last.sender === 'bot' && last.isLiveStreaming) {
           const updated = [...p];
           updated[updated.length - 1] = finalBotMsg;
-          return updated;
+          nextMsgs = updated;
+        } else {
+          nextMsgs = [...p, finalBotMsg];
         }
-        return [...p, finalBotMsg];
+        recordSessionTurn({
+          conversationId: conversationIdRef.current,
+          summary: trimmed,
+          tier: res.tier,
+          userId: user?.id,
+          messages: nextMsgs,
+        });
+        return nextMsgs;
       });
 
-      recordSessionTurn({ conversationId: conversationIdRef.current, summary: trimmed, tier: res.tier, userId: user?.id });
       refreshSessions();
+
+      if (phase === 'CONCLUDED' && res.remedies?.length > 0) {
+        scheduleFollowUp({
+          conversationId: conversationIdRef.current,
+          condition: res.consultation_summary?.condition || trimmed,
+          tier: res.tier,
+          patientName: currentFamilyMember?.name || 'Self',
+        });
+      }
     } catch (err) {
       setError(err?.response?.data?.detail ?? err.message ?? 'Unknown error');
       // Deliberately conservative fail-safe check to prevent emergency downgrade during network dropouts; not a full triage replacement.
@@ -605,7 +831,7 @@ export default function Chat() {
         setCurrentPhase('EMERGENCY');
         setMessages(p => {
           const filtered = p.filter(m => !m.isLiveStreaming);
-          return [...filtered, {
+          const nextEmergencyMsgs = [...filtered, {
             sender: 'bot',
             text: l(
               'चेतावनी: आपातकालीन लक्षण पहचाने गए हैं। नेटवर्क उपलब्ध न होने के कारण कृपया तुरंत 108 एम्बुलेंस को कॉल करें।',
@@ -618,6 +844,14 @@ export default function Chat() {
             phase: 'EMERGENCY',
             is_offline_fallback: true,
           }];
+          recordSessionTurn({
+            conversationId: conversationIdRef.current,
+            summary: trimmed,
+            tier: 'Red',
+            userId: user?.id,
+            messages: nextEmergencyMsgs,
+          });
+          return nextEmergencyMsgs;
         });
       } else {
         const offlineRes = processOfflineConsultation(trimmed, knownConditions, conversationIdRef.current, messages);
@@ -625,7 +859,7 @@ export default function Chat() {
         setCurrentPhase(resolvedPhase);
         setMessages(p => {
           const filtered = p.filter(m => !m.isLiveStreaming);
-          return [...filtered, {
+          const nextOfflineMsgs = [...filtered, {
             sender: 'bot',
             text: offlineRes.reply_text,
             tier: offlineRes.tier,
@@ -636,8 +870,15 @@ export default function Chat() {
             consultation_summary: offlineRes.consultation_summary,
             is_offline_fallback: true,
           }];
+          recordSessionTurn({
+            conversationId: conversationIdRef.current,
+            summary: trimmed,
+            tier: offlineRes.tier,
+            userId: user?.id,
+            messages: nextOfflineMsgs,
+          });
+          return nextOfflineMsgs;
         });
-        recordSessionTurn({ conversationId: conversationIdRef.current, summary: trimmed, tier: offlineRes.tier, userId: user?.id });
         refreshSessions();
         try {
           queueOfflineChat(offlineRes);
@@ -768,7 +1009,7 @@ export default function Chat() {
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5">{l('आपकी स्थितियां', 'Known Conditions')}</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {COMORBIDITY_OPTIONS.map(opt => {
+                  {getComorbidityOptions(l).map(opt => {
                     const on = knownConditions.includes(opt.value);
                     return (
                       <button key={opt.value} onClick={() => toggleCondition(opt.value)}
@@ -843,6 +1084,11 @@ export default function Chat() {
             </div>
           )}
 
+          {/* Family Member Switcher */}
+          <div className="shrink-0">
+            <FamilySelector onMemberChange={handleFamilyMemberChange} />
+          </div>
+
           <div className="flex-1" />
 
           {/* Phase tracker (compact) */}
@@ -851,13 +1097,24 @@ export default function Chat() {
           </div>
 
           {/* Controls */}
-          <div className="flex items-center gap-1 shrink-0">
-            <AccessibilityBar scale={textScale} onScaleChange={setTextScale} lang={uiLang} onLangChange={setUiLang} />
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            {/* Live Hands-Free Voice Call */}
+            <button
+              type="button"
+              onClick={() => setShowLiveRoom(true)}
+              className="touch-target inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-sage to-[#4a6346] hover:from-[#4a6346] hover:to-[#3b5038] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+              title={l('लाइव आवाज़ कॉल शुरू करें', 'Start Live Voice Call', 'Live Voice Call Shuru Karein')}
+            >
+              <PhoneCall className="w-3.5 h-3.5 animate-pulse" />
+              <span className="hidden sm:inline">{l('लाइव कॉल', 'Live Call', 'Live Call')}</span>
+            </button>
+
+            <AccessibilityBar scale={textScale} onScaleChange={setTextScale} lang={lang} onLangChange={setLang} />
             <button onClick={() => setSettingsOpen(o => !o)}
               className={`p-1.5 sm:p-2 rounded-xl border text-xs transition-all ${settingsOpen ? 'bg-sage text-white border-sage' : 'border-gray-200 dark:border-gray-700 text-gray-400 hover:border-sage/40'}`}>
               <Settings2 className="w-3.5 h-3.5" />
             </button>
-            <button onClick={handleNewSession} className="p-1.5 sm:p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-400 hover:border-sage/40 transition-all" title="Naya session">
+            <button onClick={handleNewSession} className="p-1.5 sm:p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-400 hover:border-sage/40 transition-all" title={l('नया सत्र', 'New Session', 'Naya Session')}>
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -867,11 +1124,11 @@ export default function Chat() {
         {settingsOpen && (
           <div className="shrink-0 bg-white dark:bg-[#1A2538] border-b border-sage/12 dark:border-gray-800 px-4 py-3 animate-fadeIn">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-primary">Pahle Se Maujood Sthitiyan:</span>
+              <span className="text-xs font-bold text-primary">{l('पहले से मौजूद स्थितियां:', 'Pre-existing Conditions:', 'Pehle Se Maujood Sthitiyan:')}</span>
               <button onClick={() => setSettingsOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-3.5 h-3.5" /></button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {COMORBIDITY_OPTIONS.map(opt => {
+              {getComorbidityOptions(l).map(opt => {
                 const on = knownConditions.includes(opt.value);
                 return (
                   <button key={opt.value} onClick={() => toggleCondition(opt.value)}
@@ -894,10 +1151,10 @@ export default function Chat() {
             <WifiOff className="w-4 h-4 shrink-0 text-gold-warm mt-0.5" />
             <div>
               <strong className="block font-bold text-gold-warm">
-                {l('ऑफ़लाइन मोड सक्रिय:', 'Offline Mode Active:')}
+                {l('ऑफ़लाइन मोड सक्रिय:', 'Offline Mode Active:', 'Offline Mode Active:')}
               </strong>
               <span>
-                {l('सर्वर से संपर्क नहीं हो पा रहा है। यह स्थानीय ऑफ़लाइन प्राथमिक सलाह है — नेटवर्क उपलब्ध होने पर पुनः जांचें।', 'Server unavailable. Providing offline estimated guidance — please verify once reconnected.')}
+                {l('सर्वर से संपर्क नहीं हो पा रहा है। यह स्थानीय ऑफ़लाइन प्राथमिक सलाह है — नेटवर्क उपलब्ध होने पर पुनः जांचें।', 'Server unavailable. Providing offline estimated guidance — please verify once reconnected.', 'Server se sampark nahi ho pa raha hai. Yeh local offline salah hai.')}
               </span>
             </div>
           </div>
@@ -907,9 +1164,12 @@ export default function Chat() {
         {error && (
           <div className="shrink-0 mx-4 mt-2 bg-rose-soft/10 border border-rose-soft/30 rounded-2xl p-3 flex items-start gap-2 text-xs text-rose-soft animate-fadeIn">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <div><strong className="block font-bold">Takneeki Asuvidha:</strong>{error}</div>
+            <div><strong className="block font-bold">{l('तकनीकी असुविधा:', 'Technical Error:', 'Takneeki Asuvidha:')}</strong>{error}</div>
           </div>
         )}
+
+        {/* 24-Hour Recovery Follow-Up Banner */}
+        <FollowUpBanner onEscalate={handleFollowUpEscalation} />
 
         {/* ── MESSAGE AREA (only this area scrolls) ── */}
         <div className="flex-1 overflow-y-auto min-h-0 relative overscroll-contain">
@@ -931,25 +1191,25 @@ export default function Chat() {
                     ? 'bg-rose-soft text-white animate-pulse'
                     : 'bg-white dark:bg-warm-indigo text-sage dark:text-booti-glow border border-sage/30 group-hover:border-sage'
                 }`}>
-                  {isListening ? <><MicOff className="w-3 h-3" /> Ruk jaiye</> : <><Mic className="w-3 h-3" /> Boliye</>}
+                  {isListening ? <><MicOff className="w-3 h-3" /> {l('रोकें', 'Stop', 'Ruk jaiye')}</> : <><Mic className="w-3 h-3" /> {l('बोलें', 'Speak', 'Boliye')}</>}
                 </div>
               </div>
 
               {/* Title */}
               <h2 className="font-serif text-lg sm:text-2xl font-bold text-primary text-center mt-2 sm:mt-4 mb-0.5 sm:mb-1">
-                Namaste! 🙏
+                {l('नमस्ते! 🙏', 'Hello! 🙏', 'Namaste! 🙏')}
               </h2>
               <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs mb-3 sm:mb-8">
-                Main Dr. Sanjeevani hoon. Aapki takleef sunne ke liye taiyar hoon.
+                {l('मैं डॉ. संजीवनी हूँ। आपकी तकलीफ सुनने के लिए तैयार हूँ।', 'I am Dr. Sanjeevani. Ready to listen and assist with your symptoms.', 'Main Dr. Sanjeevani hoon. Aapki takleef sunne ke liye taiyar hoon.')}
               </p>
 
               {/* Symptom quick-pick tiles */}
               <div className="w-full max-w-md">
                 <p className="text-[10px] sm:text-[11px] font-semibold text-gray-400 uppercase tracking-widest text-center mb-2 sm:mb-3">
-                  Ya yahan se chuniye
+                  {l('या यहाँ से लक्षण चुनें', 'Or choose from quick symptoms below', 'Ya yahan se chuniye')}
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-2.5 sm:mb-4">
-                  {QUICK_SYMPTOMS.map(s => (
+                  {getQuickSymptoms(lang).map(s => (
                     <button key={s.value} onClick={() => sendText(s.value)}
                       className="symptom-tile flex flex-col items-center justify-center gap-1.5 sm:gap-2 py-3 sm:py-4 px-2 sm:px-3 rounded-2xl bg-white dark:bg-[#1A2538] border border-gray-200 dark:border-gray-700 hover:border-sage/50 hover:shadow-md transition-all active:scale-95 group cursor-pointer">
                       <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">{s.emoji}</span>
@@ -972,6 +1232,7 @@ export default function Chat() {
                   msg={msg}
                   conversationId={conversationIdRef.current}
                   turnIndex={idx}
+                  patientMember={currentFamilyMember}
                   isSpeaking={speakingMsgIdx === idx}
                   isDownloading={downloadingIdx?.startsWith(`${idx}-`)}
                   downloadingFormat={downloadingIdx?.replace(`${idx}-`, '')}
@@ -993,6 +1254,7 @@ export default function Chat() {
                   }}
                   onDownloadReport={(format) => handleDownloadReport(msg, idx, format)}
                   onShowReferralQR={(data) => setQrModalData(data)}
+                  onOpenJanAushadhi={() => setShowJanAushadhiModal(true)}
                 />
               ))}
               {loading && <div className="py-1"><CalmLoader /></div>}
@@ -1007,7 +1269,7 @@ export default function Chat() {
           {knownConditions.length > 0 && (
             <div className="max-w-2xl mx-auto px-3 sm:px-4 pt-1.5 sm:pt-2 flex items-center gap-1.5">
               <Leaf className="w-3 h-3 text-sage shrink-0" />
-              <span className="text-[9px] sm:text-[10px] text-gray-400 truncate">Sthitiyan: {knownConditions.join(', ')}</span>
+              <span className="text-[9px] sm:text-[10px] text-gray-400 truncate">{l('स्थितियां:', 'Conditions:', 'Sthitiyan:')} {knownConditions.join(', ')}</span>
             </div>
           )}
           <form onSubmit={handleSend} className="max-w-2xl mx-auto flex items-end gap-1.5 sm:gap-2 px-2 py-1.5 sm:p-2.5">
@@ -1023,6 +1285,17 @@ export default function Chat() {
               {isListening ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
 
+            {/* Camera / Medical Vision Scan Button */}
+            <button
+              type="button"
+              onClick={() => setShowVisionModal(true)}
+              disabled={loading}
+              className="shrink-0 w-9 h-9 sm:w-11 sm:h-11 mb-0.5 rounded-xl border border-sage/30 bg-sage/10 hover:bg-sage/20 dark:bg-booti-glow/10 dark:border-booti-glow/30 text-sage dark:text-booti-glow flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+              title={l('दवा पर्ची या लक्षण फोटो स्कैन करें', 'Scan Rx, medicine strip or symptom photo', 'Dawa parchi ya rash scan karein')}
+            >
+              <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+
             {/* Manual EN/HI STT Voice Toggle */}
             <button
               type="button"
@@ -1030,10 +1303,10 @@ export default function Chat() {
                 const current = sttLangOverride || (detectedLanguage === 'english' ? 'en-IN' : 'hi-IN');
                 const next = current === 'en-IN' ? 'hi-IN' : 'en-IN';
                 setSttLangOverride(next);
-                toast.success(l(`वॉइस भाषा: ${next === 'en-IN' ? 'अंग्रेज़ी' : 'हिंदी'}`, `Voice language: ${next === 'en-IN' ? 'English' : 'Hindi'}`));
+                toast.success(l(`वॉइस भाषा: ${next === 'en-IN' ? 'अंग्रेज़ी' : 'हिंदी'}`, `Voice language: ${next === 'en-IN' ? 'English' : 'Hindi'}`, `Voice bhasha: ${next === 'en-IN' ? 'English' : 'Hindi'}`));
               }}
               className="shrink-0 h-9 sm:h-11 mb-0.5 px-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1A2538] text-[10px] sm:text-xs font-bold text-sage dark:text-booti-glow hover:bg-sage/10 transition-all flex items-center justify-center cursor-pointer"
-              title={l('वॉइस भाषा बदलें (EN/HI)', 'Voice Language Toggle (EN/HI)')}
+              title={l('वॉइस भाषा बदलें (EN/HI)', 'Voice Language Toggle (EN/HI)', 'Voice Bhasha Badlein (EN/HI)')}
             >
               {(sttLangOverride || (detectedLanguage === 'english' ? 'en-IN' : 'hi-IN')) === 'en-IN' ? 'EN' : 'HI'}
             </button>
@@ -1045,7 +1318,7 @@ export default function Chat() {
               value={inputText}
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isListening ? l('सुन रहा हूँ… 🎙️', 'Listening… 🎙️') : l('लक्षण लिखें या बोलें...', 'Type or speak your symptoms...')}
+              placeholder={isListening ? l('सुन रहा हूँ… 🎙️', 'Listening… 🎙️', 'Sun raha hoon… 🎙️') : l('लक्षण लिखें या बोलें...', 'Type or speak your symptoms...', 'Lakshan likhein ya bolein...')}
               disabled={loading}
               className="flex-1 min-w-0 bg-mist dark:bg-[#0F1521] border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage/50 disabled:opacity-60 placeholder-gray-400 dark:placeholder-gray-500 resize-none overflow-y-auto leading-normal min-h-[36px] max-h-[110px] transition-[height] duration-75 ease-out"
             />
@@ -1078,6 +1351,53 @@ export default function Chat() {
           patientName={user?.name || 'Aapka Naam'}
         />
       )}
+
+      {/* Medical Vision Multimodal Scanner Modal */}
+      <MedicalVisionModal
+        isOpen={showVisionModal}
+        onClose={() => setShowVisionModal(false)}
+        conversationId={conversationIdRef.current}
+        onScanComplete={handleVisionScanComplete}
+      />
+
+      {/* Live Hands-Free Voice Consultation Room */}
+      {showLiveRoom && <LiveVoiceRoom onClose={() => setShowLiveRoom(false)} />}
+
+      {/* Jan Aushadhi Generic Medicine Estimator Modal */}
+      {showJanAushadhiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#131E2B] rounded-3xl p-4 sm:p-6 border border-sage/20 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-2">
+                <Pill className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-serif font-bold text-base sm:text-lg text-primary">
+                  {l('जन औषधि केंद्र - सस्ती जेनेरिक दवा विकल्प', 'Jan Aushadhi Generic Alternatives & Prices', 'Jan Aushadhi Generic Dawa Rates')}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowJanAushadhiModal(false)}
+                className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <JanAushadhiCard />
+          </div>
+        </div>
+      )}
+
+      {/* In-app Deletion Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModalConfig.isOpen}
+        onClose={() => setDeleteModalConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDelete}
+        title={deleteModalConfig.title}
+        message={deleteModalConfig.message}
+        confirmText={l('हटाएं', 'Delete')}
+        cancelText={l('रद्द करें', 'Cancel')}
+        isDestructive={true}
+      />
     </div>
   );
 }
@@ -1087,6 +1407,7 @@ function MessageBubble({
   msg,
   conversationId,
   turnIndex,
+  patientMember = null,
   onReadAloud,
   isSpeaking,
   onStopSpeaking,
@@ -1102,8 +1423,38 @@ function MessageBubble({
   onCorrectionChange,
   onSubmitCorrection,
   onShowReferralQR,
+  onOpenJanAushadhi,
 }) {
   const { l, isHindi } = useLanguage();
+
+  const formatShareSummary = () => {
+    const patientName = patientMember?.name || 'Self';
+    const patientAge = patientMember?.age ? ` (${patientMember.age}y)` : '';
+    const condition = msg.consultation_summary?.condition || msg.text?.slice(0, 50) || 'Health Consultation';
+    const tier = msg.tier || 'Green';
+    const remedies = msg.remedies?.map(r => `• *${r.remedy_name}*: ${r.remedy_text}`).join('\n') || '';
+    
+    let pathyaText = '';
+    if (msg.consultation_summary?.pathya?.length) {
+      pathyaText = `\n\n🥗 *Pathya (क्या खाएं / Foods to eat):*\n` + msg.consultation_summary.pathya.map(p => `• ${p}`).join('\n');
+    }
+    let apathyaText = '';
+    if (msg.consultation_summary?.apathya?.length) {
+      apathyaText = `\n\n🚫 *Apathya (परहेज़ करें / To avoid):*\n` + msg.consultation_summary.apathya.map(a => `• ${a}`).join('\n');
+    }
+
+    return `🌿 *Sanjeevani Health Consultation Summary*\n👤 Patient: ${patientName}${patientAge}\n🩺 *Condition:* ${condition} (${tier} Tier)\n\n🍵 *Recommended Home Remedy:*\n${remedies}${pathyaText}${apathyaText}\n\n⚠️ *Emergency Helpline:* 108 | Health Advice: 104\n_Note: This is preliminary AYUSH clinical triage guidance._`;
+  };
+
+  const handleWhatsAppShare = () => {
+    const text = formatShareSummary();
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const handleSmsShare = () => {
+    const text = formatShareSummary();
+    window.location.href = `sms:?body=${encodeURIComponent(text)}`;
+  };
   const isUser = msg.sender === 'user';
   // Typewriter streaming: only the latest bot message animates if not already streamed live
   const shouldStream = !isUser && isLatestBot && !msg.is_offline_fallback && !msg.isLiveStreaming;
@@ -1172,10 +1523,41 @@ function MessageBubble({
           </div>
         )}
         <div className="leading-relaxed text-xs sm:text-sm">
+          {msg.image && (
+            <div className="mb-2 max-w-xs rounded-xl overflow-hidden border border-black/10 dark:border-gray-700 shadow-xs">
+              <img src={msg.image} alt="Medical scan" className="w-full max-h-56 object-cover" />
+            </div>
+          )}
           {isUser ? (
             <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
           ) : (
             <>
+              {msg.visionAnalysis && (
+                <div className="mb-3 p-3 rounded-2xl bg-sage/10 dark:bg-gray-800/80 border border-sage/20 dark:border-gray-700 space-y-2 text-left">
+                  <div className="flex items-center justify-between border-b border-sage/15 dark:border-gray-700 pb-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-xs text-sage dark:text-booti-glow">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>{msg.visionAnalysis.title}</span>
+                    </div>
+                    <TierBadge tier={msg.visionAnalysis.recommended_tier || 'Green'} />
+                  </div>
+                  {msg.visionAnalysis.key_findings && (
+                    <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">{msg.visionAnalysis.key_findings}</p>
+                  )}
+                  {msg.visionAnalysis.dosage_instructions && (
+                    <div className="p-2 rounded-xl bg-white dark:bg-gray-800 text-xs border border-gray-100 dark:border-gray-700">
+                      <strong className="block text-[10px] text-gray-500 uppercase">{l('खुराक / निर्देश:', 'Dosage / Instructions:', 'Dosage / Nirdesh:')}</strong>
+                      <span>{msg.visionAnalysis.dosage_instructions}</span>
+                    </div>
+                  )}
+                  {msg.visionAnalysis.ayurvedic_interaction_note && (
+                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-900 dark:text-amber-200 text-[11px] border border-amber-500/20">
+                      <strong className="block text-[10px] uppercase font-bold text-amber-700 dark:text-amber-300">{l('आयुर्वेदिक इंटरेक्शन सलाह:', 'Ayurvedic Interaction Advice:', 'Ayurvedic Interaction Salah:')}</strong>
+                      <span>{msg.visionAnalysis.ayurvedic_interaction_note}</span>
+                    </div>
+                  )}
+                </div>
+              )}
               <StructuredBotMessage
                 text={visibleText}
                 tier={msg.tier}
@@ -1279,6 +1661,13 @@ function MessageBubble({
               {l('आयुष प्रमाणित उपचार पर्चा:', 'AYUSH Verified Clinical Prescription:')}
             </div>
             <RemedyCard remedies={msg.remedies} />
+            {(msg.consultation_summary?.pathya?.length > 0 || msg.consultation_summary?.apathya?.length > 0) && (
+              <PathyaApathyaCard
+                pathya={msg.consultation_summary.pathya}
+                apathya={msg.consultation_summary.apathya}
+                condition={msg.consultation_summary.condition}
+              />
+            )}
             <div className="py-2 px-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-900 dark:text-amber-200 text-center font-medium italic">
               {l('यह AI का प्रारंभिक अनुमान है, डॉक्टर का निश्चित निदान नहीं।', "This is an AI estimation, not a doctor's definitive diagnosis.")}
             </div>
@@ -1308,6 +1697,24 @@ function MessageBubble({
                 )}
               </button>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+              <button
+                type="button"
+                onClick={handleWhatsAppShare}
+                className="touch-target flex items-center justify-center gap-1.5 sm:gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 sm:py-2.5 px-3 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>{l('व्हाट्सएप पर शेयर करें', 'Share to WhatsApp', 'WhatsApp Par Share Karein')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSmsShare}
+                className="touch-target flex items-center justify-center gap-1.5 sm:gap-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold py-2 sm:py-2.5 px-3 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>{l('SMS सारांश भेजें', 'Send SMS Summary', 'SMS Summary Bhejein')}</span>
+              </button>
+            </div>
             {onShowReferralQR && (
               <button
                 type="button"
@@ -1323,6 +1730,16 @@ function MessageBubble({
               >
                 <QrCode className="w-4 h-4" />
                 <span>{l('प्राथमिक स्वास्थ्य केंद्र रेफरल पास (QR)', 'PHC Doctor Referral Pass (QR)')}</span>
+              </button>
+            )}
+            {onOpenJanAushadhi && (
+              <button
+                type="button"
+                onClick={onOpenJanAushadhi}
+                className="touch-target w-full flex items-center justify-center gap-2 bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-800 dark:text-emerald-300 text-xs font-bold py-2 sm:py-2.5 px-3 rounded-xl border border-emerald-600/30 transition-all cursor-pointer mt-1"
+              >
+                <Pill className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>{l('💊 जन औषधि सस्ती जेनेरिक दवाएं (90% बचत)', '💊 Jan Aushadhi Generic Prices (Save up to 90%)', '💊 Jan Aushadhi Sasti Generic Dawa (90% Bachat)')}</span>
               </button>
             )}
           </div>

@@ -68,7 +68,7 @@ export default class ErrorBoundary extends React.Component {
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-forest hover:bg-forest/90 text-white font-semibold text-sm shadow-md transition-all active:scale-[0.98] cursor-pointer"
+                className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-sage hover:bg-sage/90 text-white font-semibold text-sm shadow-md transition-all active:scale-[0.98] cursor-pointer"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span>पुनः लोड करें / Reload</span>
@@ -83,14 +83,18 @@ export default class ErrorBoundary extends React.Component {
               </button>
             </div>
 
-            {/* Collapsible Technical Details (Dev triage) */}
+            {/* Technical Details (Expanded for debugging) */}
             {this.state.error && (
-              <details className="mt-6 text-left w-full text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800 pt-3">
-                <summary className="cursor-pointer hover:underline font-mono">
+              <details open className="mt-6 text-left w-full text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800 pt-3">
+                <summary className="cursor-pointer hover:underline font-mono font-bold text-amber-700 dark:text-amber-400">
                   तकनीकी विवरण / Technical details
                 </summary>
-                <pre className="mt-2 p-3 bg-gray-50 dark:bg-gray-950 rounded-lg overflow-x-auto text-[11px] font-mono border border-gray-200 dark:border-gray-800 text-rose-600 dark:text-rose-400 whitespace-pre-wrap">
+                <pre className="mt-2 p-3 bg-gray-50 dark:bg-gray-950 rounded-lg overflow-x-auto text-[11px] font-mono border border-gray-200 dark:border-gray-800 text-rose-600 dark:text-rose-400 whitespace-pre-wrap select-all">
                   {this.state.error.toString()}
+                  {'\n\n'}
+                  {this.state.error.stack || ''}
+                  {'\n\nComponent Stack:'}
+                  {this.state.errorInfo?.componentStack || ''}
                 </pre>
               </details>
             )}

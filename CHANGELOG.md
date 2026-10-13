@@ -4,6 +4,30 @@ All notable changes to the Sanjeevani AI Rural Himalayan Health Platform are doc
 
 ---
 
+## [2.3.0] - 2026-10-13 — In-App Modal Governance, Family Member Stacking Fix & Clinical UX Refinements
+
+### In-App Modal Governance & Browser Alert Deprecation
+- **Dedicated Confirmation Modal (`ConfirmModal.jsx`):**
+  - Replaced native blocking browser dialogs (`window.confirm`) with a customized in-app confirmation modal featuring smooth animations (`animate-fadeIn`), backdrop blur (`backdrop-blur-xs`), dark/light theme support (`dark:bg-[#131E2B]`), and destructive red accents.
+  - Portaled directly to `document.body` with `z-[100]` to guarantee reliable stacking above all UI elements without layout clipping.
+  - Integrated keyboard accessibility with automatic `Escape` key dismissal and backdrop click handling.
+- **Unified Deletion Flows Across Portals:**
+  - Integrated `ConfirmModal` in `Chat.jsx` for both single consultation deletion (`handleDeleteSession`) and bulk history clearing (`handleClearHistory`).
+  - Integrated `ConfirmModal` in `SessionHistoryDrawer.jsx` and `PatientDashboard.jsx` for complete consistency across all patient touchpoints.
+
+### Family Member Selector Stacking & Viewport Isolation
+- **Portal Rendering for `FamilySelector.jsx`:**
+  - Refactored the "+ Add Family Member" modal from local inline rendering into `createPortal(..., document.body)` with `z-[100]`.
+  - Resolved viewport overlap where the top part of the modal was clipped and hidden underneath the sticky header navbar (`Navbar.jsx`).
+  - Added Escape key dismiss listener, form autofocus, and smooth family member switching during ongoing triage sessions.
+
+### Clinical Guidance & Remedy Refinements
+- **Targeted PHC Caution Banners:**
+  - Refined clinical caution displays in `RemedyCard.jsx` to render 48-hour PHC escalation guidance selectively for cases requiring monitoring, preventing redundant banners on routine general health queries.
+  - Improved multilingual response synthesis and multimodal skin/eye inspection feedback alignment.
+
+---
+
 ## [2.2.0] - 2026-09-28 — Universal Settings Persistence, Classical AYUSH Ingestion & Illiterate Voice Mode
 
 ### Multi-Layer Settings Persistence (Survives Restarts & Reloads)

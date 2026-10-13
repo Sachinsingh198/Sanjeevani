@@ -1,20 +1,31 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Clock, Trash2 } from 'lucide-react';
 import SkeletonLoader from './SkeletonLoader';
+import ConfirmModal from './ConfirmModal';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { listSessions, fetchServerSessions, clearSessionHistory, deleteSession } from '../lib/sessionStore';
+import { setStoredConversationId } from '../api/client';
 
 /**
  * SessionHistoryDrawer — accessible consultation history drawer.
  * Lets a patient revisit and manage past consultations (title, tier, date)
  * without losing the calm single-column chat layout.
  */
-export default function SessionHistoryDrawer({ open, onClose }) {
+export default function SessionHistoryDrawer({ open, onClose, onSelectSession }) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { l, toEnglishDigits, lang } = useLanguage();
   const [sessions, setSessions] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
+  const [deleteModalConfig, setDeleteModalConfig] = React.useState({
+    isOpen: false,
+    type: 'single',
+    targetId: null,
+    title: '',
+    message: '',
+  });
 
   React.useEffect(() => {
     if (open) {
@@ -33,21 +44,37 @@ export default function SessionHistoryDrawer({ open, onClose }) {
     }
   }, [open, user?.id]);
 
-  const handleDeleteItem = async (conversationId, e) => {
+  const handleDeleteItem = (conversationId, e) => {
     e?.stopPropagation();
-    if (!window.confirm(l('क्या आप इस परामर्श को हटाना चाहते हैं?', 'Are you sure you want to delete this consultation?'))) {
-      return;
-    }
-    await deleteSession(conversationId, user?.id);
-    setSessions((prev) => prev.filter((item) => item.conversationId !== conversationId));
+    setDeleteModalConfig({
+      isOpen: true,
+      type: 'single',
+      targetId: conversationId,
+      title: l('परामर्श हटाएं', 'Delete Consultation'),
+      message: l('क्या आप इस परामर्श को हटाना चाहते हैं?', 'Are you sure you want to delete this consultation?'),
+    });
   };
 
-  const handleClearAll = async () => {
-    if (!window.confirm(l('क्या आप सभी परामर्श इतिहास हटाना चाहते हैं? यह वापस नहीं लाया जा सकता।', 'Are you sure you want to delete all consultation history? This cannot be undone.'))) {
-      return;
+  const handleClearAll = () => {
+    setDeleteModalConfig({
+      isOpen: true,
+      type: 'all',
+      targetId: null,
+      title: l('संपूर्ण इतिहास साफ करें', 'Clear All Consultation History'),
+      message: l('क्या आप सभी परामर्श इतिहास हटाना चाहते हैं? यह वापस नहीं लाया जा सकता।', 'Are you sure you want to delete all consultation history? This cannot be undone.'),
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteModalConfig.type === 'single') {
+      const conversationId = deleteModalConfig.targetId;
+      if (!conversationId) return;
+      await deleteSession(conversationId, user?.id);
+      setSessions((prev) => prev.filter((item) => item.conversationId !== conversationId));
+    } else if (deleteModalConfig.type === 'all') {
+      await clearSessionHistory(user?.id);
+      setSessions([]);
     }
-    await clearSessionHistory(user?.id);
-    setSessions([]);
   };
 
   if (!open) return null;
@@ -75,7 +102,16 @@ export default function SessionHistoryDrawer({ open, onClose }) {
             sessions.map((s) => (
               <div
                 key={s.conversationId}
-                className="bg-card dark:bg-card/80 rounded-2xl p-3.5 border border-border-subtle group hover:border-sage/40 transition-all"
+                onClick={() => {
+                  setStoredConversationId(s.conversationId);
+                  if (onSelectSession) {
+                    onSelectSession(s);
+                  } else {
+                    navigate(`/mitra/chat?conv=${encodeURIComponent(s.conversationId)}`);
+                  }
+                  onClose();
+                }}
+                className="bg-card dark:bg-card/80 rounded-2xl p-3.5 border border-border-subtle group hover:border-sage/40 transition-all cursor-pointer"
               >
                 <div className="flex items-center justify-between mb-1">
                   <span
@@ -116,6 +152,17 @@ export default function SessionHistoryDrawer({ open, onClose }) {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={deleteModalConfig.isOpen}
+        onClose={() => setDeleteModalConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDelete}
+        title={deleteModalConfig.title}
+        message={deleteModalConfig.message}
+        confirmText={l('हटाएं', 'Delete')}
+        cancelText={l('रद्द करें', 'Cancel')}
+        isDestructive={true}
+      />
     </div>
   );
 }

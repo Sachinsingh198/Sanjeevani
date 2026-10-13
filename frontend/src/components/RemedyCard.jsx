@@ -32,7 +32,10 @@ const INGREDIENT_LOOKUP = [
   { keys: ['draksha', 'munakka', 'raisin'], nameHi: 'मुनक्का / किशमिश', icon: '🍇', amount: '5-6 दाने' },
   { keys: ['triphala'], nameHi: 'त्रिफला चूर्ण', icon: '🥣', amount: '1/2 छोटा चम्मच' },
   { keys: ['ashwagandha'], nameHi: 'अश्वगंधा', icon: '🪴', amount: '1/2 छोटा चम्मच' },
-  { keys: ['til taila', 'sesame oil', 'sarson'], nameHi: 'तिल / सरसों का तेल', icon: '🫒', amount: 'हल्का गुनगुना मालिश हेतु' }
+  { keys: ['til taila', 'sesame oil', 'sarson'], nameHi: 'तिल / सरसों का तेल', icon: '🫒', amount: 'हल्का गुनगुना मालिश हेतु' },
+  { keys: ['nariyal', 'coconut', 'nariyal tel'], nameHi: 'शुद्ध नारियल तेल', icon: '🥥', amount: 'हल्का लेप लगाने हेतु' },
+  { keys: ['neem'], nameHi: 'नीम का पानी', icon: '🌿', amount: 'हल्की सिकाई हेतु' },
+  { keys: ['aloe', 'ghritkumari'], nameHi: 'एलोवेरा जेल', icon: '🪴', amount: 'हल्का लगाने हेतु' }
 ];
 
 function extractIngredients(remedyText, remedyName) {
@@ -51,10 +54,18 @@ function extractIngredients(remedyText, remedyName) {
   }
 
   if (matched.length === 0) {
-    matched.push(
-      { nameHi: 'औषधीय जड़ी-बूटी', icon: '🌿', amount: 'निर्दिष्ट मात्रा अनुसार' },
-      { nameHi: 'गुनगुना पानी', icon: '💧', amount: '1 कप' }
-    );
+    const isTopical = /topical|skin|rash|lep|tel\b|oil\b|nariyal|neem|daane|chakatte|sujan|twacha|त्वचा|दाने|चकत्ते/i.test(combined);
+    if (isTopical) {
+      matched.push(
+        { nameHi: 'शुद्ध नारियल तेल', icon: '🥥', amount: 'हल्का लगाने हेतु' },
+        { nameHi: 'नीम का पानी / अर्क', icon: '🌿', amount: 'हल्की सिकाई हेतु' }
+      );
+    } else {
+      matched.push(
+        { nameHi: 'औषधीय जड़ी-बूटी', icon: '🌿', amount: 'निर्दिष्ट मात्रा अनुसार' },
+        { nameHi: 'गुनगुना पानी', icon: '💧', amount: '1 कप' }
+      );
+    }
   }
 
   return matched.slice(0, 4);
@@ -85,8 +96,7 @@ function parseSteps(remedyText) {
 }
 
 export default function RemedyCard({ remedy, remedies, index = 0 }) {
-  const { language } = useLanguage();
-  const l = (hi, en) => (language === 'english' ? en : hi);
+  const { l } = useLanguage();
 
   // Support single remedy or multi-remedy list
   const list = remedies && remedies.length > 0 ? remedies : (remedy ? [remedy] : []);
@@ -107,8 +117,16 @@ export default function RemedyCard({ remedy, remedies, index = 0 }) {
   const ingredients = extractIngredients(remedyText, remedyName);
   const steps = parseSteps(remedyText);
 
-  // Dosage resolution
-  let dosageText = l('दिन में 1-2 बार, भोजन के बाद गुनगुने पानी के साथ लें।', 'Take 1-2 times daily after meals with lukewarm water.');
+  // Dosage resolution (distinguishing topical care from oral brews)
+  const isTopical = Boolean(
+    currentRemedy.is_topical ||
+    /topical|skin|rash|lep|tel\b|oil\b|nariyal|twacha|दाने|चकत्ते|त्वचा|बाहरी/i.test(`${remedyName} ${remedyText}`)
+  );
+
+  let dosageText = isTopical
+    ? l('दिन में 1-2 बार प्रभावित जगह पर हल्के हाथ से लगाएं (केवल बाहरी उपयोग)।', 'Apply gently to affected area 1-2 times daily (External use only).')
+    : l('दिन में 1-2 बार, भोजन के बाद गुनगुने पानी के साथ लें।', 'Take 1-2 times daily after meals with lukewarm water.');
+
   if (currentRemedy.dosage) {
     if (typeof currentRemedy.dosage === 'string') {
       dosageText = currentRemedy.dosage;
@@ -126,8 +144,7 @@ export default function RemedyCard({ remedy, remedies, index = 0 }) {
         `नुस्खे का नाम: ${remedyName}।`,
         `सामग्री: ${ingredients.map(i => `${i.nameHi} ${i.amount}`).join(', ')}।`,
         `बनाने का तरीका: ${steps.join('। ')}।`,
-        `खुराक: ${dosageText}।`,
-        'दो से तीन दिन में आराम न आए तो एक सौ चार पर कॉल करें।'
+        `खुराक: ${dosageText}।`
       ];
       setIsSpeaking(true);
       speakText(speechParts.join(' '), {

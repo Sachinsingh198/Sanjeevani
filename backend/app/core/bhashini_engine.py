@@ -125,31 +125,39 @@ class BhashiniVoiceEngine:
         High-accuracy auto-detection of user language across all Indian languages:
         Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia,
         Garhwali, Hindi, and English.
+        Prioritizes explicit in-text language requests ('hindi main batao') and actual
+        script/token signals over stale client hint headers.
         """
-        # 0. Check explicit user language hint first
-        if hint:
-            h = hint.lower().strip()
-            hint_map = {
-                "bn": "bengali", "bengali": "bengali",
-                "ta": "tamil", "tamil": "tamil",
-                "te": "telugu", "telugu": "telugu",
-                "mr": "marathi", "marathi": "marathi",
-                "gu": "gujarati", "gujarati": "gujarati",
-                "kn": "kannada", "kannada": "kannada",
-                "ml": "malayalam", "malayalam": "malayalam",
-                "pa": "punjabi", "punjabi": "punjabi",
-                "or": "odia", "od": "odia", "odia": "odia",
-                "en": "english", "english": "english",
-                "garhwali": "garhwali",
-                "hi": "hindi", "hindi": "hindi",
-            }
-            if h in hint_map:
-                return hint_map[h]
-
         if not text or not text.strip():
+            if hint:
+                h = hint.lower().strip()
+                hint_map = {
+                    "bn": "bengali", "bengali": "bengali",
+                    "ta": "tamil", "tamil": "tamil",
+                    "te": "telugu", "telugu": "telugu",
+                    "mr": "marathi", "marathi": "marathi",
+                    "gu": "gujarati", "gujarati": "gujarati",
+                    "kn": "kannada", "kannada": "kannada",
+                    "ml": "malayalam", "malayalam": "malayalam",
+                    "pa": "punjabi", "punjabi": "punjabi",
+                    "or": "odia", "od": "odia", "odia": "odia",
+                    "en": "english", "english": "english",
+                    "hinglish": "hinglish",
+                    "garhwali": "garhwali",
+                    "hi": "hindi", "hindi": "hindi",
+                }
+                if h in hint_map:
+                    return hint_map[h]
             return "hindi"
 
         lower_text = text.lower().strip()
+
+        # 0. Check for explicit in-message language requests (e.g. 'hindi main batao', 'explain in hindi')
+        from app.core.dialogue_manager import extract_requested_language
+        explicit_target = extract_requested_language(lower_text)
+        if explicit_target:
+            return explicit_target
+
 
         # 1. Unicode Script Range Detection for Indian Languages
         if re.search(r"[\u0980-\u09FF]", text):
@@ -210,8 +218,28 @@ class BhashiniVoiceEngine:
             if lid_lang:
                 return lid_lang
 
-        # 5. Default to Hindi (includes Devanagari Hindi and Hinglish)
+        # 5. Fallback to client hint if provided, otherwise default to Hindi
+        if hint:
+            h = hint.lower().strip()
+            hint_map = {
+                "bn": "bengali", "bengali": "bengali",
+                "ta": "tamil", "tamil": "tamil",
+                "te": "telugu", "telugu": "telugu",
+                "mr": "marathi", "marathi": "marathi",
+                "gu": "gujarati", "gujarati": "gujarati",
+                "kn": "kannada", "kannada": "kannada",
+                "ml": "malayalam", "malayalam": "malayalam",
+                "pa": "punjabi", "punjabi": "punjabi",
+                "or": "odia", "od": "odia", "odia": "odia",
+                "en": "english", "english": "english",
+                "hinglish": "hinglish",
+                "garhwali": "garhwali",
+                "hi": "hindi", "hindi": "hindi",
+            }
+            if h in hint_map:
+                return hint_map[h]
         return "hindi"
+
 
     def get_garhwali_guidance(self, is_devanagari: bool = False) -> str:
         """

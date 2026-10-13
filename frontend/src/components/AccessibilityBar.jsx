@@ -6,28 +6,38 @@ import { useTheme } from '../context/ThemeContext';
 /**
  * AccessibilityBar — global accessibility controls.
  * Bumps rem-based root text size up/down, toggles high-contrast sunlight mode,
- * and toggles UI language between Hindi and English.
+ * and provides a 3-mode language switcher:
+ * - 'EN': Pure English
+ * - 'हिं': Pure Hindi (Devanagari with 0-9 digits)
+ * - 'Hing': Hinglish (Hindi language in English alphabet)
  */
 export default function AccessibilityBar({ scale: propScale, onScaleChange, lang: propLang, onLangChange }) {
   const langCtx = useLanguage();
   const themeCtx = useTheme();
-  const lang = propLang || langCtx?.lang || 'hi';
+  const currentLang = propLang || langCtx?.lang || 'hi';
   const scale = propScale ?? langCtx?.textScale ?? 1.0;
   const handleScale = onScaleChange || langCtx?.setTextScale;
-  const handleLang = onLangChange || langCtx?.toggleLang;
   const highContrast = themeCtx?.highContrast || false;
   const toggleHighContrast = themeCtx?.toggleHighContrast;
 
-  const isEn = lang === 'en';
+  const handleSelectLang = (selected) => {
+    if (onLangChange) {
+      onLangChange(selected);
+    } else if (langCtx?.setLang) {
+      langCtx.setLang(selected);
+    }
+  };
+
+  const isEn = currentLang === 'en';
 
   return (
     <div className="flex items-center gap-1.5 select-none" role="toolbar" aria-label={isEn ? "Accessibility options" : "सुगमता विकल्प"}>
       {/* Font Size Adjuster */}
-      <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 h-9 sm:h-9">
+      <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 h-9">
         <button
           type="button"
           onClick={() => handleScale && handleScale(Math.max(0.9, +(scale - 0.1).toFixed(1)))}
-          className="min-w-[34px] sm:min-w-[36px] h-full flex items-center justify-center text-muted hover:text-primary dark:text-gray-300 dark:hover:text-white transition-colors cursor-pointer"
+          className="min-w-[32px] sm:min-w-[36px] h-full flex items-center justify-center text-muted hover:text-primary dark:text-gray-300 dark:hover:text-white transition-colors cursor-pointer"
           aria-label={isEn ? "Decrease text size" : "छोटा अक्षर"}
           title={isEn ? "Decrease text size" : "छोटा अक्षर"}
         >
@@ -39,7 +49,7 @@ export default function AccessibilityBar({ scale: propScale, onScaleChange, lang
         <button
           type="button"
           onClick={() => handleScale && handleScale(Math.min(1.4, +(scale + 0.1).toFixed(1)))}
-          className="min-w-[34px] sm:min-w-[36px] h-full flex items-center justify-center text-muted hover:text-primary dark:text-gray-300 dark:hover:text-white transition-colors cursor-pointer"
+          className="min-w-[32px] sm:min-w-[36px] h-full flex items-center justify-center text-muted hover:text-primary dark:text-gray-300 dark:hover:text-white transition-colors cursor-pointer"
           aria-label={isEn ? "Increase text size" : "बड़ा अक्षर"}
           title={isEn ? "Increase text size" : "बड़ा अक्षर"}
         >
@@ -52,7 +62,7 @@ export default function AccessibilityBar({ scale: propScale, onScaleChange, lang
         <button
           type="button"
           onClick={toggleHighContrast}
-          className={`flex items-center gap-1 h-9 px-2.5 rounded-full border transition-all cursor-pointer text-xs font-bold ${
+          className={`flex items-center gap-1 h-9 px-2 sm:px-2.5 rounded-full border transition-all cursor-pointer text-xs font-bold ${
             highContrast
               ? 'bg-black text-white border-black ring-2 ring-yellow-400'
               : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-primary dark:text-gray-200 border-gray-200 dark:border-gray-700'
@@ -62,21 +72,58 @@ export default function AccessibilityBar({ scale: propScale, onScaleChange, lang
           title={isEn ? (highContrast ? "High Contrast Active" : "High Contrast Mode") : (highContrast ? "धूप मोड सक्रिय" : "धूप मोड")}
         >
           <Eye className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">{isEn ? (highContrast ? 'Sun ON' : 'Sun') : (highContrast ? 'धूप ON' : 'धूप')}</span>
+          <span className="hidden md:inline">{isEn ? (highContrast ? 'Sun ON' : 'Sun') : (highContrast ? 'धूप ON' : 'धूप')}</span>
         </button>
       )}
 
-      {/* Language Toggle */}
-      <button
-        type="button"
-        onClick={() => handleLang && (onLangChange ? onLangChange(lang === 'hi' ? 'en' : 'hi') : handleLang())}
-        className="flex items-center gap-1 h-9 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-primary dark:text-gray-200 text-xs font-bold px-2.5 rounded-full border border-gray-200 dark:border-gray-700 transition-colors cursor-pointer"
-        aria-label={isEn ? "Switch to Hindi" : "अंग्रेज़ी में बदलें"}
-        title={isEn ? "Switch to Hindi (हिन्दी)" : "Switch to English"}
+      {/* 3-Mode Language Selector: EN | हिं | Hing */}
+      <div
+        className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full p-0.5 border border-gray-200 dark:border-gray-700 h-9"
+        role="group"
+        aria-label="Language Mode Selector"
       >
-        <Languages className="w-3.5 h-3.5" />
-        <span>{lang === 'hi' ? 'हिं' : 'EN'}</span>
-      </button>
+        <button
+          type="button"
+          onClick={() => handleSelectLang('en')}
+          className={`h-full px-2 sm:px-2.5 rounded-full text-[11px] sm:text-xs transition-all cursor-pointer ${
+            currentLang === 'en'
+              ? 'bg-sage text-white shadow-xs font-extrabold'
+              : 'text-muted hover:text-primary dark:text-gray-400 dark:hover:text-white font-medium'
+          }`}
+          title="Pure English (100% English)"
+          aria-pressed={currentLang === 'en'}
+        >
+          EN
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSelectLang('hi')}
+          className={`h-full px-2 sm:px-2.5 rounded-full text-[11px] sm:text-xs transition-all cursor-pointer ${
+            currentLang === 'hi'
+              ? 'bg-sage text-white shadow-xs font-extrabold'
+              : 'text-muted hover:text-primary dark:text-gray-400 dark:hover:text-white font-medium'
+          }`}
+          title="हिन्दी (Pure Hindi with standard 0-9 digits)"
+          aria-pressed={currentLang === 'hi'}
+        >
+          हिं
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSelectLang('hinglish')}
+          className={`h-full px-2 sm:px-2.5 rounded-full text-[11px] sm:text-xs transition-all cursor-pointer ${
+            currentLang === 'hinglish'
+              ? 'bg-sage text-white shadow-xs font-extrabold'
+              : 'text-muted hover:text-primary dark:text-gray-400 dark:hover:text-white font-medium'
+          }`}
+          title="Hinglish (Hindi written in English alphabet)"
+          aria-pressed={currentLang === 'hinglish'}
+        >
+          Hing
+        </button>
+      </div>
     </div>
   );
 }

@@ -15,7 +15,7 @@ import BackButton from '../components/BackButton';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Screening() {
-  const { l, isHindi, toEnglishDigits } = useLanguage();
+  const { l, isHindi, isEnglish, toEnglishDigits } = useLanguage();
   const [screeningType, setScreeningType] = useState('ANEMIA');
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -104,15 +104,15 @@ export default function Screening() {
       setSelectedFile(null);
       setResult(null);
       setActiveStep(1);
-      toast.success('Camera sakriya hua');
+      toast.success(l('कैमरा सक्रिय हुआ', 'Camera activated', 'Camera sakriya hua'));
     } catch (err) {
       console.error('Camera access error:', err);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        toast.error('Camera permission nahi mili. Kripya browser settings mein camera allow karein.');
+        toast.error(l('कैमरा अनुमति नहीं मिली। कृपया ब्राउज़र सेटिंग्स में कैमरा अनुमति दें।', 'Camera permission denied. Please allow camera in browser settings.', 'Camera permission nahi mili. Kripya browser settings mein camera allow karein.'));
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        toast.error('Koi camera device nahi mila. Kripya tasveer upload karein.');
+        toast.error(l('कोई कैमरा डिवाइस नहीं मिला। कृपया तस्वीर अपलोड करें।', 'No camera device found. Please upload an image.', 'Koi camera device nahi mila. Kripya tasveer upload karein.'));
       } else {
-        toast.error(`Camera shuru nahi ho saka (${err.message || 'Error'}). Kripya tasveer upload karein.`);
+        toast.error(l(`कैमरा शुरू नहीं हो सका (${err.message || 'Error'})। कृपया तस्वीर अपलोड करें।`, `Could not start camera (${err.message || 'Error'}). Please upload an image.`, `Camera shuru nahi ho saka (${err.message || 'Error'}). Kripya tasveer upload karein.`));
       }
       setIsCameraActive(false);
     }
@@ -137,7 +137,7 @@ export default function Screening() {
         setResult(null);
         setActiveStep(2);
         stopCamera();
-        toast.success('Tasveer capture kar li gayi');
+        toast.success(l('तस्वीर ले ली गई', 'Photo captured', 'Tasveer capture kar li gayi'));
       }
     }, 'image/jpeg', 0.9);
   };
@@ -151,7 +151,7 @@ export default function Screening() {
       setIsDemoSample(false);
       setResult(null);
       setActiveStep(2);
-      toast.success('Tasveer safalta-purvak chuni gayi');
+      toast.success(l('तस्वीर सफलतापूर्वक चुनी गई', 'Image selected successfully', 'Tasveer safalta-purvak chuni gayi'));
     }
   };
 
@@ -216,25 +216,25 @@ export default function Screening() {
         setIsDemoSample(true);
         setResult(null);
         setActiveStep(2);
-        toast.success(`Namuna tasveer (${modalities[screeningType].title}) load hui`);
+        toast.success(l(`नमूना तस्वीर (${modalities[screeningType].title}) लोड हुई`, `Sample image (${modalities[screeningType].title}) loaded`, `Namuna tasveer (${modalities[screeningType].title}) load hui`));
       }
     }, 'image/jpeg', 0.9);
   };
 
   const handlePlayInstructions = () => {
     const text = modalities[screeningType].guideText;
-    speakText(text, { language: 'hi', gender: 'female' });
+    speakText(text, { language: isEnglish ? 'en' : 'hi', gender: 'female' });
   };
 
   const handlePlayResult = () => {
     if (!result) return;
     const text = `${result.type}. ${result.estimated_metric || ''}. ${result.clinical_recommendation}`;
-    speakText(text, { language: 'hi', gender: 'female' });
+    speakText(text, { language: isEnglish ? 'en' : 'hi', gender: 'female' });
   };
 
   const handleRunScreening = async () => {
     if (!selectedFile && !selectedImage) {
-      toast.error('Kripya pehle tasveer chunein ya camera se photo lein.');
+      toast.error(l('कृपया पहले तस्वीर चुनें या कैमरे से फोटो लें।', 'Please select or capture an image first.', 'Kripya pehle tasveer chunein ya camera se photo lein.'));
       return;
     }
 
@@ -302,13 +302,13 @@ export default function Screening() {
 
       setShowAnnotated(true);
       setActiveStep(3);
-      toast.success('AI Jaanch safalta-purvak poori hui');
+      toast.success(l('एआई जांच सफलतापूर्वक पूर्ण हुई', 'AI Screening completed successfully', 'AI Jaanch safalta-purvak poori hui'));
     } catch (err) {
       console.error('Screening execution error:', err);
       const isTimeout = err?.message?.includes('TIMEOUT');
       const errorMsg = isTimeout
-        ? 'AI Jaanch timeout (20s) ho gayi. Kripya punah prayas karein.'
-        : (err?.response?.data?.detail || err?.message || 'Jaanch mein samasya aayi. Kripya tasveer dobara check karein.');
+        ? l('एआई जांच टाइमआउट हो गई (20s)। कृपया पुनः प्रयास करें।', 'AI Screening timed out (20s). Please try again.', 'AI Jaanch timeout ho gayi (20s). Kripya punah prayas karein.')
+        : (err?.response?.data?.detail || err?.message || l('जांच में समस्या आई। कृपया तस्वीर दोबारा जांचें।', 'Screening error encountered. Please check image and retry.', 'Jaanch mein samasya aayi. Kripya tasveer dobara check karein.'));
       setScreeningError(errorMsg);
 
       toast.error(
@@ -410,10 +410,10 @@ export default function Screening() {
       <div className="max-w-4xl mx-auto mb-6 bg-white dark:bg-warm-indigo rounded-2xl p-2.5 sm:p-3 border border-sage/20 shadow-xs">
         <div className="grid grid-cols-4 gap-1 sm:gap-2 text-center text-[11px] sm:text-xs font-bold">
           {[
-            { num: 1, label: '1. SCAN', desc: 'Tasveer Lein' },
-            { num: 2, label: '2. PROCESS', desc: 'Biomarker Scan' },
-            { num: 3, label: '3. RESULT', desc: 'Clinical Report' },
-            { num: 4, label: '4. REFERRAL', desc: 'PHC Parcha' },
+            { num: 1, label: '1. SCAN', desc: l('तस्वीर लें', 'Capture Photo', 'Tasveer Lein') },
+            { num: 2, label: '2. PROCESS', desc: l('बायोमार्कर्स', 'Biomarkers', 'Biomarker Scan') },
+            { num: 3, label: '3. RESULT', desc: l('जांच रिपोर्ट', 'Clinical Report', 'Clinical Report') },
+            { num: 4, label: '4. REFERRAL', desc: l('रेफरल पर्चा', 'PHC Referral', 'PHC Parcha') },
           ].map((stage) => {
             const isCompleted = activeStep > stage.num || (activeStep === 3 && stage.num <= 3);
             const isCurrent = activeStep === stage.num;
@@ -804,7 +804,7 @@ export default function Screening() {
                   className="touch-target w-full bg-gold-warm hover:bg-gold-warm/90 text-primary font-bold py-3.5 px-4 rounded-2xl text-xs shadow-xs transition-all flex items-center justify-center gap-2"
                 >
                   <FileText className="w-4 h-4" />
-                  <span>PHC Doctor Ke Liye Referral Parcha Kholein</span>
+                  <span>{l('पीएचसी डॉक्टर के लिए रेफरल पर्चा खोलें', 'Open Referral Slip for PHC Doctor', 'PHC Doctor Ke Liye Referral Parcha Kholein')}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
@@ -813,7 +813,7 @@ export default function Screening() {
                   className="touch-target w-full bg-white dark:bg-card border border-sage/30 hover:bg-sage/10 text-sage dark:text-booti-glow font-bold py-3.5 px-4 rounded-2xl text-xs transition-all flex items-center justify-center gap-2"
                 >
                   <Stethoscope className="w-4 h-4" />
-                  <span>Dr. Sanjeevani Se Paramarsh Karein</span>
+                  <span>{l('डॉ. संजीवनी से परामर्श करें', 'Consult Dr. Sanjeevani', 'Dr. Sanjeevani Se Paramarsh Karein')}</span>
                 </Link>
               </div>
 
@@ -825,7 +825,7 @@ export default function Screening() {
               </div>
               <div className="space-y-1">
                 <h4 className="font-bold text-sm text-red-700 dark:text-red-300">
-                  AI Jaanch Asafal Rahi (Screening Failed)
+                  {l('एआई जांच असफल रही (Screening Failed)', 'AI Screening Failed', 'AI Jaanch Asafal Rahi')}
                 </h4>
                 <p className="text-xs text-muted dark:text-muted max-w-sm mx-auto">
                   {screeningError}
@@ -838,7 +838,7 @@ export default function Screening() {
                   className="px-4 py-2.5 bg-sage hover:bg-sage/90 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>{l('पुनः प्रयास करें', 'Try Again')}</span>
+                  <span>{l('पुनः प्रयास करें', 'Try Again', 'Dobara Koshish Karein')}</span>
                 </button>
               </div>
             </div>
@@ -848,10 +848,10 @@ export default function Screening() {
                 <Eye className="w-8 h-8 opacity-70" />
               </div>
               <p className="text-sm font-bold text-primary">
-                Tasveer chuniye aur jaanch shuru kijiye
+                {l('तस्वीर चुनें और जांच शुरू करें', 'Select an image to begin screening', 'Tasveer chuniye aur jaanch shuru kijiye')}
               </p>
               <p className="text-xs text-muted dark:text-muted max-w-xs mx-auto leading-relaxed">
-                OpenCV colorimetric index, anumaanit clinical metric aur doctor recommendation yahan nishkarsh ke roop mein dikhega.
+                {l('कंप्यूटर विज़न द्वारा अनुक्रमित बायोमार्कर और डॉक्टर सिफारिश यहाँ दिखाई देगी।', 'Computer vision biomarker analysis and clinical recommendation will appear here.', 'OpenCV colorimetric index, anumaanit clinical metric aur doctor recommendation yahan nishkarsh ke roop mein dikhega.')}
               </p>
             </div>
           )}
@@ -872,7 +872,7 @@ export default function Screening() {
                 </div>
                 <div>
                   <h3 className="font-serif font-bold text-base text-primary">
-                    ABDM Diagnostic Referral Parcha
+                    {l('एबीडीएम डायग्नोस्टिक रेफरल पर्चा', 'ABDM Diagnostic Referral Slip', 'ABDM Diagnostic Referral Parcha')}
                   </h3>
                   <p className="text-[10px] text-muted dark:text-muted">
                     Ayushman Bharat Digital Mission • FHIR R4 DiagnosticReport
@@ -903,7 +903,7 @@ export default function Screening() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted dark:text-muted">Date / Time:</span>
-                <span>{new Date().toLocaleDateString('hi-IN')} {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <span>{formatDate(new Date())} {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted dark:text-muted">Screening Test:</span>
@@ -911,11 +911,11 @@ export default function Screening() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted dark:text-muted">Calculated Score:</span>
-                <span className="font-bold">{result.score} (Cutoff: {result.threshold})</span>
+                <span className="font-bold">{toEnglishDigits(result.score)} (Cutoff: {toEnglishDigits(result.threshold)})</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted dark:text-muted">Estimated Metric:</span>
-                <span className="font-bold text-rose-soft dark:text-rose-soft">{result.estimated_metric || 'N/A'}</span>
+                <span className="font-bold text-rose-soft dark:text-rose-soft">{toEnglishDigits(result.estimated_metric || 'N/A')}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted dark:text-muted">Risk Grade:</span>
@@ -926,7 +926,7 @@ export default function Screening() {
             {/* Referral Note */}
             <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs leading-relaxed">
               <span className="font-bold text-amber-800 dark:text-amber-300 block mb-1">
-                Prathmik Swasthya Kendra (PHC) Chikitsak Hetu:
+                {l('प्राथमिक स्वास्थ्य केंद्र (PHC) चिकित्सक हेतु:', 'For Primary Health Centre (PHC) Physician:', 'Prathmik Swasthya Kendra (PHC) Chikitsak Hetu:')}
               </span>
               <p className="text-gray-700 dark:text-gray-300">
                 {result.recommendation}
@@ -941,7 +941,7 @@ export default function Screening() {
                   onClick={() => {
                     if (result.fhir_report) {
                       downloadAbdmFhirBundle(result.fhir_report);
-                      toast.success('ABDM FHIR DiagnosticReport JSON download hua');
+                      toast.success(l('एबीडीएम एफएचआईआर डायग्नोस्टिक रिपोर्ट JSON डाउनलोड हुआ', 'ABDM FHIR DiagnosticReport JSON downloaded', 'ABDM FHIR DiagnosticReport JSON download hua'));
                     }
                   }}
                   className="touch-target flex-1 py-3 px-4 rounded-xl bg-sage text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-sage/90"
@@ -956,7 +956,7 @@ export default function Screening() {
                   className="touch-target flex-1 py-3 px-4 rounded-xl border border-gray-300 dark:border-gray-700 text-xs font-bold flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   <Printer className="w-4 h-4" />
-                  <span>Parcha Print Karein</span>
+                  <span>{l('पर्चा प्रिंट करें', 'Print Referral Slip', 'Parcha Print Karein')}</span>
                 </button>
               </div>
 

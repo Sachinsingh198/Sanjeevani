@@ -4,55 +4,78 @@ import {
   ChevronLeft, CheckCircle2, Volume2, VolumeX, ArrowRight, Heart
 } from 'lucide-react';
 import { speakText } from '../api/voiceClient';
-
-const ONBOARDING_STEPS = [
-  {
-    step: 1,
-    badge: 'Kadam 1 / Step 1',
-    title: 'Bolkar Baat Karein 🎙️',
-    englishTitle: 'Voice-First Consultation',
-    desc: 'Likhne ya type karne ki koi jhijhak nahi. Bas mic button dabayein aur apni bhasha (Hindi ya Pahadi) mein batayein kya takleef hai.',
-    englishDesc: 'No need to type. Just press the microphone and explain your symptoms naturally in Hindi or English.',
-    icon: Mic,
-    color: 'from-emerald-500/20 to-teal-500/10',
-    borderColor: 'border-emerald-500/30',
-    textColor: 'text-emerald-700 dark:text-emerald-400',
-    iconBg: 'bg-emerald-500 text-white',
-    audioText: 'Kadam ek: Bolkar baat karein. Likhne ya type karne ki koi zaroorat nahi. Bas mic dabayein aur apni takleef batayein.',
-  },
-  {
-    step: 2,
-    badge: 'Kadam 2 / Step 2',
-    title: 'Jaanch & Doctor Parcha 🏥',
-    englishTitle: 'Clinical Triage & QR Pass',
-    desc: 'AI turant triage rang (Green = Aam, Yellow = Dhyan dein, Red = Tatkal) nirdharit karta hai aur doctor ke liye instant QR Referral Pass banata hai.',
-    englishDesc: 'Instant color-coded severity triage with a digital QR Referral Pass that local PHC doctors can scan immediately.',
-    icon: QrCode,
-    color: 'from-amber-500/20 to-orange-500/10',
-    borderColor: 'border-amber-500/30',
-    textColor: 'text-amber-800 dark:text-amber-400',
-    iconBg: 'bg-amber-600 text-white',
-    audioText: 'Kadam do: Jaanch aur doctor parcha. AI turant gambhirta ki jaanch karta hai aur doctor ke liye QR pass taiyar karta hai.',
-  },
-  {
-    step: 3,
-    badge: 'Kadam 3 / Step 3',
-    title: 'AYUSH Nuskhe & 108 Madad 🌿',
-    englishTitle: 'AYUSH Remedies & Emergency Help',
-    desc: 'Sarkari AYUSH pramanit gharelu upchar, dawai lene ki aawazi ghanti, aur aapatkal mein 1-tap 108 ambulance call ki suvidha.',
-    englishDesc: 'Verified AYUSH herbal remedies, spoken audio medicine chimes, and instant 1-tap 108 emergency ambulance dialing.',
-    icon: Heart,
-    color: 'from-rose-500/20 to-pink-500/10',
-    borderColor: 'border-rose-500/30',
-    textColor: 'text-rose-800 dark:text-rose-400',
-    iconBg: 'bg-rose-600 text-white',
-    audioText: 'Kadam teen: Ayush nuskhe aur ek sau aath madad. Pramanit gharelu nuskhe aur aapatkal mein turant ambulance call.',
-  },
-];
+import { useLanguage } from '../context/LanguageContext';
 
 export default function OnboardingModal({ isOpen, onClose, onStartChat }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const { lang, l } = useLanguage();
+
+  const ONBOARDING_STEPS = [
+    {
+      step: 1,
+      badge: l('चरण 1', 'Step 1', 'Kadam 1'),
+      title: l('बोलकर परामर्श लें 🎙️', 'Voice-First Consultation 🎙️', 'Bolkar Baat Karein 🎙️'),
+      englishTitle: l('प्राकृतिक आवाज में बात करें', 'Speak Naturally in Your Language', 'Apni aawaz mein baat karein'),
+      desc: l(
+        'लिखने या टाइप करने की आवश्यकता नहीं। बस माइक दबाएं और अपनी भाषा में अपनी समस्या बताएं।',
+        'No need to type. Just press the microphone and explain your symptoms naturally in pure English.',
+        'Likhne ya type karne ki koi jhijhak nahi. Bas mic button dabayein aur apni bhasha mein batayein kya takleef hai.'
+      ),
+      icon: Mic,
+      color: 'from-emerald-500/20 to-teal-500/10',
+      borderColor: 'border-emerald-500/30',
+      textColor: 'text-emerald-700 dark:text-emerald-400',
+      iconBg: 'bg-emerald-500 text-white',
+      audioText: l(
+        'चरण 1: बोलकर परामर्श लें। लिखने की आवश्यकता नहीं, बस माइक दबाकर अपनी समस्या बताएं।',
+        'Step 1: Voice first consultation. No need to type, just press the microphone and explain your symptoms.',
+        'Kadam 1: Bolkar baat karein. Likhne ya type karne ki koi zaroorat nahi. Bas mic dabayein aur apni takleef batayein.'
+      ),
+    },
+    {
+      step: 2,
+      badge: l('चरण 2', 'Step 2', 'Kadam 2'),
+      title: l('जांच व डिजिटल पर्चा 🏥', 'Clinical Triage & Digital Pass 🏥', 'Jaanch & Doctor Parcha 🏥'),
+      englishTitle: l('त्वरित प्राथमिकता निर्धारण व क्यूआर कोड', 'Instant Severity Triage & QR Pass', 'Instant Triage aur QR Pass'),
+      desc: l(
+        'एआई तुरंत गंभीरता (हरा = सामान्य, पीला = ध्यान दें, लाल = तत्काल) निर्धारित करता है और डॉक्टर के लिए क्यूआर पास बनाता है।',
+        'Instant color-coded severity triage with a digital QR Referral Pass that local PHC doctors can scan immediately.',
+        'AI turant triage rang (Green = Aam, Yellow = Dhyan dein, Red = Tatkal) nirdharit karta hai aur doctor ke liye instant QR Referral Pass banata hai.'
+      ),
+      icon: QrCode,
+      color: 'from-amber-500/20 to-orange-500/10',
+      borderColor: 'border-amber-500/30',
+      textColor: 'text-amber-800 dark:text-amber-400',
+      iconBg: 'bg-amber-600 text-white',
+      audioText: l(
+        'चरण 2: जांच और डिजिटल पर्चा। एआई तुरंत गंभीरता की जांच करता है और डॉक्टर के लिए क्यूआर पास तैयार करता है।',
+        'Step 2: Clinical triage and digital pass. AI evaluates severity and generates an instant QR referral pass.',
+        'Kadam 2: Jaanch aur doctor parcha. AI turant gambhirta ki jaanch karta hai aur doctor ke liye QR pass taiyar karta hai.'
+      ),
+    },
+    {
+      step: 3,
+      badge: l('चरण 3', 'Step 3', 'Kadam 3'),
+      title: l('आयुष उपचार व 108 सहायता 🌿', 'AYUSH Remedies & Emergency Help 🌿', 'AYUSH Nuskhe & 108 Madad 🌿'),
+      englishTitle: l('प्रमाणित घरेलू नुस्खे व आपातकालीन मदद', 'Verified Home Remedies & Emergency 108', 'Gharelu Upchar aur 108 Ambulance'),
+      desc: l(
+        'सरकारी आयुष प्रमाणित घरेलू उपचार, दवा लेने की आवाज में घंटी, और आपातकाल में 1-टैप 108 एम्बुलेंस कॉल की सुविधा।',
+        'Verified AYUSH herbal remedies, spoken audio medicine chimes, and instant 1-tap 108 emergency ambulance dialing.',
+        'Sarkari AYUSH pramanit gharelu upchar, dawai lene ki aawazi ghanti, aur aapatkal mein 1-tap 108 ambulance call ki suvidha.'
+      ),
+      icon: Heart,
+      color: 'from-rose-500/20 to-pink-500/10',
+      borderColor: 'border-rose-500/30',
+      textColor: 'text-rose-800 dark:text-rose-400',
+      iconBg: 'bg-rose-600 text-white',
+      audioText: l(
+        'चरण 3: आयुष उपचार और 108 सहायता। प्रमाणित घरेलू नुस्खे और आपातकाल में तुरंत एम्बुलेंस कॉल।',
+        'Step 3: AYUSH remedies and 108 emergency help. Verified remedies and 1-tap emergency ambulance dialing.',
+        'Kadam 3: Ayush nuskhe aur 108 madad. Pramanit gharelu nuskhe aur aapatkal mein turant ambulance call.'
+      ),
+    },
+  ];
 
   useEffect(() => {
     return () => {
@@ -129,13 +152,13 @@ export default function OnboardingModal({ isOpen, onClose, onStartChat }) {
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#8ED14C] animate-pulse" />
             <span className="text-[11px] font-bold uppercase tracking-wider text-sage dark:text-booti-glow">
-              Sanjeevani Sahayak Margdarshak
+              {l('संजीवनी सहायक मार्गदर्शक', 'Sanjeevani Assistant Guide', 'Sanjeevani Sahayak Guide')}
             </span>
           </div>
           <button
             type="button"
             onClick={handleComplete}
-            aria-label="Band karein (Close)"
+            aria-label={l('बंद करें', 'Close', 'Band karein')}
             className="touch-target p-1.5 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <X className="w-4 h-4" />
@@ -179,9 +202,6 @@ export default function OnboardingModal({ isOpen, onClose, onStartChat }) {
           <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed max-w-sm mb-2">
             {stepData.desc}
           </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 italic max-w-sm">
-            {stepData.englishDesc}
-          </p>
 
           {/* Voice Readout Button */}
           <button
@@ -196,12 +216,12 @@ export default function OnboardingModal({ isOpen, onClose, onStartChat }) {
             {isPlayingAudio ? (
               <>
                 <VolumeX className="w-3.5 h-3.5" />
-                <span>Rukiye (Pause Audio)</span>
+                <span>{l('रोकें (ऑडियो रोकें)', 'Pause Audio', 'Rukiye (Audio pause karein)')}</span>
               </>
             ) : (
               <>
                 <Volume2 className="w-3.5 h-3.5" />
-                <span>Aawaz mein sunein (Listen Aloud)</span>
+                <span>{l('आवाज में सुनें', 'Listen Aloud', 'Aawaz mein sunein')}</span>
               </>
             )}
           </button>
@@ -216,7 +236,7 @@ export default function OnboardingModal({ isOpen, onClose, onStartChat }) {
               className="touch-target px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5"
             >
               <ChevronLeft className="w-4 h-4" />
-              <span>Peeche</span>
+              <span>{l('पीछे', 'Previous', 'Peeche')}</span>
             </button>
           ) : (
             <button
@@ -224,7 +244,7 @@ export default function OnboardingModal({ isOpen, onClose, onStartChat }) {
               onClick={handleComplete}
               className="touch-target text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline underline-offset-2"
             >
-              Chhodein (Skip)
+              {l('छोड़ें', 'Skip', 'Chhodein')}
             </button>
           )}
 
@@ -233,7 +253,11 @@ export default function OnboardingModal({ isOpen, onClose, onStartChat }) {
             onClick={handleNext}
             className="touch-target px-5 py-2.5 rounded-xl bg-sage hover:bg-sage/90 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
           >
-            <span>{isLast ? 'Paramarsh Shuru Karein 🙏' : 'Aage (Next)'}</span>
+            <span>
+              {isLast
+                ? l('परामर्श शुरू करें 🙏', 'Start Consultation 🙏', 'Paramarsh Shuru Karein 🙏')
+                : l('आगे', 'Next', 'Aage')}
+            </span>
             {isLast ? <CheckCircle2 className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
         </div>

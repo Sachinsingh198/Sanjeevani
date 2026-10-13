@@ -118,6 +118,10 @@ function identifySectionType(keyText) {
   ) {
     return 'possible_cause';
   }
+  // Alternative remedy
+  if (lower.includes('vaikalpik') || lower.includes('alternative') || lower.includes('वैकल्पिक')) {
+    return 'alternative_remedy';
+  }
   // Remedy name
   if (lower.includes('nuskha') || lower.includes('remedy') || lower.includes('नुस्खा') || lower.includes('upchaar')) {
     return 'remedy';
@@ -196,6 +200,14 @@ function parseMessageBlocks(rawText) {
       continue;
     }
 
+    // Horizontal rule / markdown divider: ---, ***, ___, --
+    if (/^[-*_]{2,}$/.test(line)) {
+      flushList();
+      flushSection();
+      blocks.push({ type: 'divider' });
+      continue;
+    }
+
     // 1. Check for emergency header or callout
     if (
       line.startsWith('EMERGENCY WARNING:') ||
@@ -243,13 +255,10 @@ function parseMessageBlocks(rawText) {
         continue;
       }
 
-      // Check if line is a new section or referral footer
-      if (line.startsWith('2 din') || line.includes('104') || line.includes('PHC')) {
-        flushSection();
-        blocks.push({
-          type: 'referral',
-          text: line,
-        });
+      // If line is a bullet item inside the section (keep it in the section!)
+      const bulletMatch = line.match(/^[-*•]\s*(.+)$/);
+      if (bulletMatch) {
+        currentSection.content.push(bulletMatch[1]);
         continue;
       }
 
@@ -258,7 +267,7 @@ function parseMessageBlocks(rawText) {
       continue;
     }
 
-    // 4. Referral / Helpline footer line
+    // 4. Standalone Referral / Helpline footer line outside sections
     if (
       (line.includes('104') && (line.includes('PHC') || line.includes('call') || line.includes('sampark'))) ||
       line.includes('108 emergency ambulance') ||
@@ -798,6 +807,7 @@ export default function StructuredBotMessage({
           if (secType === 'precaution') {
             const rawItems = content.filter((c) => typeof c === 'string');
             const items = extractBulletPoints(rawItems);
+            const hasReferralMention = items.some(it => it.includes('104') || it.includes('108') || it.includes('PHC'));
             return (
               <div
                 key={idx}
@@ -817,11 +827,54 @@ export default function StructuredBotMessage({
                     </div>
                   ))}
                 </div>
+                {hasReferralMention && (
+                  <div className="pt-1.5 flex items-center gap-2">
+                    <a
+                      href="tel:104"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sage hover:bg-[#496345] text-white text-[10px] sm:text-xs font-bold transition-all shadow-xs"
+                      title="Call 104 Tele-Health Helpline"
+                    >
+                      <PhoneCall className="w-3 h-3" />
+                      104 (Health)
+                    </a>
+                    <a
+                      href="tel:108"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-soft hover:bg-[#9c4337] text-white text-[10px] sm:text-xs font-bold transition-all shadow-xs"
+                      title="Call 108 Emergency Ambulance"
+                    >
+                      <PhoneCall className="w-3 h-3" />
+                      108 (Ambulance)
+                    </a>
+                  </div>
+                )}
               </div>
             );
           }
 
-          // (h) Generic Section Fallback
+          // (h) Alternative Remedy / Vaikalpik Nuskha
+          if (secType === 'alternative_remedy') {
+            const bodyLines = content.filter((c) => typeof c === 'string');
+            return (
+              <div
+                key={idx}
+                className="p-3 sm:p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/25 border border-emerald-300 dark:border-emerald-700/60 shadow-xs space-y-2 mt-2"
+              >
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                  <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>{label}</span>
+                </div>
+                <div className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 space-y-1.5 pl-1">
+                  {bodyLines.map((line, li) => (
+                    <p key={li} className="leading-relaxed font-medium">
+                      {renderInlineText(line)}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
+          // (i) Generic Section Fallback
           return (
             <div key={idx} className="p-2.5 rounded-xl bg-black/5 dark:bg-white/5 space-y-1">
               <div className="text-xs font-bold text-primary">{label}</div>
@@ -831,6 +884,13 @@ export default function StructuredBotMessage({
                 ))}
               </div>
             </div>
+          );
+        }
+
+        // --- DIVIDER BLOCK ---
+        if (block.type === 'divider') {
+          return (
+            <div key={idx} className="my-2 border-t border-gray-200/80 dark:border-gray-700/60" />
           );
         }
 

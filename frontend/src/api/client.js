@@ -109,11 +109,18 @@ export const sendChatMessage = async (
       conversationHistory = arg7 || [];
     }
 
+    const patientContext = {
+      known_conditions: patientConditions,
+      age: (typeof arg1 === 'object' && arg1?.patient_context?.age) || (typeof arg1 === 'object' && arg1?.age) || undefined,
+      gender: (typeof arg1 === 'object' && arg1?.patient_context?.gender) || (typeof arg1 === 'object' && arg1?.gender) || undefined,
+      pregnancy: (typeof arg1 === 'object' && arg1?.patient_context?.pregnancy) || (typeof arg1 === 'object' && arg1?.pregnancy) || undefined,
+    };
+
     const res = await api.post('/chat/message', {
       conversation_id: conversationId,
       message: message,
       language_hint: languageHint,
-      patient_context: { known_conditions: patientConditions },
+      patient_context: patientContext,
       include_audio: includeAudio,
       voice_gender: voiceGender,
     });
@@ -349,6 +356,22 @@ export const clearAllChatHistory = async (token = null) => {
   return res.data;
 };
 
+/**
+ * Analyzes prescription slips, medicine blister strips, or visible symptoms/rashes.
+ */
+export const scanMedicalImage = async (file, scanType = 'prescription_medicine', languageHint = 'hi', conversationId = 'default_conv') => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('scan_type', scanType);
+  formData.append('language_hint', languageHint);
+  formData.append('conversation_id', conversationId);
+
+  const res = await api.post('/chat/scan-medical-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 45000,
+  });
+  return res.data;
+};
 /**
  * Synchronizes batch encounters from ASHA workers to the health center backend.
  */

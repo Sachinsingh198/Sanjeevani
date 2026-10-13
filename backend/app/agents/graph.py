@@ -14,8 +14,11 @@ from app.core.logger import logger
 def get_sqlite_saver():
     """Returns a persistent local SqliteSaver on sessions.db with WAL mode."""
     try:
+        import os
         from langgraph.checkpoint.sqlite import SqliteSaver
-        conn = sqlite3.connect("sessions.db", check_same_thread=False)
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        db_path = os.path.normpath(os.path.join(backend_dir, "sessions.db"))
+        conn = sqlite3.connect(db_path, check_same_thread=False)
         conn.execute("PRAGMA journal_mode=WAL")
         return SqliteSaver(conn)
     except Exception as e:
@@ -239,8 +242,8 @@ def route_clinical_flow(state: AgentState) -> str:
     Routes after triage_node runs.
 
     - Red tier → emergency immediately
-    - dialogue_phase == CONCLUDED → fetch remedy from Qdrant, then deliver
-    - Everything else → go to doctor_consultation_node for clinical dialogue
+    - dialogue_phase == CONCLUDED and no remedies yet and not vision → fetch remedy from Qdrant, then deliver
+    - Everything else (including concluded follow-up questions, language switch, vision scan) → doctor_consultation_node
     """
     tier      = state.get("detected_tier", "Green")
     new_phase = state.get("dialogue_phase", "GREETING")
@@ -249,7 +252,11 @@ def route_clinical_flow(state: AgentState) -> str:
         return "emergency_node"
 
     if new_phase == "CONCLUDED":
-        return "retriever_node"
+        has_remedies = bool(state.get("retrieved_remedies"))
+        has_vision = bool(state.get("vision_analysis"))
+        if not has_remedies and not has_vision:
+            return "retriever_node"
+        return "doctor_consultation_node"
 
     return "doctor_consultation_node"
 
@@ -257,13 +264,14 @@ def route_clinical_flow(state: AgentState) -> str:
 def route_after_consultation(state: AgentState) -> str:
     """
     Routes after doctor_consultation_node runs:
-    If the consultation concluded during this node and remedies have not been fetched yet,
+    If the consultation concluded during this node and remedies have not been fetched yet (and not vision scan),
     route to retriever_node via graph edge (which feeds into doctor_consultation_node for delivery).
     Otherwise, complete the turn.
     """
     phase = state.get("dialogue_phase")
     remedies = state.get("retrieved_remedies")
-    if phase == "CONCLUDED" and not remedies:
+    has_vision = bool(state.get("vision_analysis"))
+    if phase == "CONCLUDED" and not remedies and not has_vision:
         return "retriever_node"
     return END
 

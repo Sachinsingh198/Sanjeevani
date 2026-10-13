@@ -38,9 +38,10 @@ const COMMON_CONDITIONS = [
 const ALL_SUPPORTED_LANGUAGES = [
   // Hill & Core Languages
   { code: 'hi', name: 'हिन्दी', nameEn: 'Hindi', native: 'हिन्दी', category: 'उत्तराखंड व मुख्य' },
+  { code: 'en', name: 'अंग्रेज़ी', nameEn: 'English', native: 'English', category: 'उत्तराखंड व मुख्य' },
+  { code: 'hinglish', name: 'हिंग्लिश', nameEn: 'Hinglish (Hindi in English script)', native: 'Hinglish', category: 'उत्तराखंड व मुख्य' },
   { code: 'garh', name: 'गढ़वाली', nameEn: 'Garhwali', native: 'गढ़वाळी', category: 'उत्तराखंड व मुख्य' },
   { code: 'ku', name: 'कुमाऊँनी', nameEn: 'Kumaoni', native: 'कुमाऊँनी', category: 'उत्तराखंड व मुख्य' },
-  { code: 'en', name: 'अंग्रेज़ी', nameEn: 'English', native: 'English', category: 'उत्तराखंड व मुख्य' },
 
   // All 22 Scheduled Indic Languages (Bhashini & Sarvam)
   { code: 'as', name: 'असमिया', nameEn: 'Assamese', native: 'অসমীয়া', category: 'संविधान की 22 आधिकारिक भाषाएँ' },

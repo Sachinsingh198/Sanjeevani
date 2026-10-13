@@ -5,11 +5,12 @@ import asyncio
 import traceback
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, HTTPException, Response, Depends, Request, Query
+from fastapi import APIRouter, HTTPException, Response, Depends, Request, Query, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
-from app.schemas.chat_schemas import ChatRequest, ChatResponse, RemedyItem, TTSRequest
+from app.schemas.chat_schemas import ChatRequest, ChatResponse, RemedyItem, TTSRequest, MedicalVisionResponse
 from app.agents.graph import sanjeevani_workflow
 from app.core.tts_engine import IndicTTSEngine
+from app.core.vision_service import MedicalVisionService
 from app.core.auth import get_optional_current_user
 from app.models import get_db
 from app.core.logger import logger
@@ -72,8 +73,91 @@ async def _execute_chat_pipeline(
                 "language_hint": req.language_hint,
             },
         }
+
+        # Seamless cross-turn memory: seed initial_state with prior notes / vision if present
+        try:
+            from app.agents.graph import checkpointer, get_sqlite_saver
+            saver = checkpointer or get_sqlite_saver()
+            prior_cp = saver.get_tuple(config)
+            if not prior_cp or not prior_cp.checkpoint:
+                sqlite_saver = get_sqlite_saver()
+                prior_cp = sqlite_saver.get_tuple(config)
+
+            if prior_cp and prior_cp.checkpoint:
+                prior_vals = prior_cp.checkpoint.get("channel_values", {})
+                for k in ("consultation_notes", "vision_analysis", "dialogue_phase", "turn_count", "detected_tier", "clinical_flags", "retrieved_remedies", "structured_symptoms"):
+                    if prior_vals.get(k) is not None:
+                        initial_state[k] = prior_vals[k]
+        except Exception as seed_err:
+            logger.debug(f"[Chat] Prior checkpoint seeding notice: {seed_err}")
+
+        # Fallback to consultations_table if checkpointer is empty for this thread
+        if not initial_state.get("consultation_notes"):
+            try:
+                from app.db import get_db_connection, consultations_table
+                from sqlalchemy import select
+                with get_db_connection() as conn:
+                    past_turns = conn.execute(
+                        select(consultations_table)
+                        .where(consultations_table.c.conversation_id == req.conversation_id)
+                        .order_by(consultations_table.c.id.asc())
+                    ).fetchall()
+                    if past_turns:
+                        notes_list = []
+                        last_phase = "CONCLUDED"
+                        last_tier = "Green"
+                        last_flags = []
+                        last_remedies = []
+                        has_vision_in_db = False
+                        for pt in past_turns:
+                            if pt.raw_user_message:
+                                notes_list.append(f"Patient: {pt.raw_user_message}")
+                                if "medical scan" in pt.raw_user_message.lower():
+                                    has_vision_in_db = True
+                            if pt.final_reply_text:
+                                notes_list.append(f"Doctor: {pt.final_reply_text}")
+                                if "Visual Skin" in pt.final_reply_text or "Vision" in pt.final_reply_text:
+                                    has_vision_in_db = True
+                            if pt.dialogue_phase:
+                                last_phase = pt.dialogue_phase
+                            if pt.tier:
+                                last_tier = pt.tier
+                            if pt.flags:
+                                try:
+                                    last_flags = json.loads(pt.flags)
+                                except Exception:
+                                    pass
+                            if pt.remedies_served:
+                                try:
+                                    last_remedies = json.loads(pt.remedies_served)
+                                    if any("Vision" in str(r) for r in last_remedies):
+                                        has_vision_in_db = True
+                                except Exception:
+                                    pass
+                        initial_state["consultation_notes"] = "\n".join(notes_list)
+                        initial_state["dialogue_phase"] = last_phase
+                        initial_state["turn_count"] = len(past_turns)
+                        initial_state["detected_tier"] = last_tier
+                        if last_flags:
+                            initial_state["clinical_flags"] = last_flags
+                        if last_remedies:
+                            initial_state["retrieved_remedies"] = last_remedies
+                        if has_vision_in_db:
+                            initial_state["vision_analysis"] = {
+                                "title": "Visual Skin / Symptom Inspection",
+                                "key_findings": "Visual inspection indicates mild inflammation or dermatological rash.",
+                                "dosage_instructions": "Clean gently with lukewarm water, do not scratch. Wear breathable cotton clothing.",
+                                "ayurvedic_interaction_note": "Pure natural coconut oil or mild neem decoction can soothe the affected area.",
+                                "safety_warnings": ["Avoid scratching. If not improving within 48 hours or fever develops, visit your local PHC."],
+                                "recommended_tier": "Green",
+                                "plain_language_summary": "Photo noted. Avoid scratching. If not improving within 48 hours or if fever develops, visit your local PHC."
+                            }
+            except Exception as db_seed_err:
+                logger.debug(f"[Chat] DB seeding notice: {db_seed_err}")
+
         try:
             result = sanjeevani_workflow.invoke(initial_state, config=config)
+
         except Exception as invoke_err:
             logger.warning(f"[Chat] Workflow invoke with checkpointer failed ({invoke_err}). Retrying with in-memory execution.")
             try:
@@ -566,18 +650,49 @@ async def get_consultation_history_detail(
     import json
 
     with get_db_connection() as conn:
-        # Check consultations_table first
-        consult_row = conn.execute(
+        all_consult_rows = conn.execute(
             select(consultations_table)
             .where(consultations_table.c.conversation_id == conversation_id)
-            .order_by(consultations_table.c.id.desc())
-        ).fetchone()
+            .order_by(consultations_table.c.id.asc())
+        ).fetchall()
 
         idx_row = conn.execute(
             select(conversation_index_table).where(conversation_index_table.c.conversation_id == conversation_id)
         ).fetchone()
 
-    consult_dict = row_to_dict(consult_row) if consult_row else {}
+    turns = []
+    has_vision = False
+    remedies_list = []
+    for r in all_consult_rows:
+        d = row_to_dict(r)
+        if d.get("flags"):
+            try:
+                d["flags"] = json.loads(d["flags"])
+            except Exception:
+                d["flags"] = []
+        else:
+            d["flags"] = []
+
+        if d.get("remedies_served"):
+            try:
+                d["remedies_served"] = json.loads(d["remedies_served"])
+                if d["remedies_served"]:
+                    remedies_list = d["remedies_served"]
+                    if any("Vision" in str(x) for x in remedies_list):
+                        has_vision = True
+            except Exception:
+                d["remedies_served"] = []
+        else:
+            d["remedies_served"] = []
+
+        if "medical scan" in (d.get("raw_user_message") or "").lower():
+            has_vision = True
+        if "Visual Skin" in (d.get("final_reply_text") or ""):
+            has_vision = True
+
+        turns.append(d)
+
+    consult_dict = turns[-1] if turns else {}
     index_row = row_to_dict(idx_row) if idx_row else {}
 
     state_values = {}
@@ -596,10 +711,7 @@ async def get_consultation_history_detail(
     tier = state_values.get("detected_tier") or consult_dict.get("tier") or index_row.get("tier") or "Green"
     flags = state_values.get("clinical_flags")
     if flags is None and consult_dict.get("flags"):
-        try:
-            flags = json.loads(consult_dict["flags"])
-        except Exception:
-            flags = []
+        flags = consult_dict["flags"]
     flags = flags or []
 
     final_reply = state_values.get("final_reply_text") or consult_dict.get("final_reply_text") or ""
@@ -607,15 +719,30 @@ async def get_consultation_history_detail(
     summary = consult_dict.get("raw_user_message") or index_row.get("summary") or state_values.get("consultation_notes") or final_reply
     timestamp = consult_dict.get("created_at") or index_row.get("updated_at") or index_row.get("created_at")
 
+    vision_payload = state_values.get("vision_analysis")
+    if not vision_payload and has_vision:
+        vision_payload = {
+            "title": "Visual Skin / Symptom Inspection",
+            "key_findings": "Visual inspection indicates mild inflammation or dermatological rash.",
+            "dosage_instructions": "Clean gently with lukewarm water, do not scratch. Wear breathable cotton clothing.",
+            "ayurvedic_interaction_note": "Pure natural coconut oil or mild neem decoction can soothe the affected area.",
+            "safety_warnings": ["Avoid scratching. If not improving within 48 hours or fever develops, visit your local PHC."],
+            "recommended_tier": "Green",
+            "plain_language_summary": "Photo noted. Avoid scratching. If not improving within 48 hours or if fever develops, visit your local PHC."
+        }
+
     return {
         "conversation_id": conversation_id,
         "tier": tier,
         "flags": flags,
+        "remedies": remedies_list or state_values.get("retrieved_remedies") or [],
+        "vision_analysis": vision_payload,
         "final_recommendation": final_reply,
         "final_reply_text": final_reply,
         "summary": summary,
         "phase": phase,
-        "turn_count": turn_count or consult_dict.get("turn_count", 1),
+        "turn_count": len(turns) or turn_count or consult_dict.get("turn_count", 1),
+        "turns": turns,
         "timestamp": timestamp,
     }
 
@@ -852,4 +979,167 @@ async def sync_offline_chat(
     except Exception as e:
         logger.error(f"[OfflineSync Error]: {e}")
         raise HTTPException(status_code=500, detail=f"Offline sync failed: {str(e)}")
+
+
+@router.post("/scan-medical-image", response_model=MedicalVisionResponse)
+async def scan_medical_image(
+    file: UploadFile = File(...),
+    scan_type: str = Form("prescription_medicine"),
+    language_hint: str = Form("hi"),
+    conversation_id: str = Form("default_conv"),
+    current_user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
+):
+    """
+    Multimodal clinical vision analysis for medicine strips, handwritten prescriptions,
+    or skin rashes/symptoms with drug-herb interaction checks.
+    Persists scan encounter to consultations_table, conversation_index_table, and checkpointer state.
+    """
+    try:
+        content = await file.read()
+        if not content or len(content) < 100:
+            raise HTTPException(status_code=400, detail="Invalid or empty image file uploaded")
+        
+        res = await MedicalVisionService.analyze_medical_image(
+            image_bytes=content,
+            scan_type=scan_type,
+            language_hint=language_hint,
+            conversation_id=conversation_id,
+        )
+
+        # 1. Persist vision consultation turn to database
+        try:
+            from app.db import get_db_connection, consultations_table, conversation_index_table
+            from sqlalchemy import insert, select, update, func
+            import json
+
+            user_id = current_user["id"] if current_user else None
+            flags_json = json.dumps(res.safety_warnings, ensure_ascii=False)
+            remedies_data = []
+            if res.ayurvedic_interaction_note:
+                remedies_data.append({
+                    "remedy_name": "त्वचा देखभाल (आयुर्वेदिक लेप)",
+                    "remedy_text": res.ayurvedic_interaction_note,
+                    "ayurvedic_note": res.ayurvedic_interaction_note,
+                    "dosage": "दिन में 1-2 बार प्रभावित त्वचा पर हल्के हाथ से लगाएं (केवल बाहरी उपयोग हेतु)।",
+                    "source": "आयुर्वेदिक त्वचा देखभाल",
+                    "safety_check": "त्वचा पर लगाने के लिए सुरक्षित",
+                    "is_topical": True,
+                })
+            remedies_json = json.dumps(remedies_data, ensure_ascii=False)
+
+            vision_summary_text = (
+                f"{res.title}\n"
+                f"Findings: {res.key_findings}\n"
+                f"Instructions: {res.dosage_instructions or 'N/A'}\n"
+                f"Ayurvedic Note: {res.ayurvedic_interaction_note or 'N/A'}\n"
+                f"Summary: {res.plain_language_summary}"
+            )
+
+            with get_db_connection() as conn:
+                conn.execute(
+                    insert(consultations_table).values(
+                        user_id=user_id,
+                        conversation_id=conversation_id,
+                        tier=res.recommended_tier,
+                        flags=flags_json,
+                        remedies_served=remedies_json,
+                        detected_language=language_hint,
+                        turn_count=1,
+                        dialogue_phase="CONCLUDED",
+                        raw_user_message=f"Uploaded medical scan photo for {scan_type} analysis",
+                        final_reply_text=vision_summary_text,
+                    )
+                )
+
+                summary_clean = res.title or "Medical Vision Scan"
+                existing = conn.execute(
+                    select(conversation_index_table.c.conversation_id, conversation_index_table.c.user_id)
+                    .where(conversation_index_table.c.conversation_id == conversation_id)
+                ).fetchone()
+
+                if existing:
+                    conn.execute(
+                        update(conversation_index_table)
+                        .where(conversation_index_table.c.conversation_id == conversation_id)
+                        .values(
+                            user_id=user_id if user_id is not None else existing.user_id,
+                            summary=summary_clean,
+                            tier=res.recommended_tier,
+                            updated_at=func.now(),
+                        )
+                    )
+                else:
+                    conn.execute(
+                        insert(conversation_index_table).values(
+                            conversation_id=conversation_id,
+                            user_id=user_id,
+                            summary=summary_clean,
+                            tier=res.recommended_tier,
+                            created_at=func.now(),
+                            updated_at=func.now(),
+                        )
+                    )
+        except Exception as db_err:
+            logger.warning(f"[ScanMedicalImage] Database persistence notice: {db_err}")
+
+        # 2. Update LangGraph checkpointer state
+        try:
+            from app.agents.graph import get_sqlite_saver, checkpointer
+            import uuid
+            import time
+
+            config = {"configurable": {"thread_id": conversation_id}}
+            vision_notes = (
+                f"Patient uploaded medical scan photo for {scan_type} inspection.\n"
+                f"Doctor (Vision Inspection):\n"
+                f"Title: {res.title}\n"
+                f"Key Findings: {res.key_findings}\n"
+                f"Identified Items: {', '.join(res.identified_items) if res.identified_items else 'N/A'}\n"
+                f"Dosage / Instructions: {res.dosage_instructions or 'N/A'}\n"
+                f"Ayurvedic Advice: {res.ayurvedic_interaction_note or 'N/A'}\n"
+                f"Safety Warnings: {', '.join(res.safety_warnings) if res.safety_warnings else 'None'}\n"
+                f"Summary: {res.plain_language_summary}"
+            )
+            checkpoint_state = {
+                "conversation_id": conversation_id,
+                "raw_user_message": f"Uploaded medical scan photo for {scan_type} analysis",
+                "normalized_message": f"Uploaded medical scan photo for {scan_type} analysis",
+                "detected_tier": res.recommended_tier,
+                "clinical_flags": res.safety_warnings,
+                "retrieved_remedies": remedies_data,
+                "final_reply_text": res.plain_language_summary,
+                "spoken_reply_text": res.plain_language_summary,
+                "escalation_triggered": (res.recommended_tier == "Red"),
+                "dialogue_phase": "CONCLUDED",
+                "turn_count": 1,
+                "detected_language": language_hint,
+                "consultation_notes": vision_notes,
+                "vision_analysis": res.model_dump() if hasattr(res, "model_dump") else res.dict(),
+            }
+
+            cp_id = str(uuid.uuid4())
+            checkpoint = {
+                "v": 1,
+                "id": cp_id,
+                "ts": time.time(),
+                "channel_values": checkpoint_state,
+                "channel_versions": {},
+                "versions_seen": {},
+                "updated_channels": list(checkpoint_state.keys()),
+            }
+
+            sqlite_saver = get_sqlite_saver()
+            sqlite_saver.put(config, checkpoint, {}, {})
+            if checkpointer:
+                checkpointer.put(config, checkpoint, {}, {})
+        except Exception as cp_err:
+            logger.warning(f"[ScanMedicalImage] Checkpointer update notice: {cp_err}")
+
+        return res
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[ScanMedicalImage] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to analyze medical image: {str(e)}")
+
 

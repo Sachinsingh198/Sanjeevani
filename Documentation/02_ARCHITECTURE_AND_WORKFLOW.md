@@ -273,3 +273,15 @@ sequenceDiagram
 | **Offline Sync Queue** | Client Store | Browser IndexedDB (`offline_consultations`) | Persisted on client until acknowledged by backend sync |
 | **Execution Telemetry** | Cloud Observability | LangSmith Cloud SaaS | Distributed tracing for agent steps, tokens, and latency |
 
+---
+
+## 4. Frontend Viewport Layering & Modal Portaling Architecture
+
+To prevent dialog clipping, scroll locking issues, and parent stacking context bugs across varying mobile device viewports:
+- **`createPortal` to `document.body`**: Floating dialogs—including [`ConfirmModal.jsx`](file:///d:/Sanjeevani/frontend/src/components/ConfirmModal.jsx) (in-app deletion confirmation) and [`FamilySelector.jsx`](file:///d:/Sanjeevani/frontend/src/components/FamilySelector.jsx) (family member creation)—are portaled directly to `document.body` rather than trapped inside local container hierarchies.
+- **Layering & Z-Index Governance**:
+  - Sticky Header Navigation Bar (`Navbar.jsx`): `z-40`
+  - Floating Drawers & Secondary Controls (`SessionHistoryDrawer.jsx`): `z-50`
+  - In-App Dialogs & Modals (`ConfirmModal.jsx`, `MedicalVisionModal.jsx`): `z-[100]` with `bg-black/65` and `backdrop-blur-xs`
+- **Accessibility & Keyboard Event Management**: All modals register an `Escape` key listener on mount and cleanup on unmount, along with backdrop-click propagation cancellation to ensure robust user control across desktop and mobile browsers.
+

@@ -80,6 +80,17 @@ def triage_node(state: AgentState) -> AgentState:
     elif tier.value == "Red":
         state["dialogue_phase"] = "EMERGENCY"
 
+    elif intent == "LANGUAGE_REQUEST":
+        # User is requesting language switch or translation/explanation (e.g. 'hindi main batao')
+        if current_phase in ("CONCLUDED", "EMERGENCY"):
+            state["dialogue_phase"] = "CONCLUDED"
+        elif current_phase == "CONSULTATION" and prior_turn_count > 0:
+            state["dialogue_phase"] = "CONSULTATION"
+        elif state.get("consultation_notes") or state.get("vision_analysis") or state.get("retrieved_remedies"):
+            state["dialogue_phase"] = "CONCLUDED"
+        else:
+            state["dialogue_phase"] = "GREETING"
+
     elif intent == "GREETING":
         # Only allow a full reset-to-GREETING when in initial/guardrail phase or turn_count == 0.
         # If in active CONSULTATION with turn_count > 0, treat greeting as a benign acknowledgment:
@@ -100,7 +111,11 @@ def triage_node(state: AgentState) -> AgentState:
         msg_lower = normalized.lower().strip()
         from app.core.dialogue_manager import has_symptom_mention
         has_new_symptoms = has_symptom_mention(normalized)
-        remedy_words = ["nuskha", "nushkha", "remedy", "dhanyawad", "thanks", "shukriya", "batao", "bataein", "upchar", "kaha", "kahan", "kab"]
+        remedy_words = [
+            "nuskha", "nushkha", "remedy", "dhanyawad", "thanks", "shukriya",
+            "batao", "bataein", "upchar", "kaha", "kahan", "kab", "hindi",
+            "english", "garhwali", "samjhao", "photo", "scan", "rash"
+        ]
 
         if has_new_symptoms and not any(w in msg_lower for w in remedy_words):
             # Patient describes a genuine new medical complaint → start new consultation
@@ -118,5 +133,6 @@ def triage_node(state: AgentState) -> AgentState:
 
     elif current_phase == "CONSULTATION":
         pass  # Stay in CONSULTATION until responder_node concludes
+
 
     return state

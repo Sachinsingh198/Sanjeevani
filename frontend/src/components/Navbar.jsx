@@ -47,22 +47,22 @@ export default function Navbar() {
 
   const morePatientLinks = [
     {
-      name: l('प्रोफाइल व सेटिंग्स', 'Profile & Settings'),
+      name: l('प्रोफाइल व सेटिंग्स', 'Profile & Settings', 'Profile aur Settings'),
       path: '/profile',
       icon: User,
-      desc: l('व्यक्तिगत विवरण, आभा आईडी व स्वास्थ्य सेटिंग्स', 'Personal details, ABHA ID & app settings')
+      desc: l('व्यक्तिगत विवरण, आभा आईडी व स्वास्थ्य सेटिंग्स', 'Personal details, ABHA ID & app settings', 'Personal details, ABHA ID aur app settings')
     },
     {
-      name: l('नेत्र जांच', 'Eye Screening'),
+      name: l('नेत्र जांच', 'Eye Screening', 'Aankh Jaanch'),
       path: '/mitra/screen',
       icon: Eye,
-      desc: l('गैर-आक्रामक एनीमिया व पीलिया प्राथमिक जांच', 'Non-invasive anemia & jaundice screening')
+      desc: l('गैर-आक्रामक एनीमिया व पीलिया प्राथमिक जांच', 'Non-invasive anemia & jaundice screening', 'Non-invasive anemia aur peeliya screening')
     },
     {
-      name: l('संजीवनी के बारे में', 'About Sanjeevani'),
+      name: l('संजीवनी के बारे में', 'About Sanjeevani', 'Sanjeevani ke baare mein'),
       path: '/about',
       icon: Info,
-      desc: l('परियोजना मिशन, टीम व सुरक्षित स्वास्थ्य एआई', 'Project mission, team & ethical health AI')
+      desc: l('परियोजना मिशन, टीम व सुरक्षित स्वास्थ्य एआई', 'Project mission, team & ethical health AI', 'Mission, team aur surakshit swasthya AI')
     },
   ];
 
@@ -204,7 +204,7 @@ export default function Navbar() {
                 }`}
               >
                 <Stethoscope className="w-3.5 h-3.5 text-gold-warm" />
-                <span>{l('स्वास्थ्य सलाह', 'Consultation')}</span>
+                <span>{l('स्वास्थ्य सलाह', 'Consultation', 'Doctor Salah')}</span>
               </Link>
 
               <Link
@@ -216,7 +216,7 @@ export default function Navbar() {
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
-                <span>{l('आरोग्य', 'Wellness')}</span>
+                <span>{l('आरोग्य स्टूडियो', 'Wellness Studio', 'Arogya Studio')}</span>
               </Link>
 
               <Link
@@ -228,7 +228,7 @@ export default function Navbar() {
                 }`}
               >
                 <HeartHandshake className="w-3.5 h-3.5 text-rose-soft" />
-                <span>{l('साथी', 'Saathi')}</span>
+                <span>{l('बुजुर्ग साथी', 'Companion', 'Buzurg Saathi')}</span>
               </Link>
 
               {/* More Dropdown */}
@@ -241,7 +241,7 @@ export default function Navbar() {
                   aria-expanded={moreDropdownOpen}
                   aria-haspopup="true"
                 >
-                  <span>More</span>
+                  <span>{l('अधिक', 'More', 'Aur')}</span>
                   <ChevronDown className={`w-3.5 h-3.5 transition-transform ${moreDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
@@ -376,25 +376,25 @@ export default function Navbar() {
               {isPatient && (
                 <>
                   <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted dark:text-muted">
-                    {l('संजीवनी मित्र सेवा', 'Sanjeevani Mitra Services')}
+                    {l('संजीवनी मित्र सेवाएं', 'Sanjeevani Mitra Services', 'Sanjeevani Mitra Seva')}
                   </div>
                   <Link to="/mitra" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                    <SanjeevaniOrb state="idle" size={24} /> {l('मुख्य सेवा', 'Main Services')}
+                    <SanjeevaniOrb state="idle" size={24} /> {l('मुख्य सेवाएं', 'Main Services', 'Mukhya Seva')}
                   </Link>
                   <Link to="/mitra/chat" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                    <Stethoscope className="w-4 h-4 text-gold-warm" /> {l('स्वास्थ्य सलाह', 'Health Consultation')}
+                    <Stethoscope className="w-4 h-4 text-gold-warm" /> {l('स्वास्थ्य सलाह', 'Health Consultation', 'Doctor Salah')}
                   </Link>
                   <Link to="/mitra/wellness" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                    <Sparkles className="w-4 h-4 text-gold-warm" /> {l('आरोग्य स्टूडियो', 'Wellness Studio')}
+                    <Sparkles className="w-4 h-4 text-gold-warm" /> {l('आरोग्य स्टूडियो', 'Wellness Studio', 'Arogya Studio')}
                   </Link>
                   <Link to="/mitra/saathi" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                    <HeartHandshake className="w-4 h-4 text-rose-soft" /> {l('संजीवनी साथी', 'Sanjeevani Saathi')}
+                    <HeartHandshake className="w-4 h-4 text-rose-soft" /> {l('बुजुर्ग साथी', 'Companion', 'Buzurg Saathi')}
                   </Link>
                   <Link to="/mitra/screen" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                    <Eye className="w-4 h-4 text-sage" /> {l('नेत्र जांच', 'Eye Screening')}
+                    <Eye className="w-4 h-4 text-sage" /> {l('नेत्र जांच', 'Eye Screening', 'Aankh Jaanch')}
                   </Link>
                   <Link to="/about" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
-                    <Info className="w-4 h-4 text-gold-warm" /> {l('संजीवनी के बारे में', 'About Sanjeevani')}
+                    <Info className="w-4 h-4 text-gold-warm" /> {l('संजीवनी के बारे में', 'About Sanjeevani', 'Sanjeevani ke baare mein')}
                   </Link>
                 </>
               )}
@@ -432,7 +432,7 @@ export default function Navbar() {
                   className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-primary hover:bg-black/5 dark:hover:bg-white/5"
                 >
                   <User className="w-4 h-4 text-sage" />
-                  <span>{l('प्रोफाइल व सेटिंग्स', 'Profile & Settings')}</span>
+                  <span>{l('प्रोफाइल व सेटिंग्स', 'Profile & Settings', 'Profile aur Settings')}</span>
                 </Link>
 
                 <button
@@ -440,7 +440,7 @@ export default function Navbar() {
                   className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-bold text-rose-soft dark:text-rose-soft hover:bg-rose-soft/10 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>{l('लॉग आउट', 'Sign Out')} ({user.name})</span>
+                  <span>{l('लॉग आउट', 'Sign Out', 'Sign Out')} ({user.name})</span>
                 </button>
               </div>
             </>

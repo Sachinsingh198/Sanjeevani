@@ -60,3 +60,6 @@ class AgentState(_AgentStateRequired, total=False):
 
     # Structured prescription / home remedy summary card
     consultation_summary: Optional[Dict[str, Any]]
+
+    # Multimodal clinical vision analysis
+    vision_analysis: Optional[Dict[str, Any]]

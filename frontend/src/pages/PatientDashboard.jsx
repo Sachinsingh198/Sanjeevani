@@ -7,18 +7,20 @@ import {
   ShieldAlert, BookOpen, ChevronDown, ChevronUp, Sparkles, Navigation,
   Wind, Activity, HeartHandshake, ArrowRight, Stethoscope, Hospital,
   Volume2, VolumeX, Square, Home, FileText, Bandage, ArrowLeft, FileDown, Share2, RefreshCw, Printer,
-  Bell, QrCode, Trash2
+  Bell, QrCode, Trash2, Pill
 } from 'lucide-react';
 import LiveVoiceRoom from '../components/LiveVoiceRoom';
 import NearbyFacilityFinder from '../components/NearbyFacilityFinder';
+import JanAushadhiCard from '../components/JanAushadhiCard';
 import SanjeevaniOrb from '../components/SanjeevaniOrb';
 import MountainRidge from '../components/MountainRidge';
 import SessionHistoryDrawer from '../components/SessionHistoryDrawer';
 import SkeletonLoader from '../components/SkeletonLoader';
 import ReferralQRModal from '../components/ReferralQRModal';
+import ConfirmModal from '../components/ConfirmModal';
 import FamilyProfileSelector from '../components/FamilyProfileSelector';
 import { listSessions, deleteSession, clearSessionHistory } from '../lib/sessionStore';
-import { getChatHistory } from '../api/client';
+import { getChatHistory, setStoredConversationId } from '../api/client';
 import { downloadConsultationReport } from '../api/reportsClient';
 import { speakCue, stopCue } from '../lib/audioSynthesizer';
 import PageVoiceGuide from '../components/PageVoiceGuide';
@@ -36,7 +38,7 @@ const DEFAULT_REMEDIES = [
 
 export default function PatientDashboard() {
   const { user } = useAuth();
-  const { lang, l, isHindi, toEnglishDigits, formatDate } = useLanguage();
+  const { lang, l, isHindi, isEnglish, toEnglishDigits, formatDate } = useLanguage();
   const [activeTab, setActiveTab] = useState('hub'); // 'hub' | 'remedies' | 'history' | 'facilities' | 'firstaid'
   const [showLiveRoom, setShowLiveRoom] = useState(false);
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
@@ -49,11 +51,29 @@ export default function PatientDashboard() {
   const [downloadingId, setDownloadingId] = useState(null);
   const [selectedReferral, setSelectedReferral] = useState(null);
   const [activeFamilyMember, setActiveFamilyMember] = useState(null);
+  const [deleteModalConfig, setDeleteModalConfig] = useState({
+    isOpen: false,
+    type: 'single',
+    targetId: null,
+    title: '',
+    message: '',
+  });
 
   const handlePlayRemedyReminder = (remedy) => {
-    const text = `${remedy.name} lene ka samay ho gaya hai! Kripya gungune paani ya nirdeshit matra ke sath lein.`;
-    speakCue(text);
-    toast.success(`Dawa / Kadha Reminder: ${remedy.name} 🔔`, { icon: '🌿' });
+    const text = isEnglish
+      ? `It is time to take your remedy: ${remedy.name}. Please take with warm water or as directed.`
+      : isHindi
+      ? `${remedy.name} लेने का समय हो गया है! कृपया गुनगुने पानी या निर्देशित मात्रा के साथ लें।`
+      : `${remedy.name} lene ka samay ho gaya hai! Kripya gungune paani ya nirdeshit matra ke sath lein.`;
+    speakCue(text, isEnglish ? 'en-IN' : 'hi-IN');
+    toast.success(
+      l(
+        `दवा / नुस्खा स्मरण: ${remedy.name} 🔔`,
+        `Remedy Reminder: ${remedy.name} 🔔`,
+        `Dawa / Kadha Reminder: ${remedy.name} 🔔`
+      ),
+      { icon: '🌿' }
+    );
     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
   };
 
@@ -101,7 +121,7 @@ export default function PatientDashboard() {
           tier: item.tier,
           updatedAt: item.updated_at || item.created_at,
         })));
-        toast.success('Parcha itihas taaza ho gaya! 🔄');
+        toast.success(l('पर्चा इतिहास ताज़ा हो गया! 🔄', 'Prescription history refreshed! 🔄', 'Parcha itihas taaza ho gaya! 🔄'));
         setIsRefreshing(false);
         return;
       }
@@ -110,37 +130,53 @@ export default function PatientDashboard() {
     }
     const stored = listSessions();
     setConsultations(stored || []);
-    toast.success('Itihas taaza ho gaya! 🔄');
+    toast.success(l('इतिहास ताज़ा हो गया! 🔄', 'History refreshed! 🔄', 'Itihas taaza ho gaya! 🔄'));
     setIsRefreshing(false);
-  }, []);
+  }, [l]);
 
-  const handleDeleteConsultation = async (conversationId, e) => {
+  const handleDeleteConsultation = (conversationId, e) => {
     e?.stopPropagation();
     e?.preventDefault();
-    if (!window.confirm(l('क्या आप इस परामर्श रिकॉर्ड को हटाना चाहते हैं?', 'Are you sure you want to delete this consultation record?'))) {
-      return;
-    }
-    try {
-      await deleteSession(conversationId, user?.id);
-      setConsultations((prev) => prev.filter((c) => c.conversationId !== conversationId));
-      toast.success(l('परामर्श इतिहास हटा दिया गया 🗑️', 'Consultation deleted 🗑️'));
-    } catch (err) {
-      console.warn('Failed to delete consultation:', err);
-      toast.error(l('परामर्श हटाने में विफल', 'Failed to delete consultation'));
-    }
+    setDeleteModalConfig({
+      isOpen: true,
+      type: 'single',
+      targetId: conversationId,
+      title: l('परामर्श हटाएं', 'Delete Consultation', 'Paramarsh hatayein'),
+      message: l('क्या आप इस परामर्श रिकॉर्ड को हटाना चाहते हैं?', 'Are you sure you want to delete this consultation record?', 'Kya aap is paramarsh record ko hatana chahte hain?'),
+    });
   };
 
-  const handleClearAllConsultations = async () => {
-    if (!window.confirm(l('क्या आप सभी परामर्श इतिहास हटाना चाहते हैं? यह वापस नहीं लाया जा सकता।', 'Are you sure you want to delete all consultation history? This cannot be undone.'))) {
-      return;
-    }
-    try {
-      await clearSessionHistory(user?.id);
-      setConsultations([]);
-      toast.success(l('संपूर्ण परामर्श इतिहास साफ कर दिया गया 🗑️', 'All consultation history cleared 🗑️'));
-    } catch (err) {
-      console.warn('Failed to clear consultations:', err);
-      toast.error(l('इतिहास साफ करने में विफल', 'Failed to clear history'));
+  const handleClearAllConsultations = () => {
+    setDeleteModalConfig({
+      isOpen: true,
+      type: 'all',
+      targetId: null,
+      title: l('संपूर्ण इतिहास साफ करें', 'Clear All Consultation History', 'Itihas saaf karein'),
+      message: l('क्या आप सभी परामर्श इतिहास हटाना चाहते हैं? यह वापस नहीं लाया जा सकता।', 'Are you sure you want to delete all consultation history? This cannot be undone.', 'Kya aap sabhi paramarsh itihas hatana chahte hain?'),
+    });
+  };
+
+  const handleConfirmDeleteConsultation = async () => {
+    if (deleteModalConfig.type === 'single') {
+      const conversationId = deleteModalConfig.targetId;
+      if (!conversationId) return;
+      try {
+        await deleteSession(conversationId, user?.id);
+        setConsultations((prev) => prev.filter((c) => c.conversationId !== conversationId));
+        toast.success(l('परामर्श इतिहास हटा दिया गया 🗑️', 'Consultation deleted 🗑️', 'Paramarsh itihas hata diya gaya 🗑️'));
+      } catch (err) {
+        console.warn('Failed to delete consultation:', err);
+        toast.error(l('परामर्श हटाने में विफल', 'Failed to delete consultation', 'Paramarsh hatane mein vifal'));
+      }
+    } else if (deleteModalConfig.type === 'all') {
+      try {
+        await clearSessionHistory(user?.id);
+        setConsultations([]);
+        toast.success(l('संपूर्ण परामर्श इतिहास साफ कर दिया गया 🗑️', 'All consultation history cleared 🗑️', 'Sampoorn paramarsh itihas saaf kar diya gaya 🗑️'));
+      } catch (err) {
+        console.warn('Failed to clear consultations:', err);
+        toast.error(l('इतिहास साफ करने में विफल', 'Failed to clear history', 'Itihas saaf karne mein vifal'));
+      }
     }
   };
 
@@ -155,7 +191,7 @@ export default function PatientDashboard() {
         consultationSummary: item.summary || 'Consultation Summary',
         format: 'pdf',
       });
-      toast.success('Parcha (PDF) download ho gaya! 📄');
+      toast.success(l('पर्चा (PDF) डाउनलोड हो गया! 📄', 'Prescription (PDF) downloaded! 📄', 'Parcha (PDF) download ho gaya! 📄'));
     } catch (err) {
       console.warn('Backend PDF download error, attempting browser printable parcha fallback:', err);
       const printWindow = window.open('', '_blank');
@@ -164,7 +200,7 @@ export default function PatientDashboard() {
           <!DOCTYPE html>
           <html>
           <head>
-            <title>Sanjeevani Parcha - ${item.conversationId}</title>
+            <title>${isEnglish ? 'Sanjeevani Prescription' : 'Sanjeevani Parcha'} - ${item.conversationId}</title>
             <style>
               body { font-family: system-ui, sans-serif; padding: 24px; color: #1e2a43; }
               .header { border-bottom: 2px solid #4a6845; padding-bottom: 12px; margin-bottom: 18px; }
@@ -177,18 +213,18 @@ export default function PatientDashboard() {
           </head>
           <body>
             <div class="header">
-              <div class="title">🌿 ${isHindi ? 'संजीवनी स्वास्थ्य परामर्श पर्चा' : 'Sanjeevani Health Summary'}</div>
+              <div class="title">🌿 ${isEnglish ? 'Sanjeevani Health Summary & Prescription' : isHindi ? 'संजीवनी स्वास्थ्य परामर्श पर्चा' : 'Sanjeevani Swasthya Parcha'}</div>
               <div class="meta">Uttarakhand Telehealth & Rural Clinical Advisory • Gopeshwar & Chamoli</div>
             </div>
-            <p><strong>${isHindi ? 'सत्र पहचान:' : 'Session ID:'}</strong> ${item.conversationId}</p>
-            <p><strong>${isHindi ? 'दिनांक:' : 'Date:'}</strong> ${item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : (isHindi ? 'सक्रिय परामर्श' : 'Active Session')}</p>
-            <p><strong>${isHindi ? 'ट्राइएज स्तर:' : 'Triage Tier:'}</strong> <span class="tier">${item.tier || 'Green'}</span></p>
+            <p><strong>${isEnglish ? 'Session ID:' : isHindi ? 'सत्र पहचान:' : 'Session ID:'}</strong> ${item.conversationId}</p>
+            <p><strong>${isEnglish ? 'Date:' : isHindi ? 'दिनांक:' : 'Tarikh:'}</strong> ${item.updatedAt ? formatDate(item.updatedAt) : (isEnglish ? 'Active Session' : 'सक्रिय परामर्श')}</p>
+            <p><strong>${isEnglish ? 'Triage Tier:' : isHindi ? 'ट्राइएज स्तर:' : 'Triage Tier:'}</strong> <span class="tier">${item.tier || 'Green'}</span></p>
             <div class="summary">
-              <strong>${isHindi ? 'परामर्श सारांश:' : 'Consultation Summary:'}</strong><br/>
-              ${item.summary || (isHindi ? 'डॉ. संजीवनी AI के साथ सामान्य परामर्श एवं स्वास्थ्य सलाह।' : 'General wellness consultation and advice with Dr. Sanjeevani AI.')}
+              <strong>${isEnglish ? 'Consultation Summary:' : isHindi ? 'परामर्श सारांश:' : 'Paramarsh Summary:'}</strong><br/>
+              ${item.summary || (isEnglish ? 'General wellness consultation and advice with Dr. Sanjeevani AI.' : isHindi ? 'डॉ. संजीवनी AI के साथ सामान्य परामर्श एवं स्वास्थ्य सलाह।' : 'Dr. Sanjeevani AI ke sath paramarsh aur swasthya salah.')}
             </div>
             <div class="footer">
-              ${isHindi ? '⚠️ यह पर्चा Dr. Sanjeevani AI द्वारा उत्पन्न किया गया है। आपातकाल में तुरंत 108 डायल करें।' : '⚠️ This summary was generated by Dr. Sanjeevani AI. In medical emergencies, dial 108 immediately.'}
+              ${isEnglish ? '⚠️ This prescription was generated by Dr. Sanjeevani AI. In medical emergencies, dial 108 immediately.' : isHindi ? '⚠️ यह पर्चा Dr. Sanjeevani AI द्वारा उत्पन्न किया गया है। आपातकाल में तुरंत 108 डायल करें।' : '⚠️ Yeh parcha Dr. Sanjeevani AI dwara taiyar kiya gaya hai. Aapaatkaal me turant 108 dial karein.'}
             </div>
             <script>window.onload = function() { window.print(); };</script>
           </body>
@@ -196,7 +232,7 @@ export default function PatientDashboard() {
         `);
         printWindow.document.close();
       } else {
-        toast.error('PDF download nahi ho saka. Kripya dobara koshish karein.');
+        toast.error(l('PDF डाउनलोड नहीं हो सका। कृपया पुनः प्रयास करें।', 'Could not download PDF. Please try again.', 'PDF download nahi ho saka. Kripya dobara koshish karein.'));
       }
     } finally {
       setDownloadingId(null);
@@ -206,11 +242,15 @@ export default function PatientDashboard() {
   const handleShareParcha = (item, e) => {
     e?.stopPropagation();
     e?.preventDefault();
-    const parchaDate = item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : '';
-    const shareText = `*🌿 Sanjeevani Swasthya Parcha*\n*Tarikh:* ${parchaDate}\n*Triage:* ${item.tier || 'Green'}\n*Salah:* ${item.summary || 'Swasthya Paramarsh'}\n\nAapaatkaal mein 108 par call karein.`;
+    const parchaDate = item.updatedAt ? formatDate(item.updatedAt) : '';
+    const shareText = isEnglish
+      ? `*🌿 Sanjeevani Health Summary*\n*Date:* ${parchaDate}\n*Triage:* ${item.tier || 'Green'}\n*Advice:* ${item.summary || 'Health Consultation'}\n\nIn emergency, call 108 immediately.`
+      : isHindi
+      ? `*🌿 संजीवनी स्वास्थ्य पर्चा*\n*तारीख:* ${parchaDate}\n*ट्राइएज:* ${item.tier || 'Green'}\n*सलाह:* ${item.summary || 'स्वास्थ्य परामर्श'}\n\nआपातकाल में तुरंत 108 पर कॉल करें।`
+      : `*🌿 Sanjeevani Swasthya Parcha*\n*Tarikh:* ${parchaDate}\n*Triage:* ${item.tier || 'Green'}\n*Salah:* ${item.summary || 'Swasthya Paramarsh'}\n\nAapaatkaal mein 108 par call karein.`;
     if (navigator.share) {
       navigator.share({
-        title: 'Sanjeevani Consultation Parcha',
+        title: isEnglish ? 'Sanjeevani Consultation Summary' : 'Sanjeevani Consultation Parcha',
         text: shareText,
         url: window.location.origin + '/mitra/chat',
       }).catch(() => {});
@@ -268,7 +308,7 @@ export default function PatientDashboard() {
       localStorage.setItem(REMEDIES_STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
-    toast.success('Dose tracker updated! 🌿');
+    toast.success(l('खुराक ट्रैकर अपडेट हुआ! 🌿', 'Dose tracker updated! 🌿', 'Dose tracker update ho gaya! 🌿'));
   };
 
   const handleAddRemedy = (e) => {
@@ -286,7 +326,7 @@ export default function PatientDashboard() {
     localStorage.setItem(REMEDIES_STORAGE_KEY, JSON.stringify(updated));
     setNewRemedyName('');
     setShowAddRemedy(false);
-    toast.success('Naya gharelu nuskha schedule mein jud gaya');
+    toast.success(l('नया नुस्खा दिनचर्या में जुड़ गया 🌿', 'New remedy added to schedule 🌿', 'Naya nuskha schedule mein jud gaya 🌿'));
   };
 
   const [tabNarrationEnabled, setTabNarrationEnabled] = useState(() => {
@@ -300,13 +340,13 @@ export default function PatientDashboard() {
       setIsSpeaking(false);
       setTabNarrationEnabled(false);
       localStorage.setItem('sanjeevani_tab_narration', 'false');
-      toast(l('आवाज़ी वाचन बंद किया गया 🔇', 'Audio Narration Off 🔇'), { icon: '🔇' });
+      toast(l('आवाज़ी वाचन बंद किया गया 🔇', 'Audio Narration Off 🔇', 'Audio narration band kiya gaya 🔇'), { icon: '🔇' });
     } else {
       setTabNarrationEnabled(true);
       localStorage.setItem('sanjeevani_tab_narration', 'true');
-      toast.success(l('आवाज़ी वाचन चालू किया गया 🔊', 'Audio Narration On 🔊'));
+      toast.success(l('आवाज़ी वाचन चालू किया गया 🔊', 'Audio Narration On 🔊', 'Audio narration chalu kiya gaya 🔊'));
       speakCue(
-        l('आवाज़ी मार्गदर्शन चालू है। टैब बदलने पर आवाज़ सुनाई देगी।', 'Audio guidance enabled. You will hear cues when switching tabs.'),
+        l('आवाज़ी मार्गदर्शन चालू है। टैब बदलने पर आवाज़ सुनाई देगी।', 'Audio guidance enabled. You will hear cues when switching tabs.', 'Audio margdarshan chalu hai. Tab badalne par aawaz sunai degi.'),
         isHindi ? 'hi-IN' : 'en-IN',
         {
           onStart: () => setIsSpeaking(true),
@@ -324,7 +364,7 @@ export default function PatientDashboard() {
       return;
     }
     setIsSpeaking(true);
-    speakCue(text, 'hi-IN', {
+    speakCue(text, isHindi ? 'hi-IN' : 'en-IN', {
       onStart: () => setIsSpeaking(true),
       onEnd: () => setIsSpeaking(false),
     });
@@ -332,26 +372,29 @@ export default function PatientDashboard() {
 
   const firstAidGuides = [
     {
-      title: l('उंचाई पर चक्कर या ठंड लगना (हाइपोथर्मिया)', 'High-Altitude Sickness & Hypothermia'),
+      title: l('उंचाई पर चक्कर या ठंड लगना (हाइपोथर्मिया)', 'High-Altitude Sickness & Hypothermia', 'Uunchai par chakkar ya thand lagna'),
       content: l(
         'चढ़ाई तुरंत रोकें। रोगी को ऊनी कंबल से गर्म और सूखा रखें। अदरक या गुड़ का गुनगुना पेय दें। यदि सांस लेने में कठिनाई हो या होंठ नीले पड़ने लगें (SpO2 < 90%), तो तुरंत 108 पर कॉल करें।',
-        'Immediately halt ascent. Keep the patient warm and dry with woolen blankets. Sip warm liquids with ginger or jaggery. If breathing is labored or lips turn pale/blue (SpO2 < 90%), dial 108 for descent support immediately.'
+        'Immediately halt ascent. Keep the patient warm and dry with woolen blankets. Sip warm liquids with ginger or jaggery. If breathing is labored or lips turn pale/blue (SpO2 < 90%), dial 108 for descent support immediately.',
+        'Chadhai turant rokein. Mareez ko garam kambal odhayein. Adrak ya gud ka gunguna paani dein. Agar saans lene me takleef ho, toh turant 108 par call karein.'
       ),
       audio: 'Uunchai par chhatpatana ya thand lagne par chadhai turant rokein, garam kambal odhein aur 108 ko call karein.',
     },
     {
-      title: l('दस्त और उल्टी में ओआरएस (ORS)', 'ORS Rehydration for Diarrhea & Vomiting'),
+      title: l('दस्त और उल्टी में ओआरएस (ORS)', 'ORS Rehydration for Diarrhea & Vomiting', 'Dast aur ulti me ORS ghol'),
       content: l(
         '1 लीटर साफ या उबले पानी में 6 चम्मच चीनी और 1/2 चम्मच नमक मिलाएं। दिनभर छोटे-छोटे घूंट पिलाते रहें। शिशुओं को मां का दूध जारी रखें।',
-        'Mix 1 liter of clean/boiled water with 6 level teaspoons of sugar and 1/2 level teaspoon of salt. Give small frequent sips throughout the day. Continue breast milk for infants.'
+        'Mix 1 liter of clean/boiled water with 6 level teaspoons of sugar and 1/2 level teaspoon of salt. Give small frequent sips throughout the day. Continue breast milk for infants.',
+        '1 liter saaf uble paani me 6 chammach cheeni aur 1/2 chammach namak milayein. Din bhar thoda thoda pilate rahein.'
       ),
       audio: 'Dast ya ulti hone par ek liter uble paani me chhah chammach cheeni aur aadha chammach namak milakar piyen.',
     },
     {
-      title: l('पहाड़ी रास्तों पर चोट और रक्तस्राव', 'Bleeding & Cuts on Mountain Terrain'),
+      title: l('पहाड़ी रास्तों पर चोट और रक्तस्राव', 'Bleeding & Cuts on Mountain Terrain', 'Chot lagna aur khoon behna'),
       content: l(
         'साफ कपड़े से 5 मिनट तक बिना हटाए सीधा दबाव बनाएं। अंग को दिल के स्तर से ऊपर उठाएं। खून रुकने पर उबले पानी से धीरे-धीरे धोएं।',
-        'Apply firm direct pressure with clean cloth for 5 full minutes without lifting. Elevate limb above heart level. Wash gently with boiled water once bleeding slows.'
+        'Apply firm direct pressure with clean cloth for 5 full minutes without lifting. Elevate limb above heart level. Wash gently with boiled water once bleeding slows.',
+        'Saaf kapde se 5 minute tak seedha dabaav banayein. Khoon rukne par gungune paani se saaf karein.'
       ),
       audio: 'Chot lagne par saaf kapde se paanch minute tak dabaav banaye rakhein.',
     },
@@ -360,11 +403,11 @@ export default function PatientDashboard() {
   const completedRemediesCount = remedies.filter(r => r.completed).length;
 
   const tabs = [
-    { id: 'hub', label: l('मुख्य सेवा', 'Main Services'), sub: l('डैशबोर्ड', 'Dashboard'), icon: Home },
-    { id: 'remedies', label: l('दवा व काढ़ा', 'Remedies'), sub: l('दिनचर्या', 'Routine'), icon: Leaf, badge: `${completedRemediesCount}/${remedies.length}` },
-    { id: 'history', label: l('पुराना पर्चा', 'Records'), sub: l('परामर्श इतिहास', 'History'), icon: FileText, badge: `${consultations.length}` },
-    { id: 'facilities', label: l('अस्पताल', 'Hospitals'), sub: l('निकटतम केंद्र', 'Nearby Care'), icon: Hospital },
-    { id: 'firstaid', label: l('प्राथमिक उपचार', 'First-Aid'), sub: l('आपातकालीन गाइड', 'Emergency'), icon: Bandage },
+    { id: 'hub', label: l('मुख्य सेवा', 'Main Services', 'Mukhya Seva'), sub: l('डैशबोर्ड', 'Dashboard', 'Dashboard'), icon: Home },
+    { id: 'remedies', label: l('दवा व काढ़ा', 'Remedies', 'Dawa Aur Kadha'), sub: l('दिनचर्या', 'Routine', 'Dincharya'), icon: Leaf, badge: `${toEnglishDigits(completedRemediesCount)}/${toEnglishDigits(remedies.length)}` },
+    { id: 'history', label: l('पुराना पर्चा', 'Records', 'Purana Parcha'), sub: l('परामर्श इतिहास', 'History', 'Paramarsh Itihas'), icon: FileText, badge: `${toEnglishDigits(consultations.length)}` },
+    { id: 'facilities', label: l('अस्पताल', 'Hospitals', 'Aspataal'), sub: l('निकटतम केंद्र', 'Nearby Care', 'Paas Ke Kendra'), icon: Hospital },
+    { id: 'firstaid', label: l('प्राथमिक उपचार', 'First-Aid', 'Prathmik Upchar'), sub: l('आपातकालीन गाइड', 'Emergency Guide', 'Aapaatkaal Guide'), icon: Bandage },
   ];
 
   return (
@@ -556,17 +599,17 @@ export default function PatientDashboard() {
                     <Stethoscope className="w-5 h-5 sm:w-7 sm:h-7" />
                   </div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-sage dark:text-booti-glow block truncate">
-                    {l('चिकित्सक सहयोग', 'Doctor Consultation')}
+                    {l('चिकित्सक सहयोग', 'Doctor Consultation', 'Doctor Paramarsh')}
                   </span>
                   <h3 className="font-serif font-bold text-sm sm:text-lg text-primary mt-0.5 leading-snug">
-                    {l('स्वास्थ्य', 'Doctor Clinic')}
+                    {l('स्वास्थ्य परामर्श', 'Doctor Clinic', 'Doctor Clinic')}
                   </h3>
                   <p className="text-xs text-muted dark:text-muted mt-1 hidden sm:block">
-                    {l('लक्षण जांच, प्राथमिक निदान एवं डॉक्टर से परामर्श लें।', 'Symptom triage, primary diagnosis and clinical advice.')}
+                    {l('लक्षण जांच, प्राथमिक निदान एवं डॉक्टर से परामर्श लें।', 'Symptom triage, primary diagnosis and clinical advice.', 'Lakshan jaanch, prathmik nidan aur doctor se salah.')}
                   </p>
                 </div>
                 <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-xs font-bold text-sage dark:text-booti-glow pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>{l('परामर्श लें', 'Consult Now')}</span>
+                  <span>{l('परामर्श लें', 'Consult Now', 'Salah Lein')}</span>
                   <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
@@ -581,17 +624,17 @@ export default function PatientDashboard() {
                     <Sparkles className="w-5 h-5 sm:w-7 sm:h-7" />
                   </div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-gold-warm dark:text-gold-warm block truncate">
-                    {l('योग • ध्यान • नाद', 'Yoga • Dhyan • Naad')}
+                    {l('योग • ध्यान • नाद', 'Yoga • Meditation • Sound', 'Yoga • Dhyan • Naad')}
                   </span>
                   <h3 className="font-serif font-bold text-sm sm:text-lg text-primary mt-0.5 leading-snug">
-                    {l('आरोग्यशाला', 'Wellness Studio')}
+                    {l('आरोग्यशाला', 'Wellness Studio', 'Arogyashala')}
                   </h3>
                   <p className="text-xs text-muted dark:text-muted mt-1 hidden sm:block">
-                    {l('मुद्रा एआई, 5 वैदिक प्राणायाम, ध्यान कथा और सुखद ध्वनियां।', 'Pose AI, 5 Vedic Pranayamas, guided meditation and soundscapes.')}
+                    {l('मुद्रा एआई, 5 वैदिक प्राणायाम, ध्यान कथा और सुखद ध्वनियां।', 'Pose AI, 5 Vedic Pranayamas, guided meditation and soundscapes.', 'Mudra AI, 5 Vedic Pranayama, dhyan katha aur soothing aawazein.')}
                   </p>
                 </div>
                 <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-xs font-bold text-gold-warm dark:text-gold-warm pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>{l('स्टूडियो खोलें', 'Open Studio')}</span>
+                  <span>{l('स्टूडियो खोलें', 'Open Studio', 'Studio Kholein')}</span>
                   <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
@@ -606,17 +649,17 @@ export default function PatientDashboard() {
                     <HeartHandshake className="w-5 h-5 sm:w-7 sm:h-7" />
                   </div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-rose-soft dark:text-rose-soft block truncate">
-                    {l('सदा आपके साथ', 'Elder Companion')}
+                    {l('सदा आपके साथ', 'Elder Companion', 'Hamesha Aapke Saath')}
                   </span>
                   <h3 className="font-serif font-bold text-sm sm:text-lg text-primary mt-0.5 leading-snug">
-                    {l('साथी', 'Saathi Companion')}
+                    {l('साथी', 'Companion', 'Saathi')}
                   </h3>
                   <p className="text-xs text-muted dark:text-muted mt-1 hidden sm:block">
-                    {l('अकेलेपन में आत्मीय बातचीत, पुराने किस्से और स्नेहपूर्ण सम्बल।', 'Warm comforting conversations, storytelling, and emotional support.')}
+                    {l('अकेलेपन में आत्मीय बातचीत, पुराने किस्से और स्नेहपूर्ण सम्बल।', 'Warm comforting conversations, storytelling, and emotional support.', 'Akelepan me aatmiya baatcheet, purane kisse aur sahara.')}
                   </p>
                 </div>
                 <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-xs font-bold text-rose-soft dark:text-rose-soft pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>{l('बातचीत करें', 'Talk to Saathi')}</span>
+                  <span>{l('बातचीत करें', 'Talk to Companion', 'Baatcheet Karein')}</span>
                   <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
@@ -631,17 +674,17 @@ export default function PatientDashboard() {
                     <Eye className="w-5 h-5 sm:w-7 sm:h-7" />
                   </div>
                   <span className="text-xs font-extrabold uppercase tracking-wider text-primary dark:text-muted block truncate">
-                    {l('नेत्र जांच', 'Eye Screening')}
+                    {l('नेत्र जांच', 'Eye Screening', 'Aankhon Ki Jaanch')}
                   </span>
                   <h3 className="font-serif font-bold text-sm sm:text-lg text-primary mt-0.5 leading-snug">
-                    {l('स्क्रीनिंग', 'Eye Health Scan')}
+                    {l('स्क्रीनिंग', 'Eye Health Scan', 'Screening')}
                   </h3>
                   <p className="text-xs text-muted dark:text-muted mt-1 hidden sm:block">
-                    {l('कैमरे से पलक की तस्वीर लेकर एनीमिया व पीलिया के संकेत जांचें।', 'Scan eyelid image to detect signs of anemia and jaundice.')}
+                    {l('कैमरे से पलक की तस्वीर लेकर एनीमिया व पीलिया के संकेत जांचें।', 'Scan eyelid image to detect signs of anemia and jaundice.', 'Camera se palak ki tasveer lekar anemia aur peeliya ki jaanch karein.')}
                   </p>
                 </div>
                 <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-[11px] sm:text-xs font-bold text-primary dark:text-muted pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>{l('जांच शुरू करें', 'Start Screening')}</span>
+                  <span>{l('जांच शुरू करें', 'Start Screening', 'Jaanch Shuru Karein')}</span>
                   <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
@@ -657,15 +700,15 @@ export default function PatientDashboard() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] sm:text-xs bg-sage text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                      {l('दैनिक साधना', 'Daily Sadhana')}
+                      {l('दैनिक साधना', 'Daily Routine', 'Dainik Sadhana')}
                     </span>
-                    <span className="text-[11px] text-gold-warm dark:text-gold-warm font-bold">{l('15 मिनट • हिमालयी स्फूर्ति', '15 Mins • Himalayan Vitality')}</span>
+                    <span className="text-[11px] text-gold-warm dark:text-gold-warm font-bold">{l('15 मिनट • हिमालयी स्फूर्ति', '15 Mins • Himalayan Vitality', '15 Min • Himalayi Sphoorti')}</span>
                   </div>
                   <h3 className="font-serif font-bold text-base sm:text-xl text-primary mt-1">
-                    {l('सुबह की ऊर्जा साधना', 'Himalayan Morning Flow')}
+                    {l('सुबह की ऊर्जा साधना', 'Himalayan Morning Flow', 'Subah Ki Urja Sadhana')}
                   </h3>
                   <p className="text-xs sm:text-sm text-muted dark:text-muted mt-0.5">
-                    {l('अनुलोम विलोम प्राणायाम + ताड़ासन व वृक्षासन मुद्रा जांच + गायन पात्र नाद।', 'Anulom Vilom breathwork + Tadasana & Vrikshasana posture check + Singing bowls.')}
+                    {l('अनुलोम विलोम प्राणायाम + ताड़ासन व वृक्षासन मुद्रा जांच + गायन पात्र नाद।', 'Anulom Vilom breathwork + Mountain & Tree pose alignment + Singing bowls.', 'Anulom Vilom pranayam + Tadasana aur Vrikshasana posture check + Dhwani dhyan.')}
                   </p>
                 </div>
               </div>
@@ -673,9 +716,42 @@ export default function PatientDashboard() {
                 to="/mitra/wellness?tab=flow"
                 className="touch-target w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-extrabold text-white bg-sage hover:bg-sage/90 px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl transition-all shadow-sm hover:scale-102 cursor-pointer"
               >
-                <span>{l('आरंभ करें', 'Start Flow')}</span>
+                <span>{l('आरंभ करें', 'Start Flow', 'Shuru Karein')}</span>
                 <ArrowRight className="w-4 h-4 ml-0.5" />
               </Link>
+            </div>
+
+            {/* Jan Aushadhi Generic Medicine Savings Banner */}
+            <div className="bg-gradient-to-r from-emerald-600/10 via-sage/15 to-teal-500/10 dark:from-emerald-950/30 dark:to-teal-950/20 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-emerald-600/30 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 tactile-card">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-700/25">
+                  <Pill className="w-6 h-6 sm:w-7 sm:h-7" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] sm:text-xs bg-emerald-700 text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                      {l('जन औषधि केंद्र', 'PMBJP Generics', 'Jan Aushadhi')}
+                    </span>
+                    <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">
+                      {l('50%-90% तक सस्ती दवाएं', 'Save 50%-90% on Medicines', '50%-90% Sasti Dawayein')}
+                    </span>
+                  </div>
+                  <h3 className="font-serif font-bold text-base sm:text-xl text-primary mt-1">
+                    {l('सस्ती जेनेरिक दवा कैलकुलेटर व केंद्र', 'Generic Medicine Savings & Centers', 'Generic Dawa Savings & Kendras')}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted dark:text-muted mt-0.5">
+                    {l('ब्रांडेड दवाओं के मुकाबले चमोली व उत्तराखंड के जन औषधि केंद्रों से पाएं 90% तक कम कीमत में दवाएं।', 'Compare market vs Jan Aushadhi generic prices and find verified Kendras in Chamoli.', 'Branded dawaon ke muqable Jan Aushadhi se 90% tak sasti dawa paayein.')}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('facilities')}
+                className="touch-target w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-extrabold text-white bg-emerald-700 hover:bg-emerald-800 px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl transition-all shadow-sm hover:scale-102 cursor-pointer"
+              >
+                <span>{l('दरें व केंद्र देखें', 'View Prices & Kendras', 'Rates & Kendra Dekhein')}</span>
+                <ArrowRight className="w-4 h-4 ml-0.5" />
+              </button>
             </div>
 
             {/* 24/7 Emergency 108 Call Strip */}
@@ -1072,7 +1148,8 @@ export default function PatientDashboard() {
 
                             {/* Reopen Consultation in Chat */}
                             <Link
-                              to="/mitra/chat"
+                              to={`/mitra/chat?conv=${encodeURIComponent(item.conversationId)}`}
+                              onClick={() => setStoredConversationId(item.conversationId)}
                               className="touch-target inline-flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-xl bg-sage text-white hover:bg-sage/90 transition-all shadow-2xs"
                               title={l('चैट में खोलें', 'Open in Chat')}
                             >
@@ -1101,10 +1178,14 @@ export default function PatientDashboard() {
           </div>
         )}
 
-        {/* ── TAB 4: NEARBY FACILITIES (अस्पताल खोजें) ────────────── */}
+        {/* ── TAB 4: NEARBY FACILITIES & JAN AUSHADHI (अस्पताल व जन औषधि केंद्र) ────────────── */}
         {activeTab === 'facilities' && (
-          <div className="space-y-4 animate-fadeIn">
+          <div className="space-y-6 animate-fadeIn">
+            {/* Hospital & Health Center Locator */}
             <NearbyFacilityFinder onClose={() => setActiveTab('hub')} />
+
+            {/* PMBJP Jan Aushadhi Generic Medicine Cost Estimator & Kendra Directory */}
+            <JanAushadhiCard />
           </div>
         )}
 
@@ -1179,6 +1260,18 @@ export default function PatientDashboard() {
           patientName={activeFamilyMember?.name || user?.name}
         />
       )}
+
+      {/* In-app Deletion Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModalConfig.isOpen}
+        onClose={() => setDeleteModalConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDeleteConsultation}
+        title={deleteModalConfig.title}
+        message={deleteModalConfig.message}
+        confirmText={l('हटाएं', 'Delete')}
+        cancelText={l('रद्द करें', 'Cancel')}
+        isDestructive={true}
+      />
     </div>
   );
 }

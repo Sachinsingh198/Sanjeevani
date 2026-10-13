@@ -63,9 +63,19 @@ export const LanguageProvider = ({ children }) => {
     setLangState(newLang);
   };
 
-  const toggleLang = () => {
-    setLangState((prev) => (prev === LANGS.HI ? LANGS.EN : LANGS.HI));
+  /**
+   * Cycles through 3 primary modes:
+   * 'en' (Pure English) -> 'hi' (Pure Hindi) -> 'hinglish' (Hinglish) -> 'en'
+   */
+  const cycleLang = () => {
+    setLangState((prev) => {
+      if (prev === LANGS.EN) return LANGS.HI;
+      if (prev === LANGS.HI) return LANGS.HINGLISH;
+      return LANGS.EN;
+    });
   };
+
+  const toggleLang = cycleLang;
 
   const setTextScale = (scale) => {
     const clamped = Math.max(0.9, Math.min(1.4, Number(scale.toFixed(1))));
@@ -74,11 +84,12 @@ export const LanguageProvider = ({ children }) => {
 
   const isHindi = lang === 'hi' || lang === 'garh' || lang === 'garhwali';
   const isEnglish = lang === 'en';
+  const isHinglish = lang === 'hinglish';
   const isGarhwali = lang === 'garh' || lang === 'garhwali';
 
-  const t = (key) => translate(key, lang);
-  const l = (hi, en, garh) => localText(lang, hi, en, garh);
-  const fmtDate = (d) => formatDate(d, lang);
+  const t = (key, overrideLang) => translate(key, overrideLang || lang);
+  const l = (hi, en, hinglish) => localText(lang, hi, en, hinglish);
+  const fmtDate = (d, lOverride) => formatDate(d, lOverride || lang);
 
   return (
     <LanguageContext.Provider
@@ -87,10 +98,12 @@ export const LanguageProvider = ({ children }) => {
         language: lang,
         isHindi,
         isEnglish,
+        isHinglish,
         isGarhwali,
         setLang,
         setLanguage: setLang,
         toggleLang,
+        cycleLang,
         t,
         l,
         toEnglishDigits,
@@ -103,3 +116,5 @@ export const LanguageProvider = ({ children }) => {
     </LanguageContext.Provider>
   );
 };
+
+export default LanguageContext;

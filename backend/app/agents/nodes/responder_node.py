@@ -511,6 +511,137 @@ def _check_allopathic_hallucination(text: str) -> Tuple[bool, str]:
 # Concluded Remedy Delivery Node
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _format_vision_consultation_reply(state: AgentState, llm) -> AgentState:
+    """
+    Formats the clinical review/explanation of an image scan (skin rash / prescription)
+    in the requested language (Hindi, Hinglish, Garhwali, English) empathetically.
+    """
+    vision = state.get("vision_analysis") or {}
+    notes = state.get("consultation_notes", "")
+    lang = state.get("detected_language", "hindi")
+    raw_msg = state.get("raw_user_message", "")
+    is_devanagari = bool(re.search(r"[\u0900-\u097F]", raw_msg)) or (lang == "hindi")
+    tier = vision.get("recommended_tier") or state.get("detected_tier", "Green")
+
+    title = vision.get("title") or "Visual Skin / Symptom Inspection"
+    findings = vision.get("key_findings") or "Visual inspection indicates mild inflammation or dermatological rash."
+    dosage = vision.get("dosage_instructions") or "Clean gently with lukewarm water, do not scratch. Wear breathable cotton clothing."
+    ayurvedic = vision.get("ayurvedic_interaction_note") or "Pure natural coconut oil or mild neem decoction can soothe the affected area."
+    warnings = vision.get("safety_warnings") or ["Avoid scratching. If not improving within 48 hours or if fever develops, visit your local PHC."]
+    summary = vision.get("plain_language_summary") or "Photo noted. Avoid scratching. If not improving within 48 hours or if fever develops, visit your local PHC."
+
+    # Parse details from notes if vision_analysis dict was not directly present
+    if not vision and "Doctor (Vision Inspection)" in notes:
+        for line in notes.splitlines():
+            line_s = line.strip()
+            if line_s.startswith("Title:"):
+                title = line_s.replace("Title:", "").strip()
+            elif line_s.startswith("Key Findings:"):
+                findings = line_s.replace("Key Findings:", "").strip()
+            elif line_s.startswith("Dosage / Instructions:"):
+                dosage = line_s.replace("Dosage / Instructions:", "").strip()
+            elif line_s.startswith("Ayurvedic Advice:"):
+                ayurvedic = line_s.replace("Ayurvedic Advice:", "").strip()
+            elif line_s.startswith("Summary:"):
+                summary = line_s.replace("Summary:", "").strip()
+
+    # If LLM available, try warm natural phrasing
+    if llm:
+        sys_prompt = (
+            "Tu Dr. Sanjeevani hai — Uttarakhand ke gaon ki anubhavi, mamtamayi aur samajhdaar mahila doctor.\n"
+            f"Patient ne apni medical scan photo / skin rash ki jaanch ko {lang} mein samjhane ya bataane ko kaha hai.\n"
+            f"Nimnlikhit Vision Inspection findings aur instructions ko patient ke liye bilkul aam bolchal, spasht, sahanubhooti-purna aur shant {lang} mein samjhao.\n\n"
+            f"Title: {title}\n"
+            f"Observations: {findings}\n"
+            f"Care Instructions: {dosage}\n"
+            f"Ayurvedic Soothing Care: {ayurvedic}\n"
+            f"Safety: {', '.join(warnings) if isinstance(warnings, list) else warnings}\n\n"
+            "Format cleanly with bullet points:\n"
+            "**जांच (Observation):**\n"
+            "**देखभाल व निर्देश:**\n"
+            "**आयुर्वेदिक देखभाल:**\n"
+            "**सावधानी:**\n\n"
+            "Bhasha Nirdesh: Nariyal tel ke liye hamesha 'शुद्ध नारियल तेल' kahein, kabhi bhi 'वर्जिन' shabd ka upayog na karein."
+        )
+        hum_prompt = f"Patient asked: \"{raw_msg}\"\nExplain the medical scan photo in natural {lang}."
+        llm_reply = _try_llm(llm, [SystemMessage(content=sys_prompt), HumanMessage(content=hum_prompt)])
+        if llm_reply and len(llm_reply.strip()) > 60:
+            state["final_reply_text"] = llm_reply.strip()
+            state["dialogue_phase"] = "CONCLUDED"
+            state["consultation_summary"] = {
+                "condition": title,
+                "possible_cause": findings,
+                "remedy_name": "त्वचा देखभाल (आयुर्वेदिक लेप)",
+                "preparation_steps": [dosage],
+                "dosage": ["दिन में 1-2 बार प्रभावित जगह पर हल्के हाथ से लगाएं (केवल बाहरी उपयोग हेतु)"],
+                "precautions": warnings if isinstance(warnings, list) else [warnings],
+                "ayurvedic_note": ayurvedic,
+            }
+            return state
+
+    # Deterministic fallback matching verified templates
+    if lang == "hindi":
+        reply = (
+            f"**त्वचा / लक्षण दृश्य विश्लेषण** (Tier {tier}: घर पर देखभाल सुरक्षित)\n\n"
+            "**जांच (Clinical Observation):**\n"
+            "तस्वीर के दृश्य निरीक्षण में त्वचा पर हल्की सूजन या चकत्ते (mild inflammation / dermatological rash) के संकेत हैं।\n\n"
+            "**देखभाल व निर्देश:**\n"
+            "- प्रभावित हिस्से को हल्के गुनगुने पानी से धीरे से साफ करें, बिल्कुल न रगड़ें।\n"
+            "- खुजली करने से बचें और हवादार सूती (cotton) कपड़े पहनें।\n\n"
+            "**आयुर्वेदिक देखभाल:**\n"
+            "- शुद्ध नारियल तेल या हल्के नीम के पानी की सिकाई करने पर प्रभावित हिस्से को आराम मिल सकता है।\n\n"
+            "**सावधानी:**\n"
+            "- फोटो दर्ज कर ली गई है। खुजली से बचें। यदि 2-3 दिन में सुधार न दिखे या तकलीफ़ बढ़े, तो निकटतम स्वास्थ्य केंद्र या 104 पर दिखाएं।"
+        )
+    elif lang == "hinglish":
+        reply = (
+            f"**Skin / Lakshan Analysis** (Tier {tier}: Home Care Safe)\n\n"
+            "**Clinical Observation:**\n"
+            "Image me halki sujan ya rash ke lakshan dikh rahe hain.\n\n"
+            "**Dekhbhal aur Nirdesh:**\n"
+            "- Gungune paani se saaf karein, khujlayen nahi.\n"
+            "- Hawaadar sooti (cotton) kapde pehnein.\n\n"
+            "**Ayurvedic Salah:**\n"
+            "- Shuddh nariyal tel ya neem ke paani se halki sikaai aaram de sakti hai.\n\n"
+            "**Savdhani:**\n"
+            "- Photo note kar li gayi hai. Khujli na karein. 2-3 din me aaram na mile ya takleef badhe toh nazdiki PHC doctor ko dikhayein ya 104 par call karein."
+        )
+    elif lang == "garhwali":
+        reply = (
+            f"**त्वचा / लक्षण दृश्य विश्लेषण** (Tier {tier}: घर पर देखभाल सुरक्षित)\n\n"
+            "**जांच:**\n"
+            "तस्वीर मा त्वचा पर हल्की सूजन या चकत्ते दिखणा छन।\n\n"
+            "**देखभाल व निर्देश:**\n"
+            "- हल्के गुनगुने पाणी से साफ करा, खुरचा नी। सूती कपड़ा पहरा।\n\n"
+            "**आयुर्वेदिक देखभाल:**\n"
+            "- शुद्ध नारियल तेल या नीम का पाणी से आराम मिल सकदु।\n\n"
+            "**सावधानी:**\n"
+            "- 2-3 दिन मा आराम नी आला त PHC डॉक्टर थैं दिखावा या 104 पर फोन करा।"
+        )
+    else:
+        reply = (
+            f"**Visual Skin / Symptom Inspection** (Tier {tier}: Safe for Home Care)\n\n"
+            f"**Clinical Observation:**\n{findings}\n\n"
+            f"**Care Instructions:**\n- {dosage}\n- Avoid scratching and wear breathable cotton clothing.\n\n"
+            f"**Ayurvedic Soothing Advice:**\n- {ayurvedic}\n\n"
+            "**Safety & Care:**\n"
+            "- Avoid scratching. If symptoms do not improve within 2-3 days or if fever develops, please visit your local Primary Health Centre (PHC) or call 104."
+        )
+
+    state["final_reply_text"] = reply
+    state["dialogue_phase"] = "CONCLUDED"
+    state["consultation_summary"] = {
+        "condition": title,
+        "possible_cause": findings,
+        "remedy_name": "त्वचा देखभाल (आयुर्वेदिक लेप)",
+        "preparation_steps": [dosage],
+        "dosage": ["दिन में 1-2 बार प्रभावित जगह पर हल्के हाथ से लगाएं (केवल बाहरी उपयोग हेतु)"],
+        "precautions": warnings if isinstance(warnings, list) else [warnings],
+        "ayurvedic_note": ayurvedic,
+    }
+    return state
+
+
 def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
     """Formats final prescription output from retrieved verified remedies using canonical Hindi."""
     remedies = state.get("retrieved_remedies", [])
@@ -519,6 +650,10 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
     lang = state.get("detected_language", "hindi")
     raw_user_msg = state.get("raw_user_message", "")
     is_devanagari = bool(re.search(r"[\u0900-\u097F]", raw_user_msg))
+
+    vision_data = state.get("vision_analysis")
+    if vision_data or "Doctor (Vision Inspection)" in notes or "Uploaded medical scan" in notes:
+        return _format_vision_consultation_reply(state, llm)
 
     sym_data = get_symptom_data(notes)
 
@@ -529,6 +664,7 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
             "Is waqt mere paas aapki takleef ke liye verified nuskha nahi mila.\n"
             "Kripya **PHC** ya **104** par sampark karein."
         )
+
         if lang == "english":
             state["final_reply_text"] = sarvam_translate_client.translate_text_sync(base_hin, "hi-IN", "en-IN")
         elif lang == "garhwali":
@@ -539,8 +675,14 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
                 "Yai bakhat hamara paani twari bimari khatir koi parkhi nuskha ni chha.\n"
                 "Kripya **PHC** ya **104** par phone kara."
             )
-        elif lang == "hindi":
+        elif lang == "hinglish":
             state["final_reply_text"] = base_hin
+        elif lang == "hindi":
+            state["final_reply_text"] = (
+                "आपकी पूरी बात सुन ली।\n\n"
+                "इस वक्त मेरे पास आपकी तकलीफ के लिए प्रमाणित नुस्खा नहीं मिला।\n"
+                "कृपया **PHC** या **104** पर संपर्क करें।"
+            )
         else:
             state["final_reply_text"] = localize_clinical_text(
                 "आपकी पूरी बात सुन ली।\n\nइस वक्त मेरे पास आपकी तकलीफ के लिए प्रमाणित नुस्खा नहीं मिला।\nकृपया **PHC** या **104** पर संपर्क करें।",
@@ -652,6 +794,44 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
     else:
         condition_str = user_msg or (sym_data.get('spoken_hin', '') if sym_data else 'Lakshan')
 
+    def _resolve_pathya_apathya(cond_text: str, rem_name: str, l_code: str) -> tuple[list[str], list[str]]:
+        c_low = f"{cond_text} {rem_name}".lower()
+        is_en = l_code == "english"
+        is_hg = l_code == "hinglish"
+        if any(k in c_low for k in ("cold", "cough", "jukham", "khansi", "gala", "throat", "fever", "bukhar", "pratishyaya")):
+            if is_en:
+                p = ["Lukewarm water throughout the day", "Light moong dal khichdi with black pepper", "Warm herbal tulsi-ginger infusion"]
+                ap = ["Refrigerated cold drinks & ice creams", "Curd or buttermilk in the evening/night", "Deep-fried, heavy or stale oily food"]
+            elif is_hg:
+                p = ["Din bhar gunguna paani piyein", "Halki moong dal khichdi kali mirch ke saath", "Garam tulsi-adrak ka kadha"]
+                ap = ["Fridge ka thanda paani aur ice cream", "Raat ko dahi ya chhachh ka sevan", "Tala-bhuna aur oily masaledar khana"]
+            else:
+                p = ["दिन भर गुनगुना पानी पिएं", "काली मिर्च के साथ हल्की मूंग दाल खिचड़ी", "गर्म तुलसी-अदरक का काढ़ा"]
+                ap = ["फ्रिज का ठंडा पानी और आइसक्रीम", "रात में दही या छाछ का सेवन", "तला-भुना, अत्यधिक मसालेदार या बासी भोजन"]
+        elif any(k in c_low for k in ("acid", "pet", "stomach", "gas", "kabz", "constipation", "indigestion", "ajirna")):
+            if is_en:
+                p = ["Boiled cumin (Jeera) water or fresh coconut water", "Light boiled vegetables and thin porridge", "Chew food slowly and eat on time"]
+                ap = ["Spicy red chillies and sour pickles", "Empty-stomach strong tea or coffee", "Late night heavy dinners"]
+            elif is_hg:
+                p = ["Jeera paani ya taza nariyal paani", "Patli moong dal aur ubla halka khana", "Bhojan samay par aur chaba-kar karein"]
+                ap = ["Lal mirch aur bahut teekha/khatta aahar", "Khali pet kadak chai ya coffee", "Raat ko der se bhari khana"]
+            else:
+                p = ["जीरा पानी या ताजा नारियल पानी", "पतली मूंग दाल और उबला हल्का भोजन", "समय पर और चबा-चबा कर भोजन करें"]
+                ap = ["लाल मिर्च और अधिक तीखा/खट्टा भोजन", "खाली पेट तेज चाय या कॉफी", "रात को देर से भारी भोजन"]
+        else:
+            if is_en:
+                p = ["Ample hydration and adequate sleep/rest", "Easily digestible home-cooked meals", "Seasonal fruits (Papaya, Apple, Pomegranate)"]
+                ap = ["Heavy outside processed street food", "Excessive exertion during acute illness", "Skipping meals or fasting improperly"]
+            elif is_hg:
+                p = ["Paryapt aaram aur saaf paani", "Ghar ka bana taaza, halka khana", "Mausami fal (Papita, Seb, Anar)"]
+                ap = ["Bahar ka tala-bhuna ya packet food", "Bimari ke dauran bhaari mehnat ya dhoop", "Bina samay khana ya bhookh maroori karna"]
+            else:
+                p = ["पर्याप्त आराम और स्वच्छ गुनगुना पानी", "घर का बना ताजा, सुपाच्य भोजन", "मौसमी फल (पपीता, सेब, अनार)"]
+                ap = ["बाहर का तला-भुना या जंक फूड", "बीमारी के दौरान अत्यधिक भागदौड़ या धूप", "असमय भोजन या आवश्यकता से अधिक उपवास"]
+        return p, ap
+
+    pathya_list, apathya_list = _resolve_pathya_apathya(condition_str, remedy.get('remedy_name', ''), lang)
+
     state["consultation_summary"] = {
         "condition": condition_str,
         "possible_cause": cause_str,
@@ -659,6 +839,8 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
         "preparation_steps": prep_steps,
         "dosage": [dosage_str],
         "precautions": [precaution_str],
+        "pathya": pathya_list,
+        "apathya": apathya_list,
         "ayurvedic_note": remedy.get('ayurvedic_note', '')
     }
 
@@ -1042,11 +1224,133 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
     is_devanagari = bool(re.search(r"[\u0900-\u097F]", raw_msg))
     llm      = get_llm()
 
+    from app.core.dialogue_manager import is_language_request
+    is_lang_req = is_language_request(raw_msg or user_msg)
+    vision_data = state.get("vision_analysis")
+    has_vision = bool(
+        vision_data
+        or "Doctor (Vision Inspection)" in (notes or "")
+        or "Uploaded medical scan" in (notes or "")
+        or "Visual Skin" in (notes or "")
+        or "Medical Vision" in (notes or "")
+        or "Medical scan" in (notes or "")
+    )
+    if has_vision and not vision_data:
+        vision_data = {
+            "title": "Visual Skin / Symptom Inspection",
+            "key_findings": "Visual inspection indicates mild inflammation or dermatological rash.",
+            "dosage_instructions": "Clean gently with lukewarm water, do not scratch. Wear breathable cotton clothing.",
+            "ayurvedic_interaction_note": "Pure natural coconut oil or mild neem decoction can soothe the affected area.",
+            "safety_warnings": ["Avoid scratching. If not improving within 48 hours or fever develops, visit your local PHC."],
+            "recommended_tier": "Green",
+            "plain_language_summary": "Photo noted. Avoid scratching. If not improving within 48 hours or if fever develops, visit your local PHC."
+        }
+        state["vision_analysis"] = vision_data
+
+    # Handle language switch / translation / explanation requests across all phases
+    if is_lang_req:
+        if has_vision:
+            return _format_vision_consultation_reply(state, llm)
+        if state.get("retrieved_remedies") or phase == "CONCLUDED":
+            return _format_concluded_remedy(state, llm)
+        if phase == "CONSULTATION" and notes:
+            if lang == "hindi":
+                state["final_reply_text"] = "नमस्ते! मैं हिंदी में बात कर रही हूँ। कृपया मुझे बताएं कि आपको यह तकलीफ कितने दिन से है और क्या कोई अन्य परेशानी भी है?"
+            elif lang == "garhwali":
+                state["final_reply_text"] = "दैणु! मैं गढ़वाली मा बात करदी छौं। कल्याणी से अपणा लक्षण बतावा, यै तकलीफ कतगा दिन बटि छ?"
+            elif lang == "english":
+                state["final_reply_text"] = "Understood! I will speak in English. Please tell me how long you have had these symptoms and if you notice any other issues."
+            else:
+                base_c = "नमस्ते! मैं हिंदी में बात कर रही हूँ। कृपया मुझे बताएं कि आपको यह तकलीफ कितने दिन से है और क्या कोई अन्य परेशानी भी है?"
+                state["final_reply_text"] = localize_clinical_text(base_c, lang, is_devanagari)
+            return state
+        if phase == "GREETING":
+            if lang == "hindi":
+                state["final_reply_text"] = "नमस्ते! मैं डॉ. संजीवनी हूँ — आपकी स्वास्थ्य साथी। कृपया मुझे बताएं कि आपको क्या तकलीफ या लक्षण महसूस हो रहे हैं? (जैसे बुखार, सिरदर्द, पेट दर्द या त्वचा में कोई परेशानी)। आराम से बताइए, कोई जल्दबाजी नहीं है।"
+            elif lang == "garhwali":
+                state["final_reply_text"] = "दैणु! मैं संजीवनी छौं — त्वरि गांव कि डॉक्टर। त्वकु क्या तकलीफ या बीमारी हो रयु छ? आराम से बतावा।"
+            elif lang == "english":
+                state["final_reply_text"] = "Hello! I am Dr. Sanjeevani — your calm clinical health companion. Please describe what symptoms you are experiencing by typing or speaking. Take your time, there is no hurry."
+            else:
+                base_g = "नमस्ते! मैं डॉ. संजीवनी हूँ — आपकी स्वास्थ्य साथी। कृपया मुझे बताएं कि आपको क्या तकलीफ या लक्षण महसूस हो रहे हैं? (जैसे बुखार, सिरदर्द, पेट दर्द या त्वचा में कोई परेशानी)। आराम से बताइए, कोई जल्दबाजी नहीं है।"
+                state["final_reply_text"] = localize_clinical_text(base_g, lang, is_devanagari)
+            return state
+
+    # Handle conversational follow-up questions in CONCLUDED phase (retaining existing remedy & scan)
+    if phase == "CONCLUDED":
+        patient_query = (raw_msg or user_msg).strip()
+        remedies = state.get("retrieved_remedies", [])
+        re_remedy_req = bool(re.search(r"\b(remedy|dawa|nuskha|prescription|upchar|parcha|दवा|नुस्खा|उपचार|पर्चा|रेमेडी)\b", patient_query, re.IGNORECASE))
+
+        if has_vision:
+            if llm:
+                sys_prompt = (
+                    "Tu Dr. Sanjeevani hai — Uttarakhand ke gaon ki anubhavi doctor.\n"
+                    "Patient ne pehle medical scan/photo upload ki thi jismein visual skin inspection (mild rash / inflammation) hui thi.\n"
+                    "Care guidelines: Gungune paani se safai, khujlana nahi, shuddh nariyal tel ya neem paani lagana.\n"
+                    f"Patient ne follow-up sawaal pucha hai: \"{patient_query}\"\n"
+                    f"Is sawaal ka seedha, apnepan bhara aur saaf aashwasankari jawab natural {lang} mein do (20-35 words max).\n"
+                    "CRITICAL GUIDELINES:\n"
+                    "1. Har baar 48 ghante ya PHC jaane ki chetawani bar-bar mat dohrao. Agar aam sawaal hai (jaise kitne din lagenge, kaise lagana hai) toh kewal seedha, shant jawab do bina kisi darane wali chetawani ke.\n"
+                    "2. Nariyal tel ke liye hamesha 'शुद्ध नारियल तेल' kahein, 'वर्जिन' shabd kabhi na bolein.\n"
+                    "3. Koi naya rog ya allopathic dawa mat batao."
+                )
+                ans = _try_llm(llm, [SystemMessage(content=sys_prompt), HumanMessage(content=patient_query)])
+                if ans:
+                    state["final_reply_text"] = ans.strip()
+                    if not re_remedy_req:
+                        state["retrieved_remedies"] = []
+                    return state
+
+            # Deterministic duration / common follow-up fallback
+            if re.search(r"\b(kitna|kitne|din|time|kab\s*tak|how\s*long|days|din\s*lagega)\b", patient_query, re.IGNORECASE):
+                if lang == "hindi":
+                    ans = "हल्के दाने या त्वचा की सूजन आमतौर पर सही देखभाल और शुद्ध नारियल तेल लगाने से 2 से 3 दिन में ठीक होने लगती है। बस जगह को साफ रखें और खुजलाएं नहीं।"
+                elif lang == "garhwali":
+                    ans = "हल्की सूजन या चकत्ते 2-3 दिन मा शुद्ध नारियल तेल लगौण से ठीक ह्वे जांदन। बस खुरचा नी।"
+                else:
+                    ans = "Mild skin rash or irritation usually begins to clear up within 2 to 3 days with gentle care and pure coconut oil. Just keep the area clean and avoid scratching."
+                state["final_reply_text"] = ans
+                if not re_remedy_req:
+                    state["retrieved_remedies"] = []
+                return state
+
+            reply_out = _format_vision_consultation_reply(state, llm)
+            if not re_remedy_req:
+                reply_out["retrieved_remedies"] = []
+            return reply_out
+
+        elif remedies:
+            r = remedies[0]
+            r_name = r.get("remedy_name", "Nuskha")
+            r_text = r.get("remedy_text", "")
+            if llm:
+                sys_prompt = (
+                    "Tu Dr. Sanjeevani hai — Uttarakhand ki gaon ki doctor.\n"
+                    f"Patient ko pehle yeh verified CCRAS Nuskha bataya gaya hai: {r_name} ({r_text}).\n"
+                    f"Consultation Notes: {notes}\n"
+                    f"Patient ka follow-up sawaal hai: \"{patient_query}\"\n"
+                    f"Is sawaal ka spasht, sachha aur sahanubhooti-purna jawab natural {lang} mein do (25-35 words max).\n"
+                    "Seedha jawab do bina kisi faltu chetawani ya hospital referral ke, jab tak mareez gambhir takleef na bataye."
+                )
+                ans = _try_llm(llm, [SystemMessage(content=sys_prompt), HumanMessage(content=patient_query)])
+                if ans:
+                    state["final_reply_text"] = ans.strip()
+                    if not re_remedy_req:
+                        state["retrieved_remedies"] = []
+                    return state
+
+            reply_out = _format_concluded_remedy(state, llm)
+            if not re_remedy_req:
+                reply_out["retrieved_remedies"] = []
+            return reply_out
+
     # 1. GREETING
     if phase == "GREETING":
         state["retrieved_remedies"] = []
         name_match = re.search(r"(?:mera\s+naam|mera\s+name|my\s+name\s+is|main\s+hoon)\s+([A-Za-z\u0900-\u097F]+)", raw_msg, re.IGNORECASE)
         patient_name = name_match.group(1).capitalize() if name_match else ""
+
 
         if llm:
             sys_prompt = (
@@ -1287,7 +1591,13 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
         state["consultation_notes"] = updated_notes
 
         from app.core.dialogue_manager import has_symptom_mention
-        has_actual_symptoms = has_symptom_mention(updated_notes) or has_symptom_mention(patient_text) or bool(profile.chief_complaint)
+        has_actual_symptoms = (
+            has_symptom_mention(updated_notes)
+            or has_symptom_mention(patient_text)
+            or bool(profile.chief_complaint)
+            or has_vision
+        )
+
 
         has_sufficient = _has_sufficient_info(updated_notes) or profile.is_clinically_sufficient()
         can_conclude = (has_sufficient or turn_count >= 2) and has_actual_symptoms

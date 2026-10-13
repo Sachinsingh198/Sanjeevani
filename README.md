@@ -464,6 +464,9 @@ Sanjeevani/
         ├── main.jsx               # React DOM initialization
         ├── api/                   # Axios HTTP & Voice API clients
         ├── components/            # Reusable UI widgets
+        │   ├── ConfirmModal.jsx   # Portaled in-app confirmation modal (z-[100])
+        │   ├── FamilySelector.jsx # Family profile switcher & portaled member modal
+        │   ├── MedicalVisionModal.jsx # Multimodal clinical scanner modal
         │   ├── LiveVoiceRoom.jsx  # Interactive voice chat room
         │   ├── SanjeevaniOrb.jsx  # Visualizer orb with mic states
         │   ├── StructuredBotMessage.jsx # Rich Markdown & remedy card renderer

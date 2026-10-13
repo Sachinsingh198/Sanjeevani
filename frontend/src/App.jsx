@@ -62,127 +62,127 @@ export default function App() {
               {/* ── Sanjeevani Mitra / Citizen Wellness Routes ─────── */}
               {/* Mitra Hub (Dashboard) */}
               <Route path="/mitra" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <PatientDashboard />
                 </ProtectedRoute>
               } />
               <Route path="/patient" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <PatientDashboard />
                 </ProtectedRoute>
               } />
 
               {/* Unified Wellness Studio (आरोग्यशाला) & Dedicated Sub-Pages */}
               <Route path="/mitra/wellness" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <WellnessStudio />
                 </ProtectedRoute>
               } />
               <Route path="/mitra/wellness/:section" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <WellnessStudio />
                 </ProtectedRoute>
               } />
               <Route path="/patient/wellness" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <WellnessStudio />
                 </ProtectedRoute>
               } />
               <Route path="/patient/wellness/:section" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <WellnessStudio />
                 </ProtectedRoute>
               } />
 
               {/* Backward-Compatible Dhyan Guru & Yogashala Deep Links */}
               <Route path="/mitra/meditation" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <WellnessStudio defaultTab="dhyan" />
                 </ProtectedRoute>
               } />
               <Route path="/patient/meditation" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <WellnessStudio defaultTab="dhyan" />
                 </ProtectedRoute>
               } />
               <Route path="/mitra/yoga" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <WellnessStudio defaultTab="yoga" />
                 </ProtectedRoute>
               } />
               <Route path="/patient/yoga" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <WellnessStudio defaultTab="yoga" />
                 </ProtectedRoute>
               } />
 
               {/* Village Companion (Sanjeevani Saathi) & Dedicated Sub-Pages */}
               <Route path="/mitra/saathi" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <Companion />
                 </ProtectedRoute>
               } />
               <Route path="/mitra/saathi/:subpage" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <Companion />
                 </ProtectedRoute>
               } />
               <Route path="/patient/saathi" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <Companion />
                 </ProtectedRoute>
               } />
               <Route path="/patient/saathi/:subpage" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <Companion />
                 </ProtectedRoute>
               } />
               <Route path="/mitra/companion" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <Companion />
                 </ProtectedRoute>
               } />
               <Route path="/mitra/companion/:subpage" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <Companion />
                 </ProtectedRoute>
               } />
               <Route path="/patient/companion" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <Companion />
                 </ProtectedRoute>
               } />
               <Route path="/patient/companion/:subpage" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <Companion />
                 </ProtectedRoute>
               } />
 
               {/* Clinical Triage Chat & Eye Screening */}
               <Route path="/patient/chat" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <Chat />
                 </ProtectedRoute>
               } />
               <Route path="/mitra/chat" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <Chat />
                 </ProtectedRoute>
               } />
               <Route path="/patient/screen" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <Screening />
                 </ProtectedRoute>
               } />
               <Route path="/mitra/screen" element={
-                <ProtectedRoute allowedRoles={['patient']}>
+                <ProtectedRoute allowedRoles={['patient', 'asha', 'admin']}>
                   <Screening />
                 </ProtectedRoute>
               } />
 
               {/* ── ASHA Worker Routes ─────────────────────────────── */}
               <Route path="/asha" element={
-                <ProtectedRoute allowedRoles={['asha']}>
+                <ProtectedRoute allowedRoles={['asha', 'admin']}>
                   <AshaDashboard />
                 </ProtectedRoute>
               } />

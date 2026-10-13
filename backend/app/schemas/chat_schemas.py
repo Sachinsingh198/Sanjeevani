@@ -29,7 +29,22 @@ class ConsultationSummary(BaseModel):
     preparation_steps: List[str] = Field(default_factory=list)
     dosage: List[str] = Field(default_factory=list)
     precautions: List[str] = Field(default_factory=list)
+    pathya: List[str] = Field(default_factory=list)      # Favorable diet & lifestyle
+    apathya: List[str] = Field(default_factory=list)    # Contraindicated / To avoid
     ayurvedic_note: Optional[str] = None
+
+class MedicalVisionResponse(BaseModel):
+    conversation_id: str
+    scan_type: str  # 'prescription_medicine' or 'symptom_skin'
+    title: str
+    identified_items: List[str] = Field(default_factory=list)
+    key_findings: str
+    dosage_instructions: Optional[str] = None
+    safety_warnings: List[str] = Field(default_factory=list)
+    ayurvedic_interaction_note: Optional[str] = None
+    recommended_tier: str = "Green"
+    plain_language_summary: str
+    image_url: Optional[str] = None
 
 class ChatResponse(BaseModel):
     conversation_id: str

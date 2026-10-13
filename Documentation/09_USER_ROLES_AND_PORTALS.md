@@ -38,6 +38,9 @@ graph TD
 
 The central dashboard for rural families and individuals:
 - **One-Tap Consultation Launcher**: Instant switch between text chat and hands-free voice room.
+- **Family Member Health Profiles (`FamilySelector`)**: Switch between multiple family members (Self, Elderly Parents, Pediatric Infants/Children) directly within consultation sessions with custom age-appropriate triage discriminators. Add new members via a portaled modal designed for seamless mobile viewports.
+- **In-App Consultation History & Deletion Governance (`ConfirmModal`)**: Review, resume, and manage past clinical consultations with custom in-app confirmation dialogues replacing browser alerts across both the chat drawer and patient dashboard.
+- **Multimodal Medical Vision Scanner (`MedicalVisionModal`)**: Direct camera and photo upload within the chat interface for visual skin, eye, and symptom inspection with automated safety escalation.
 - **Recent Health Insights**: Shows active triage phase, detected symptoms, and past sessions.
 - **Visual Vision Screening Hub**: Direct camera upload cards for eye and skin evaluations.
 - **Himalayan Wellness Section**: Quick access to Yoga, Meditation, and Village Companion.

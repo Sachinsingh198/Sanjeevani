@@ -4,6 +4,8 @@ import {
   Copy, Check, Share2, AlertCircle, PhoneCall
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useLanguage } from '../context/LanguageContext';
+import { toEnglishDigits } from '../lib/i18n';
 
 /**
  * ReferralQRModal — Generates an official PHC / CHC Doctor Referral QR Code
@@ -17,15 +19,17 @@ export default function ReferralQRModal({
   patientName = 'Sanjeevani Patient'
 }) {
   const [copied, setCopied] = useState(false);
+  const { lang, l } = useLanguage();
 
   if (!isOpen) return null;
 
   const convId = consultation.conversationId || 'demo-session';
   const tier = consultation.tier || 'Green';
   const summary = consultation.summary || 'Clinical Triage Assessment';
-  const dateStr = consultation.updatedAt
-    ? new Date(consultation.updatedAt).toLocaleDateString('hi-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-    : new Date().toLocaleDateString('hi-IN');
+  const dateRaw = consultation.updatedAt ? new Date(consultation.updatedAt) : new Date();
+  const dateStr = toEnglishDigits(
+    dateRaw.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  );
 
   const referralPayload = JSON.stringify({
     app: 'Sanjeevani-2.0',
@@ -43,7 +47,7 @@ export default function ReferralQRModal({
   const handleCopyToken = () => {
     navigator.clipboard?.writeText(convId);
     setCopied(true);
-    toast.success('Session Token copy hua!');
+    toast.success(l('सत्र टोकन कॉपी हो गया!', 'Session Token copied successfully!', 'Session Token copy ho gaya!'));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -53,6 +57,12 @@ export default function ReferralQRModal({
 
   const isRed = tier === 'Red';
   const isYellow = tier === 'Yellow';
+
+  const tierLabel = isRed
+    ? l('तत्काल रेफरल', 'Emergency Immediate Referral', 'Tatkal Referral')
+    : isYellow
+    ? l('आशा / क्लिनिक जांच', 'ASHA / Clinic Review', 'ASHA / Clinic Jaanch')
+    : l('सामान्य परामर्श', 'Routine Advice', 'Aam Salah');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn select-text">
@@ -72,7 +82,7 @@ export default function ReferralQRModal({
             </div>
             <div>
               <h3 className="font-serif font-bold text-sm text-primary">
-                PHC Doctor Referral Pass
+                {l('प्राथमिक स्वास्थ्य केंद्र रेफरल पास', 'PHC Doctor Referral Pass', 'PHC Doctor Referral Pass')}
               </h3>
               <p className="text-[10px] text-muted dark:text-muted">
                 Uttarakhand Health Informatics • Gopeshwar CHC
@@ -82,7 +92,7 @@ export default function ReferralQRModal({
           <button
             onClick={onClose}
             className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-primary transition-colors cursor-pointer"
-            aria-label="Close"
+            aria-label={l('बंद करें', 'Close', 'Band karein')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -100,7 +110,7 @@ export default function ReferralQRModal({
             }}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Triage Tier: {tier} • {isRed ? 'तत्काल रेफरल' : isYellow ? 'आशा/क्लिनिक जांच' : 'सामान्य परामर्श'}</span>
+            <span>{l('प्राथमिकता स्तर', 'Triage Tier', 'Triage Tier')}: {tier} • {tierLabel}</span>
           </div>
 
           {/* QR Code Container */}
@@ -116,14 +126,18 @@ export default function ReferralQRModal({
           </div>
 
           <p className="text-xs text-muted dark:text-muted max-w-xs mx-auto">
-            पीएचसी या अस्पताल काउंटर पर डॉक्टर या आशा कार्यकर्ता को यह कोड स्कैन कराएं।
+            {l(
+              'प्राथमिक स्वास्थ्य केंद्र या अस्पताल काउंटर पर डॉक्टर या स्वास्थ्य कार्यकर्ता को यह कोड स्कैन कराएं।',
+              'Present this QR pass to the attending clinician or desk at the primary health centre for immediate triage.',
+              'PHC ya hospital counter par doctor ya ASHA karyakarta ko yeh code scan karayein.'
+            )}
           </p>
 
           {/* Clinical Summary Snippet */}
           <div className="p-3 bg-mist dark:bg-card/70 rounded-xl text-left border border-gray-200/80 dark:border-gray-800 space-y-1 text-xs">
             <div className="flex justify-between items-center text-[10px] text-muted dark:text-muted">
-              <span>मरीज (Patient): <strong>{patientName}</strong></span>
-              <span>दिनांक: {dateStr}</span>
+              <span>{l('रोगी', 'Patient', 'Mareez')}: <strong>{patientName}</strong></span>
+              <span>{l('दिनांक', 'Date', 'Date')}: {dateStr}</span>
             </div>
             <p className="font-semibold text-primary line-clamp-2">
               {summary}
@@ -136,7 +150,7 @@ export default function ReferralQRModal({
                 className="inline-flex items-center gap-1 text-sage hover:underline cursor-pointer"
               >
                 {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                <span>{copied ? 'Copied' : 'Copy ID'}</span>
+                <span>{copied ? l('कॉपी हो गया', 'Copied', 'Copied') : l('आईडी कॉपी करें', 'Copy ID', 'ID copy karein')}</span>
               </button>
             </div>
           </div>
@@ -149,21 +163,21 @@ export default function ReferralQRModal({
               className="touch-target flex-1 py-2.5 px-3 rounded-xl border border-gray-300 dark:border-gray-700 text-primary dark:text-gray-200 text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print Pass</span>
+              <span>{l('पास प्रिंट करें', 'Print Pass', 'Pass Print Karein')}</span>
             </button>
             <button
               type="button"
               onClick={onClose}
               className="touch-target flex-1 py-2.5 px-3 rounded-xl bg-sage hover:bg-sage/90 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
             >
-              Band Karein (Done)
+              {l('पूर्ण (बंद करें)', 'Close', 'Band Karein')}
             </button>
           </div>
 
           {isRed && (
             <div className="pt-1 text-[11px] text-rose-soft font-bold flex items-center justify-center gap-1.5">
               <PhoneCall className="w-3.5 h-3.5 animate-pulse" />
-              <span>आपातकालीन स्थिति में तुरंत 108 पर कॉल करें</span>
+              <span>{l('आपातकालीन स्थिति में तुरंत 108 पर कॉल करें', 'In emergency, immediately dial 108 ambulance', 'Aapatkal mein turant 108 par call karein')}</span>
             </div>
           )}
 
