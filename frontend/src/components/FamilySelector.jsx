@@ -19,7 +19,7 @@ export default function FamilySelector({ onMemberChange }) {
 
   useEffect(() => {
     onMemberChange?.(activeMember);
-  }, [activeMember]);
+  }, [activeMember, onMemberChange]);
 
   useEffect(() => {
     if (!showAddModal) return;

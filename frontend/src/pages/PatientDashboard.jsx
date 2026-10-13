@@ -511,7 +511,7 @@ export default function PatientDashboard() {
           <div className="space-y-4 sm:space-y-6 animate-fadeIn">
 
             {/* ── Family Profile Switcher ── */}
-            <FamilyProfileSelector onProfileChange={(member) => setActiveFamilyMember(member)} />
+            <FamilyProfileSelector onProfileChange={setActiveFamilyMember} />
 
             {/* ── Page Voice Guide Banner ── */}
             <PageVoiceGuide pageKey="mitra" />

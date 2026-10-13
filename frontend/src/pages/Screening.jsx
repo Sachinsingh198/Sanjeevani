@@ -14,6 +14,9 @@ import PageVoiceGuide from '../components/PageVoiceGuide';
 import BackButton from '../components/BackButton';
 import { useLanguage } from '../context/LanguageContext';
 
+const formatDate = (date) =>
+  new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
 export default function Screening() {
   const { l, isHindi, isEnglish, toEnglishDigits } = useLanguage();
   const [screeningType, setScreeningType] = useState('ANEMIA');

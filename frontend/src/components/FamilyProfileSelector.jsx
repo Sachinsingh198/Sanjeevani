@@ -24,7 +24,7 @@ export default function FamilyProfileSelector({ onProfileChange }) {
     const cur = getActiveFamilyMember();
     setActiveMember(cur);
     if (onProfileChange) onProfileChange(cur);
-  }, []);
+  }, [onProfileChange]);
 
   const handleSelect = (member) => {
     setActiveMember(member);

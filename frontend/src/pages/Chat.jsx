@@ -437,7 +437,7 @@ export default function Chat() {
     } catch (err) {
       console.warn('Failed to load session details:', err);
     }
-  }, [lang, isEnglish, isHindi, l, user?.id]);
+  }, [lang, isEnglish, isHindi, l, user]);
 
   /* Restore session from URL query param if present */
   useEffect(() => {
@@ -506,7 +506,7 @@ export default function Chat() {
         toast.error(l('इतिहास साफ करने में विफल', 'Failed to clear history'));
       }
     }
-  }, [deleteModalConfig, user?.id, handleNewSession, l]);
+  }, [deleteModalConfig, user, handleNewSession, l]);
 
   /* Fallback to browser SpeechRecognition if MediaRecorder or Sarvam STT is unavailable */
   const fallbackToWebSpeech = useCallback(() => {
