@@ -9,14 +9,14 @@ import {
   Users, WifiOff, RefreshCw, Plus, CheckCircle, Clock, MapPin,
   UserPlus, Leaf, PhoneCall, AlertTriangle, Search, Filter,
   Activity, Thermometer, Heart, ShieldAlert, Copy, Check, ChevronDown, CheckCircle2,
-  User, Bell
+  User, Bell, Stethoscope
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { checkBackendHealth, syncAshaBatch } from '../api/client';
 import PageVoiceGuide from '../components/PageVoiceGuide';
 import BackButton from '../components/BackButton';
 
-const QUEUE_STORAGE_KEY = 'sanjeevani_asha_queue_v2';
+const QUEUE_STORAGE_KEY = 'sanjeevani_asha_queue';
 const API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL)) || 'http://localhost:8000';
 
 const DEFAULT_PATIENTS = [
@@ -32,10 +32,14 @@ export default function AshaDashboard() {
 
   const [offlineQueue, setOfflineQueue] = useState(() => {
     try {
-      const saved = localStorage.getItem(QUEUE_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
+      const saved = localStorage.getItem(QUEUE_STORAGE_KEY) || localStorage.getItem('sanjeevani_asha_queue_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      return DEFAULT_PATIENTS;
     } catch {
-      return [];
+      return DEFAULT_PATIENTS;
     }
   });
 
@@ -176,14 +180,41 @@ export default function AshaDashboard() {
     setNewPatient(updated);
   };
 
+  const classifyEncounterTier = (symptomText = '', spo2 = '', temp = '', selectedTier = 'Green') => {
+    const text = (symptomText || '').toLowerCase();
+    const spo2Num = parseFloat(spo2);
+    const tempNum = parseFloat(temp);
+
+    // Red urgency keywords or critical vitals
+    const redKeywords = [
+      'chest pain', 'breathing distress', 'saans', 'unconscious', 'behosh',
+      'heavy bleeding', 'khoon behna', 'hypoxia', 'seene me dard', 'heart'
+    ];
+    if (redKeywords.some((k) => text.includes(k)) || (spo2Num && spo2Num < 90) || (tempNum && tempNum >= 103)) {
+      return 'Red';
+    }
+
+    // Yellow urgency keywords or warning vitals
+    const yellowKeywords = [
+      '3+ din', '3 din', '4 din', 'din se bukhar', 'severe pain', 'tez dard',
+      'dehydration', 'vomiting', 'ulti', 'chakkar'
+    ];
+    if (yellowKeywords.some((k) => text.includes(k)) || (spo2Num && spo2Num < 95) || (tempNum && tempNum >= 100)) {
+      return 'Yellow';
+    }
+
+    return selectedTier || 'Green';
+  };
+
   const handleAddPatient = (e) => {
     e.preventDefault();
     if (!newPatient.name || !newPatient.symptom) return;
+    const classifiedTier = classifyEncounterTier(newPatient.symptom, newPatient.spo2, newPatient.temp, newPatient.tier);
     const newRecord = {
       id: `REC-${100 + offlineQueue.length + 1}`,
       name: newPatient.name.trim(),
       village: newPatient.village.trim() || user?.village || 'Local Ward',
-      tier: newPatient.tier || 'Green',
+      tier: classifiedTier,
       symptom: newPatient.symptom.trim(),
       vitals: {
         spo2: newPatient.spo2 || '--',
@@ -631,7 +662,7 @@ export default function AshaDashboard() {
                   <div className="p-8 text-center text-xs text-gray-400">{l('फ़िल्टर के अनुसार कोई रिकॉर्ड नहीं मिला।', 'No matching records found.')}</div>
                 ) : (
                   filteredPatients.map((patient) => (
-                    <div key={patient.id} className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors">
+                    <div key={patient.id} className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 hover:bg-surface/60 transition-colors">
                       <div className="flex items-center gap-3.5">
                         <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white text-sm font-bold shadow-xs ${
                           patient.tier === 'Red' ? 'bg-rose-soft' :
@@ -663,7 +694,16 @@ export default function AshaDashboard() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <Link
+                          to={`/patient/chat?symptom=${encodeURIComponent(patient.symptom)}`}
+                          className="touch-target inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sage/10 hover:bg-sage/20 text-sage dark:text-booti-glow text-xs font-bold border border-sage/25 transition-all shadow-2xs"
+                          title={l('चैट में ट्राइएज करें', 'Triage in Chat')}
+                        >
+                          <Stethoscope className="w-3.5 h-3.5" />
+                          <span>{l('चैट ट्राइएज', 'Triage in Chat')}</span>
+                        </Link>
+
                         <span className={`text-xs font-bold px-3 py-1 rounded-full ${
                           patient.tier === 'Red' ? 'bg-rose-soft text-white' :
                           patient.tier === 'Yellow' ? 'bg-gold-warm text-primary' :

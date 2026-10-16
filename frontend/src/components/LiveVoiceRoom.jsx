@@ -36,7 +36,8 @@ export default function LiveVoiceRoom({ onClose }) {
   const effectiveLangRef   = useRef(effectiveLang);
   effectiveLangRef.current = effectiveLang;
 
-  const sessionIdRef       = useRef('live-session-' + Date.now());
+  const [sessionId]        = useState(() => 'live-session-' + Date.now());
+  const sessionIdRef       = useRef(sessionId);
   const convStateRef       = useRef('idle');
   convStateRef.current     = convState;
   const isLiveActiveRef    = useRef(true);

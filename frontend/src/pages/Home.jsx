@@ -99,17 +99,29 @@ export default function Home() {
           {/* Primary 64px Tactile Voice Action */}
           <div className="mt-6 flex flex-col items-center justify-center gap-4">
             
-            <button
-              onClick={handleVoiceAction}
-              className="touch-target-lg group relative inline-flex items-center justify-center gap-3.5 px-8 py-5 rounded-full bg-gradient-to-r from-[#2B4A30] via-[#5A7855] to-[#2B4A30] text-white font-semibold text-lg sm:text-xl shadow-xl shadow-sage/30 hover:shadow-sage/45 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer"
-              aria-label="Sanjeevani Voice consultation"
-            >
-              <span className="absolute -inset-1 rounded-full bg-[#8ED14C]/30 blur-md group-hover:blur-lg opacity-75 group-hover:opacity-100 transition-opacity animate-pulse pointer-events-none" />
-              <div className="relative w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-mist">
-                <Mic className="w-5 h-5 animate-bounce" />
-              </div>
-              <span className="relative tracking-wide">{l('🎙 बोलकर कहें', '🎙 Speak Now')}</span>
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-3.5">
+              <button
+                onClick={handleVoiceAction}
+                className="touch-target-lg group relative inline-flex items-center justify-center gap-3.5 px-8 py-5 rounded-full bg-gradient-to-r from-[#2B4A30] via-[#5A7855] to-[#2B4A30] text-white font-semibold text-lg sm:text-xl shadow-xl shadow-sage/30 hover:shadow-sage/45 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer"
+                aria-label="Sanjeevani Voice consultation"
+              >
+                <span className="absolute -inset-1 rounded-full bg-[#8ED14C]/30 blur-md group-hover:blur-lg opacity-75 group-hover:opacity-100 transition-opacity animate-pulse pointer-events-none" />
+                <div className="relative w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-mist">
+                  <Mic className="w-5 h-5 animate-bounce" />
+                </div>
+                <span className="relative tracking-wide">{l('🎙 बोलकर कहें', '🎙 Speak Now')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowLiveRoom(true)}
+                className="touch-target inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-full bg-surface dark:bg-card border-2 border-sage/40 hover:border-sage text-primary font-bold text-sm sm:text-base shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer"
+                aria-label="Talk Live in Hindi or Garhwali"
+              >
+                <PhoneCall className="w-4 h-4 text-sage animate-pulse" />
+                <span>{l('लाइव बात करें (हिंदी / गढ़वाली)', 'Talk Live in Hindi / Garhwali')}</span>
+              </button>
+            </div>
 
             {/* Fallback Text Input Option */}
             <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-muted dark:text-muted">

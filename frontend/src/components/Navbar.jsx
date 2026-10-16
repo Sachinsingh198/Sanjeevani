@@ -101,7 +101,7 @@ export default function Navbar() {
               <Link
                 to="/"
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  location.pathname === '/' ? 'bg-sage text-white shadow-xs' : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                  location.pathname === '/' ? 'bg-sage text-white shadow-xs' : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                 }`}
               >
                 {t('nav_home')}
@@ -109,7 +109,7 @@ export default function Navbar() {
               <Link
                 to="/about"
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  location.pathname === '/about' ? 'bg-sage text-white shadow-xs' : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                  location.pathname === '/about' ? 'bg-sage text-white shadow-xs' : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                 }`}
               >
                 {t('nav_about')}
@@ -117,7 +117,7 @@ export default function Navbar() {
               <Link
                 to="/login"
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  location.pathname === '/login' ? 'bg-sage text-white shadow-xs' : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                  location.pathname === '/login' ? 'bg-sage text-white shadow-xs' : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                 }`}
               >
                 {t('login')}
@@ -137,7 +137,7 @@ export default function Navbar() {
               <Link
                 to="/admin"
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  location.pathname === '/admin' ? 'bg-warm-indigo text-white shadow-xs' : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                  location.pathname === '/admin' ? 'bg-warm-indigo text-white shadow-xs' : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                 }`}
               >
                 Control Center
@@ -145,7 +145,7 @@ export default function Navbar() {
               <Link
                 to="/about"
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  location.pathname === '/about' ? 'bg-warm-indigo text-white shadow-xs' : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                  location.pathname === '/about' ? 'bg-warm-indigo text-white shadow-xs' : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                 }`}
               >
                 About
@@ -157,7 +157,7 @@ export default function Navbar() {
               <Link
                 to="/asha"
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  location.pathname === '/asha' ? 'bg-gold-warm text-primary shadow-xs' : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                  location.pathname === '/asha' ? 'bg-gold-warm text-primary shadow-xs' : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                 }`}
               >
                 Field Portal
@@ -167,7 +167,7 @@ export default function Navbar() {
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                   location.pathname === '/mitra/screen' || location.pathname === '/patient/screen'
                     ? 'bg-sage text-white shadow-xs'
-                    : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                    : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                 }`}
               >
                 Screenings
@@ -175,7 +175,7 @@ export default function Navbar() {
               <Link
                 to="/about"
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  location.pathname === '/about' ? 'bg-sage text-white shadow-xs' : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                  location.pathname === '/about' ? 'bg-sage text-white shadow-xs' : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                 }`}
               >
                 About
@@ -189,7 +189,7 @@ export default function Navbar() {
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                   location.pathname === '/mitra' || location.pathname === '/patient'
                     ? 'bg-sage text-white shadow-xs'
-                    : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                    : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                 }`}
               >
                 {t('nav_home')}
@@ -200,7 +200,7 @@ export default function Navbar() {
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                   location.pathname === '/mitra/chat' || location.pathname === '/patient/chat'
                     ? 'bg-sage text-white shadow-xs'
-                    : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                    : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                 }`}
               >
                 <Stethoscope className="w-3.5 h-3.5 text-gold-warm" />
@@ -212,7 +212,7 @@ export default function Navbar() {
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                   location.pathname.includes('/wellness') || location.pathname.includes('/yoga') || location.pathname.includes('/meditation')
                     ? 'bg-sage text-white shadow-xs'
-                    : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                    : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
@@ -224,7 +224,7 @@ export default function Navbar() {
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                   location.pathname === '/mitra/saathi' || location.pathname === '/patient/saathi' || location.pathname === '/patient/companion'
                     ? 'bg-sage text-white shadow-xs'
-                    : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                    : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                 }`}
               >
                 <HeartHandshake className="w-3.5 h-3.5 text-rose-soft" />
@@ -236,7 +236,7 @@ export default function Navbar() {
                 <button
                   onClick={() => setMoreDropdownOpen(!moreDropdownOpen)}
                   className={`flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                    moreDropdownOpen ? 'bg-gold-warm/20 text-primary' : 'text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                    moreDropdownOpen ? 'bg-gold-warm/20 text-primary' : 'text-primary hover:bg-sage/10 dark:hover:bg-white/5'
                   }`}
                   aria-expanded={moreDropdownOpen}
                   aria-haspopup="true"
@@ -293,7 +293,7 @@ export default function Navbar() {
           {/* Theme Switcher */}
           <button
             onClick={toggleTheme}
-            className="p-2.5 sm:p-2 text-muted dark:text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-all cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="p-2.5 sm:p-2 text-muted dark:text-muted hover:text-primary hover:bg-sage/10 dark:hover:bg-white/5 rounded-xl transition-all cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label="Toggle theme"
           >
             {theme === 'dark' ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold-warm" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />}
@@ -320,7 +320,7 @@ export default function Navbar() {
 
               <button
                 onClick={handleLogout}
-                className="p-2 text-muted dark:text-muted hover:text-rose-soft dark:hover:text-[#FF7878] hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-all cursor-pointer"
+                className="p-2 text-muted dark:text-muted hover:text-rose-soft dark:hover:text-[#FF7878] hover:bg-sage/10 dark:hover:bg-white/5 rounded-xl transition-all cursor-pointer"
                 title="Sign Out"
                 aria-label="Sign Out"
               >
@@ -340,7 +340,7 @@ export default function Navbar() {
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden text-primary hover:bg-black/5 dark:hover:bg-white/5 p-2.5 rounded-xl min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="md:hidden text-primary hover:bg-sage/10 dark:hover:bg-white/5 p-2.5 rounded-xl min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label="Open mobile navigation menu"
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -358,10 +358,10 @@ export default function Navbar() {
           </div>
           {!isAuthenticated ? (
             <>
-              <Link to="/" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
+              <Link to="/" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-primary hover:bg-sage/10">
                 {t('nav_home')}
               </Link>
-              <Link to="/about" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
+              <Link to="/about" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-primary hover:bg-sage/10">
                 {t('nav_about')}
               </Link>
               <Link to="/login" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold bg-sage text-white shadow-xs">
@@ -378,22 +378,22 @@ export default function Navbar() {
                   <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted dark:text-muted">
                     {l('संजीवनी मित्र सेवाएं', 'Sanjeevani Mitra Services', 'Sanjeevani Mitra Seva')}
                   </div>
-                  <Link to="/mitra" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
+                  <Link to="/mitra" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-sage/10">
                     <SanjeevaniOrb state="idle" size={24} /> {l('मुख्य सेवाएं', 'Main Services', 'Mukhya Seva')}
                   </Link>
-                  <Link to="/mitra/chat" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
+                  <Link to="/mitra/chat" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-sage/10">
                     <Stethoscope className="w-4 h-4 text-gold-warm" /> {l('स्वास्थ्य सलाह', 'Health Consultation', 'Doctor Salah')}
                   </Link>
-                  <Link to="/mitra/wellness" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
+                  <Link to="/mitra/wellness" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-sage/10">
                     <Sparkles className="w-4 h-4 text-gold-warm" /> {l('आरोग्य स्टूडियो', 'Wellness Studio', 'Arogya Studio')}
                   </Link>
-                  <Link to="/mitra/saathi" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
+                  <Link to="/mitra/saathi" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-sage/10">
                     <HeartHandshake className="w-4 h-4 text-rose-soft" /> {l('बुजुर्ग साथी', 'Companion', 'Buzurg Saathi')}
                   </Link>
-                  <Link to="/mitra/screen" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
+                  <Link to="/mitra/screen" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-sage/10">
                     <Eye className="w-4 h-4 text-sage" /> {l('नेत्र जांच', 'Eye Screening', 'Aankh Jaanch')}
                   </Link>
-                  <Link to="/about" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
+                  <Link to="/about" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-sage/10">
                     <Info className="w-4 h-4 text-gold-warm" /> {l('संजीवनी के बारे में', 'About Sanjeevani', 'Sanjeevani ke baare mein')}
                   </Link>
                 </>
@@ -405,10 +405,10 @@ export default function Navbar() {
                   <Link to="/asha" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold bg-gold-warm text-primary">
                     <Users className="w-4 h-4" /> Field Dashboard
                   </Link>
-                  <Link to="/mitra/screen" className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
+                  <Link to="/mitra/screen" className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-sage/10">
                     <Eye className="w-4 h-4 text-sage" /> Screenings
                   </Link>
-                  <Link to="/about" className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
+                  <Link to="/about" className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-sage/10">
                     <Info className="w-4 h-4 text-gold-warm" /> About
                   </Link>
                 </>
@@ -420,16 +420,32 @@ export default function Navbar() {
                   <Link to="/admin" className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold bg-warm-indigo text-white">
                     <Shield className="w-4 h-4" /> Control Center
                   </Link>
-                  <Link to="/about" className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-black/5">
+                  <Link to="/about" className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-primary hover:bg-sage/10">
                     <Info className="w-4 h-4 text-gold-warm" /> About
                   </Link>
                 </>
               )}
 
-              <div className="pt-2 border-t border-gray-200 dark:border-gray-800 space-y-1">
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-800 space-y-2">
+                {/* Mobile User Profile & Role Pill */}
+                <div className="flex items-center justify-between p-2.5 rounded-2xl bg-surface border border-border-subtle">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-sage/20 text-sage dark:text-booti-glow flex items-center justify-center font-bold text-xs shrink-0">
+                      {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-xs font-bold text-primary block truncate">{user?.name || 'User'}</span>
+                      <span className="text-[10px] text-muted block truncate">{user?.village || user?.email || ''}</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-sage/15 text-sage dark:text-booti-glow uppercase tracking-wider border border-sage/30 shrink-0">
+                    {user?.role === 'admin' ? 'Admin' : user?.role === 'asha' ? 'ASHA' : 'Mitra'}
+                  </span>
+                </div>
+
                 <Link
                   to="/profile"
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-primary hover:bg-black/5 dark:hover:bg-white/5"
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold text-primary hover:bg-sage/10 dark:hover:bg-white/5"
                 >
                   <User className="w-4 h-4 text-sage" />
                   <span>{l('प्रोफाइल व सेटिंग्स', 'Profile & Settings', 'Profile aur Settings')}</span>
@@ -440,7 +456,7 @@ export default function Navbar() {
                   className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-bold text-rose-soft dark:text-rose-soft hover:bg-rose-soft/10 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>{l('लॉग आउट', 'Sign Out', 'Sign Out')} ({user.name})</span>
+                  <span>{l('लॉग आउट', 'Sign Out', 'Sign Out')} ({user?.name || ''})</span>
                 </button>
               </div>
             </>

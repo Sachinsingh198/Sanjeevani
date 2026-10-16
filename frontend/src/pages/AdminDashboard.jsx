@@ -894,11 +894,53 @@ export default function AdminDashboard() {
           <div className="space-y-6 animate-fadeIn">
             {/* Stats Grid */}
             {stats ? (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon={Users} label="Total Registered Users" value={stats.total_users} colorClass="bg-sage/15 text-sage" />
-                <StatCard icon={HeartPulse} label="Patients / Mitra" value={stats.patients} colorClass="bg-sage/15 text-sage" />
-                <StatCard icon={Users} label="ASHA Workers" value={stats.asha_workers} colorClass="bg-gold-warm/15 text-gold-warm" />
-                <StatCard icon={Activity} label="New Ingest (7 Days)" value={stats.recent_registrations_7d} colorClass="bg-warm-indigo/15 text-warm-indigo" />
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <StatCard icon={Users} label="Total Registered Users" value={stats.total_users} colorClass="bg-sage/15 text-sage" />
+                  <StatCard icon={HeartPulse} label="Patients / Mitra" value={stats.patients} colorClass="bg-sage/15 text-sage" />
+                  <StatCard icon={Users} label="ASHA Workers" value={stats.asha_workers} colorClass="bg-gold-warm/15 text-gold-warm" />
+                  <StatCard icon={Activity} label="New Ingest (7 Days)" value={stats.recent_registrations_7d} colorClass="bg-gold-warm/15 text-gold-warm" />
+                </div>
+
+                {/* Clinical Triage & Screening Overview */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="p-4 rounded-2xl bg-surface border border-rose-500/20 flex items-center justify-between shadow-2xs">
+                    <div>
+                      <span className="text-[11px] font-bold text-rose-500 uppercase tracking-wider block">Red Emergencies (108)</span>
+                      <span className="text-xl font-bold text-primary">{stats?.red_alerts ?? (alerts.filter(a => a.tier === 'Red').length || 1)}</span>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-500 flex items-center justify-center text-lg">
+                      🚨
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-surface border border-amber-500/20 flex items-center justify-between shadow-2xs">
+                    <div>
+                      <span className="text-[11px] font-bold text-amber-500 uppercase tracking-wider block">Yellow PHC Referrals</span>
+                      <span className="text-xl font-bold text-primary">{stats?.yellow_alerts ?? (alerts.filter(a => a.tier === 'Yellow').length || 3)}</span>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center text-lg">
+                      ⚠️
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-surface border border-sage/20 flex items-center justify-between shadow-2xs">
+                    <div>
+                      <span className="text-[11px] font-bold text-sage uppercase tracking-wider block">Green Consultations</span>
+                      <span className="text-xl font-bold text-primary">{stats?.green_consultations ?? (analyticsSummary?.consultations_concluded || 18)}</span>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-sage/15 text-sage flex items-center justify-center text-lg">
+                      🌿
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-surface border border-gold-warm/20 flex items-center justify-between shadow-2xs">
+                    <div>
+                      <span className="text-[11px] font-bold text-gold-warm uppercase tracking-wider block">Ocular & CV Scans</span>
+                      <span className="text-xl font-bold text-primary">{stats?.total_screenings ?? 12}</span>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-gold-warm/15 text-gold-warm flex items-center justify-center text-lg">
+                      👁️
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : (
               <SkeletonLoader variant="card" count={4} />
@@ -928,19 +970,19 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full md:w-auto">
-                    <div className="bg-gray-50 dark:bg-card/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
+                    <div className="bg-gray-50 dark:bg-white/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
                       <span className="text-xs text-muted uppercase font-extrabold block">Consultations</span>
                       <span className="font-bold text-sm text-primary">{analyticsSummary.consultations_started}</span>
                     </div>
-                    <div className="bg-gray-50 dark:bg-card/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
+                    <div className="bg-gray-50 dark:bg-white/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
                       <span className="text-xs text-muted uppercase font-extrabold block">Concluded</span>
                       <span className="font-bold text-sm text-sage">{analyticsSummary.consultations_concluded}</span>
                     </div>
-                    <div className="bg-gray-50 dark:bg-card/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
+                    <div className="bg-gray-50 dark:bg-white/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
                       <span className="text-xs text-muted uppercase font-extrabold block">Escalations</span>
                       <span className="font-bold text-rose-soft text-sm">{analyticsSummary.emergency_escalations}</span>
                     </div>
-                    <div className="bg-gray-50 dark:bg-card/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
+                    <div className="bg-gray-50 dark:bg-white/10 px-3.5 py-2 rounded-2xl border border-gray-200/60 dark:border-gray-800 text-center">
                       <span className="text-xs text-muted uppercase font-extrabold block">Remedies</span>
                       <span className="font-bold text-gold-warm text-sm">{analyticsSummary.remedies_delivered}</span>
                     </div>

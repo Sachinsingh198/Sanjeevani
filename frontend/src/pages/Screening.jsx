@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Camera, Eye, CheckCircle2, ShieldCheck, RefreshCw, FlaskConical,
@@ -8,16 +8,19 @@ import {
 import toast from 'react-hot-toast';
 import { speakText } from '../api/voiceClient';
 import { runEdgeDiagnosticScreening, downloadAbdmFhirBundle } from '../api/screeningClient';
+import { runVisionScreening } from '../api/client';
 import { runClientDiagnosticScreening } from '../lib/offlineScreeningEngine';
 import { queueOfflineScreening } from '../lib/offlineSyncManager';
 import PageVoiceGuide from '../components/PageVoiceGuide';
 import BackButton from '../components/BackButton';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 
 const formatDate = (date) =>
   new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export default function Screening() {
+  const { user } = useAuth();
   const { l, isHindi, isEnglish, toEnglishDigits } = useLanguage();
   const [screeningType, setScreeningType] = useState('ANEMIA');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -32,6 +35,7 @@ export default function Screening() {
   const [screeningError, setScreeningError] = useState(null);
 
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -235,7 +239,7 @@ export default function Screening() {
     speakText(text, { language: isEnglish ? 'en' : 'hi', gender: 'female' });
   };
 
-  const handleRunScreening = async () => {
+  const handleRunScreening = useCallback(async () => {
     if (!selectedFile && !selectedImage) {
       toast.error(l('कृपया पहले तस्वीर चुनें या कैमरे से फोटो लें।', 'Please select or capture an image first.', 'Kripya pehle tasveer chunein ya camera se photo lein.'));
       return;
@@ -254,30 +258,29 @@ export default function Screening() {
 
       let data = null;
 
-      // 1. If navigator is offline, directly use client-side canvas engine
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        console.warn('[Screening] Navigator offline — using client-side canvas engine');
-        data = await runClientDiagnosticScreening(screeningType, fileToSend || selectedImage);
-        toast(l('ऑन-डिवाइस ऑफ़लाइन AI जांच', 'On-Device Offline AI Screening'), { icon: '👁️' });
+      if (screeningType === 'ANEMIA' || screeningType === 'JAUNDICE') {
+        data = await runVisionScreening(screeningType, fileToSend);
       } else {
-        // 2. Online: Try backend first, gracefully fallback to on-device engine on error/timeout
+        // Fallback or on-device for oral / skin
         try {
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => {
-              reject(new Error('TIMEOUT: OpenCV Biomarker Jaanch mein samay laga.'));
-            }, 8000);
-          });
-
-          data = await Promise.race([
-            runEdgeDiagnosticScreening(screeningType, fileToSend),
-            timeoutPromise
-          ]);
-        } catch (serverErr) {
-          console.warn('[Screening] Backend server unavailable — gracefully falling back to on-device CV engine:', serverErr);
+          data = await runEdgeDiagnosticScreening(screeningType, fileToSend);
+        } catch {
           data = await runClientDiagnosticScreening(screeningType, fileToSend || selectedImage);
-          toast(l('सर्वर अनुपलब्ध: ऑन-डिवाइस AI जांच सक्रिय', 'Server offline: On-device AI screening active'), { icon: '⚡' });
         }
       }
+
+      const calculatedScore = typeof data.calculated_index === 'number'
+        ? data.calculated_index
+        : parseFloat(data.calculated_index || 0);
+
+      const cutoffThreshold = typeof data.cutoff_threshold === 'number'
+        ? data.cutoff_threshold
+        : parseFloat(data.cutoff_threshold || 0);
+
+      const now = new Date();
+      const timestampIso = now.toISOString();
+      const dateFormatted = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      const timeFormatted = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
       setResult({
         type: data.screening_type === 'ANEMIA'
@@ -288,8 +291,8 @@ export default function Screening() {
           ? l('मुख रोग जांच', 'Oral Leukoplakia Screening')
           : l('त्वचा रोग जांच', 'Skin Lesion Screening'),
         biomarker: data.biomarker,
-        score: data.calculated_index,
-        threshold: data.cutoff_threshold,
+        score: calculatedScore,
+        threshold: cutoffThreshold,
         estimated_metric: data.estimated_metric,
         risk: data.risk_level,
         confidence: data.confidence_score,
@@ -300,18 +303,37 @@ export default function Screening() {
         fhir_report: data.abdm_fhir_report,
         roi_localization_method: data.roi_localization_method || 'estimated',
         is_demo: isDemoSample,
-        source: data.source || 'backend_cv',
+        source: data.source || (data.is_offline_fallback ? 'offline_fallback' : 'backend_cv'),
+        timestamp: timestampIso,
+        dateFormatted,
+        timeFormatted,
       });
+
+      // Save scan to localStorage under 'sanjeevani_screenings'
+      try {
+        const existing = JSON.parse(localStorage.getItem('sanjeevani_screenings') || '[]');
+        const newEntry = {
+          id: existing.length > 0 ? (Number(existing[0].id) + 1) : 1,
+          date: dateFormatted,
+          type: screeningType === 'ANEMIA' ? 'Anemia Scan (Hb)' : 'Jaundice Scan (Sclera)',
+          biomarker: data.biomarker,
+          calculated_index: calculatedScore,
+          cutoff_threshold: cutoffThreshold,
+          risk: data.risk_level,
+          estimated_metric: data.estimated_metric,
+          clinical_recommendation: data.clinical_recommendation,
+        };
+        localStorage.setItem('sanjeevani_screenings', JSON.stringify([newEntry, ...existing.slice(0, 19)]));
+      } catch (saveErr) {
+        console.warn('Failed to persist screening to localStorage:', saveErr);
+      }
 
       setShowAnnotated(true);
       setActiveStep(3);
       toast.success(l('एआई जांच सफलतापूर्वक पूर्ण हुई', 'AI Screening completed successfully', 'AI Jaanch safalta-purvak poori hui'));
     } catch (err) {
       console.error('Screening execution error:', err);
-      const isTimeout = err?.message?.includes('TIMEOUT');
-      const errorMsg = isTimeout
-        ? l('एआई जांच टाइमआउट हो गई (20s)। कृपया पुनः प्रयास करें।', 'AI Screening timed out (20s). Please try again.', 'AI Jaanch timeout ho gayi (20s). Kripya punah prayas karein.')
-        : (err?.response?.data?.detail || err?.message || l('जांच में समस्या आई। कृपया तस्वीर दोबारा जांचें।', 'Screening error encountered. Please check image and retry.', 'Jaanch mein samasya aayi. Kripya tasveer dobara check karein.'));
+      const errorMsg = err?.response?.data?.detail || err?.message || l('जांच में समस्या आई। कृपया तस्वीर दोबारा जांचें।', 'Screening error encountered. Please check image and retry.', 'Jaanch mein samasya aayi. Kripya tasveer dobara check karein.');
       setScreeningError(errorMsg);
 
       toast.error(
@@ -335,7 +357,7 @@ export default function Screening() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedFile, selectedImage, screeningType, isDemoSample, l]);
 
   const handleReset = () => {
     stopCamera();
@@ -523,6 +545,22 @@ export default function Screening() {
                     alt="Screening Preview"
                     className="max-h-64 rounded-2xl object-contain mx-auto shadow-md border border-gray-200 dark:border-gray-700"
                   />
+
+                  {/* Visual ROI Alignment Guide Overlay */}
+                  {(!result || !showAnnotated || !result.annotated_image) && (
+                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                      <div className="w-[62%] h-[50%] border-2 border-dashed border-gold-warm bg-gold-warm/15 rounded-[50%] flex items-center justify-center shadow-lg">
+                        <span className="text-[10px] font-bold text-white bg-black/60 px-2.5 py-1 rounded-full backdrop-blur-xs text-center max-w-[90%] shadow-xs">
+                          {screeningType === 'ANEMIA'
+                            ? l('Center Lower Eyelid Here (60% ROI)', 'Center Lower Eyelid Here (60% ROI)', 'Neechli Palk Yahan Kendrit Karein (60% ROI)')
+                            : screeningType === 'JAUNDICE'
+                            ? l('Center Eye White (Sclera) Here', 'Center Eye White (Sclera) Here', 'Aankh Ka Safed Bhaag Yahan Kendrit Karein')
+                            : l('Center Target Region Here', 'Center Target Region Here')}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {loading && (
                     <div className="absolute inset-0 bg-sage/50 backdrop-blur-xs rounded-2xl flex flex-col items-center justify-center text-white p-4">
                       <RefreshCw className="w-9 h-9 animate-spin mb-2" />
@@ -585,9 +623,26 @@ export default function Screening() {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
-                  <label className="touch-target cursor-pointer px-4 py-2.5 bg-sage hover:bg-sage/90 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all">
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="touch-target px-4 py-2.5 bg-sage hover:bg-sage/90 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>{l('Take Eye Photo', 'Take Eye Photo', 'Photo Kheinchein')}</span>
+                  </button>
+
+                  <label className="touch-target cursor-pointer px-4 py-2.5 bg-white dark:bg-card border border-sage/30 text-sage dark:text-booti-glow rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-sage/10 transition-all">
                     <Upload className="w-4 h-4" />
-                    <span>Gallery Se Chunein</span>
+                    <span>{l('Upload Existing Photo', 'Upload Existing Photo', 'Photo Upload Karein')}</span>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -600,10 +655,10 @@ export default function Screening() {
                   <button
                     type="button"
                     onClick={startCamera}
-                    className="touch-target px-4 py-2.5 bg-white dark:bg-card border border-sage/30 text-sage dark:text-booti-glow rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-sage/10 transition-all"
+                    className="touch-target px-3.5 py-2.5 bg-white dark:bg-card border border-gray-300 dark:border-gray-700 text-muted hover:text-primary rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-sage/10 transition-all"
                   >
                     <Camera className="w-4 h-4" />
-                    <span>Live Camera Kholein</span>
+                    <span>{l('लाइव वेबकैम', 'Live Webcam')}</span>
                   </button>
 
                   <button
@@ -612,7 +667,7 @@ export default function Screening() {
                     className="touch-target px-3.5 py-2.5 bg-gold-warm/15 border border-gold-warm/30 text-gold-warm dark:text-gold-warm rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-gold-warm/25 transition-all"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Demo Photo Load Karein</span>
+                    <span>Demo Photo</span>
                   </button>
                 </div>
               </div>
@@ -770,6 +825,70 @@ export default function Screening() {
                 </div>
               </div>
 
+              {/* Visual Biomarker Spectrum Bar */}
+              {typeof result.score === 'number' && typeof result.threshold === 'number' && (
+                <div className="p-4 rounded-2xl bg-surface border border-sage/20 space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-primary flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-sage" />
+                      <span>{l('बायोमार्कर स्पेक्ट्रम विश्लेषण', 'Biomarker Spectrum Analysis', 'Biomarker Spectrum Jaanch')}</span>
+                    </span>
+                    <span className="font-mono text-[11px] font-bold text-muted">
+                      Score: {result.score.toFixed(3)} | Cutoff: {result.threshold.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {(() => {
+                    let scorePct = 50;
+                    let cutoffPct = 50;
+                    if (screeningType === 'ANEMIA') {
+                      scorePct = Math.max(5, Math.min(95, ((result.score - 0.05) / (0.45 - 0.05)) * 100));
+                      cutoffPct = Math.max(5, Math.min(95, ((result.threshold - 0.05) / (0.45 - 0.05)) * 100));
+                    } else if (screeningType === 'JAUNDICE') {
+                      scorePct = Math.max(5, Math.min(95, ((result.score - 0) / (0.35 - 0)) * 100));
+                      cutoffPct = Math.max(5, Math.min(95, ((result.threshold - 0) / (0.35 - 0)) * 100));
+                    }
+                    return (
+                      <div className="relative pt-6 pb-4">
+                        {/* Marker Pin for Calculated Score */}
+                        <div
+                          className="absolute top-0 transform -translate-x-1/2 flex flex-col items-center transition-all duration-500 z-10"
+                          style={{ left: `${scorePct}%` }}
+                        >
+                          <span className="px-1.5 py-0.5 rounded-md bg-primary text-white text-[9px] font-mono font-bold shadow-xs whitespace-nowrap">
+                            Index: {result.score.toFixed(3)}
+                          </span>
+                          <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-primary" />
+                        </div>
+
+                        {/* Color Gradient Track */}
+                        <div className={`h-3.5 rounded-full overflow-hidden shadow-inner flex ${
+                          screeningType === 'ANEMIA'
+                            ? 'bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-500'
+                            : 'bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-500'
+                        }`} />
+
+                        {/* Cutoff Threshold Marker Pin */}
+                        <div
+                          className="absolute top-4 transform -translate-x-1/2 flex flex-col items-center z-5"
+                          style={{ left: `${cutoffPct}%` }}
+                        >
+                          <div className="w-0.5 h-6 bg-primary dark:bg-white border-dashed shadow-xs" />
+                          <span className="text-[9px] font-bold text-muted mt-1 whitespace-nowrap">
+                            Cutoff ({result.threshold.toFixed(2)})
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="flex justify-between items-center text-[10px] text-muted font-semibold pt-1">
+                    <span>{screeningType === 'ANEMIA' ? l('⚠️ High Anemia Risk (< 0.20)', '⚠️ High Risk (< 0.20)') : l('✅ Safe / Normal (< 0.15)', '✅ Safe (< 0.15)')}</span>
+                    <span>{screeningType === 'ANEMIA' ? l('✅ Safe / Normal (> 0.20)', '✅ Safe (> 0.20)') : l('⚠️ High Jaundice Risk (> 0.15)', '⚠️ High Risk (> 0.15)')}</span>
+                  </div>
+                </div>
+              )}
+
               {/* ROI Localization Confidence Warning / Notice */}
               {result.roi_localization_method === 'estimated' && (
                 <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs leading-relaxed text-amber-900 dark:text-amber-300 flex items-start gap-2.5">
@@ -901,16 +1020,24 @@ export default function Screening() {
             {/* Parcha Body */}
             <div className="bg-mist dark:bg-card p-4 rounded-2xl text-xs space-y-2.5 border border-sage/15 font-mono">
               <div className="flex justify-between">
+                <span className="text-muted dark:text-muted">Patient Name:</span>
+                <span className="font-bold text-primary">{user?.name || 'Aapka Naam (Self)'}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-muted dark:text-muted">Report ID:</span>
                 <span className="font-bold text-primary">{result.fhir_report?.id || 'SANJ-REF-001'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted dark:text-muted">Date / Time:</span>
-                <span>{formatDate(new Date())} {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                <span>{result.dateFormatted || (result.timestamp ? formatDate(result.timestamp) : 'N/A')} {result.timeFormatted || ''}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted dark:text-muted">Screening Test:</span>
                 <span className="font-bold">{result.type}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted dark:text-muted">Biomarker Model:</span>
+                <span className="font-bold text-primary">{result.biomarker}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted dark:text-muted">Calculated Score:</span>

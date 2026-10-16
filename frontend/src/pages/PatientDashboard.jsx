@@ -59,6 +59,55 @@ export default function PatientDashboard() {
     message: '',
   });
 
+  // Persistent Known Conditions synced with Chat
+  const [knownConditions, setKnownConditions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sanjeevani_conditions');
+      if (saved) return JSON.parse(saved);
+      const kSaved = localStorage.getItem('sanjeevani_known_conditions');
+      if (kSaved) return JSON.parse(kSaved);
+    } catch {}
+    return ['BP / Hypertension'];
+  });
+
+  const toggleCondition = (condition) => {
+    setKnownConditions((prev) => {
+      const next = prev.includes(condition)
+        ? prev.filter((c) => c !== condition)
+        : [...prev, condition];
+      localStorage.setItem('sanjeevani_conditions', JSON.stringify(next));
+      localStorage.setItem('sanjeevani_known_conditions', JSON.stringify(next));
+      return next;
+    });
+    toast.success(l('स्वास्थ्य स्थिति अपडेट हुई! 🌿', 'Health condition updated! 🌿', 'Svasthya sthiti update hui! 🌿'));
+  };
+
+  // Persistent Recent Consultations & Screenings
+  const [recentConsultations] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sanjeevani_consultations');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [
+      { id: 1, date: '14 Oct 2026', symptom: 'Bukhar aur Gale me Kharash (Fever & Sore Throat)', tier: 'Green', status: 'Tulsi Adrak Kadha' },
+      { id: 2, date: '11 Oct 2026', symptom: 'Kamar Dard aur Thakan (Joint & Back Pain)', tier: 'Green', status: 'Nirgundi Tel Malish' },
+    ];
+  });
+
+  const [recentScreenings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sanjeevani_screenings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
+
   const handlePlayRemedyReminder = (remedy) => {
     const text = isEnglish
       ? `It is time to take your remedy: ${remedy.name}. Please take with warm water or as directed.`
@@ -517,7 +566,7 @@ export default function PatientDashboard() {
             <PageVoiceGuide pageKey="mitra" />
             
             {/* Welcoming Centerpiece Banner */}
-            <div className="relative overflow-hidden bg-white/95 dark:bg-card backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-sage/20 dark:border-gray-800 shadow-sm text-center">
+            <div className="relative overflow-hidden bg-gradient-to-br from-sage/15 via-card to-gold-warm/10 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-sage/20 dark:border-gray-800 shadow-sm text-center">
               <div className="flex flex-col items-center justify-center">
                 
                 {/* Living Orb */}
@@ -752,6 +801,143 @@ export default function PatientDashboard() {
                 <span>{l('दरें व केंद्र देखें', 'View Prices & Kendras', 'Rates & Kendra Dekhein')}</span>
                 <ArrowRight className="w-4 h-4 ml-0.5" />
               </button>
+            </div>
+
+            {/* Interactive Health Conditions Profile (Synced with Chat Safety Graph) */}
+            <div className="bg-surface/80 dark:bg-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-sage/20 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 text-xs font-bold text-sage dark:text-booti-glow uppercase tracking-wider">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>{l('स्वास्थ्य सुरक्षा प्रोफ़ाइल (Health & Comorbidities Profile)', 'Health & Comorbidities Profile', 'Svasthya Suraksha Profile')}</span>
+                  </div>
+                  <p className="text-xs text-muted mt-0.5">
+                    {l('अपनी ज्ञात स्वास्थ्य स्थितियां चुनें ताकि चैट में सुरक्षित, परहेज़-युक्त उपचार मिले।', 'Select your health conditions to ensure safe, contraindication-free herbal advice.')}
+                  </p>
+                </div>
+                <span className="text-[11px] font-bold text-sage bg-sage/10 px-2.5 py-1 rounded-full self-start sm:self-auto">
+                  {knownConditions.length} {l('सक्रिय स्थितियां', 'Active Conditions')}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                {[
+                  { id: 'BP / Hypertension', label: l('हाई बीपी (BP / Hypertension)', 'BP / Hypertension', 'High BP') },
+                  { id: 'Gastric Ulcer', label: l('पेट में छाला (Gastric Ulcer)', 'Gastric Ulcer', 'Pet Ka Chhala') },
+                  { id: 'Pregnancy', label: l('गर्भावस्था (Pregnancy)', 'Pregnancy', 'Garbhavastha') },
+                  { id: 'Diabetes', label: l('मधुमेह (Diabetes)', 'Diabetes', 'Sugar (Diabetes)') },
+                ].map((cond) => {
+                  const isChecked = knownConditions.includes(cond.id);
+                  return (
+                    <button
+                      key={cond.id}
+                      type="button"
+                      onClick={() => toggleCondition(cond.id)}
+                      className={`touch-target p-3 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer shadow-2xs ${
+                        isChecked
+                          ? 'bg-sage text-white border-sage shadow-xs'
+                          : 'bg-elevated hover:bg-sage/10 text-primary border-border-subtle'
+                      }`}
+                    >
+                      <span className="text-xs font-bold leading-snug">{cond.label}</span>
+                      <CheckCircle2 className={`w-4 h-4 shrink-0 transition-opacity ${isChecked ? 'opacity-100 text-white' : 'opacity-25'}`} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Recent Consultations & Ocular Screenings Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Recent Consultations */}
+              <div className="bg-surface/80 dark:bg-card rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-sage/20 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-sage" />
+                    <h3 className="font-serif font-bold text-sm sm:text-base text-primary">
+                      {l('हाल के परामर्श (Recent Consultations)', 'Recent Consultations', 'Haal Ke Paramarsh')}
+                    </h3>
+                  </div>
+                  <Link to="/mitra/chat" className="text-xs font-bold text-sage hover:underline flex items-center gap-1">
+                    <span>{l('नया परामर्श', 'New Chat')}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+
+                <div className="space-y-2">
+                  {recentConsultations.slice(0, 3).map((item, idx) => (
+                    <div key={item.id || idx} className="p-3 rounded-xl bg-elevated border border-border-subtle flex items-center justify-between gap-3 text-xs">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            item.tier === 'Red' ? 'bg-red-500/15 text-red-600' : item.tier === 'Yellow' ? 'bg-gold-warm/20 text-yellow-700' : 'bg-sage/15 text-sage'
+                          }`}>
+                            {item.tier || 'Green'}
+                          </span>
+                          <span className="text-[11px] text-muted">{item.date}</span>
+                        </div>
+                        <p className="font-semibold text-primary truncate mt-1">{item.symptom || 'General Consultation'}</p>
+                        <p className="text-[11px] text-muted truncate">{item.status}</p>
+                      </div>
+                      <Link
+                        to="/mitra/chat"
+                        className="touch-target p-2 rounded-xl bg-sage/10 text-sage hover:bg-sage/20 transition-colors shrink-0"
+                        title={l('चैट जारी रखें', 'Continue Chat')}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Screenings */}
+              <div className="bg-surface/80 dark:bg-card rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-sage/20 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-gold-warm" />
+                    <h3 className="font-serif font-bold text-sm sm:text-base text-primary">
+                      {l('हाल की बायोमार्कर जांचें (Recent Screenings)', 'Recent Vision Screenings', 'Haal Ki Jaanch')}
+                    </h3>
+                  </div>
+                  <Link to="/mitra/screen" className="text-xs font-bold text-gold-warm hover:underline flex items-center gap-1">
+                    <span>{l('नई जांच', 'New Scan')}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+
+                <div className="space-y-2">
+                  {recentScreenings.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-muted border border-dashed border-border-subtle rounded-xl">
+                      {l('कोई पूर्व बायोमार्कर स्कैन दर्ज नहीं है।', 'No prior scans recorded yet.')}
+                    </div>
+                  ) : (
+                    recentScreenings.slice(0, 3).map((scan, sIdx) => (
+                      <div key={scan.id || sIdx} className="p-3 rounded-xl bg-elevated border border-border-subtle flex items-center justify-between gap-3 text-xs">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sage/15 text-sage">
+                              {scan.risk || 'NORMAL'}
+                            </span>
+                            <span className="text-[11px] text-muted">{scan.date}</span>
+                          </div>
+                          <p className="font-semibold text-primary truncate mt-1">{scan.type}</p>
+                          <p className="text-[11px] text-muted truncate">
+                            Index: {typeof scan.calculated_index === 'number' ? scan.calculated_index.toFixed(3) : scan.calculated_index} (Cutoff: {scan.cutoff_threshold})
+                          </p>
+                        </div>
+                        <Link
+                          to="/mitra/screen"
+                          className="touch-target p-2 rounded-xl bg-gold-warm/15 text-gold-warm hover:bg-gold-warm/25 transition-colors shrink-0"
+                          title={l('जांच देखें', 'View Screening')}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Link>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* 24/7 Emergency 108 Call Strip */}

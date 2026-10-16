@@ -156,10 +156,10 @@ export default function RemedyCard({ remedy, remedies, index = 0 }) {
   };
 
   return (
-    <div className="w-full bg-white dark:bg-[#131E2B] rounded-2xl border border-sage/20 dark:border-gray-700 shadow-sm overflow-hidden transition-all my-2.5">
+    <div className="w-full bg-surface/90 text-primary rounded-2xl border border-sage/30 shadow-sm overflow-hidden transition-all my-2.5">
       {/* ── MULTI-REMEDY TABS (If more than 1 remedy) ── */}
       {list.length > 1 && (
-        <div className="flex border-b border-sage/15 dark:border-gray-800 bg-mist/50 dark:bg-[#0F1722] p-1.5 gap-1.5">
+        <div className="flex border-b border-sage/15 dark:border-gray-800 bg-mist/50 dark:bg-elevated p-1.5 gap-1.5">
           {list.map((r, idx) => (
             <button
               key={idx}
@@ -171,8 +171,8 @@ export default function RemedyCard({ remedy, remedies, index = 0 }) {
               }}
               className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeTab === idx
-                  ? 'bg-white dark:bg-gray-800 text-sage dark:text-booti-glow shadow-xs border border-sage/20 dark:border-gray-700'
-                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                  ? 'bg-card text-sage dark:text-booti-glow shadow-xs border border-sage/30'
+                  : 'text-muted hover:text-primary'
               }`}
             >
               <span>{idx === 0 ? '🌿' : '✨'}</span>
@@ -183,14 +183,14 @@ export default function RemedyCard({ remedy, remedies, index = 0 }) {
       )}
 
       {/* ── CARD HEADER ── */}
-      <div className="p-3.5 sm:p-4 bg-gradient-to-r from-sage/10 via-emerald-50/50 to-transparent dark:from-sage/20 dark:via-[#162330] dark:to-transparent border-b border-sage/15 dark:border-gray-800/80 flex items-start justify-between gap-3">
+      <div className="p-3.5 sm:p-4 bg-gradient-to-r from-sage/10 via-sage/5 to-transparent border-b border-sage/15 dark:border-gray-800/80 flex items-start justify-between gap-3">
         <div className="flex items-start gap-2.5 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-sage/20 dark:bg-sage/30 flex items-center justify-center text-sage dark:text-booti-glow shrink-0 shadow-xs mt-0.5">
             <Leaf className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-serif text-base sm:text-lg font-bold text-primary dark:text-[#F4F6F0] leading-snug">
+              <h3 className="font-serif text-base sm:text-lg font-bold text-primary leading-snug">
                 {remedyName}
               </h3>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold border border-emerald-300/50">
@@ -199,7 +199,7 @@ export default function RemedyCard({ remedy, remedies, index = 0 }) {
               </span>
             </div>
             {currentRemedy.source && (
-              <p className="text-[11px] text-muted dark:text-gray-400 mt-0.5 font-medium truncate">
+              <p className="text-[11px] text-muted mt-0.5 font-medium truncate">
                 {currentRemedy.source}
               </p>
             )}
@@ -212,8 +212,8 @@ export default function RemedyCard({ remedy, remedies, index = 0 }) {
           onClick={handleVoiceToggle}
           className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
             isSpeaking
-              ? 'bg-rose-500 text-white border-rose-600 shadow-sm animate-pulse'
-              : 'bg-white dark:bg-gray-800 text-sage dark:text-booti-glow hover:bg-sage/10 border-sage/25 dark:border-gray-700 shadow-xs'
+              ? 'bg-rose-soft text-white border-rose-soft shadow-sm animate-pulse'
+              : 'bg-card text-sage dark:text-booti-glow hover:bg-sage/10 border-sage/25 shadow-xs'
           }`}
           title={isSpeaking ? l('आवाज़ रोकें', 'Stop Audio') : l('नुस्खा बोलकर सुनें', 'Listen Aloud')}
         >
@@ -234,23 +234,23 @@ export default function RemedyCard({ remedy, remedies, index = 0 }) {
       <div className="p-3.5 sm:p-4 space-y-3.5">
         {/* ── 1. INGREDIENTS SHELF ── */}
         <div>
-          <div className="text-[11px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <div className="text-[11px] font-extrabold text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <span>🌿</span> {l('ज़रूरी सामग्री:', 'Key Ingredients:')}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {ingredients.map((item, idx) => (
               <div
                 key={idx}
-                className="p-2 rounded-xl bg-mist/60 dark:bg-gray-800/50 border border-sage/15 dark:border-gray-700/60 flex items-center gap-2"
+                className="p-2 rounded-xl bg-card border border-sage/15 flex items-center gap-2"
               >
                 <span className="text-xl shrink-0" role="img" aria-label={item.nameHi}>
                   {item.icon}
                 </span>
                 <div className="min-w-0 leading-tight">
-                  <div className="font-bold text-xs text-primary dark:text-[#EAEFEA] truncate">
+                  <div className="font-bold text-xs text-primary truncate">
                     {item.nameHi}
                   </div>
-                  <div className="text-[10px] text-muted dark:text-gray-400 font-medium truncate">
+                  <div className="text-[10px] text-muted font-medium truncate">
                     {item.amount}
                   </div>
                 </div>
@@ -261,16 +261,24 @@ export default function RemedyCard({ remedy, remedies, index = 0 }) {
 
         {/* ── 2. PREPARATION METHOD (Numbered Steps) ── */}
         <div>
-          <div className="text-[11px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <span>🥣</span> {l('बनाने की सरल विधि:', 'Simple Preparation Method:')}
+          <div className="text-[11px] font-extrabold text-muted uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span className="flex items-center gap-1.5"><span>🥣</span> {l('बनाने की सरल विधि:', 'Simple Preparation Method:')}</span>
+            <button
+              type="button"
+              onClick={handleVoiceToggle}
+              className="text-[11px] font-bold text-sage dark:text-booti-glow flex items-center gap-1 hover:underline cursor-pointer"
+            >
+              <Volume2 className="w-3 h-3" />
+              <span>{isSpeaking ? l('⏹️ रोकें', '⏹️ Stop') : l('🔊 हिंदी में सुनें', '🔊 Listen in Hindi')}</span>
+            </button>
           </div>
           <div className="space-y-1.5">
             {steps.map((st, i) => (
               <div
                 key={i}
-                className="flex items-start gap-2.5 p-2.5 rounded-xl bg-mist/40 dark:bg-gray-800/30 border border-sage/10 dark:border-gray-700/40 text-xs text-primary dark:text-gray-200"
+                className="flex items-start gap-2.5 p-2.5 rounded-xl bg-card border border-sage/10 text-xs text-primary"
               >
-                <span className="w-5 h-5 rounded-full bg-sage/15 dark:bg-sage/30 text-sage dark:text-booti-glow font-extrabold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                <span className="w-5 h-5 rounded-full bg-sage/15 text-sage dark:text-booti-glow font-extrabold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
                   {i + 1}
                 </span>
                 <p className="leading-relaxed font-medium">
@@ -282,18 +290,28 @@ export default function RemedyCard({ remedy, remedies, index = 0 }) {
         </div>
 
         {/* ── 3. DOSAGE & CONSUMPTION BANNER ── */}
-        <div className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/50 text-xs">
-          <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center shrink-0 text-emerald-700 dark:text-emerald-300">
-            <Clock className="w-4 h-4" />
+        <div className="flex items-center justify-between gap-2.5 p-2.5 sm:p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-700 dark:text-emerald-300">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="font-extrabold text-emerald-800 dark:text-emerald-300 mr-1.5">
+                {l('सेवन का समय व खुराक:', 'When & How to Take:')}
+              </span>
+              <span className="text-primary font-medium">
+                {dosageText}
+              </span>
+            </div>
           </div>
-          <div className="min-w-0">
-            <span className="font-extrabold text-emerald-800 dark:text-emerald-300 mr-1.5">
-              {l('सेवन का समय व खुराक:', 'When & How to Take:')}
-            </span>
-            <span className="text-emerald-900 dark:text-emerald-100 font-medium">
-              {dosageText}
-            </span>
-          </div>
+          <button
+            type="button"
+            onClick={handleVoiceToggle}
+            className="shrink-0 p-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-800 dark:text-emerald-300 text-xs font-bold cursor-pointer"
+            title={l('खुराक सुनें', 'Listen to Dosage')}
+          >
+            <Volume2 className="w-3.5 h-3.5" />
+          </button>
         </div>
 
         {/* ── 4. SAFETY ADVISORY FOOTER ── */}

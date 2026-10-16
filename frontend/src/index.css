@@ -17,6 +17,9 @@
   --color-primary: var(--text-primary);
   --color-muted: var(--text-muted);
   --color-card: var(--bg-card);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-navy-header: #1A263D;
   --color-border-subtle: var(--border-subtle);
   --color-booti-glow: var(--herb-glow);
 }
@@ -27,43 +30,47 @@
    Colors:
      --sage         #5A7855  Herb Sage — primary actions, nature, healing
      --gold-warm    #D4A359  Himalayan Gold — warmth, secondary accents
-     --mist         #F4F6F0  Mountain Mist — serene parchment canvas
-     --warm-indigo  #2E4057  Himalayan Indigo — mountain slate, authority
+     --mist         #F7F5EE  Mountain Mist — serene parchment canvas
+     --warm-indigo  #1A263D  Himalayan Indigo — mountain slate, authority
      --rose-soft    #B85042  Emergency Berry — critical alerts, 108 SOS
      --booti-glow   #8ED14C  Living Sanjeevani Booti glow reserved for the Orb
    ───────────────────────────────────────────────────────────────────── */
 
 :root {
-  --mist: #F4F6F0;
-  --sage: #4A6845;
-  --sage-light: #EBF2E9;
-  --warm-indigo: #2E4057;
-  --sand: #EDE7DA;
+  --mist: #F7F5EE;
+  --sage: #5A7855;
+  --sage-light: #EBF1EA;
+  --warm-indigo: #1A263D;
+  --sand: #EFE9D9;
   --gold-warm: #D4A359;
   --rose-soft: #B85042;
 
-  --text-primary: #1E2A43;
-  --text-muted: #5A697A;
+  --text-primary: #1A263D;
+  --text-muted: #5B6472;
   --bg-card: rgba(255, 255, 255, 0.92);
-  --border-subtle: rgba(46, 64, 87, 0.12);
+  --bg-surface: #F3EFE4;
+  --bg-elevated: #FFFFFF;
+  --border-subtle: rgba(26, 38, 61, 0.10);
 
   --herb-glow: #8ED14C;
   --herb-glow-light: #E4F5D1;
 }
 
 .dark {
-  --mist: #151D28;
-  --sage: #5F8A58;
-  --sage-light: #1C2B21;
-  --warm-indigo: #1A2433;
-  --sand: #232C3A;
-  --gold-warm: #E2B065;
-  --rose-soft: #C95D4F;
+  --mist: #0B1120;
+  --sage: #6D9766;
+  --sage-light: rgba(109, 151, 102, 0.16);
+  --warm-indigo: #1E293B;
+  --sand: #1E293B;
+  --gold-warm: #E8A33D;
+  --rose-soft: #EF4444;
 
-  --text-primary: #F4F6F0;
-  --text-muted: #9AA8B8;
-  --bg-card: rgba(27, 37, 52, 0.88);
-  --border-subtle: rgba(244, 246, 240, 0.10);
+  --text-primary: #F1F5F9;
+  --text-muted: #94A3B8;
+  --bg-card: rgba(30, 41, 59, 0.90);
+  --bg-surface: #1E293B;
+  --bg-elevated: #0F172A;
+  --border-subtle: rgba(255, 255, 255, 0.12);
 
   --herb-glow: #7BC750;
   --herb-glow-light: #1F331D;
@@ -264,6 +271,9 @@ p, li {
 }
 ::-webkit-scrollbar-track {
   background: var(--mist);
+}
+.dark ::-webkit-scrollbar-track {
+  background: #0B1120;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--gold-warm);

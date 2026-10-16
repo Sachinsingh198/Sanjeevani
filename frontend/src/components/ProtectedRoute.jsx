@@ -50,10 +50,10 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
             This section is available to <strong>{allowedRoles.map(r => r === 'patient' ? 'User' : r === 'asha' ? 'ASHA Worker' : r === 'admin' ? 'Admin' : r).join(' / ')}</strong> accounts only.
           </p>
           <Link
-            to="/"
-            className="inline-flex items-center gap-2 bg-sage hover:bg-[#4a6346] text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-all"
+            to={user?.role === 'admin' ? '/admin' : user?.role === 'asha' ? '/asha' : '/patient'}
+            className="inline-flex items-center gap-2 bg-sage hover:bg-[#4a6346] text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer"
           >
-            <Home className="w-4 h-4" /> Go to Home
+            <Home className="w-4 h-4" /> Go to My Dashboard
           </Link>
         </div>
       </div>

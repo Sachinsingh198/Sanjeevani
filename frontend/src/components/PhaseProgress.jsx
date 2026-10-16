@@ -13,20 +13,25 @@ const PHASES = [
   { key: 'CONCLUDED', label: 'Remedy', icon: CheckCircle2 },
 ];
 
-export default function PhaseProgress({ currentPhase, turnCount = 0 }) {
+export default function PhaseProgress({ currentPhase, turnCount = 0, symptomProfile = null }) {
   let currentStep = 0;
 
-  if (currentPhase === 'CONCLUDED' || currentPhase === 'EMERGENCY') {
-    currentStep = 3;
+  if (currentPhase === 'GREETING' || currentPhase === 'GUARDRAIL_BLOCKED') {
+    currentStep = 0;
   } else if (currentPhase === 'CONSULTATION') {
-    // turnCount >= 2 moves from Symptoms intake to Assessment probing
-    currentStep = turnCount >= 2 ? 2 : 1;
+    if (turnCount >= 2 || Boolean(symptomProfile?.duration || symptomProfile?.comorbidities_asked)) {
+      currentStep = 2; // Assessment
+    } else {
+      currentStep = 1; // Symptoms
+    }
   } else if (currentPhase === 'INTAKE') {
     currentStep = 1;
   } else if (currentPhase === 'PROBING') {
     currentStep = 2;
+  } else if (currentPhase === 'CONCLUDED' || currentPhase === 'EMERGENCY') {
+    currentStep = 3;
   } else {
-    currentStep = 0; // GREETING, GUARDRAIL_BLOCKED
+    currentStep = 0;
   }
 
   return (
@@ -43,9 +48,9 @@ export default function PhaseProgress({ currentPhase, turnCount = 0 }) {
               <div
                 className={`
                   w-7 h-7 rounded-full flex items-center justify-center transition-all duration-500
-                  ${isDone ? 'bg-sage text-white shadow-sm' : ''}
-                  ${isActive ? 'bg-warm-indigo text-white ring-2 ring-gold-warm ring-offset-1 shadow-md' : ''}
-                  ${isFuture ? 'bg-gray-200 text-gray-400' : ''}
+                  ${isDone ? 'bg-sage text-white shadow-xs' : ''}
+                  ${isActive ? 'bg-gold-warm text-[#1A263D] ring-2 ring-gold-warm/60 ring-offset-1 ring-offset-mist shadow-md font-bold' : ''}
+                  ${isFuture ? 'bg-surface text-muted border border-border-subtle' : ''}
                 `}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -53,8 +58,8 @@ export default function PhaseProgress({ currentPhase, turnCount = 0 }) {
               <span
                 className={`text-xs font-bold uppercase tracking-wide transition-colors duration-300
                   ${isDone ? 'text-sage' : ''}
-                  ${isActive ? 'text-warm-indigo' : ''}
-                  ${isFuture ? 'text-gray-400' : ''}
+                  ${isActive ? 'text-gold-warm font-extrabold' : ''}
+                  ${isFuture ? 'text-muted' : ''}
                 `}
               >
                 {phase.label}
@@ -65,7 +70,7 @@ export default function PhaseProgress({ currentPhase, turnCount = 0 }) {
               <div
                 className={`
                   flex-1 h-0.5 mx-1 rounded-full transition-all duration-500
-                  ${idx < currentStep ? 'bg-sage' : 'bg-gray-200'}
+                  ${idx < currentStep ? 'bg-sage' : 'bg-surface'}
                 `}
               />
             )}

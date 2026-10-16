@@ -56,6 +56,15 @@ const COMORBIDITY_OPTIONS = [
   { label: 'Diabetes', value: 'diabetes', icon: '💉' },
 ];
 
+const STARTER_SYMPTOM_CHIPS = [
+  { label: '🤒 Bukhar aur Thakan (Fever & Fatigue)', text: 'Mujhe bukhar aur badan me thakan ho rahi hai' },
+  { label: '🗣️ Gale me Kharash / Khasi (Cough & Cold)', text: 'Mere gale me kharash aur sookhi khasi hai' },
+  { label: '🤢 Pet me Gas / Apach (Indigestion)', text: 'Mere pet me gas, bharipan aur apach ho raha hai' },
+  { label: '🤕 Sir Dard / Mund Peed (Headache)', text: 'Mere sir me dard (mund peed) ho raha hai' },
+  { label: '🦵 Kamar aur Jod Dard (Joint Pain)', text: 'Mere ghutno aur kamar me dard hai' },
+  { label: '🔥 Acidity aur Jalan (Heartburn)', text: 'Mujhe khatti dakar aur seene me jalan (angaro) ho rahi hai' },
+];
+
 const getQuickSymptoms = (lang) => {
   if (lang === 'en') {
     return [
@@ -129,7 +138,7 @@ export default function Chat() {
   const [currentFamilyMember, setCurrentFamilyMember] = useState(getActiveFamilyMember);
   const [knownConditions, setKnownConditions] = useState(() => {
     try {
-      const saved = localStorage.getItem('sanjeevani_known_conditions');
+      const saved = localStorage.getItem('sanjeevani_conditions') || localStorage.getItem('sanjeevani_known_conditions');
       if (saved) return JSON.parse(saved);
     } catch {}
     return [];
@@ -140,9 +149,10 @@ export default function Chat() {
   const [detectedLanguage, setDetectedLanguage] = useState(lang === 'en' ? 'english' : 'hindi');
   const [sttLangOverride, setSttLangOverride]   = useState(null);
 
-  /* Persist known conditions */
+  /* Persist known conditions to both storage keys */
   useEffect(() => {
     try {
+      localStorage.setItem('sanjeevani_conditions', JSON.stringify(knownConditions));
       localStorage.setItem('sanjeevani_known_conditions', JSON.stringify(knownConditions));
     } catch {}
   }, [knownConditions]);
@@ -704,6 +714,27 @@ export default function Chat() {
     return -1;
   }, [messages]);
 
+  const lastBotText = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].sender === 'bot') return (messages[i].text || '').toLowerCase();
+    }
+    return '';
+  }, [messages]);
+
+  const contextualQuickReplies = useMemo(() => {
+    if (currentPhase !== 'CONSULTATION' || loading) return [];
+    if (lastBotText.includes('kitne din') || lastBotText.includes('kab se') || lastBotText.includes('kitna samay') || lastBotText.includes('how many days') || lastBotText.includes('duration')) {
+      return ["Aaj subah se (1 din)", "2 din se", "3–4 din se", "1 hafte se zyada"];
+    }
+    if (lastBotText.includes('bukhar') || lastBotText.includes('kamzori') || lastBotText.includes('saath mein') || lastBotText.includes('aur koi') || lastBotText.includes('associated') || lastBotText.includes('lakshan')) {
+      return ["Haan, halka bukhar hai", "Haan, kamzori lag rahi hai", "Nahi, aur koi lakshan nahi hai"];
+    }
+    if (lastBotText.includes('bp') || lastBotText.includes('acidity') || lastBotText.includes('pregnancy') || lastBotText.includes('sugar') || lastBotText.includes('bimari') || lastBotText.includes('comorbid')) {
+      return ["Nahi, koi bimari nahi hai", "Mujhe High BP hai", "Mujhe Acidity / Gas rehti hai", "Mujhe Sugar (Diabetes) hai"];
+    }
+    return [];
+  }, [currentPhase, loading, lastBotText]);
+
   const sendText = useCallback(async rawText => {
     const trimmed = rawText.trim();
     if (!trimmed || loading) return;
@@ -796,7 +827,14 @@ export default function Chat() {
       setCurrentPhase(phase);
 
       if (Array.isArray(res.detected_conditions) && res.detected_conditions.length > 0) {
-        setKnownConditions(prev => Array.from(new Set([...prev, ...res.detected_conditions])));
+        setKnownConditions(prev => {
+          const updated = Array.from(new Set([...prev, ...res.detected_conditions]));
+          try {
+            localStorage.setItem('sanjeevani_conditions', JSON.stringify(updated));
+            localStorage.setItem('sanjeevani_known_conditions', JSON.stringify(updated));
+          } catch {}
+          return updated;
+        });
       }
 
       const finalBotMsg = {
@@ -837,6 +875,26 @@ export default function Chat() {
       });
 
       refreshSessions();
+
+      // Persist concluded or escalated consultations to localStorage under sanjeevani_consultations
+      if (phase === 'CONCLUDED' || phase === 'EMERGENCY' || res.escalation_triggered || res.tier === 'Red') {
+        try {
+          const stored = JSON.parse(localStorage.getItem('sanjeevani_consultations') || '[]');
+          const firstUserSymptom = messages.find(m => m.sender === 'user')?.text || trimmed;
+          const newEntry = {
+            id: Date.now(),
+            date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+            symptom: firstUserSymptom,
+            tier: res.tier || (phase === 'EMERGENCY' ? 'Red' : 'Green'),
+            status: res.remedies?.length
+              ? res.remedies[0].remedy_name
+              : (res.tier === 'Red' || phase === 'EMERGENCY' ? '108 Emergency Alert' : 'PHC Referral'),
+          };
+          localStorage.setItem('sanjeevani_consultations', JSON.stringify([newEntry, ...stored.filter(item => item.id !== newEntry.id)].slice(0, 20)));
+        } catch (e) {
+          console.warn('Failed to sync consultation to localStorage:', e);
+        }
+      }
 
       if (phase === 'CONCLUDED' && res.remedies?.length > 0) {
         scheduleFollowUp({
@@ -1116,28 +1174,33 @@ export default function Chat() {
 
           {/* Phase tracker (compact) */}
           <div className="hidden lg:block">
-            <PhaseProgress currentPhase={currentPhase} />
+            <PhaseProgress
+              currentPhase={currentPhase}
+              turnCount={messages.filter(m => m.sender === 'user').length}
+              symptomProfile={messages[messages.length - 1]?.symptom_profile}
+            />
           </div>
 
           {/* Controls */}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            {/* Live Hands-Free Voice Call */}
+            <AccessibilityBar scale={textScale} onScaleChange={setTextScale} lang={lang} onLangChange={setLang} />
+            <button onClick={() => setSettingsOpen(o => !o)}
+              className={`p-1.5 sm:p-2 rounded-xl border text-xs transition-all ${settingsOpen ? 'bg-sage text-white border-sage' : 'border-border-subtle text-muted hover:border-sage/40 hover:text-primary cursor-pointer'}`}>
+              <Settings2 className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Live Hands-Free Voice Call Launcher */}
             <button
               type="button"
               onClick={() => setShowLiveRoom(true)}
               className="touch-target inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-sage to-[#4a6346] hover:from-[#4a6346] hover:to-[#3b5038] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
               title={l('लाइव आवाज़ कॉल शुरू करें', 'Start Live Voice Call', 'Live Voice Call Shuru Karein')}
             >
-              <PhoneCall className="w-3.5 h-3.5 animate-pulse" />
-              <span className="hidden sm:inline">{l('लाइव कॉल', 'Live Call', 'Live Call')}</span>
+              <Mic className="w-3.5 h-3.5 animate-pulse" />
+              <span>{l('🎙️ लाइव कॉल', '🎙️ Live Voice Call', '🎙️ Live Call')}</span>
             </button>
 
-            <AccessibilityBar scale={textScale} onScaleChange={setTextScale} lang={lang} onLangChange={setLang} />
-            <button onClick={() => setSettingsOpen(o => !o)}
-              className={`p-1.5 sm:p-2 rounded-xl border text-xs transition-all ${settingsOpen ? 'bg-sage text-white border-sage' : 'border-gray-200 dark:border-gray-700 text-gray-400 hover:border-sage/40'}`}>
-              <Settings2 className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={handleNewSession} className="p-1.5 sm:p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-400 hover:border-sage/40 transition-all" title={l('नया सत्र', 'New Session', 'Naya Session')}>
+            <button onClick={handleNewSession} className="p-1.5 sm:p-2 rounded-xl border border-border-subtle text-muted hover:border-sage/40 hover:text-primary transition-all cursor-pointer" title={l('नया सत्र', 'New Session', 'Naya Session')}>
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -1189,7 +1252,11 @@ export default function Chat() {
             </div>
             {/* Mobile Phase */}
             <div className="lg:hidden mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-              <PhaseProgress currentPhase={currentPhase} />
+              <PhaseProgress
+                currentPhase={currentPhase}
+                turnCount={messages.filter(m => m.sender === 'user').length}
+                symptomProfile={messages[messages.length - 1]?.symptom_profile}
+              />
             </div>
           </div>
         )}
@@ -1318,9 +1385,55 @@ export default function Chat() {
           {knownConditions.length > 0 && (
             <div className="max-w-2xl mx-auto px-3 sm:px-4 pt-1.5 sm:pt-2 flex items-center gap-1.5">
               <Leaf className="w-3 h-3 text-sage shrink-0" />
-              <span className="text-[9px] sm:text-[10px] text-gray-400 truncate">{l('स्थितियां:', 'Conditions:', 'Sthitiyan:')} {knownConditions.join(', ')}</span>
+              <span className="text-[9px] sm:text-[10px] text-muted truncate">{l('स्थितियां:', 'Conditions:', 'Sthitiyan:')} {knownConditions.join(', ')}</span>
             </div>
           )}
+
+          {/* 1-Tap Bilingual Symptom Starter Chips (Zero-Typing Start on GREETING) */}
+          {messages.length === 1 && currentPhase === 'GREETING' && (
+            <div className="max-w-2xl mx-auto px-3 sm:px-4 pt-2 pb-1 animate-fadeIn">
+              <p className="text-[10px] font-extrabold text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
+                <span>{l('1-टैप मुख्य लक्षण (Zero-Typing Start):', '1-Tap Common Symptoms (Zero-Typing Start):', '1-Tap Lakshan:')}</span>
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto no-scrollbar">
+                {STARTER_SYMPTOM_CHIPS.map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => sendText(chip.text)}
+                    disabled={loading}
+                    className="touch-target text-left text-xs px-3 py-2 rounded-xl bg-surface hover:bg-sage/15 text-primary border border-border-subtle hover:border-sage/40 transition-all font-medium flex items-center justify-between gap-2 shadow-2xs cursor-pointer group"
+                  >
+                    <span className="truncate">{chip.label}</span>
+                    <span className="text-sage opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Contextual Quick-Reply Pills During CONSULTATION */}
+          {contextualQuickReplies.length > 0 && (
+            <div className="max-w-2xl mx-auto px-3 sm:px-4 pt-2 pb-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar animate-fadeIn">
+              <span className="text-[10px] font-bold text-muted uppercase tracking-wider shrink-0 flex items-center gap-1">
+                <MessageCircle className="w-3 h-3 text-sage" />
+                <span>{l('त्वरित उत्तर:', 'Quick Reply:', 'Jaldi Jawab:')}</span>
+              </span>
+              {contextualQuickReplies.map((pill, pIdx) => (
+                <button
+                  key={pIdx}
+                  type="button"
+                  onClick={() => sendText(pill)}
+                  disabled={loading}
+                  className="touch-target shrink-0 text-xs px-3 py-1.5 rounded-full bg-sage/15 hover:bg-sage/25 text-sage dark:text-booti-glow border border-sage/30 hover:border-sage transition-all font-semibold cursor-pointer shadow-2xs active:scale-95"
+                >
+                  {pill}
+                </button>
+              ))}
+            </div>
+          )}
+
           <form onSubmit={handleSend} className="max-w-2xl mx-auto flex items-end gap-1.5 sm:gap-2 px-2 py-1.5 sm:p-2.5">
             {/* Mic */}
             <button type="button" onClick={toggleListening}
@@ -1515,13 +1628,59 @@ function MessageBubble({
   );
   const visibleText = shouldStream ? displayText : msg.text;
   const [feedback, setFeedback] = useState(null);
+  const [isPlayingTTS, setIsPlayingTTS] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handleToggleLocalTTS = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      onReadAloud?.();
+      return;
+    }
+
+    if (isPlayingTTS || isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsPlayingTTS(false);
+      onStopSpeaking?.();
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const rawText = msg.spoken_text || msg.spoken_reply_text || visibleText || msg.text || '';
+    const cleanText = rawText
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/[*_#`~>]/g, ' ')
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!cleanText) return;
+
+    try {
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'hi-IN';
+      utterance.rate = 0.92;
+      utterance.onend = () => setIsPlayingTTS(false);
+      utterance.onerror = () => setIsPlayingTTS(false);
+      setIsPlayingTTS(true);
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      onReadAloud?.();
+    }
+  };
 
   return (
     <div className={`flex gap-1.5 sm:gap-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
       {!isUser && (
         <div className="shrink-0 mt-0.5">
-          <div className="hidden sm:block"><SanjeevaniOrb state={isSpeaking ? 'speaking' : (isStreaming || msg.isLiveStreaming ? 'thinking' : 'idle')} size={28} /></div>
-          <div className="sm:hidden"><SanjeevaniOrb state={isSpeaking ? 'speaking' : (isStreaming || msg.isLiveStreaming ? 'thinking' : 'idle')} size={22} /></div>
+          <div className="hidden sm:block"><SanjeevaniOrb state={isSpeaking || isPlayingTTS ? 'speaking' : (isStreaming || msg.isLiveStreaming ? 'thinking' : 'idle')} size={28} /></div>
+          <div className="sm:hidden"><SanjeevaniOrb state={isSpeaking || isPlayingTTS ? 'speaking' : (isStreaming || msg.isLiveStreaming ? 'thinking' : 'idle')} size={22} /></div>
         </div>
       )}
       <div className={`max-w-[88%] sm:max-w-[75%] rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm shadow-xs ${
@@ -1545,22 +1704,26 @@ function MessageBubble({
                 Dr. Sanjeevani
               </span>
             )}
-            {isSpeaking ? (
+            {isPlayingTTS || isSpeaking ? (
               <button
                 type="button"
-                onClick={onStopSpeaking}
+                onClick={handleToggleLocalTTS}
                 className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 text-[10px] font-bold border border-amber-500/30 transition-all cursor-pointer shadow-2xs"
-                title={l('आवाज़ रोकें और स्क्रीन पर पढ़ें', 'Stop audio and read on screen')}
+                title={l('आवाज़ रोकें', 'Stop voice playback')}
               >
                 <VolumeX className="w-3 h-3 text-amber-500" />
-                <span>{l('पढ़ना चाहते हैं? आवाज़ रोकें', 'Prefer reading? Stop audio')}</span>
+                <span>{l('⏹️ Rokein', '⏹️ Stop')}</span>
               </button>
             ) : (
-              <button onClick={onReadAloud}
-                className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-gray-400 hover:text-sage cursor-pointer"
-                aria-label="Read aloud"
-                title={l('आवाज़ में सुनें', 'Listen to audio')}>
-                <Volume2 className="w-3.5 h-3.5" />
+              <button
+                type="button"
+                onClick={handleToggleLocalTTS}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sage/15 hover:bg-sage/25 text-sage dark:text-booti-glow text-[10px] font-bold border border-sage/30 transition-all cursor-pointer shadow-2xs"
+                aria-label="Read aloud in Hindi"
+                title={l('हिंदी में सुनें', 'Listen aloud in Hindi')}
+              >
+                <Volume2 className="w-3 h-3 text-sage" />
+                <span>{l('🔊 Suniye', '🔊 Listen')}</span>
               </button>
             )}
           </div>
