@@ -1,6 +1,12 @@
 {
   "contraindications": [
     {
+      "herb": "ear drops/karnapurana/ear drop/karna bindu/taila ear drops/lahsun siddha taila",
+      "target_condition": "EarDischarge",
+      "severity": "CRITICAL",
+      "reason": "Ear drops (Karnapurana) are strictly contraindicated in tympanic membrane perforation or active ear discharge (pus/fluid/Putikarna)."
+    },
+    {
       "herb": "Ginger/Sunthi/Adrak/सोंठ/अदरक",
       "target_condition": "Hyperacidity/PepticUlcer",
       "severity": "HIGH",

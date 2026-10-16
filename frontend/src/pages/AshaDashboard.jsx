@@ -232,6 +232,7 @@ export default function AshaDashboard() {
   };
 
   const pendingCount = offlineQueue.filter((p) => !p.synced).length;
+  const priorityCount = offlineQueue.filter((p) => p.tier === 'Red' || p.tier === 'Yellow').length;
 
   const filteredPatients = useMemo(() => {
     return offlineQueue.filter((p) => {
@@ -242,7 +243,10 @@ export default function AshaDashboard() {
 
       const matchesTier =
         tierFilter === 'all' ||
-        (tierFilter === 'needsFollowUp' ? (p.tier === 'Red' || p.tier === 'Yellow') && !p.followedUp : p.tier === tierFilter);
+        (tierFilter === 'pending' ? !p.synced :
+         tierFilter === 'priority' ? (p.tier === 'Red' || p.tier === 'Yellow') :
+         tierFilter === 'needsFollowUp' ? (p.tier === 'Red' || p.tier === 'Yellow') && !p.followedUp :
+         p.tier === tierFilter);
 
       return matchesSearch && matchesTier;
     });
@@ -259,7 +263,7 @@ export default function AshaDashboard() {
 
   return (
     <div className="min-h-screen bg-mist dark:bg-card text-primary transition-colors duration-300 pb-20 safe-bottom-nav">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 space-y-6">
         {/* ── Universal Back Button for Mobile & Desktop ─────────────────── */}
         <div className="flex items-center justify-between pb-1">
           <BackButton fallback="/mitra" label={l('वापस जाएं', 'Back')} />
@@ -332,6 +336,71 @@ export default function AshaDashboard() {
                   ? l(`${toEnglishDigits(pendingCount)} रिकॉर्ड्स ऑफ़लाइन सुरक्षित हैं (सिंक प्रतीक्षित)`, `${toEnglishDigits(pendingCount)} encounters queued for PHC sync`)
                   : l('सभी रिकॉर्ड्स PHC सर्वर पर सिंक हो चुके हैं', 'All records synchronized with PHC server')}
               </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 3 KPI Summary Cards ────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* KPI 1: Total Field Encounters */}
+          <div className="bg-card p-5 rounded-3xl border border-border-subtle shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                {l('कुल फील्ड मरीज', 'Total Field Encounters')}
+              </span>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-primary font-mono mt-1">
+                {toEnglishDigits(offlineQueue.length)}
+              </h3>
+              <span className="text-[10px] text-sage font-semibold mt-0.5 block">
+                {l('ऑफ़लाइन लॉग में सुरक्षित', 'Stored in offline queue')}
+              </span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-sage/15 text-sage flex items-center justify-center">
+              <Users className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* KPI 2: Pending PHC Sync */}
+          <div className={`p-5 rounded-3xl border shadow-sm flex items-center justify-between transition-colors ${
+            pendingCount > 0
+              ? 'bg-amber-500/10 border-amber-500/30'
+              : 'bg-card border-border-subtle'
+          }`}>
+            <div>
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${pendingCount > 0 ? 'text-yellow-700 dark:text-gold-warm' : 'text-muted'}`}>
+                {l('सिंक प्रतीक्षित', 'Pending PHC Sync')}
+              </span>
+              <h3 className={`text-2xl sm:text-3xl font-extrabold font-mono mt-1 ${pendingCount > 0 ? 'text-amber-600 dark:text-gold-warm' : 'text-primary'}`}>
+                {toEnglishDigits(pendingCount)}
+              </h3>
+              <span className={`text-[10px] font-semibold mt-0.5 block ${pendingCount > 0 ? 'text-amber-700 dark:text-gold-warm' : 'text-sage'}`}>
+                {pendingCount > 0 ? l('इंटरनेट मिलने पर सिंक करें', 'Awaiting network sync') : l('सभी सिंक पूर्ण', 'Fully synchronized')}
+              </span>
+            </div>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+              pendingCount > 0 ? 'bg-amber-500/20 text-amber-600 dark:text-gold-warm' : 'bg-sage/15 text-sage'
+            }`}>
+              {pendingCount > 0 ? <WifiOff className="w-6 h-6" /> : <CheckCircle className="w-6 h-6" />}
+            </div>
+          </div>
+
+          {/* KPI 3: High-Priority (Red/Yellow) Cases */}
+          <div className={`p-5 rounded-3xl border shadow-sm flex items-center justify-between ${
+            priorityCount > 0 ? 'bg-rose-500/10 border-rose-500/30' : 'bg-card border-border-subtle'
+          }`}>
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-rose-soft">
+                {l('उच्च प्राथमिकता (लाल / पीली)', 'High-Priority Cases')}
+              </span>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-primary font-mono mt-1">
+                {toEnglishDigits(priorityCount)}
+              </h3>
+              <span className="text-[10px] text-muted font-semibold mt-0.5 block">
+                {l('फॉलो-अप व पीएचसी संदर्भ', 'Red/Yellow triage urgency')}
+              </span>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-soft flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6" />
             </div>
           </div>
         </div>
@@ -588,8 +657,8 @@ export default function AshaDashboard() {
             )}
 
             {/* Patient Queue & Search/Filter Controls */}
-            <div className="bg-white dark:bg-warm-indigo rounded-3xl shadow-sm border border-gray-200/80 dark:border-gray-800 overflow-hidden">
-              <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3 bg-gray-50/60 dark:bg-card">
+            <div className="bg-card rounded-3xl shadow-sm border border-border-subtle overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface/60">
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-serif font-bold text-base sm:text-lg text-primary">
@@ -597,41 +666,52 @@ export default function AshaDashboard() {
                     </h3>
                     {offlineQueue === DEFAULT_PATIENTS && (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300">
-                        {l('नमूना डेटा — वास्तविक संख्या के लिए बैकएंड से जुड़ें', 'Sample data — connect backend for live numbers')}
+                        {l('नमूना डेटा', 'Sample Data')}
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] text-muted dark:text-muted">{l('ब्राउज़र स्टोरेज में स्थानीय रूप से सुरक्षित', 'Auto-persisted to local browser storage')}</span>
+                  <span className="text-[11px] text-muted">{l('ब्राउज़र स्टोरेज में स्थानीय रूप से सुरक्षित', 'Auto-persisted to local browser storage')}</span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  {/* Filter Pills */}
+                  <div className="flex items-center gap-1 bg-surface p-1 rounded-xl border border-border-subtle overflow-x-auto no-scrollbar">
+                    {[
+                      { id: 'all', label: l('सभी', 'All') },
+                      { id: 'pending', label: l(`प्रतीक्षित (${pendingCount})`, `Pending (${pendingCount})`) },
+                      { id: 'priority', label: l(`प्राथमिकता (${priorityCount})`, `Priority (${priorityCount})`) },
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setTierFilter(tab.id)}
+                        className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                          tierFilter === tab.id
+                            ? 'bg-sage text-white shadow-xs'
+                            : 'text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Search Input */}
                   <div className="relative">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder={l('नाम या गाँव...', 'Name or village...')}
-                      className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 rounded-2xl pl-9 pr-3.5 py-2 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-sage w-36 sm:w-48"
+                      className="bg-card border border-border-subtle rounded-xl pl-9 pr-3 py-2 text-xs text-primary focus:outline-none focus:ring-2 focus:ring-sage w-full sm:w-64"
                     />
                   </div>
-
-                  <select
-                    value={tierFilter}
-                    onChange={(e) => setTierFilter(e.target.value)}
-                    className="bg-white dark:bg-warm-indigo border border-gray-300 dark:border-gray-700 text-primary rounded-2xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sage"
-                  >
-                    <option value="all">{l('सभी श्रेणियां', 'All Tiers')}</option>
-                    <option value="needsFollowUp">{l('फॉलो-अप आवश्यक', 'Follow-Up Required')}</option>
-                    <option value="Red">{l('लाल श्रेणी (आपातकाल)', 'Red Tier (Emergency)')}</option>
-                    <option value="Yellow">{l('पीली श्रेणी (मध्यम)', 'Yellow Tier (Moderate)')}</option>
-                    <option value="Green">{l('हरी श्रेणी (सामान्य)', 'Green Tier (Mild)')}</option>
-                  </select>
                 </div>
               </div>
 
               {/* Patient List */}
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              <div className="divide-y divide-border-subtle">
                 {offlineQueue.length === 0 ? (
                   <div className="py-12 px-6 text-center flex flex-col items-center justify-center">
                     <div className="w-14 h-14 rounded-3xl bg-sage/10 text-sage flex items-center justify-center mb-3">
@@ -652,40 +732,40 @@ export default function AshaDashboard() {
                       </button>
                       <button
                         onClick={handleLoadSamplePatients}
-                        className="touch-target bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-primary font-bold text-xs px-4 py-2.5 rounded-xl transition-all border border-gray-200 dark:border-gray-700 cursor-pointer"
+                        className="touch-target bg-surface hover:bg-surface/80 text-primary font-bold text-xs px-4 py-2.5 rounded-xl transition-all border border-border-subtle cursor-pointer"
                       >
                         {l('नमूना डेटा लोड करें', 'Load Sample Data')}
                       </button>
                     </div>
                   </div>
                 ) : filteredPatients.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-gray-400">{l('फ़िल्टर के अनुसार कोई रिकॉर्ड नहीं मिला।', 'No matching records found.')}</div>
+                  <div className="p-8 text-center text-xs text-muted">{l('फ़िल्टर के अनुसार कोई रिकॉर्ड नहीं मिला।', 'No matching records found.')}</div>
                 ) : (
                   filteredPatients.map((patient) => (
-                    <div key={patient.id} className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 hover:bg-surface/60 transition-colors">
-                      <div className="flex items-center gap-3.5">
-                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white text-sm font-bold shadow-xs ${
+                    <div key={patient.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface/60 transition-colors">
+                      <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                        <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white text-sm font-bold shadow-xs shrink-0 ${
                           patient.tier === 'Red' ? 'bg-rose-soft' :
                           patient.tier === 'Yellow' ? 'bg-gold-warm text-primary' :
                           'bg-sage'
                         }`}>
                           {patient.name.charAt(0)}
                         </div>
-                        <div>
-                          <div className="font-bold text-primary text-sm sm:text-base flex items-center gap-2">
-                            {patient.name}
-                            <span className="text-xs font-normal text-muted dark:text-muted">• {patient.village}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-primary text-sm sm:text-base flex flex-wrap items-center gap-2">
+                            <span>{patient.name}</span>
+                            <span className="text-xs font-normal text-muted">• {patient.village}</span>
                             {patient.followedUp && (
-                              <span className="text-[10px] bg-sage/15 text-sage dark:text-booti-glow px-2 py-0.5 rounded-full font-bold">
+                              <span className="text-[10px] bg-sage/15 text-sage px-2 py-0.5 rounded-full font-bold">
                                 {l('फॉलो-अप पूर्ण ✓', 'Followed Up ✓')}
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-muted dark:text-muted mt-0.5">
+                          <div className="text-xs text-muted mt-0.5 line-clamp-1">
                             {l('लक्षण:', 'Symptoms:')} <span className="font-medium text-primary">{patient.symptom}</span>
                           </div>
                           {patient.vitals && (
-                            <div className="flex items-center gap-3 text-[11px] text-muted dark:text-muted mt-1 font-mono">
+                            <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted mt-1 font-mono">
                               {patient.vitals.spo2 !== '--' && <span>SpO2: <b className="text-primary">{toEnglishDigits(patient.vitals.spo2)}%</b></span>}
                               {patient.vitals.temp !== '--' && <span>Temp: <b className="text-primary">{toEnglishDigits(patient.vitals.temp)}°F</b></span>}
                               {patient.vitals.pulse !== '--' && <span>Pulse: <b className="text-primary">{toEnglishDigits(patient.vitals.pulse)} bpm</b></span>}
@@ -694,17 +774,17 @@ export default function AshaDashboard() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 self-end sm:self-auto shrink-0 flex-wrap">
                         <Link
                           to={`/patient/chat?symptom=${encodeURIComponent(patient.symptom)}`}
-                          className="touch-target inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sage/10 hover:bg-sage/20 text-sage dark:text-booti-glow text-xs font-bold border border-sage/25 transition-all shadow-2xs"
+                          className="min-h-[38px] px-3 py-1.5 rounded-xl bg-sage/10 hover:bg-sage/20 text-sage text-xs font-bold border border-sage/25 transition-all flex items-center gap-1.5 shadow-2xs"
                           title={l('चैट में ट्राइएज करें', 'Triage in Chat')}
                         >
                           <Stethoscope className="w-3.5 h-3.5" />
                           <span>{l('चैट ट्राइएज', 'Triage in Chat')}</span>
                         </Link>
 
-                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-xl ${
                           patient.tier === 'Red' ? 'bg-rose-soft text-white' :
                           patient.tier === 'Yellow' ? 'bg-gold-warm text-primary' :
                           'bg-sage text-white'
@@ -712,7 +792,7 @@ export default function AshaDashboard() {
                           Tier {patient.tier}
                         </span>
 
-                        <span className={`inline-flex items-center gap-1 text-xs font-bold ${patient.synced ? 'text-sage dark:text-booti-glow' : 'text-gold-warm'}`}>
+                        <span className={`inline-flex items-center gap-1 text-xs font-bold px-1.5 ${patient.synced ? 'text-sage' : 'text-gold-warm'}`}>
                           {patient.synced ? <CheckCircle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                           <span>{patient.synced ? l('सिंक पूर्ण', 'Synced') : l('प्रतीक्षित', 'Pending')}</span>
                         </span>

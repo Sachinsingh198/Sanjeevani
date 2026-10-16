@@ -135,7 +135,7 @@ class ClinicalTriageEngine:
             ]
         )
 
-        if is_prolonged and fever_or_vomit:
+        if patient_notes and is_prolonged and fever_or_vomit:
             return SeverityTier.YELLOW, ["YELLOW_FLAG: prolonged_symptom_duration ('>=3 days')"]
 
         if tier_cur == SeverityTier.YELLOW:

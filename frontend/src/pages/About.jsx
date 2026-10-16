@@ -44,20 +44,20 @@ export default function About() {
   ];
 
   return (
-    <div className="min-h-screen bg-mist text-primary py-10 pb-24 safe-bottom-nav px-4 sm:px-6 lg:px-8 transition-colors duration-300 relative overflow-hidden">
+    <div className="min-h-[calc(100dvh-4.5rem)] bg-mist text-primary pb-20 md:pb-12 transition-colors duration-300 relative overflow-hidden">
       
       {/* Background Mountain Motif */}
       <div className="absolute top-12 left-0 right-0 pointer-events-none opacity-30 dark:opacity-15 z-0">
         <MountainRidge tone="pine" className="w-full h-40 object-cover" />
       </div>
 
-      <div className="max-w-4xl mx-auto space-y-8 relative z-10">
+      <div className="max-w-5xl mx-auto px-4 lg:px-8 py-8 space-y-8 relative z-10">
         
         {/* Back Link */}
         <div>
           <Link
             to="/"
-            className="touch-target inline-flex items-center gap-2 text-xs font-semibold text-muted dark:text-muted hover:text-primary transition-colors"
+            className="min-h-[44px] inline-flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Home Page Par Wapas</span>
@@ -65,12 +65,12 @@ export default function About() {
         </div>
 
         {/* ── Hero Banner ────────────────────────────────────────────── */}
-        <div className="bg-white dark:bg-warm-indigo rounded-3xl p-6 sm:p-8 shadow-xs border border-gray-200/80 dark:border-gray-800 relative overflow-hidden">
+        <div className="bg-card rounded-3xl p-6 sm:p-8 shadow-xs border border-border-subtle relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-sage/10 via-[#D4A359]/10 to-transparent rounded-full blur-2xl pointer-events-none" />
 
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
             <SanjeevaniOrb state="idle" size={38} />
-            <div className="inline-flex items-center gap-2 bg-sage/10 dark:bg-sage/20 text-sage dark:text-booti-glow text-xs font-bold px-3.5 py-1 rounded-full">
+            <div className="inline-flex items-center gap-2 bg-sage/10 text-sage text-xs font-bold px-3.5 py-1 rounded-full">
               <Award className="w-4 h-4 text-gold-warm" />
               <span>Academic Capstone Project (B.Tech Computer Science & Engineering)</span>
             </div>
@@ -79,29 +79,29 @@ export default function About() {
           <h1 className="font-serif text-3xl sm:text-4xl font-bold text-primary mb-3">
             Project Sanjeevani (संजीवनी 2.0)
           </h1>
-          <p className="text-sm sm:text-base text-muted dark:text-muted leading-relaxed mb-6">
+          <p className="text-sm sm:text-base text-muted leading-relaxed mb-6 max-w-3xl">
             Developed at the <strong>Institute of Technology, Gopeshwar, Chamoli</strong> (<em>Veer Madho Singh Bhandari Uttarakhand Technical University</em>), under the academic supervision and mentorship of <strong>Mr. Rajendra Kumar</strong> (Assistant Professor, Department of Computer Science & Engineering).
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 dark:border-gray-800 pt-6">
-            <div className="bg-sand/60 dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
-              <h4 className="font-bold text-[11px] uppercase tracking-wider text-gold-warm dark:text-gold-warm mb-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border-subtle pt-6">
+            <div className="bg-surface/80 p-4 rounded-2xl border border-border-subtle">
+              <h4 className="font-bold text-[11px] uppercase tracking-wider text-gold-warm mb-1">
                 Project Supervision
               </h4>
               <p className="font-serif font-bold text-base text-primary">Mr. Rajendra Kumar</p>
-              <p className="text-xs text-muted dark:text-muted">Assistant Professor, Dept. of CSE</p>
-              <p className="text-xs text-muted dark:text-muted flex items-center gap-1 mt-0.5">
+              <p className="text-xs text-muted">Assistant Professor, Dept. of CSE</p>
+              <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
                 <MapPin className="w-3.5 h-3.5 text-sage" /> IT Gopeshwar, Chamoli
               </p>
             </div>
             
-            <div className="bg-sand/60 dark:bg-card p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
-              <h4 className="font-bold text-[11px] uppercase tracking-wider text-gold-warm dark:text-gold-warm mb-1">
+            <div className="bg-surface/80 p-4 rounded-2xl border border-border-subtle">
+              <h4 className="font-bold text-[11px] uppercase tracking-wider text-gold-warm mb-1">
                 Academic Affiliation
               </h4>
               <p className="font-serif font-bold text-base text-primary">IT Gopeshwar, Chamoli</p>
-              <p className="text-xs text-muted dark:text-muted">Veer Madho Singh Bhandari Uttarakhand Technical University</p>
-              <p className="text-xs text-muted dark:text-muted mt-0.5">State Government University, Uttarakhand</p>
+              <p className="text-xs text-muted">Veer Madho Singh Bhandari Uttarakhand Technical University</p>
+              <p className="text-xs text-muted mt-0.5">State Government University, Uttarakhand</p>
             </div>
           </div>
         </div>
@@ -115,24 +115,26 @@ export default function About() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {pillars.map((item, idx) => {
               const Icon = item.icon;
               return (
                 <div
                   key={idx}
-                  className="bg-white dark:bg-warm-indigo p-5 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-xs space-y-2.5 tactile-card"
+                  className="bg-card p-5 rounded-3xl border border-border-subtle shadow-xs flex flex-col justify-between space-y-3 hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className={`w-10 h-10 rounded-2xl ${item.color} flex items-center justify-center`}>
-                      <Icon className="w-5 h-5" />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className={`w-10 h-10 rounded-2xl ${item.color} flex items-center justify-center`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-surface text-muted px-2 py-0.5 rounded-full border border-border-subtle">
+                        {item.tag}
+                      </span>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-gray-100 dark:bg-gray-800 text-muted dark:text-muted px-2.5 py-0.5 rounded-full">
-                      {item.tag}
-                    </span>
+                    <h3 className="font-serif font-bold text-base text-primary leading-snug">{item.title}</h3>
+                    <p className="text-xs text-muted leading-relaxed">{item.desc}</p>
                   </div>
-                  <h3 className="font-serif font-bold text-base text-primary">{item.title}</h3>
-                  <p className="text-xs text-muted dark:text-muted leading-relaxed">{item.desc}</p>
                 </div>
               );
             })}
@@ -146,21 +148,26 @@ export default function About() {
             <span>Capstone Engineering Team</span>
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {teamMembers.map((member, idx) => (
-              <div key={idx} className="bg-white dark:bg-warm-indigo p-5 rounded-3xl border border-gray-200/80 dark:border-gray-800 shadow-xs flex items-center justify-between gap-3.5 tactile-card">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-2xl bg-gold-warm/20 text-gold-warm dark:text-gold-warm flex items-center justify-center font-bold text-sm shrink-0">
+              <div
+                key={idx}
+                className="bg-card p-5 rounded-3xl border border-border-subtle shadow-xs flex flex-col justify-between gap-3 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-gold-warm/20 text-gold-warm flex items-center justify-center font-bold text-sm shrink-0">
                     {member.name.split(' ').map(n => n[0]).join('')}
                   </div>
-                  <div>
-                    <h4 className="font-serif font-bold text-sm sm:text-base text-primary">{member.name}</h4>
-                    <p className="text-xs text-muted dark:text-muted mt-0.5">{member.role}</p>
+                  <div className="min-w-0">
+                    <h4 className="font-serif font-bold text-sm sm:text-base text-primary truncate">{member.name}</h4>
+                    <p className="text-xs text-muted mt-0.5 leading-snug">{member.role}</p>
                   </div>
                 </div>
-                <span className="text-[9px] font-bold uppercase bg-sage/15 text-sage dark:text-booti-glow px-2.5 py-1 rounded-lg shrink-0">
-                  {member.badge}
-                </span>
+                <div className="pt-2 border-t border-border-subtle">
+                  <span className="inline-block text-[9px] font-bold uppercase bg-sage/15 text-sage px-2 py-0.5 rounded-md">
+                    {member.badge}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

@@ -8,7 +8,7 @@ import {
   HeartPulse, MessageSquare, Eye, Users, Info, PhoneCall,
   LogOut, LogIn, Shield, Menu, X, User, Sun, Moon,
   Wind, Activity, HeartHandshake, ChevronDown, Sparkles, Navigation,
-  Stethoscope, BarChart3, AlertTriangle, ShieldCheck
+  Stethoscope, BarChart3, AlertTriangle, ShieldCheck, Home
 } from 'lucide-react';
 import SanjeevaniOrb from './SanjeevaniOrb';
 
@@ -74,7 +74,39 @@ export default function Navbar() {
     ? '/asha'
     : '/mitra';
 
+  // Determine mobile bottom nav items based on auth and role
+  const getBottomNavItems = () => {
+    if (!isAuthenticated) {
+      return [
+        { label: 'Home', path: '/', icon: Home, active: location.pathname === '/' },
+        { label: 'About', path: '/about', icon: Info, active: location.pathname === '/about' },
+        { label: 'Sign In', path: '/login', icon: LogIn, active: location.pathname === '/login' },
+      ];
+    }
+    if (isAdmin) {
+      return [
+        { label: 'Control Center', path: '/admin', icon: Shield, active: location.pathname.startsWith('/admin') },
+        { label: 'About', path: '/about', icon: Info, active: location.pathname === '/about' },
+      ];
+    }
+    if (isAsha) {
+      return [
+        { label: 'Field Queue', path: '/asha', icon: Users, active: location.pathname.startsWith('/asha') },
+        { label: 'About', path: '/about', icon: Info, active: location.pathname === '/about' },
+      ];
+    }
+    // Patient (Mitra)
+    return [
+      { label: 'Dashboard', path: '/patient', icon: Home, active: location.pathname === '/patient' || location.pathname === '/mitra' },
+      { label: 'Triage Chat', path: '/patient/chat', icon: MessageSquare, active: location.pathname.includes('/chat') },
+      { label: 'Eye Scan', path: '/patient/screen', icon: Eye, active: location.pathname.includes('/screen') },
+    ];
+  };
+
+  const bottomNavItems = getBottomNavItems();
+
   return (
+    <>
     <header className="sticky top-0 z-40 bg-mist/95 dark:bg-mist/95 backdrop-blur-md border-b border-warm-indigo/10 dark:border-white/10 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 transition-all select-none">
       <div className="max-w-6xl mx-auto flex items-center justify-between">
 
@@ -464,5 +496,38 @@ export default function Navbar() {
         </div>
       )}
     </header>
+
+    {/* Sticky Mobile Bottom Navigation Bar */}
+    <nav
+      aria-label="Mobile Bottom Navigation Bar"
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-md border-t border-border-subtle px-2 py-1.5 flex items-center justify-around shadow-lg"
+      style={{ paddingBottom: 'calc(0.375rem + env(safe-area-inset-bottom, 0px))' }}
+    >
+      {bottomNavItems.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`min-h-[44px] flex-1 flex flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold transition-all touch-target ${
+              item.active ? 'bg-sage/15 text-sage' : 'text-muted hover:text-primary'
+            }`}
+          >
+            <Icon className={`w-4 h-4 transition-transform ${item.active ? 'scale-110' : ''}`} />
+            <span className="truncate">{item.label}</span>
+          </Link>
+        );
+      })}
+      {/* 108 SOS emergency button */}
+      <a
+        href="tel:108"
+        className="min-h-[44px] flex-1 flex flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-bold text-rose-soft hover:bg-rose-soft/10 transition-all touch-target"
+        title="Call 108 Emergency Ambulance"
+      >
+        <PhoneCall className="w-4 h-4 animate-pulse" />
+        <span>108 SOS</span>
+      </a>
+    </nav>
+    </>
   );
 }

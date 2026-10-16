@@ -224,7 +224,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-mist text-primary flex items-center justify-center px-4 py-12 relative overflow-hidden transition-colors duration-300">
+    <div className="min-h-[calc(100dvh-4.5rem)] bg-mist text-primary flex items-center justify-center px-4 py-8 relative overflow-hidden transition-colors duration-300">
       
       {/* Mountain Silhouette Background */}
       <div className="absolute top-10 left-0 right-0 pointer-events-none opacity-25 dark:opacity-15 z-0">
@@ -233,13 +233,13 @@ export default function Register() {
 
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gradient-to-b from-gold-warm/15 via-[#5A7855]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-md relative z-10 space-y-6">
+      <div className="w-full max-w-md relative z-10 space-y-5">
         
         {/* Back Link */}
         <div className="text-left">
           <Link
             to="/"
-            className="touch-target inline-flex items-center gap-1.5 text-xs font-semibold text-muted dark:text-muted hover:text-primary transition-colors"
+            className="min-h-[44px] inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Home Par Wapas</span>

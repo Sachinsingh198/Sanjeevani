@@ -68,3 +68,41 @@ def test_canonical_synonym_normalization(kg):
     remedy_text_ginger = "Drink fresh ginger and black pepper decoction."
     is_safe_g, reason_g = kg.validate_remedy(remedy_text_ginger, ["pet me jalan"])
     assert is_safe_g is False
+
+
+def test_ear_discharge_blocks_ear_drops(kg):
+    """Ear drops / Karnapurana (rem_038) must be strictly blocked when ear discharge is present."""
+    import json
+    with open("DATA/remedies_dataset.json", encoding="utf-8") as f:
+        data = json.load(f)
+    rem_038 = next(r for r in data if r.get("id") == "rem_038")
+
+    is_safe, reason = kg.validate_remedy(rem_038, ["EarDischarge"])
+    assert is_safe is False
+    assert "EarDischarge" in reason or "ear discharge" in reason.lower() or "contraindicated" in reason.lower()
+
+    # Also test colloquial phrases
+    for cond in ["kaan behna", "kaan se mavad", "मवाद", "कान बहना"]:
+        is_safe_colloquial, _ = kg.validate_remedy(rem_038, [cond])
+        assert is_safe_colloquial is False, f"Expected {cond} to block rem_038"
+
+
+def test_triage_extracts_ear_discharge():
+    """Triage condition extractor must identify ear discharge from patient narrative."""
+    from app.agents.nodes.triage_node import extract_patient_conditions_from_text
+
+    cases = [
+        ("kaan behna shuru ho gaya hai", True),
+        ("kaan se mavad aa rahi hai", True),
+        ("pus from ear since yesterday", True),
+        ("ear discharge ho raha hai", True),
+        ("कान बहना और दर्द है", True),
+        ("कान से मवाद निकल रहा है", True),
+        ("kaan me dard hai lekin kaan behna nahi hai", False),
+    ]
+    for text, expected in cases:
+        conds = extract_patient_conditions_from_text(text)
+        if expected:
+            assert "EarDischarge" in conds, f"Failed to extract EarDischarge from '{text}'"
+        else:
+            assert "EarDischarge" not in conds, f"False positive EarDischarge from '{text}'"

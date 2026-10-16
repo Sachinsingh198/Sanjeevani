@@ -1,881 +1,352 @@
-import json
 import os
+import json
+import math
 import re
-import time
-import concurrent.futures
-from typing import List, Dict, Any, Optional, Tuple, Set
-from qdrant_client import QdrantClient, models
+from collections import Counter
+from typing import List, Dict, Any, Optional
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
 from fastembed import TextEmbedding
-from app.config import settings
-from app.core.logger import logger
+
+try:
+    from app.core.logger import logger
+except ImportError:
+    import logging
+    logger = logging.getLogger("sanjeevani")
+
+
+def _tokenize_multilingual(text: str) -> List[str]:
+    """Tokenizes English, Hinglish, Sanskrit, and Unicode Devanagari preserving matras."""
+    if not text:
+        return []
+    return [tok for tok in re.findall(r"[^\s,.;:!?()\[\]/\"'-]+", text.lower()) if len(tok) > 1]
+
+
+class OkapiBM25Index:
+    """Zero-dependency in-memory Okapi BM25 sparse lexical index over all 100+ remedies."""
+
+    def __init__(self, k1: float = 1.5, b: float = 0.75):
+        self.k1 = k1
+        self.b = b
+        self.doc_freqs: List[Counter] = []
+        self.doc_lens: List[int] = []
+        self.avgdl: float = 0.0
+        self.idf: Dict[str, float] = {}
+        self.N: int = 0
+
+    def build(self, corpus_texts: List[str]) -> None:
+        self.N = len(corpus_texts)
+        self.doc_freqs = []
+        self.doc_lens = []
+        df: Counter = Counter()
+
+        for text in corpus_texts:
+            tokens = _tokenize_multilingual(text)
+            counts = Counter(tokens)
+            self.doc_freqs.append(counts)
+            self.doc_lens.append(len(tokens))
+            for token in counts.keys():
+                df[token] += 1
+
+        self.avgdl = (sum(self.doc_lens) / self.N) if self.N > 0 else 1.0
+        self.idf = {}
+        for token, freq in df.items():
+            # Standard Okapi BM25 IDF with smoothing so common clinical terms remain positive
+            self.idf[token] = math.log(1.0 + (self.N - freq + 0.5) / (freq + 0.5))
+
+    def score_all(self, query: str) -> List[float]:
+        q_tokens = _tokenize_multilingual(query)
+        if not q_tokens or self.N == 0:
+            return [0.0] * self.N
+
+        scores = [0.0] * self.N
+        for i in range(self.N):
+            dl = self.doc_lens[i]
+            freqs = self.doc_freqs[i]
+            doc_score = 0.0
+            for tok in q_tokens:
+                if tok not in freqs:
+                    continue
+                tf = freqs[tok]
+                idf = self.idf.get(tok, 0.0)
+                numer = tf * (self.k1 + 1.0)
+                denom = tf + self.k1 * (1.0 - self.b + self.b * (dl / self.avgdl))
+                doc_score += idf * (numer / denom)
+            scores[i] = doc_score
+        return scores
+
 
 class HybridRemedyStore:
-    """
-    Production-grade Vector RAG store for AYUSH remedies.
-    Supports Qdrant Cloud clusters with automatic local on-disk fallback using FastEmbed.
-    Hardened with 5.0s query timeout, 1s cloud retry, and in-memory keyword search fallback.
-    """
-    def __init__(self, data_path: str = "DATA/remedies_dataset.json"):
-        # Resolve data path safely across different working directories
-        if not os.path.exists(data_path) and os.path.exists(os.path.join("backend", data_path)):
-            self.data_path = os.path.join("backend", data_path)
-        else:
-            self.data_path = data_path
+    def __init__(
+        self,
+        data_path: str = "DATA/remedies_dataset.json",
+        qdrant_path: Optional[str] = None,
+    ):
+        self.collection_name = "ayush_remedies"
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        self.full_data_path = os.path.join(base_dir, data_path)
+        cache_dir = os.path.join(base_dir, "models_cache")
 
-        docx_cand = "DATA/ayurveda_docx_remedies.json"
-        if not os.path.exists(docx_cand) and os.path.exists(os.path.join("backend", docx_cand)):
-            self.docx_remedies_path = os.path.join("backend", docx_cand)
-        else:
-            self.docx_remedies_path = docx_cand
-
-        vc_cand = "DATA/vaidya_chikitsa_curated.json"
-        if not os.path.exists(vc_cand) and os.path.exists(os.path.join("backend", vc_cand)):
-            self.vaidya_chikitsa_path = os.path.join("backend", vc_cand)
-        else:
-            self.vaidya_chikitsa_path = vc_cand
-
-        herbs_cand = "DATA/botanical_herbs_curated.json"
-        if not os.path.exists(herbs_cand) and os.path.exists(os.path.join("backend", herbs_cand)):
-            self.botanical_herbs_path = os.path.join("backend", herbs_cand)
-        else:
-            self.botanical_herbs_path = herbs_cand
-
-        ayurveda_3_cand = "DATA/ayurveda_3_remedies.json"
-        if not os.path.exists(ayurveda_3_cand) and os.path.exists(os.path.join("backend", ayurveda_3_cand)):
-            self.ayurveda_3_path = os.path.join("backend", ayurveda_3_cand)
-        else:
-            self.ayurveda_3_path = ayurveda_3_cand
-
-        # Load Botanical Herbs Dravyaguna lookup map
-        self.herbs_lookup: Dict[str, Dict[str, Any]] = {}
-        self._load_botanical_herbs()
-
-        self.collection_name = settings.QDRANT_COLLECTION_NAME
-        self.garhwali_collection_name = "sanjeevani_garhwali"
-        self.garhwali_data_dir = "DATA/Garhwali" if os.path.exists("DATA/Garhwali") else os.path.join("backend", "DATA", "Garhwali")
-        self.vector_dim = 384  # Standard dimension for sentence-transformers/all-MiniLM-L6-v2
-        self.degraded = False
-        self._all_cached_remedies = []
-
-        # 1. Initialize FastEmbed with project-local cache directory (prevents Windows Temp corruptions)
-        cache_dir = os.path.join(os.getcwd(), "models_cache")
-        os.makedirs(cache_dir, exist_ok=True)
-        
         self.embedding_model = TextEmbedding(
             model_name="sentence-transformers/all-MiniLM-L6-v2",
-            cache_dir=cache_dir
+            cache_dir=cache_dir,
         )
 
-        # 2. Initialize Qdrant Client (Cloud vs. Local On-Disk with 3s connection probe)
-        qdrant_url = (settings.QDRANT_URL or "").strip()
-        qdrant_api_key = (settings.QDRANT_API_KEY or "").strip()
-
-        if qdrant_url and qdrant_api_key:
-            try:
-                # 3-second startup connection health check
-                test_client = QdrantClient(
-                    url=qdrant_url,
-                    api_key=qdrant_api_key,
-                    timeout=3.0
-                )
-                test_client.get_collections()
-                self.client = test_client
-                self.is_cloud = True
-                logger.info(f"[Qdrant] Connected to Cloud Cluster: {qdrant_url}")
-                self._initialize_and_seed()
-                self._initialize_and_seed_garhwali()
-            except Exception as e:
-                logger.warning(f"[Qdrant Cloud Connection Failed]: {e}. Falling back to local on-disk storage.")
-                self.degraded = True
-                self.is_cloud = False
-                try:
-                    self.client = QdrantClient(path=settings.QDRANT_PATH)
-                    self._initialize_and_seed()
-                    self._initialize_and_seed_garhwali()
-                except Exception as local_err:
-                    logger.warning(f"[Qdrant Local Fallback Failed]: {local_err}. Running with in-memory keyword fallback.")
-                    self.client = None
+        resolved_qdrant_path = qdrant_path or os.getenv("QDRANT_PATH", ":memory:")
+        if resolved_qdrant_path == ":memory:":
+            self.client = QdrantClient(":memory:")
         else:
+            full_qdrant_path = (
+                resolved_qdrant_path
+                if os.path.isabs(resolved_qdrant_path)
+                else os.path.join(base_dir, resolved_qdrant_path)
+            )
             try:
-                self.client = QdrantClient(path=settings.QDRANT_PATH)
-                self.is_cloud = False
-                logger.info(f"[Qdrant] Connected to Local On-Disk Storage: {settings.QDRANT_PATH}")
-                self._initialize_and_seed()
-                self._initialize_and_seed_garhwali()
-            except Exception as e:
-                logger.warning(f"[Qdrant Local Storage Failed]: {e}. Running with in-memory keyword fallback.")
-                self.client = None
-                self.is_cloud = False
-                self.degraded = True
+                self.client = QdrantClient(path=full_qdrant_path)
+            except Exception as lock_err:
+                logger.warning(f"[Qdrant] Storage locked or unavailable ({lock_err}). Using :memory: client.")
+                self.client = QdrantClient(":memory:")
 
-    def _load_botanical_herbs(self):
-        """Loads curated medicinal herbs with their Dravyaguna energetic profiles."""
-        if not os.path.exists(self.botanical_herbs_path):
-            try:
-                from app.core.ayush_knowledge_curator import build_and_save_curated_knowledge
-                build_and_save_curated_knowledge()
-            except Exception as e:
-                logger.info(f"[Qdrant Curator] Notice: could not auto-build curated knowledge: {e}")
+        self.remedies: List[Dict[str, Any]] = []
+        self.bm25 = OkapiBM25Index()
+        self.herbs_lookup: Dict[str, Any] = {}
+        self.garhwali_data_dir = os.path.join(base_dir, "DATA", "Garhwali")
+        self._initialize_and_seed()
 
-        if os.path.exists(self.botanical_herbs_path):
-            try:
-                with open(self.botanical_herbs_path, "r", encoding="utf-8") as f:
-                    herbs = json.load(f)
-                    for h in herbs:
-                        v_name = h.get("vernacular_name", "").strip().lower()
-                        c_name = h.get("common_name", "").strip().lower()
-                        if v_name:
-                            self.herbs_lookup[v_name] = h
-                        if c_name:
-                            self.herbs_lookup[c_name] = h
-                logger.info(f"[Qdrant] Loaded {len(herbs)} botanical Dravyaguna herbs into memory.")
-            except Exception as e:
-                logger.error(f"[Qdrant Error] Failed loading botanical herbs: {e}")
-
-        # Also register Dravyaguna herbs from ayurveda_3 monographs if available
-        if os.path.exists(self.ayurveda_3_path):
-            try:
-                with open(self.ayurveda_3_path, "r", encoding="utf-8") as f:
-                    a3_items = json.load(f)
-                    for item in a3_items:
-                        s_name = item.get("sanskrit_name", "").strip().lower()
-                        c_name = item.get("common_name", "").strip().lower()
-                        herb_profile = {
-                            "vernacular_name": item.get("sanskrit_name", ""),
-                            "common_name": item.get("common_name", ""),
-                            "full_title": item.get("remedy_name", ""),
-                            "dravyaguna_properties": item.get("dravyaguna_properties", ""),
-                            "searchable_summary": f"{item.get('remedy_name', '')}: {item.get('dravyaguna_properties', '')} {item.get('clinical_indications', '')}"
-                        }
-                        if s_name and s_name not in self.herbs_lookup:
-                            self.herbs_lookup[s_name] = herb_profile
-                        if c_name and c_name not in self.herbs_lookup:
-                            self.herbs_lookup[c_name] = herb_profile
-                logger.info(f"[Qdrant] Registered ayurveda_3 dravyaguna profiles into herb lookup.")
-            except Exception as e:
-                logger.debug(f"[Qdrant] ayurveda_3 herb lookup note: {e}")
-
-    def load_all_remedies(self) -> List[Dict[str, Any]]:
-        """
-        Loads and combines remedies from verified sources:
-        1. CCRAS & AYUSH base remedies (DATA/remedies_dataset.json)
-        2. Classical Ayurveda Treatise formulations (DATA/Ayush/ayurveda_1.docx)
-        3. Curated Vaidya Chikitsa clinical ailments (DATA/vaidya_chikitsa_curated.json)
-        4. Classical Dravyaguna Monographs (DATA/Ayush/ayurveda_3.docx -> DATA/ayurveda_3_remedies.json)
-        """
-        all_remedies: List[Dict[str, Any]] = []
-        seen_names = set()
-
-        # 1. Base remedies
-        if os.path.exists(self.data_path):
-            try:
-                with open(self.data_path, "r", encoding="utf-8") as f:
-                    base_items = json.load(f)
-                    for item in base_items:
-                        name_key = item.get("remedy_name", "").strip().lower()
-                        if name_key and name_key not in seen_names:
-                            seen_names.add(name_key)
-                            item["safety_tier"] = "household_safe"
-                            item["is_primary_household"] = True
-                            item["is_household"] = True
-                            all_remedies.append(item)
-            except Exception as e:
-                logger.error(f"[Qdrant Error] Failed reading base remedies {self.data_path}: {e}")
-
-        # 2. Docx remedies (from cache JSON or directly extracted)
-        docx_items: List[Dict[str, Any]] = []
-        if os.path.exists(self.docx_remedies_path):
-            try:
-                with open(self.docx_remedies_path, "r", encoding="utf-8") as f:
-                    docx_items = json.load(f)
-            except Exception as e:
-                logger.error(f"[Qdrant Error] Failed reading docx remedies JSON {self.docx_remedies_path}: {e}")
-
-        if not docx_items:
-            try:
-                from app.core.ayush_docx_extractor import save_docx_remedies_json
-                docx_items = save_docx_remedies_json(self.docx_remedies_path)
-            except Exception as e:
-                logger.error(f"[Qdrant Error] Failed extracting docx remedies: {e}")
-
-        for item in docx_items:
-            name_key = item.get("remedy_name", "").strip().lower()
-            if name_key and name_key not in seen_names:
-                seen_names.add(name_key)
-                item["safety_tier"] = "household_safe"
-                all_remedies.append(item)
-
-        # 3. Curated Vaidya Chikitsa Ailments
-        vc_items: List[Dict[str, Any]] = []
-        if not os.path.exists(self.vaidya_chikitsa_path):
-            try:
-                from app.core.ayush_knowledge_curator import build_and_save_curated_knowledge
-                build_and_save_curated_knowledge()
-            except Exception as e:
-                logger.info(f"[Qdrant Curator] Notice: could not auto-build Vaidya Chikitsa: {e}")
-
-        if os.path.exists(self.vaidya_chikitsa_path):
-            try:
-                with open(self.vaidya_chikitsa_path, "r", encoding="utf-8") as f:
-                    vc_items = json.load(f)
-            except Exception as e:
-                logger.error(f"[Qdrant Error] Failed reading Vaidya Chikitsa JSON: {e}")
-
-        BANNED_HOME_TERMS = (
-            "tobacco", "snuff", "tambaku", "opium", "afeem", "cannabis", "ganja", "bhang",
-            "syphilis", "upadansh", "gonorrhea", "flesh decay", "foul odor", "kshar oil"
+    def _build_searchable_text(self, item: Dict[str, Any]) -> str:
+        """Builds a rich composite document for both Dense Embedding and Sparse BM25."""
+        kw_str = " ".join(item.get("keywords", []))
+        return (
+            f"Condition: {item.get('condition_name', '')} ({item.get('ayurvedic_disease_name', '')}). "
+            f"Dosha: {item.get('dosha_involvement', '')}. "
+            f"Remedy: {item.get('remedy_name', '')}. "
+            f"Keywords: {kw_str}. "
+            f"Instructions: {item.get('remedy_text', '')} "
+            f"Rationale: {item.get('ayurvedic_note', '')}"
         )
 
-        for item in vc_items:
-            # SAFETY RULE: Never index clinical emergencies or consultation-only items as home remedies!
-            if item.get("safety_tier") in ("clinical_emergency", "requires_consultation"):
-                continue
+    def _initialize_and_seed(self) -> None:
+        if not os.path.exists(self.full_data_path):
+            return
 
-            full_desc = f"{item.get('remedy_name', '')} {item.get('preparation', '')} {item.get('causes', '')} {item.get('indications', '')}".lower()
-            if any(term in full_desc for term in BANNED_HOME_TERMS):
-                continue
+        with open(self.full_data_path, "r", encoding="utf-8") as f:
+            self.remedies = json.load(f)
 
-            name_key = item.get("remedy_name", "").strip().lower()
-            if name_key and name_key not in seen_names:
-                seen_names.add(name_key)
-                if not item.get("remedy_text"):
-                    item["remedy_text"] = item.get("preparation") or item.get("treatment") or item.get("instructions") or ""
-                if not item.get("ayurvedic_note"):
-                    item["ayurvedic_note"] = item.get("causes") or item.get("classical_medicines_note") or item.get("safety_precaution") or ""
-                all_remedies.append(item)
+        # Build in-memory Okapi BM25 index over all remedies
+        corpus_texts = [
+            f"{item.get('condition_name', '')} {item.get('ayurvedic_disease_name', '')} "
+            f"{item.get('remedy_name', '')} {' '.join(item.get('keywords', []))} "
+            f"{item.get('dosha_involvement', '')} {item.get('remedy_text', '')}"
+            for item in self.remedies
+        ]
+        self.bm25.build(corpus_texts)
 
-        # 4. Classical Dravyaguna Monographs (DATA/Ayush/ayurveda_3.docx)
-        ayurveda_3_items: List[Dict[str, Any]] = []
-        if not os.path.exists(self.ayurveda_3_path):
-            try:
-                from app.core.ayurveda_3_extractor import save_ayurveda_3_remedies_json
-                ayurveda_3_items = save_ayurveda_3_remedies_json(self.ayurveda_3_path)
-            except Exception as e:
-                logger.info(f"[Qdrant] Notice: could not auto-build ayurveda_3 remedies: {e}")
+        # Check if Qdrant collection exists AND matches current dataset size (e.g., 100 vs old 16)
+        needs_reseed = True
+        if self.client is not None and self.client.collection_exists(self.collection_name):
+            info = self.client.get_collection(self.collection_name)
+            if info.points_count == len(self.remedies):
+                needs_reseed = False
+            else:
+                self.client.delete_collection(self.collection_name)
 
-        if os.path.exists(self.ayurveda_3_path) and not ayurveda_3_items:
-            try:
-                with open(self.ayurveda_3_path, "r", encoding="utf-8") as f:
-                    ayurveda_3_items = json.load(f)
-            except Exception as e:
-                logger.error(f"[Qdrant Error] Failed reading ayurveda_3 JSON: {e}")
+        if needs_reseed and self.remedies and self.client is not None:
+            self.client.create_collection(
+                collection_name=self.collection_name,
+                vectors_config=models.VectorParams(
+                    size=384,
+                    distance=models.Distance.COSINE,
+                ),
+            )
+            docs_to_embed = [self._build_searchable_text(item) for item in self.remedies]
+            embeddings = list(self.embedding_model.embed(docs_to_embed))
 
-        for item in ayurveda_3_items:
-            name_key = item.get("remedy_name", "").strip().lower()
-            if name_key and name_key not in seen_names:
-                seen_names.add(name_key)
-                item["safety_tier"] = "household_safe"
-                all_remedies.append(item)
+            points = [
+                models.PointStruct(
+                    id=idx + 1,
+                    vector=embeddings[idx].tolist(),
+                    payload=item,
+                )
+                for idx, item in enumerate(self.remedies)
+            ]
+            self.client.upsert(collection_name=self.collection_name, points=points)
 
-        self._all_cached_remedies = all_remedies
-        return all_remedies
+    def seed_dataset(self, force: bool = False) -> None:
+        """Forces re-creation and upserting into collection."""
+        if not self.remedies and os.path.exists(self.full_data_path):
+            with open(self.full_data_path, "r", encoding="utf-8") as f:
+                self.remedies = json.load(f)
 
-    def _initialize_and_seed(self):
-        """Creates collection if missing, and seeds points if empty or outdated."""
-        # Create collection if it does not exist
+        if self.client is None or not self.remedies:
+            return
+
+        if force and self.client.collection_exists(self.collection_name):
+            self.client.delete_collection(self.collection_name)
+
         if not self.client.collection_exists(self.collection_name):
             self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=models.VectorParams(
-                    size=self.vector_dim,
-                    distance=models.Distance.COSINE
-                )
+                    size=384,
+                    distance=models.Distance.COSINE,
+                ),
             )
-            logger.info(f"[Qdrant] Created new Qdrant collection: '{self.collection_name}'")
 
-        # Check point count
-        collection_info = self.client.get_collection(self.collection_name)
-        points_count = collection_info.points_count or 0
-        all_remedies = self.load_all_remedies()
+        docs_to_embed = [self._build_searchable_text(item) for item in self.remedies]
+        embeddings = list(self.embedding_model.embed(docs_to_embed))
+        points = [
+            models.PointStruct(
+                id=idx + 1,
+                vector=embeddings[idx].tolist(),
+                payload=item,
+            )
+            for idx, item in enumerate(self.remedies)
+        ]
+        self.client.upsert(collection_name=self.collection_name, points=points)
 
-        if points_count != len(all_remedies):
-            logger.info(f"[Qdrant] Collection '{self.collection_name}' has {points_count} points, but {len(all_remedies)} remedies curated. Re-seeding clean remedies...")
-            self.seed_dataset(force=True)
-        else:
-            logger.info(f"[Qdrant] Collection '{self.collection_name}' is fully up to date with {points_count} indexed points.")
+    def keyword_search_fallback(self, query: str, limit: int = 2) -> List[Dict[str, Any]]:
+        """In-memory BM25 lexical fallback when Qdrant client is unavailable or times out."""
+        if not self.remedies:
+            return []
 
-    def seed_dataset(self, force: bool = False):
-        """Loads all remedies, generates embeddings on clinical indications, and upserts them into Qdrant."""
-        remedies = self.load_all_remedies()
-        if not remedies:
-            logger.error("[Qdrant Error] No remedies found to seed.")
-            return
+        bm25_raw_scores = self.bm25.score_all(query)
+        ranked_indices = sorted(
+            range(len(self.remedies)),
+            key=lambda idx: bm25_raw_scores[idx],
+            reverse=True,
+        )
 
-        if force and self.client is not None:
+        results = []
+        for idx in ranked_indices:
+            item = dict(self.remedies[idx])
+            item["source"] = "fallback_keyword"
+            item["similarity_score"] = min(0.95, round(bm25_raw_scores[idx] / 10.0, 4)) if bm25_raw_scores[idx] > 0 else 0.5
+            item["bm25_score"] = round(bm25_raw_scores[idx], 4)
+            results.append(item)
+            if len(results) >= limit:
+                break
+        return results
+
+    def search_garhwali(self, query_text: str, limit: int = 3) -> List[Dict[str, Any]]:
+        """Lexical lookup for Garhwali health idioms and dictionary terms."""
+        results = []
+        if not os.path.exists(self.garhwali_data_dir):
+            return results
+
+        dict_file = os.path.join(self.garhwali_data_dir, "Dictionary_English-Garhwali-Hindi_FULL_Reference_Format.md")
+        if os.path.exists(dict_file):
+            keywords = [w.lower() for w in re.findall(r"[\w\u0900-\u097F]+", query_text) if len(w) > 2]
             try:
-                self.client.delete_collection(self.collection_name)
-                self.client.create_collection(
-                    collection_name=self.collection_name,
-                    vectors_config=models.VectorParams(
-                        size=self.vector_dim,
-                        distance=models.Distance.COSINE
-                    )
-                )
-                logger.info(f"[Qdrant] Re-created clean collection '{self.collection_name}' for fresh seeding.")
+                with open(dict_file, "r", encoding="utf-8", errors="ignore") as f:
+                    for line in f:
+                        line_lower = line.lower()
+                        if any(kw in line_lower for kw in keywords) and ("*" in line or "**" in line):
+                            clean = line.strip()
+                            if clean:
+                                results.append({"source_file": "Dictionary", "content": clean})
+                                if len(results) >= limit:
+                                    break
             except Exception as e:
-                logger.warning(f"[Qdrant] Recreate collection note: {e}")
+                logger.error(f"[Garhwali Lexical Error]: {e}")
+        return results
 
-        search_texts: List[str] = []
-        payloads: List[Dict[str, Any]] = []
-        ids: List[int] = []
-
-        for idx, item in enumerate(remedies):
-            # Sharp search embedding focused on clinical indications & symptoms
-            search_text = item.get("searchable_text")
-            if not search_text:
-                keywords_str = " ".join(item.get("keywords", []))
-                search_text = (
-                    f"Condition: {item.get('condition_name', item.get('remedy_name', ''))} | "
-                    f"Keywords: {keywords_str} | "
-                    f"Remedy: {item.get('remedy_name', '')} | "
-                    f"Symptoms: {', '.join(item.get('symptoms', []))}"
-                )
-            search_texts.append(search_text)
-            payloads.append(item)
-            ids.append(idx + 1)
-
-        batch_size = 25
-        total_upserted = 0
-        for i in range(0, len(search_texts), batch_size):
-            b_texts = search_texts[i:i+batch_size]
-            b_payloads = payloads[i:i+batch_size]
-            b_ids = ids[i:i+batch_size]
-
-            embeddings = list(self.embedding_model.embed(b_texts))
-            points = [
-                models.PointStruct(
-                    id=b_ids[j],
-                    vector=embeddings[j].tolist(),
-                    payload=b_payloads[j]
-                )
-                for j in range(len(b_ids))
-            ]
-
-            for attempt in range(3):
-                try:
-                    self.client.upsert(
-                        collection_name=self.collection_name,
-                        points=points,
-                        wait=False
-                    )
-                    break
-                except Exception as e:
-                    if attempt == 2:
-                        logger.error(f"[Qdrant] Upsert batch {i} failed: {e}")
-                        raise e
-                    time.sleep(1.0)
-
-            total_upserted += len(points)
-
-        logger.info(f"[Qdrant] Successfully uploaded and indexed {total_upserted} vector points in '{self.collection_name}'.")
-
-    def _enrich_with_botanicals(self, remedy: Dict[str, Any]) -> Dict[str, Any]:
-        """Matches ingredients or text against Dravyaguna herbs and attaches energetic profiles."""
-        if not self.herbs_lookup:
-            return remedy
-
-        text_to_search = f"{remedy.get('remedy_name', '')} {remedy.get('preparation', '')} {remedy.get('ingredients', '')}".lower()
-        matched_herbs = []
-
-        for herb_key, herb_data in self.herbs_lookup.items():
-            if len(herb_key) > 3 and re.search(r'\b' + re.escape(herb_key) + r'\b', text_to_search):
-                matched_herbs.append({
-                    "name": herb_data.get("full_title"),
-                    "thermal_energy": herb_data.get("thermal_energy"),
-                    "properties": herb_data.get("dravyaguna_properties")
-                })
-                if len(matched_herbs) >= 2:
-                    break
-
-        enriched = dict(remedy)
-        if matched_herbs:
-            enriched["matched_botanicals"] = matched_herbs
-        return enriched
-
-    def close(self):
+    def close(self) -> None:
         """Closes the underlying Qdrant client connection cleanly if open."""
         if self.client is not None and hasattr(self.client, "close"):
             try:
                 self.client.close()
-                logger.info("[Qdrant] Closed client connection cleanly.")
-            except Exception as e:
-                logger.warning(f"[Qdrant] Error closing client: {e}")
+            except Exception:
+                pass
 
-    # Synonym expansion table for cross-lingual lexical matching (Hindi/Garhwali/English)
-    CLINICAL_SYNONYM_MAP = {
-        "naak": ["nasal", "nose", "rhinitis", "pratishyaya", "allergy", "cold", "sinus", "peenas", "sneezing", "congestion"],
-        "nak": ["nasal", "nose", "rhinitis", "pratishyaya", "allergy", "sneezing"],
-        "chheenk": ["sneezing", "chheekein", "chheken", "chhink", "chhik", "rhinitis", "pratishyaya", "allergy"],
-        "chhink": ["sneezing", "chheenk", "chhik", "rhinitis", "pratishyaya", "allergy"],
-        "allergy": ["allergic", "rhinitis", "pratishyaya", "itch", "khujli", "sneezing", "naak"],
-        "allergic": ["allergy", "rhinitis", "pratishyaya", "nasal", "naak", "sneezing"],
-        "rhinitis": ["allergic rhinitis", "pratishyaya", "nasal", "naak", "sneezing", "chheenk", "peenas", "congestion"],
-        "pratishyaya": ["rhinitis", "nasal", "naak", "sneezing", "chheenk", "sinus", "peenas"],
-        "aankh": ["eye", "watery eyes", "aankhon", "itchy eyes", "allergy", "khujli"],
-        "aankhon": ["eye", "eyes", "watery eyes", "aankh", "itchy eyes", "allergy", "khujli"],
-        "khujli": ["itching", "itch", "allergy", "kandu"],
-        "sinus": ["sinusitis", "pratishyaya", "rhinitis", "naak", "nasal"],
-        "jod": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
-        "jodo": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
-        "jodon": ["joint", "joints", "sandhi", "stiffness", "jakdan", "arthritis", "amavata", "sandhivata", "ghutna", "ghutne", "ghutno", "knee"],
-        "ghutna": ["joint", "knee", "sandhi", "stiffness", "jakdan", "amavata", "sandhivata"],
-        "ghutne": ["joint", "knee", "sandhi", "stiffness", "jakdan", "amavata", "sandhivata"],
-        "ghutno": ["joint", "knee", "sandhi", "stiffness", "jakdan", "amavata", "sandhivata"],
-        "jakdan": ["stiffness", "joint", "sandhi", "stiff", "amavata", "sandhivata", "morning stiffness"],
-        "sandhi": ["joint", "sandhivata", "stiffness", "amavata"],
-        "gathiya": ["arthritis", "rheumatoid", "joint", "amavata", "vatarakta"],
-        "pet": ["stomach", "abdomen", "abdominal", "indigestion", "gas", "bloating", "apach", "colic", "shoola"],
-        "gas": ["bloating", "flatulence", "indigestion", "pet", "stomach", "apach"],
-        "apach": ["indigestion", "digestion", "gas", "bloating", "stomach"],
-        "marod": ["colic", "cramps", "stomach", "abdomen", "shoola"],
-        "bukhar": ["fever", "pyrexia", "jwara", "taap", "temperature"],
-        "thand": ["fever", "chills", "cold", "pyrexia", "syal"],
-        "khansi": ["cough", "kasa", "cold", "respiratory", "throat"],
-        "khang": ["cough", "kasa", "cold", "throat"],
-        "gala": ["throat", "cough", "cold", "pharyngitis"],
-        "kharash": ["throat", "cough", "scratchy throat"],
-        "sar": ["headache", "head", "mund", "shirashoola"],
-        "sir": ["headache", "head", "mund", "shirashoola"],
-        "mund": ["headache", "head", "sir", "sar"],
-        "badan": ["body", "fatigue", "ache", "body ache", "thakan"],
-        "thakan": ["fatigue", "tiredness", "weakness", "body ache"],
-        "chakkar": ["dizziness", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
-        "dizzy": ["chakkar", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
-        "dizziness": ["chakkar", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
-        "vertigo": ["chakkar", "dizziness", "giddiness", "bhrama", "bhram"],
-        "pyas": ["thirst", "trishna", "excessive thirst", "dehydration", "heat"],
-        "thirst": ["pyas", "trishna", "excessive thirst", "dehydration"],
-        "jalan": ["burning", "burning sensation", "daha", "pitta", "acidity", "heat"],
-        "burning": ["jalan", "daha", "burning sensation", "pitta", "heat"],
-        "tez": ["high", "acute", "severe", "tivr"],
-    }
+    def search_remedies(
+        self,
+        query: str,
+        limit: int = 5,
+        inferred_dosha: Optional[str] = None,
+        rrf_k: int = 60,
+    ) -> List[Dict[str, Any]]:
+        if not query or not query.strip() or not self.remedies:
+            return []
 
-    STOP_WORDS = {
-        "hai", "hain", "hona", "hota", "hoti", "hote", "raha", "rahi", "rahe",
-        "lag", "laga", "lagi", "lagna", "tha", "thi", "the", "ko", "se", "me",
-        "mein", "ka", "ki", "ke", "par", "aur", "and", "in", "is", "for", "to",
-        "with", "the", "a", "an", "le", "lo", "kar", "karein", "karna", "bhi"
-    }
-
-    def _extract_query_tokens(self, query_text: str) -> Tuple[List[str], Set[str]]:
-        """Extracts cleaned keywords, filtering common conversational stop words."""
-        tokens = [w for w in re.split(r'[^\w\u0900-\u097F]+', query_text.lower()) if len(w) > 2]
-        raw_tokens = [w for w in tokens if w not in self.STOP_WORDS]
-        if not raw_tokens:
-            raw_tokens = tokens
-        expanded_tokens = set(raw_tokens)
-        for t in raw_tokens:
-            if t in self.CLINICAL_SYNONYM_MAP:
-                expanded_tokens.update(self.CLINICAL_SYNONYM_MAP[t])
-        return raw_tokens, expanded_tokens
-
-    def keyword_search_fallback(self, query_text: str, limit: int = 2) -> List[Dict[str, Any]]:
-        """
-        In-memory keyword / BM25 lexical search fallback over remedies dataset.
-        Always sets source: 'fallback_keyword' and never crashes.
-        Includes clinical synonym mapping (Hindi/Garhwali/English) and category-aware safe fallbacks.
-        """
-        if not hasattr(self, "_all_cached_remedies") or not self._all_cached_remedies:
-            try:
-                self._all_cached_remedies = self.load_all_remedies()
-            except Exception as e:
-                logger.warning(f"[RAG] Failed to load dataset for keyword fallback: {e}")
-                self._all_cached_remedies = []
-
-    def _compute_lexical_score(self, payload: Dict[str, Any], raw_tokens: List[str], expanded_tokens: Set[str]) -> Tuple[float, int]:
-        """
-        Computes deterministic bilingual lexical / BM25 keyword score over:
-        - keywords
-        - condition_name
-        - remedy_name
-        Returns (lexical_score, lexical_overlap_count).
-        """
-        keywords_list = payload.get("keywords", [])
-        if isinstance(keywords_list, list):
-            kw_list = [str(k).lower() for k in keywords_list]
-        else:
-            kw_list = [str(keywords_list).lower()]
-        kw_str = " ".join(kw_list)
-
-        cond_name = str(payload.get("condition_name", "")).lower()
-        rem_name = str(payload.get("remedy_name", "")).lower()
-        searchable_core = f"{cond_name} {kw_str} {rem_name}"
-        searchable_full = f"{searchable_core} {str(payload.get('remedy_text', '')).lower()} {str(payload.get('preparation', '')).lower()}"
-
-        overlap_count = 0
-        score = 0.0
-
-        for token in raw_tokens:
-            if token in searchable_core:
-                overlap_count += 1
-                if token in cond_name or token in rem_name:
-                    score += 4.0
-                elif token in kw_str:
-                    score += 3.0
-            elif token in searchable_full:
-                score += 1.0
-
-        for token in expanded_tokens:
-            if token in searchable_core:
-                score += 1.5
-            elif token in searchable_full:
-                score += 0.5
-
-        return score, overlap_count
-
-    def keyword_search_fallback(self, query_text: str, limit: int = 2) -> List[Dict[str, Any]]:
-        """
-        In-memory keyword / BM25 lexical search fallback over remedies dataset.
-        Always sets source: 'fallback_keyword' and never crashes.
-        Filters out unrelated queries with 0 lexical overlap.
-        """
-        if not hasattr(self, "_all_cached_remedies") or not self._all_cached_remedies:
-            try:
-                self._all_cached_remedies = self.load_all_remedies()
-            except Exception as e:
-                logger.warning(f"[RAG] Failed to load dataset for keyword fallback: {e}")
-                self._all_cached_remedies = []
-
-        raw_tokens, expanded_tokens = self._extract_query_tokens(query_text)
-
-        scored = []
-        for r in self._all_cached_remedies:
-            # SAFETY: Exclude clinical emergencies and high-risk conditions
-            if r.get("safety_tier") in ("clinical_emergency", "requires_consultation"):
-                continue
-
-            lex_score, lex_overlap = self._compute_lexical_score(r, raw_tokens, expanded_tokens)
-            if lex_overlap == 0 and lex_score == 0:
-                continue
-
-            # Prioritize proven CCRAS / AYUSH household remedies
-            is_household = r.get("is_primary_household") or r.get("is_household") or (
-                r.get("source") in [
-                    "CCRAS / Ministry of AYUSH Guidelines",
-                    "AYUSH Ayurvedic Home Formularies",
-                    "AYUSH Home Formularies",
-                    "CCRAS Ayurvedic Home Formularies & Classical Treatise"
-                ]
-            )
-            if is_household:
-                lex_score += 6.0
-
-            item = dict(r)
-            if not item.get("remedy_text"):
-                item["remedy_text"] = item.get("preparation") or item.get("treatment") or ""
-            if not item.get("ayurvedic_note"):
-                item["ayurvedic_note"] = item.get("causes") or item.get("classical_medicines_note") or item.get("safety_precaution") or ""
-            if not item.get("source"):
-                item["source"] = "fallback_keyword"
-            item["similarity_score"] = min(1.0, float(lex_score) / (max(len(raw_tokens), 1) * 4.0 + 1.0))
-            item["lexical_score"] = lex_score
-            item["hybrid_score"] = item["similarity_score"]
-            scored.append((lex_score, self._enrich_with_botanicals(item)))
-
-        scored.sort(key=lambda x: x[0], reverse=True)
-        results = [s[1] for s in scored[:limit]]
-        return results
-
-    def search_remedies(self, query_text: str, limit: int = 2, min_score: float = 0.25, timeout: float = 25.0) -> List[Dict[str, Any]]:
-        """
-        Embeds the query text and retrieves top matching remedies from Qdrant with a resilient timeout.
-        On timeout or connection failure, retries (for cloud) and falls back to BM25 keyword search.
-        Uses Hybrid Reciprocal Rank Fusion (RRF) combining dense embeddings and sparse lexical scores.
-        """
+        # Fallback if client is None
         if self.client is None:
             logger.warning("[RAG] Qdrant search timed out / failed, falling back to BM25 / keyword search")
-            return self.keyword_search_fallback(query_text, limit=limit)
+            return self.keyword_search_fallback(query, limit=limit)
 
-        effective_timeout = max(timeout, 25.0) if getattr(self, "is_cloud", False) else timeout
+        # 1. Dense Vector Search via Qdrant (fetch top 25 candidates)
+        dense_ranks: Dict[str, int] = {}
+        dense_scores: Dict[str, float] = {}
 
-        def _do_qdrant_query():
-            query_embedding = list(self.embedding_model.embed([query_text]))[0].tolist()
-            # Fetch a balanced candidate pool from Qdrant to enable hybrid clinical re-ranking
-            candidate_limit = max(limit * 8, 40)
-            search_result = self.client.query_points(
-                collection_name=self.collection_name,
-                query=query_embedding,
-                limit=candidate_limit,
-                timeout=int(effective_timeout)
-            )
-            BANNED_HOME_TERMS = (
-                "tobacco", "snuff", "tambaku", "opium", "afeem", "cannabis", "ganja", "bhang",
-                "syphilis", "upadansh", "gonorrhea", "flesh decay", "foul odor", "kshar oil"
-            )
-
-            raw_tokens, expanded_tokens = self._extract_query_tokens(query_text)
-
-            # 1. Collect dense candidates from Qdrant query_points
-            dense_map: Dict[str, Dict[str, Any]] = {}
-            for point in search_result.points:
-                if not point.payload:
-                    continue
-                name_key = point.payload.get("remedy_name", "").strip().lower()
-                if name_key:
-                    dense_map[name_key] = {
-                        "payload": point.payload,
-                        "vec_score": float(getattr(point, "score", 0.0) or 0.0)
-                    }
-
-            # 2. Collect sparse lexical candidates from all curated remedies
-            all_remedies = self._all_cached_remedies or self.load_all_remedies()
-            lexical_map: Dict[str, Dict[str, Any]] = {}
-            for r in all_remedies:
-                if r.get("safety_tier") in ("clinical_emergency", "requires_consultation"):
-                    continue
-                name_key = r.get("remedy_name", "").strip().lower()
-                if not name_key:
-                    continue
-                l_score, l_overlap = self._compute_lexical_score(r, raw_tokens, expanded_tokens)
-                if l_score > 0 or name_key in dense_map:
-                    lexical_map[name_key] = {
-                        "payload": r,
-                        "lex_score": l_score,
-                        "lex_overlap": l_overlap
-                    }
-
-            # 3. Dense ranking
-            dense_sorted = sorted(dense_map.items(), key=lambda x: x[1]["vec_score"], reverse=True)
-            dense_rank_map = {k: rank for rank, (k, _) in enumerate(dense_sorted, start=1)}
-
-            # 4. Lexical ranking
-            lex_sorted = sorted(lexical_map.items(), key=lambda x: x[1]["lex_score"], reverse=True)
-            lex_rank_map = {k: rank for rank, (k, _) in enumerate(lex_sorted, start=1)}
-
-            # 5. Fused candidates pool across Dense & Lexical channels
-            all_keys = set(dense_map.keys()) | set(lexical_map.keys())
-            fused_candidates = []
-
-            for k in all_keys:
-                payload = dense_map[k]["payload"] if k in dense_map else lexical_map[k]["payload"]
-                vec_score = dense_map[k]["vec_score"] if k in dense_map else 0.0
-                dense_rank = dense_rank_map.get(k, 120)
-                lex_score = lexical_map[k]["lex_score"] if k in lexical_map else 0.0
-                lex_overlap = lexical_map[k]["lex_overlap"] if k in lexical_map else 0
-                lex_rank = lex_rank_map.get(k, 120)
-
-                payload_desc = f"{payload.get('remedy_name', '')} {payload.get('preparation', '')} {payload.get('remedy_text', '')} {payload.get('causes', '')}".lower()
-                if any(b in payload_desc for b in BANNED_HOME_TERMS):
-                    continue
-
-                # Relevance Threshold: Filter out remedies whose dense similarity score is < 0.25 and lexical overlap is 0
-                if vec_score < min_score and lex_overlap == 0:
-                    continue
-
-                # Reciprocal Rank Fusion: 1/(60 + dense_rank) + 1/(60 + lex_rank)
-                rrf = (1.0 / (60.0 + dense_rank)) + (1.0 / (60.0 + lex_rank))
-
-                is_household = payload.get("is_primary_household") or payload.get("is_household") or (
-                    payload.get("source") in [
-                        "CCRAS / Ministry of AYUSH Guidelines",
-                        "AYUSH Ayurvedic Home Formularies",
-                        "AYUSH Home Formularies",
-                        "CCRAS Ayurvedic Home Formularies & Classical Treatise"
-                    ]
-                )
-                if is_household:
-                    rrf += 0.003
-
-                enriched = self._enrich_with_botanicals(payload)
-                if not enriched.get("remedy_text"):
-                    enriched["remedy_text"] = enriched.get("preparation") or enriched.get("treatment") or ""
-                if not enriched.get("ayurvedic_note"):
-                    enriched["ayurvedic_note"] = enriched.get("causes") or enriched.get("classical_medicines_note") or ""
-
-                enriched["similarity_score"] = vec_score
-                enriched["lexical_score"] = lex_score
-                enriched["rrf_score"] = rrf
-                enriched["hybrid_score"] = rrf
-
-                fused_candidates.append((rrf, enriched))
-
-            fused_candidates.sort(key=lambda x: x[0], reverse=True)
-            matched = [c[1] for c in fused_candidates[:limit]]
-            return matched
-
-        max_attempts = 3 if getattr(self, "is_cloud", False) else 2
-        last_error = None
-
-        for attempt in range(max_attempts):
-            try:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                    future = executor.submit(_do_qdrant_query)
-                    matched = future.result(timeout=effective_timeout)
-                if matched:
-                    return matched
-                # If matched is empty but search succeeded, return keyword fallback
-                break
-            except Exception as e:
-                last_error = e
-                if attempt < max_attempts - 1:
-                    time.sleep(1.0)
-                    continue
-
-        logger.warning(f"[RAG] Qdrant search timed out / failed, falling back to BM25 / keyword search (Error: {last_error})")
-        return self.keyword_search_fallback(query_text, limit=limit)
-
-    def _initialize_and_seed_garhwali(self):
-        """Creates collection for Garhwali texts if missing, and seeds points if empty."""
-        if not self.client.collection_exists(self.garhwali_collection_name):
-            self.client.create_collection(
-                collection_name=self.garhwali_collection_name,
-                vectors_config=models.VectorParams(
-                    size=self.vector_dim,
-                    distance=models.Distance.COSINE
-                )
-            )
-            logger.info(f"[Qdrant] Created new Qdrant collection: '{self.garhwali_collection_name}'")
-
-        collection_info = self.client.get_collection(self.garhwali_collection_name)
-        if (collection_info.points_count or 0) == 0:
-            logger.info(f"[Qdrant] Collection '{self.garhwali_collection_name}' is empty. Seeding Garhwali dataset...")
-            self.seed_garhwali_dataset()
-        else:
-            logger.info(f"[Qdrant] Collection '{self.garhwali_collection_name}' is active with {collection_info.points_count} points.")
-
-    def _extract_text_from_file(self, file_path: str, filename: str) -> str:
-        """Reads .txt, .md, or .docx files safely."""
-        if filename.endswith(".docx"):
-            try:
-                import docx
-                doc = docx.Document(file_path)
-                return "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
-            except Exception as e:
-                import zipfile
-                import xml.etree.ElementTree as ET
-                try:
-                    with zipfile.ZipFile(file_path) as z:
-                        xml_content = z.read("word/document.xml")
-                    tree = ET.fromstring(xml_content)
-                    return "".join(node.text for node in tree.iter() if node.text)
-                except Exception as e2:
-                    logger.error(f"[Qdrant Error] Failed reading docx {filename}: {e2}")
-                    return ""
-        else:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                return f.read()
-
-    def seed_garhwali_dataset(self):
-        if not os.path.exists(self.garhwali_data_dir):
-            logger.error(f"[Qdrant Error] Garhwali dataset folder not found: {self.garhwali_data_dir}")
-            return
-
-        search_texts = []
-        payloads = []
-        ids = []
-        point_id = 1
-
-        for filename in os.listdir(self.garhwali_data_dir):
-            if not filename.endswith((".txt", ".md", ".docx")):
-                continue
-            
-            file_path = os.path.join(self.garhwali_data_dir, filename)
-            try:
-                text = self._extract_text_from_file(file_path, filename)
-                if not text:
-                    continue
-                    
-                # Simple chunking by double newline (paragraphs)
-                chunks = [c.strip() for c in text.split("\n\n") if len(c.strip()) > 40]
-                
-                # Further split large chunks to avoid huge embeddings
-                max_chunk_len = 700
-                final_chunks = []
-                for chunk in chunks:
-                    if len(chunk) > max_chunk_len:
-                        sentences = chunk.split(". ")
-                        temp_chunk = ""
-                        for sent in sentences:
-                            if len(temp_chunk) + len(sent) > max_chunk_len:
-                                final_chunks.append(temp_chunk.strip())
-                                temp_chunk = sent + ". "
-                            else:
-                                temp_chunk += sent + ". "
-                        if temp_chunk.strip():
-                            final_chunks.append(temp_chunk.strip())
-                    else:
-                        final_chunks.append(chunk)
-
-                for chunk in final_chunks:
-                    search_texts.append(chunk)
-                    payloads.append({"source_file": filename, "content": chunk})
-                    ids.append(point_id)
-                    point_id += 1
-            except Exception as e:
-                logger.error(f"[Qdrant Error] Error reading {filename}: {e}")
-
-        # In testing environment, cap dataset to 50 chunks for fast CPU embeddings
-        if getattr(settings, "APP_ENV", "").lower() == "testing":
-            search_texts = search_texts[:50]
-            payloads = payloads[:50]
-            ids = ids[:50]
-
-        # Batch upload to avoid memory/network issues
-        batch_size = 100
-        for i in range(0, len(search_texts), batch_size):
-            batch_texts = search_texts[i:i+batch_size]
-            batch_payloads = payloads[i:i+batch_size]
-            batch_ids = ids[i:i+batch_size]
-
-            if batch_texts:
-                embeddings = list(self.embedding_model.embed(batch_texts))
-                points = [
-                    models.PointStruct(id=batch_ids[j], vector=embeddings[j].tolist(), payload=batch_payloads[j])
-                    for j in range(len(batch_ids))
-                ]
-                self.client.upsert(collection_name=self.garhwali_collection_name, points=points, wait=True)
-
-        logger.info(f"[Qdrant] Successfully indexed {len(ids)} Garhwali vector points.")
-
-    def search_garhwali(self, query_text: str, limit: int = 3) -> List[Dict[str, Any]]:
-        """
-        Hybrid search in Garhwali documents:
-        Combines lexical keyword matching with dense vector search for high recall.
-        """
-        results = []
-        seen_contents = set()
-
-        # 1. Lexical keyword search over Garhwali files for exact anatomical/symptom matches
-        keywords = [w.lower() for w in re.findall(r"[\w\u0900-\u097F]+", query_text) if len(w) > 2]
-        if keywords and os.path.exists(self.garhwali_data_dir):
-            dict_file = os.path.join(self.garhwali_data_dir, "Dictionary_English-Garhwali-Hindi_FULL_Reference_Format.md")
-            if os.path.exists(dict_file):
-                try:
-                    with open(dict_file, "r", encoding="utf-8", errors="ignore") as f:
-                        lines = f.readlines()
-                    for line in lines:
-                        line_lower = line.lower()
-                        if any(kw in line_lower for kw in keywords) and ("*" in line or "**" in line):
-                            clean_line = line.strip()
-                            if clean_line and clean_line not in seen_contents:
-                                seen_contents.add(clean_line)
-                                results.append({"source_file": "Dictionary", "content": clean_line})
-                                if len(results) >= limit:
-                                    break
-                except Exception as e:
-                    logger.error(f"[Garhwali Lexical Search Error]: {e}")
-
-        # 2. Dense Vector Search in Qdrant
         try:
-            query_embedding = list(self.embedding_model.embed([query_text]))[0].tolist()
-            search_result = self.client.query_points(
-                collection_name=self.garhwali_collection_name,
-                query=query_embedding,
-                limit=limit
-            )
-            for point in search_result.points:
-                if point.payload and point.payload.get("content"):
-                    c = point.payload["content"]
-                    if c not in seen_contents:
-                        seen_contents.add(c)
-                        results.append(point.payload)
-        except Exception as e:
-            logger.error(f"[Qdrant Search Error (Garhwali)]: {e}")
+            query_vector = list(self.embedding_model.embed([query]))[0].tolist()
+            dense_response = self.client.query_points(
+                collection_name=self.collection_name,
+                query=query_vector,
+                limit=min(25, len(self.remedies)),
+            ).points
 
-        return results[:limit]
+            for rank_idx, hit in enumerate(dense_response):
+                rem_id = hit.payload.get("id")
+                if rem_id:
+                    dense_ranks[rem_id] = rank_idx + 1
+                    dense_scores[rem_id] = float(hit.score)
+        except Exception as e:
+            logger.warning(f"[RAG] Qdrant search timed out / failed, falling back to BM25 / keyword search (Error: {e})")
+            return self.keyword_search_fallback(query, limit=limit)
+
+        # 2. Sparse Lexical Search via Okapi BM25 over all 100 remedies
+        bm25_raw_scores = self.bm25.score_all(query)
+        bm25_ranked_indices = sorted(
+            range(len(self.remedies)),
+            key=lambda idx: bm25_raw_scores[idx],
+            reverse=True,
+        )
+        bm25_ranks: Dict[str, int] = {}
+        bm25_scores: Dict[str, float] = {}
+        for rank_idx, doc_idx in enumerate(bm25_ranked_indices):
+            if bm25_raw_scores[doc_idx] > 0.0:
+                rem_id = self.remedies[doc_idx]["id"]
+                bm25_ranks[rem_id] = rank_idx + 1
+                bm25_scores[rem_id] = bm25_raw_scores[doc_idx]
+
+        # 3. Reciprocal Rank Fusion (RRF) + Dosha Alignment Boost
+        fused_results = []
+        for item in self.remedies:
+            rem_id = item["id"]
+            d_score = dense_scores.get(rem_id, 0.0)
+            b_score = bm25_scores.get(rem_id, 0.0)
+
+            # Relevance threshold: skip completely unrelated entries
+            if d_score < 0.25 and b_score <= 0.0:
+                continue
+
+            rrf_score = 0.0
+            if rem_id in dense_ranks:
+                rrf_score += 1.0 / (rrf_k + dense_ranks[rem_id])
+            if rem_id in bm25_ranks:
+                # Weight BM25 slightly higher (1.25x) when exact Hindi/Sanskrit/Garhwali keywords match
+                rrf_score += 1.25 / (rrf_k + bm25_ranks[rem_id])
+
+            # Optional Dosha alignment boost
+            if inferred_dosha and inferred_dosha.lower() in item.get("dosha_involvement", "").lower():
+                rrf_score += 0.003
+
+            enriched = dict(item)
+            enriched["similarity_score"] = round(max(d_score, min(0.99, d_score + (0.15 if b_score > 0 else 0.0))), 4)
+            enriched["bm25_score"] = round(b_score, 4)
+            enriched["rrf_score"] = round(rrf_score, 6)
+            fused_results.append(enriched)
+
+        fused_results.sort(key=lambda x: (x["rrf_score"], x["bm25_score"], x["similarity_score"]), reverse=True)
+
+        if not fused_results and self.remedies:
+            return self.keyword_search_fallback(query, limit=limit)
+
+        return fused_results[:limit]
 
 
 _shared_remedy_store: Optional[HybridRemedyStore] = None
+
 
 def get_shared_remedy_store(data_path: str = "DATA/remedies_dataset.json") -> HybridRemedyStore:
     """Returns a process-wide singleton HybridRemedyStore instance."""
@@ -883,4 +354,3 @@ def get_shared_remedy_store(data_path: str = "DATA/remedies_dataset.json") -> Hy
     if _shared_remedy_store is None:
         _shared_remedy_store = HybridRemedyStore(data_path=data_path)
     return _shared_remedy_store
-

@@ -68,6 +68,20 @@ def extract_patient_conditions_from_text(text: str, last_bot_question: str = "")
     if diab_pos and not diab_neg:
         detected.append("diabetes")
 
+    # 5. Ear Discharge (Pus/Fluid from ear)
+    ear_pos = bool(
+        re.search(r"\b(?:ear\s+discharge|pus\s+from\s+ear|ear\s+pus|kaan\s+behna|kaan\s+se\s+mavad|kaan\s+se\s+मवाद|kan\s+behna|kan\s+se\s+mavad|kaan\s+se\s+mad|कान\s+बहना|कान\s+से\s+मवाद|मवाद)\b", t)
+        or ("kaan" in t and ("beh" in t or "mavad" in t or "pus" in t or "paani" in t))
+        or ("कान" in t and ("बह" in t or "मवाद" in t or "पानी" in t))
+    )
+    ear_neg = bool(
+        re.search(r"\b(?:ear\s+discharge|pus|kaan\s+behna|kaan\s+se\s+mavad|कान\s+बहना|मवाद)\s+(?:nahi|nahin|na|नहीं|ना)\b|\b(?:no|without)\s+(?:ear\s+discharge|pus)\b", t)
+    )
+    if ("ear discharge" in last_q or "kaan behna" in last_q or "मवाद" in last_q or "बह" in last_q) and re.search(r"\b(?:haan|ji\s+haan|yes|yep|ha|हाँ|हां|जी)\b", t) and not re.search(r"\b(?:nahi|nahin|no|नहीं)\b", t):
+        ear_pos = True
+    if ear_pos and not ear_neg:
+        detected.append("EarDischarge")
+
     return detected
 
 

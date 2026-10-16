@@ -371,101 +371,85 @@ export default function Screening() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-primary pb-20 safe-bottom-nav">
+    <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 space-y-6 text-primary pb-20 safe-bottom-nav">
       
       {/* ── Universal Back Button for Mobile & Desktop ─────────────────── */}
-      <div className="flex items-center justify-between pb-3 max-w-4xl mx-auto">
+      <div className="flex items-center justify-between pb-1">
         <BackButton fallback="/mitra" label={l('वापस जाएं', 'Back')} />
         <span className="text-xs text-muted font-medium hidden sm:inline">{l('डिजिटल स्वास्थ्य जांच', 'Digital AI Screening')}</span>
       </div>
 
-      {/* ── Header ────────────────────────────────────────────── */}
-      <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
-        <div className="inline-flex items-center gap-2 bg-sage/10 dark:bg-sage/20 text-sage dark:text-booti-glow px-4 py-1.5 rounded-full text-xs font-bold mb-3 border border-sage/20">
-          <Eye className="w-4 h-4 text-gold-warm" />
-          <span>{l('नेत्र व मुख डिजिटल स्वास्थ्य जांच', 'Non-Invasive Vision & Oral Screening')}</span>
+      {/* ── Compact Header & Mode Switcher Bar ────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-card p-5 rounded-3xl border border-border-subtle shadow-sm">
+        <div>
+          <div className="inline-flex items-center gap-1.5 bg-sage/10 text-sage px-3 py-0.5 rounded-full text-xs font-bold mb-1">
+            <Eye className="w-3.5 h-3.5 text-gold-warm" />
+            <span>{l('नेत्र बायोमार्कर डायग्नोस्टिक सुइट', 'Non-Invasive Ocular Diagnostic Suite')}</span>
+          </div>
+          <h1 className="font-serif text-xl sm:text-2xl font-bold text-primary">
+            {l('नेत्र व रक्त बायोमार्कर जांच', 'Non-Invasive Ocular Diagnostic Suite')}
+          </h1>
+          <p className="text-xs text-muted mt-0.5">
+            {l('चमोली व उत्तराखंड के लिए एज कंप्यूटर विज़न • बिना सुई चुभाए एनीमिया व पीलिया की जांच', 'Edge Computer Vision for rural Uttarakhand • Point-of-Care Anemia & Jaundice Screen')}
+          </p>
         </div>
-        <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-primary leading-tight">
-          Pahadi Kshetra Digital Swasthya Jaanch
-        </h1>
-        <p className="text-xs sm:text-sm text-muted dark:text-muted mt-2 leading-relaxed">
-          Bina suee chubhaaye, camera photo se Khoon Ki Kami (Anemia), Peeliya (Jaundice), Mukh Rog (Leukoplakia) aur Twacha ke lakshan pehchanein.
-        </p>
+
+        {/* Segmented Mode Toggle Pill */}
+        <div className="bg-surface p-1 rounded-2xl border border-border-subtle flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setScreeningType('ANEMIA');
+              setResult(null);
+              setActiveStep(1);
+            }}
+            className={`min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              screeningType === 'ANEMIA'
+                ? 'bg-sage text-white shadow-xs'
+                : 'text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5'
+            }`}
+          >
+            <Eye className="w-4 h-4" />
+            <div className="text-left leading-tight">
+              <span className="block">{l('खून की कमी (Anemia)', 'Anemia Screen')}</span>
+              <span className={`text-[10px] block ${screeningType === 'ANEMIA' ? 'text-white/80' : 'opacity-70'}`}>
+                Lower Eyelid Pallor
+              </span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setScreeningType('JAUNDICE');
+              setResult(null);
+              setActiveStep(1);
+            }}
+            className={`min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              screeningType === 'JAUNDICE'
+                ? 'bg-sage text-white shadow-xs'
+                : 'text-muted hover:text-primary hover:bg-black/5 dark:hover:bg-white/5'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <div className="text-left leading-tight">
+              <span className="block">{l('पीलिया (Jaundice)', 'Jaundice Screen')}</span>
+              <span className={`text-[10px] block ${screeningType === 'JAUNDICE' ? 'text-white/80' : 'opacity-70'}`}>
+                Eye White Icterus
+              </span>
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* ── Page Voice Guide Banner ───────────────────────────────── */}
-      <PageVoiceGuide pageKey="screening" className="mb-6 max-w-4xl mx-auto" />
+      <PageVoiceGuide pageKey="screening" />
 
-      {/* ── 4-Modality Tab Bar ──────────────────────────────────── */}
-      <div className="max-w-4xl mx-auto mb-6 grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-        {Object.entries(modalities).map(([key, item]) => {
-          const Icon = item.icon;
-          const isSelected = screeningType === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => {
-                setScreeningType(key);
-                setResult(null);
-                setActiveStep(1);
-              }}
-              className={`touch-target p-3 sm:p-4 rounded-2xl border text-left transition-all flex flex-col justify-between ${
-                isSelected
-                  ? 'bg-sage text-white border-sage shadow-md shadow-sage/20 ring-2 ring-sage/30'
-                  : 'bg-white dark:bg-warm-indigo text-muted dark:text-muted border-gray-200 dark:border-gray-800 hover:border-sage/40'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? 'bg-white/20 text-white' : 'bg-sage/10 text-sage dark:text-booti-glow'}`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                {isSelected && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-              </div>
-              <div>
-                <div className="font-bold text-xs sm:text-sm leading-snug">{item.title}</div>
-                <div className="text-[10px] opacity-75 truncate mt-0.5">{item.subtitle.split('•')[0]}</div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── 4-Stage Pipeline Progress ────────────────────────────── */}
-      <div className="max-w-4xl mx-auto mb-6 bg-white dark:bg-warm-indigo rounded-2xl p-2.5 sm:p-3 border border-sage/20 shadow-xs">
-        <div className="grid grid-cols-4 gap-1 sm:gap-2 text-center text-[11px] sm:text-xs font-bold">
-          {[
-            { num: 1, label: '1. SCAN', desc: l('तस्वीर लें', 'Capture Photo', 'Tasveer Lein') },
-            { num: 2, label: '2. PROCESS', desc: l('बायोमार्कर्स', 'Biomarkers', 'Biomarker Scan') },
-            { num: 3, label: '3. RESULT', desc: l('जांच रिपोर्ट', 'Clinical Report', 'Clinical Report') },
-            { num: 4, label: '4. REFERRAL', desc: l('रेफरल पर्चा', 'PHC Referral', 'PHC Parcha') },
-          ].map((stage) => {
-            const isCompleted = activeStep > stage.num || (activeStep === 3 && stage.num <= 3);
-            const isCurrent = activeStep === stage.num;
-            return (
-              <div
-                key={stage.num}
-                className={`py-2 px-1 rounded-xl transition-all ${
-                  isCurrent
-                    ? 'bg-sage text-white shadow-xs'
-                    : isCompleted
-                    ? 'bg-sage/15 text-sage dark:text-booti-glow'
-                    : 'text-gray-400 dark:text-gray-400'
-                }`}
-              >
-                <div className="font-bold leading-tight">{stage.label}</div>
-                <div className="text-[10px] opacity-80 truncate hidden sm:block">{stage.desc}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── 2-Column Work Area ──────────────────────────────────── */}
+      {/* ── 12-Column Split Diagnostic Workbench ────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-        {/* Left Column: Image Capture & Controls (7 cols) */}
-        <div className="lg:col-span-7 bg-white dark:bg-warm-indigo p-5 sm:p-7 rounded-3xl shadow-sm border border-sage/20 dark:border-gray-800 space-y-5">
+        {/* Left Column: Image Capture & Controls (6 cols) */}
+        <div className="lg:col-span-6 bg-card p-5 sm:p-6 rounded-3xl shadow-sm border border-border-subtle space-y-4">
           
           {/* Section Heading & Audio Guide */}
           <div className="flex items-center justify-between">
@@ -674,14 +658,20 @@ export default function Screening() {
             )}
           </div>
 
-          {/* Clinical Photography Instructions */}
-          <div className="bg-mist dark:bg-card p-4 rounded-2xl border border-sage/15 dark:border-gray-800 text-xs space-y-1.5 text-muted dark:text-muted">
-            <div className="flex items-center gap-1.5 font-bold text-primary">
-              <Info className="w-4 h-4 text-sage" />
-              <span>{l('सही तस्वीर लेने के निर्देश', 'Photography Guidelines')} — {modalities[screeningType].title}:</span>
+          {/* 3-Step Photography Checklist Strip */}
+          <div className="grid grid-cols-3 gap-2 text-center pt-1 border-t border-border-subtle">
+            <div className="p-2.5 rounded-2xl bg-surface border border-border-subtle">
+              <span className="block text-[11px] font-bold text-primary">1. Natural Daylight</span>
+              <span className="block text-[10px] text-muted truncate mt-0.5">{l('फ्लैश बंद रखें', 'Avoid harsh flash')}</span>
             </div>
-            <p>• {modalities[screeningType].guideText}</p>
-            <p>• {l('कैमरा फ्लैश बंद रखें ताकि प्राकृतिक ऊतक रंग स्पष्ट दिखे।', 'Keep camera flash off to reflect natural tissue color.')}</p>
+            <div className="p-2.5 rounded-2xl bg-surface border border-border-subtle">
+              <span className="block text-[11px] font-bold text-primary">2. Expose Target</span>
+              <span className="block text-[10px] text-muted truncate mt-0.5">{screeningType === 'ANEMIA' ? l('पलक नीचे खींचें', 'Pull lower lid') : l('स्क्लेरा पर फोकस', 'Focus sclera')}</span>
+            </div>
+            <div className="p-2.5 rounded-2xl bg-surface border border-border-subtle">
+              <span className="block text-[11px] font-bold text-primary">3. Center in Oval</span>
+              <span className="block text-[10px] text-muted truncate mt-0.5">{l('60% ROI भरें', 'Fill 60% ROI')}</span>
+            </div>
           </div>
 
           {/* Action Trigger Button */}
@@ -689,18 +679,18 @@ export default function Screening() {
             type="button"
             onClick={handleRunScreening}
             disabled={(!selectedImage && !selectedFile) || loading}
-            className="touch-target w-full bg-sage hover:bg-sage/90 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 shadow-md shadow-sage/20 transition-all"
+            className="touch-target w-full min-h-[44px] bg-sage hover:bg-sage/90 text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 shadow-md shadow-sage/20 transition-all cursor-pointer"
           >
             {loading ? (
               <><RefreshCw className="w-5 h-5 animate-spin" /> {l('बायोमार्कर स्कैन जारी है...', 'Scanning Biomarkers...')}</>
             ) : (
-              <><CheckCircle2 className="w-5 h-5" /> {l('एआई बायोमार्कर जांच शुरू करें', 'Start AI Biomarker Screening')}</>
+              <><CheckCircle2 className="w-5 h-5" /> {l('व्हाइट-बैलेंस्ड बायोमार्कर स्कैन शुरू करें', 'Run White-Balanced Biomarker Scan')}</>
             )}
           </button>
         </div>
 
-        {/* Right Column: Results & Clinical Actions (5 cols) */}
-        <div className="lg:col-span-5 bg-white dark:bg-warm-indigo p-5 sm:p-7 rounded-3xl shadow-sm border border-sage/20 dark:border-gray-800 space-y-5">
+        {/* Right Column: Results & Clinical Actions (6 cols) */}
+        <div className="lg:col-span-6 bg-card p-5 sm:p-6 rounded-3xl shadow-sm border border-border-subtle space-y-5">
           {result ? (
             <div className="space-y-5 animate-fadeIn">
 
@@ -965,16 +955,87 @@ export default function Screening() {
               </div>
             </div>
           ) : (
-            <div className="text-center text-muted dark:text-muted py-16 space-y-3">
-              <div className="w-16 h-16 rounded-3xl bg-sage/10 dark:bg-gray-800 flex items-center justify-center mx-auto text-sage mb-2">
-                <Eye className="w-8 h-8 opacity-70" />
+            /* Biomarker Reference & Calibration Guide (Pre-Scan Idle State) */
+            <div className="space-y-4 animate-fadeIn">
+              <div className="flex items-center gap-2.5 pb-3 border-b border-border-subtle">
+                <div className="w-8 h-8 rounded-xl bg-sage/15 text-sage flex items-center justify-center shrink-0">
+                  <FlaskConical className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-sm sm:text-base text-primary">
+                    {l('बायोमार्कर संदर्भ एवं कैलिब्रेशन गाइड', 'Biomarker Reference & Calibration Guide')}
+                  </h3>
+                  <p className="text-[11px] text-muted">
+                    {l('OpenCV व कलरिमेट्रिक एज डायग्नोस्टिक मानक', 'OpenCV Colorimetric Edge Standards')}
+                  </p>
+                </div>
               </div>
-              <p className="text-sm font-bold text-primary">
-                {l('तस्वीर चुनें और जांच शुरू करें', 'Select an image to begin screening', 'Tasveer chuniye aur jaanch shuru kijiye')}
-              </p>
-              <p className="text-xs text-muted dark:text-muted max-w-xs mx-auto leading-relaxed">
-                {l('कंप्यूटर विज़न द्वारा अनुक्रमित बायोमार्कर और डॉक्टर सिफारिश यहाँ दिखाई देगी।', 'Computer vision biomarker analysis and clinical recommendation will appear here.', 'OpenCV colorimetric index, anumaanit clinical metric aur doctor recommendation yahan nishkarsh ke roop mein dikhega.')}
-              </p>
+
+              <div className="space-y-2.5">
+                <div className="p-3.5 rounded-2xl bg-surface/70 border border-border-subtle space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-primary flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
+                      Gray-World & CLAHE Normalization
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sage/15 text-sage">
+                      Preprocessing
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted leading-relaxed">
+                    {l('पहाड़ी इलाकों में धूप-छांव और असमान रोशनी को स्वचालित रूप से संतुलित करता है ताकि ऊतक का वास्तविक रंग स्पष्ट रहे।', 'Corrects ambient mountain lighting conditions and enhances mucosal contrast before colorimetric indexing.')}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-surface/70 border border-border-subtle space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-primary flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5 text-rose-soft" />
+                      CIELAB a*/L* Erythema Index
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-rose-soft/15 text-rose-soft">
+                      Cutoff: 0.20
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted leading-relaxed">
+                    {l('कंजंक्टिवा के हीमोग्लोबिन लालिमा को मापता है। 0.20 से कम मान एनीमिया (रक्त की कमी) के उच्च जोखिम का संकेत देता है।', 'Measures palpebral conjunctiva redness; indices < 0.20 indicate high risk of microcytic or nutritional anemia.')}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-surface/70 border border-border-subtle space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-primary flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-gold-warm" />
+                      HSV Scleral Icterus Ratio
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-gold-warm/20 text-yellow-700 dark:text-gold-warm">
+                      Cutoff: 0.35
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted leading-relaxed">
+                    {l('आंख की पुतली के सफेद भाग (स्क्लेरा) में पीले रंग के फैलाव का विश्लेषण करता है, जिससे पीलिया का प्रारंभिक संकेत मिलता है।', 'Quantifies yellow pigment distribution on the sclera for early jaundice and elevated bilirubin detection.')}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-surface/70 border border-border-subtle space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-primary flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-sage" />
+                      ABDM FHIR Diagnostic Report
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sage/15 text-sage">
+                      Compliance
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted leading-relaxed">
+                    {l('जांच रिपोर्ट स्वतः आयुष्मान भारत डिजिटल मिशन (ABDM) प्रारूप में तैयार होती है जिसे पीएचसी डॉक्टर को दिखाया जा सकता है।', 'Generates a standardized FHIR R4 diagnostic slip for referral to local Primary Health Centers.')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-sage/10 text-center text-xs text-sage font-medium">
+                {l('👈 बाईं ओर तस्वीर चुनें या कैमरा चालू करके स्कैन करें', '👈 Select an image on the left or use camera to start scan')}
+              </div>
             </div>
           )}
         </div>

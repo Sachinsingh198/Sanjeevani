@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import {
   Send, Mic, MicOff, RefreshCw, User, AlertTriangle, AlertCircle, RotateCcw,
   Volume2, VolumeX, Settings2, Wifi, WifiOff, FileDown, PhoneCall,
   Sparkles, Stethoscope, X, ChevronLeft, ChevronRight,
   MessageSquare, Plus, Clock, Trash2, Leaf, Edit3, ThumbsUp, ThumbsDown,
-  QrCode, Camera, Share2, MessageCircle, Pill
+  QrCode, Camera, Share2, MessageCircle, Pill, HeartPulse, Eye, ArrowRight
 } from 'lucide-react';
 import useTypewriter from '../lib/useTypewriter';
 import toast from 'react-hot-toast';
@@ -148,6 +148,7 @@ export default function Chat() {
   const [sidebarOpen, setSidebarOpen]       = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
   const [detectedLanguage, setDetectedLanguage] = useState(lang === 'en' ? 'english' : 'hindi');
   const [sttLangOverride, setSttLangOverride]   = useState(null);
+  const [mobileContextOpen, setMobileContextOpen] = useState(false);
 
   /* Persist known conditions to both storage keys */
   useEffect(() => {
@@ -994,505 +995,471 @@ export default function Chat() {
   const stateLabel = { idle: 'Taiyar hoon', listening: 'Sun raha hoon…', thinking: 'Soch raha hoon…', speaking: 'Bol raha hoon…', emergency: 'Tatkal!' }[orbState] || '';
   const stateColor = { idle: '#5A7855', listening: '#D4A359', thinking: '#6B8DB5', speaking: '#8ED14C', emergency: '#B85042' }[orbState] || '#5A7855';
 
+  const latestSymptomProfile = messages[messages.length - 1]?.symptom_profile || null;
+  const activeTier = messages.slice().reverse().find(m => m.tier)?.tier || 'Green';
+
+  const getPhaseDescription = () => {
+    switch (currentPhase) {
+      case 'GREETING':
+        return l('स्वागत एवं प्रारंभिक लक्षण intake', 'Welcome & initial symptom intake', 'Swagat aur initial intake');
+      case 'CONSULTATION':
+        return messages.length <= 2
+          ? l('लक्षण अवधि व तीव्रता निर्धारण', 'Symptom characterization & duration', 'Lakshan avadhi aur tivrata nirdharan')
+          : l('संबंधित लक्षण व नैदानिक मूल्यांकन', 'Associated symptoms & clinical safety assessment', 'Sambandhit lakshan aur safety assessment');
+      case 'CONCLUDED':
+        return l('सत्यापित आयुष नुस्खे व सलाह प्रस्तुत', 'Verified AYUSH remedy & clinical advice delivered', 'Satyapit upchar aur salah');
+      case 'EMERGENCY':
+        return l('आपातकालीन 108 अस्पताल रेफरल', 'Immediate 108 hospital escalation', 'Apatkaleen 108 hospital referral');
+      default:
+        return l('नैदानिक परामर्श प्रगति पर', 'Clinical consultation in progress', 'Paramarsh pragati par');
+    }
+  };
+
   /* ══════════════════════════════════════════════════════════════
-     RENDER — ChatGPT/Gemini-style 3-column layout
-     [Sidebar] [Chat Column]
+     RENDER — 2-Column Responsive Clinical Workspace
+     Left (8-9 cols): Main Chat Pane
+     Right (3-4 cols): Clinical Context & Safeguards Sidebar
      ════════════════════════════════════════════════════════════ */
   return (
     <div
       ref={chatContainerRef}
-      className="flex bg-mist dark:bg-[#0F1521] text-primary overflow-hidden w-full h-full"
+      className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-2 lg:py-4 h-[calc(100dvh-7.5rem)] md:h-[calc(100dvh-4.25rem)] w-full overflow-hidden"
       style={{ fontSize: `${textScale}rem` }}
     >
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full overflow-hidden">
 
-      {/* Mobile Backdrop for Sidebar */}
-      {sidebarOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-xs animate-fadeIn"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ════════════════════════════════════════════════════════
-          LEFT SIDEBAR — History + Controls (like ChatGPT)
-          ════════════════════════════════════════════════════ */}
-      <div className={`
-        fixed md:relative inset-y-0 left-0 z-50 md:z-0
-        shrink-0 flex flex-col border-r border-sage/15 dark:border-gray-800 bg-white dark:bg-[#131E2B]
-        transition-all duration-300 overflow-hidden h-full
-        ${sidebarOpen ? 'w-72 md:w-64 translate-x-0 shadow-2xl md:shadow-none' : 'w-0 -translate-x-full md:translate-x-0'}
-      `}>
-        {sidebarOpen && (
-          <>
-            {/* Sidebar Header */}
-            <div className="flex items-center justify-between px-4 py-3.5 border-b border-sage/10 dark:border-gray-800 shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-sage flex items-center justify-center">
-                  <Stethoscope className="w-3.5 h-3.5 text-white" />
-                </div>
-                <span className="font-serif font-bold text-sm text-primary">Sanjeevani</span>
+        {/* ════════════════════════════════════════════════════════
+            LEFT / MAIN CHAT PANE
+            ════════════════════════════════════════════════════ */}
+        <div className="lg:col-span-8 xl:col-span-9 flex flex-col h-full bg-card rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+          
+          {/* Slim Sticky Chat Header */}
+          <div className="px-4 py-2.5 border-b border-border-subtle flex items-center justify-between gap-2 shrink-0 bg-card">
+            {/* Left: Avatar + Title + Subtitle + Tier Badge */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-sage/15 text-sage flex items-center justify-center font-bold text-sm shrink-0">
+                🌿
               </div>
-              <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
-                <ChevronLeft className="w-4 h-4" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-serif font-bold text-sm text-primary truncate leading-tight">
+                    Dr. Sanjeevani
+                  </h2>
+                  <TierBadge tier={activeTier} />
+                </div>
+                <p className="text-[10px] text-muted truncate leading-tight">
+                  Bhashini · MTS Triage
+                </p>
+              </div>
+            </div>
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Mobile-only toggle for Context & Comorbidities */}
+              <button
+                type="button"
+                onClick={() => setMobileContextOpen((o) => !o)}
+                className={`lg:hidden px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                  mobileContextOpen
+                    ? 'bg-sage text-white border-sage'
+                    : 'border-border-subtle text-muted hover:text-primary bg-surface'
+                }`}
+                title={l('मरीज स्थितियां देखें', 'View patient tags')}
+              >
+                <Leaf className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-bold">Tags ({knownConditions.length})</span>
+              </button>
+
+              {/* Live Voice Button */}
+              <button
+                type="button"
+                onClick={() => setShowLiveRoom(true)}
+                className="touch-target inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-sage to-[#4a6346] hover:from-[#4a6346] hover:to-[#3b5038] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                title={l('लाइव आवाज़ कॉल शुरू करें', 'Start Live Voice Call')}
+              >
+                <Mic className="w-3.5 h-3.5 animate-pulse" />
+                <span className="hidden sm:inline">{l('🎙️ लाइव कॉल', '🎙️ Live Voice', '🎙️ Live Voice')}</span>
+              </button>
+
+              {/* New Session Button */}
+              <button
+                type="button"
+                onClick={handleNewSession}
+                className="p-2 rounded-xl border border-border-subtle text-muted hover:border-sage/40 hover:text-primary transition-all cursor-pointer"
+                title={l('नया सत्र शुरू करें', 'New Session', 'Naya Session')}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
               </button>
             </div>
+          </div>
 
-            {/* New Chat Button */}
-            <div className="px-3 py-2.5 shrink-0">
-              <button onClick={handleNewSession}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-sage/25 dark:border-gray-700 text-sage dark:text-booti-glow hover:bg-sage/8 dark:hover:bg-sage/15 transition-all text-sm font-semibold group">
-                <Plus className="w-4 h-4 shrink-0" />
-                Naya Paramarsh
-              </button>
-            </div>
+          {/* Mobile-Only Compact Progress Strip */}
+          <div className="lg:hidden px-3 py-1.5 bg-surface/60 border-b border-border-subtle shrink-0">
+            <PhaseProgress
+              currentPhase={currentPhase}
+              turnCount={messages.length}
+              symptomProfile={latestSymptomProfile}
+            />
 
-            {/* Session History */}
-            <div className="flex-1 overflow-y-auto px-3 pb-3 min-h-0">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 px-1 mb-2 mt-1">Itihas</p>
-
-              {sessions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <Clock className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                    Abhi tak koi<br />consultation record nahi
-                  </p>
+            {/* Collapsible Mobile Drawer for Patient Tags */}
+            {mobileContextOpen && (
+              <div className="mt-2 pt-2 border-t border-border-subtle space-y-1.5 animate-fadeIn">
+                <div className="flex items-center justify-between text-[11px] font-bold text-muted">
+                  <span>{l('स्वास्थ्य स्थितियां (Comorbidity Safeguards):', 'Pre-existing Conditions:')}</span>
+                  <button
+                    type="button"
+                    onClick={() => setMobileContextOpen(false)}
+                    className="text-muted hover:text-primary p-0.5 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              ) : (
-                <div className="space-y-1">
-                  {sessions.map(s => (
-                    <div key={s.conversationId}
-                      onClick={() => handleSelectSession(s)}
-                      className="group flex items-start justify-between gap-2 px-2.5 py-2 rounded-xl hover:bg-sage/6 dark:hover:bg-sage/12 cursor-pointer transition-all">
-                      <div className="flex items-start gap-2 min-w-0 flex-1">
-                        <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${s.tier === 'Red' ? 'bg-rose-soft' : s.tier === 'Yellow' ? 'bg-gold-warm' : 'bg-sage'}`} />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs text-primary dark:text-[#C8D4E0] leading-snug line-clamp-2 group-hover:text-primary dark:group-hover:text-white">{s.summary || 'Consultation'}</p>
-                          <p className="text-[9px] text-gray-400 mt-0.5">{toEnglishDigits(new Date(s.updatedAt).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' }))}</p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteSession(s.conversationId, e)}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded-md text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all shrink-0 cursor-pointer"
-                        title={l('हटाएं', 'Delete')}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Sidebar Bottom — Conditions + Emergency */}
-            <div className="shrink-0 border-t border-sage/10 dark:border-gray-800 px-3 py-3 space-y-2">
-              {/* Comorbidities */}
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5">{l('आपकी स्थितियां', 'Known Conditions')}</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {getComorbidityOptions(l).map(opt => {
+                  {getComorbidityOptions(l).map((opt) => {
                     const on = knownConditions.includes(opt.value);
                     return (
-                      <button key={opt.value} onClick={() => toggleCondition(opt.value)}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer ${on ? 'bg-sage text-white border-sage' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-sage/40'}`}>
-                        {opt.icon} {on ? '✓ ' : ''}{opt.label}
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => toggleCondition(opt.value)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold transition-all text-[11px] border cursor-pointer ${
+                          on
+                            ? 'bg-sage text-white border-sage shadow-2xs font-bold'
+                            : 'bg-card text-muted border-border-subtle hover:border-sage/40'
+                        }`}
+                      >
+                        <span>{opt.icon}</span>
+                        <span>{on ? '✓ ' : ''}{opt.label}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
-
-              {/* Clear History */}
-              {sessions.length > 0 && (
-                <button onClick={handleClearHistory}
-                  className="w-full flex items-center justify-center gap-1.5 text-[11px] text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 py-1.5 rounded-lg transition-all cursor-pointer font-bold">
-                  <Trash2 className="w-3 h-3" /> {l('इतिहास साफ करें', 'Clear History')}
-                </button>
-              )}
-
-              {/* Emergency */}
-              <a href="tel:108" className="w-full flex items-center justify-center gap-1.5 bg-rose-soft hover:bg-rose-soft/90 text-white py-2 rounded-xl text-xs font-bold transition-all shadow-sm">
-                <PhoneCall className="w-3.5 h-3.5" /> {l('108 आपातकालीन सहायता', '108 Emergency Call')}
-              </a>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* ════════════════════════════════════════════════════════
-          MAIN CHAT COLUMN
-          ════════════════════════════════════════════════════ */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden">
-
-        {/* ── Top Bar (permanently pinned) ──────────────────── */}
-        <div className="shrink-0 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 bg-white/95 dark:bg-[#131E2B]/95 backdrop-blur-md border-b border-sage/12 dark:border-gray-800 z-10 overflow-visible">
-
-          {/* Universal Back Button */}
-          <BackButton fallback="/mitra" showLabel={false} className="shrink-0" />
-
-          {/* Sidebar toggle */}
-          <button onClick={() => setSidebarOpen(o => !o)}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-sage hover:bg-sage/8 transition-all shrink-0"
-            title={sidebarOpen ? 'Hide history' : 'Show history'}>
-            {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-
-          {/* ── Orb + Identity — centred like Gemini ──── */}
-          <div className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group" onClick={toggleListening} title={isListening ? 'Sunna band karein' : 'Mic — tap to speak'}>
-            <div className="relative shrink-0 overflow-visible py-0.5">
-              <div className="hidden sm:block overflow-visible"><SanjeevaniOrb state={orbState} size={38} /></div>
-              <div className="sm:hidden overflow-visible"><SanjeevaniOrb state={orbState} size={32} /></div>
-              {/* Mic badge */}
-              <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 border-white dark:border-[#131E2B] flex items-center justify-center transition-all ${
-                isListening ? 'bg-rose-soft animate-pulse' : 'bg-sage group-hover:bg-gold-warm'
-              }`}>
-                {isListening ? <MicOff className="w-1.5 h-1.5 sm:w-2 sm:h-2 text-white" /> : <Mic className="w-1.5 h-1.5 sm:w-2 sm:h-2 text-white" />}
-              </div>
-            </div>
-            <div>
-              <p className="font-serif font-bold text-xs sm:text-sm text-primary leading-tight">Dr. Sanjeevani</p>
-              <p className="text-[9px] sm:text-[10px] font-semibold" style={{ color: stateColor }}>{stateLabel}</p>
-            </div>
+            )}
           </div>
 
-          {/* Connection */}
-          {backendOnline !== false && (
-            <div className={`hidden sm:flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg ${
-              backendOnline === null ? 'text-gray-400' : 'text-sage bg-sage/10'
-            }`}>
-              {backendOnline === null ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Wifi className="w-3 h-3" />}
-              <span className="hidden md:inline">{backendOnline === null ? 'Jud raha…' : 'Online'}</span>
+          {/* Sticky Offline / Technical Error Banners */}
+          {backendOnline === false && (
+            <div className="shrink-0 mx-4 mt-2 bg-gold-warm/15 border border-gold-warm/40 rounded-2xl p-2.5 flex items-start gap-2.5 text-xs text-primary animate-fadeIn shadow-xs">
+              <WifiOff className="w-4 h-4 shrink-0 text-gold-warm mt-0.5" />
+              <div>
+                <strong className="block font-bold text-gold-warm">
+                  {l('ऑफ़लाइन मोड सक्रिय:', 'Offline Mode Active:')}
+                </strong>
+                <span>
+                  {l('सर्वर से संपर्क नहीं हो पा रहा है। यह स्थानीय ऑफ़लाइन प्राथमिक सलाह है।', 'Server unavailable. Providing offline estimated guidance.')}
+                </span>
+              </div>
             </div>
           )}
 
-          {/* Family Member Switcher */}
-          <div className="shrink-0">
-            <FamilySelector onMemberChange={handleFamilyMemberChange} />
-          </div>
-
-          <div className="flex-1" />
-
-          {/* Phase tracker (compact) */}
-          <div className="hidden lg:block">
-            <PhaseProgress
-              currentPhase={currentPhase}
-              turnCount={messages.filter(m => m.sender === 'user').length}
-              symptomProfile={messages[messages.length - 1]?.symptom_profile}
-            />
-          </div>
-
-          {/* Controls */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            <AccessibilityBar scale={textScale} onScaleChange={setTextScale} lang={lang} onLangChange={setLang} />
-            <button onClick={() => setSettingsOpen(o => !o)}
-              className={`p-1.5 sm:p-2 rounded-xl border text-xs transition-all ${settingsOpen ? 'bg-sage text-white border-sage' : 'border-border-subtle text-muted hover:border-sage/40 hover:text-primary cursor-pointer'}`}>
-              <Settings2 className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Live Hands-Free Voice Call Launcher */}
-            <button
-              type="button"
-              onClick={() => setShowLiveRoom(true)}
-              className="touch-target inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-sage to-[#4a6346] hover:from-[#4a6346] hover:to-[#3b5038] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
-              title={l('लाइव आवाज़ कॉल शुरू करें', 'Start Live Voice Call', 'Live Voice Call Shuru Karein')}
-            >
-              <Mic className="w-3.5 h-3.5 animate-pulse" />
-              <span>{l('🎙️ लाइव कॉल', '🎙️ Live Voice Call', '🎙️ Live Call')}</span>
-            </button>
-
-            <button onClick={handleNewSession} className="p-1.5 sm:p-2 rounded-xl border border-border-subtle text-muted hover:border-sage/40 hover:text-primary transition-all cursor-pointer" title={l('नया सत्र', 'New Session', 'Naya Session')}>
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* ── Patient Tags Quick Bar ──────────────────── */}
-        <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-gray-50/90 dark:bg-[#101924]/90 border-b border-sage/10 dark:border-gray-800/60 overflow-x-auto text-[11px] no-scrollbar">
-          <span className="font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-[10px] shrink-0 flex items-center gap-1">
-            <span>{l('मरीज टैग:', 'Patient Tags:', 'Patient Tags:')}</span>
-          </span>
-          {getComorbidityOptions(l).map(opt => {
-            const on = knownConditions.includes(opt.value);
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => toggleCondition(opt.value)}
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-semibold transition-all shrink-0 cursor-pointer text-[11px] border ${
-                  on
-                    ? 'bg-sage text-white border-sage shadow-2xs font-bold ring-1 ring-sage/40'
-                    : 'bg-white/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-sage/40'
-                }`}
-                title={on ? l('टैग हटाएं', 'Remove tag') : l('टैग जोड़ें', 'Add tag')}
-              >
-                <span>{opt.icon}</span>
-                <span>{on ? '✓ ' : ''}{opt.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ── Settings Panel ──────────────────────────────────── */}
-        {settingsOpen && (
-          <div className="shrink-0 bg-white dark:bg-[#1A2538] border-b border-sage/12 dark:border-gray-800 px-4 py-3 animate-fadeIn">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-primary">{l('पहले से मौजूद स्थितियां:', 'Pre-existing Conditions:', 'Pehle Se Maujood Sthitiyan:')}</span>
-              <button onClick={() => setSettingsOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-3.5 h-3.5" /></button>
+          {error && (
+            <div className="shrink-0 mx-4 mt-2 bg-rose-soft/10 border border-rose-soft/30 rounded-2xl p-2.5 flex items-start gap-2 text-xs text-rose-soft animate-fadeIn">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div><strong className="block font-bold">{l('तकनीकी असुविधा:', 'Technical Error:')}</strong>{error}</div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {getComorbidityOptions(l).map(opt => {
-                const on = knownConditions.includes(opt.value);
-                return (
-                  <button key={opt.value} onClick={() => toggleCondition(opt.value)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${on ? 'bg-sage text-white border-sage' : 'bg-white dark:bg-[#1E2A43] text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-sage/40'}`}>
-                    {opt.icon} {on ? '✓ ' : ''}{opt.label}
-                  </button>
-                );
-              })}
-            </div>
-            {/* Mobile Phase */}
-            <div className="lg:hidden mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-              <PhaseProgress
-                currentPhase={currentPhase}
-                turnCount={messages.filter(m => m.sender === 'user').length}
-                symptomProfile={messages[messages.length - 1]?.symptom_profile}
-              />
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* ── Full-Width Sticky Offline Banner ──────────────────── */}
-        {backendOnline === false && (
-          <div className="shrink-0 mx-4 mt-2 bg-gold-warm/15 border border-gold-warm/40 rounded-2xl p-3 flex items-start gap-2.5 text-xs text-primary animate-fadeIn shadow-xs">
-            <WifiOff className="w-4 h-4 shrink-0 text-gold-warm mt-0.5" />
-            <div>
-              <strong className="block font-bold text-gold-warm">
-                {l('ऑफ़लाइन मोड सक्रिय:', 'Offline Mode Active:', 'Offline Mode Active:')}
-              </strong>
-              <span>
-                {l('सर्वर से संपर्क नहीं हो पा रहा है। यह स्थानीय ऑफ़लाइन प्राथमिक सलाह है — नेटवर्क उपलब्ध होने पर पुनः जांचें।', 'Server unavailable. Providing offline estimated guidance — please verify once reconnected.', 'Server se sampark nahi ho pa raha hai. Yeh local offline salah hai.')}
-              </span>
-            </div>
-          </div>
-        )}
+          <FollowUpBanner onEscalate={handleFollowUpEscalation} />
 
-        {/* ── Error Banner ────────────────────────────────────── */}
-        {error && (
-          <div className="shrink-0 mx-4 mt-2 bg-rose-soft/10 border border-rose-soft/30 rounded-2xl p-3 flex items-start gap-2 text-xs text-rose-soft animate-fadeIn">
-            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <div><strong className="block font-bold">{l('तकनीकी असुविधा:', 'Technical Error:', 'Takneeki Asuvidha:')}</strong>{error}</div>
-          </div>
-        )}
-
-        {/* 24-Hour Recovery Follow-Up Banner */}
-        <FollowUpBanner onEscalate={handleFollowUpEscalation} />
-
-        {/* ── MESSAGE AREA (only this area scrolls) ── */}
-        <div className="flex-1 overflow-y-auto min-h-0 relative overscroll-contain">
-
-          {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-              EMPTY STATE — Big centred Orb when no convo yet
-              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          {isEmptyChat ? (
-            <div className="flex flex-col items-center justify-center h-full py-4 sm:py-8 px-3 sm:px-6 animate-fadeIn">
-              {/* The hero Orb */}
-              <div className="relative mb-3 sm:mb-6 cursor-pointer group" onClick={toggleListening}>
-                {/* Glow behind orb */}
-                <div className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${stateColor}20 0%, transparent 70%)`, transform: 'scale(1.6)' }} />
-                <div className="hidden sm:block"><SanjeevaniOrb state={orbState} size={120} showLabel={false} /></div>
-                <div className="sm:hidden"><SanjeevaniOrb state={orbState} size={64} showLabel={false} /></div>
-                {/* Big mic ring */}
-                <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold shadow-md transition-all ${
-                  isListening
-                    ? 'bg-rose-soft text-white animate-pulse'
-                    : 'bg-white dark:bg-warm-indigo text-sage dark:text-booti-glow border border-sage/30 group-hover:border-sage'
-                }`}>
-                  {isListening ? <><MicOff className="w-3 h-3" /> {l('रोकें', 'Stop', 'Ruk jaiye')}</> : <><Mic className="w-3 h-3" /> {l('बोलें', 'Speak', 'Boliye')}</>}
+          {/* Scrollable Conversation Stream */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 min-h-0 relative overscroll-contain">
+            {isEmptyChat ? (
+              <div className="flex flex-col items-center justify-center h-full py-4 sm:py-8 px-3 sm:px-6 animate-fadeIn">
+                <div className="relative mb-3 sm:mb-6 cursor-pointer group" onClick={toggleListening}>
+                  <div className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${stateColor}20 0%, transparent 70%)`, transform: 'scale(1.6)' }} />
+                  <div className="hidden sm:block"><SanjeevaniOrb state={orbState} size={110} showLabel={false} /></div>
+                  <div className="sm:hidden"><SanjeevaniOrb state={orbState} size={64} showLabel={false} /></div>
+                  <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold shadow-md transition-all ${
+                    isListening
+                      ? 'bg-rose-soft text-white animate-pulse'
+                      : 'bg-card text-sage border border-sage/30 group-hover:border-sage'
+                  }`}>
+                    {isListening ? <><MicOff className="w-3 h-3" /> {l('रोकें', 'Stop', 'Ruk jaiye')}</> : <><Mic className="w-3 h-3" /> {l('बोलें', 'Speak', 'Boliye')}</>}
+                  </div>
                 </div>
-              </div>
 
-              {/* Title */}
-              <h2 className="font-serif text-lg sm:text-2xl font-bold text-primary text-center mt-2 sm:mt-4 mb-0.5 sm:mb-1">
-                {l('नमस्ते! 🙏', 'Hello! 🙏', 'Namaste! 🙏')}
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs mb-3 sm:mb-8">
-                {l('मैं डॉ. संजीवनी हूँ। आपकी तकलीफ सुनने के लिए तैयार हूँ।', 'I am Dr. Sanjeevani. Ready to listen and assist with your symptoms.', 'Main Dr. Sanjeevani hoon. Aapki takleef sunne ke liye taiyar hoon.')}
-              </p>
-
-              {/* Symptom quick-pick tiles */}
-              <div className="w-full max-w-md">
-                <p className="text-[10px] sm:text-[11px] font-semibold text-gray-400 uppercase tracking-widest text-center mb-2 sm:mb-3">
-                  {l('या यहाँ से लक्षण चुनें', 'Or choose from quick symptoms below', 'Ya yahan se chuniye')}
+                <h2 className="font-serif text-lg sm:text-2xl font-bold text-primary text-center mt-2 sm:mt-4 mb-0.5 sm:mb-1">
+                  {l('नमस्ते! 🙏', 'Hello! 🙏', 'Namaste! 🙏')}
+                </h2>
+                <p className="text-xs sm:text-sm text-muted text-center max-w-xs mb-3 sm:mb-6">
+                  {l('मैं डॉ. संजीवनी हूँ। आपकी तकलीफ सुनने के लिए तैयार हूँ।', 'I am Dr. Sanjeevani. Ready to listen and assist with your symptoms.', 'Main Dr. Sanjeevani hoon. Aapki takleef sunne ke liye taiyar hoon.')}
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-2.5 sm:mb-4">
-                  {getQuickSymptoms(lang).map(s => (
-                    <button key={s.value} onClick={() => sendText(s.value)}
-                      className="symptom-tile flex flex-col items-center justify-center gap-1.5 sm:gap-2 py-3 sm:py-4 px-2 sm:px-3 rounded-2xl bg-white dark:bg-[#1A2538] border border-gray-200 dark:border-gray-700 hover:border-sage/50 hover:shadow-md transition-all active:scale-95 group cursor-pointer">
-                      <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">{s.emoji}</span>
-                      <span className="text-xs sm:text-sm font-bold text-primary dark:text-[#C8D4E0] truncate max-w-full">{s.label}</span>
-                    </button>
-                  ))}
+
+                <div className="w-full max-w-md">
+                  <p className="text-[10px] sm:text-[11px] font-semibold text-muted uppercase tracking-widest text-center mb-2 sm:mb-3">
+                    {l('या यहाँ से लक्षण चुनें', 'Or choose from quick symptoms below', 'Ya yahan se chuniye')}
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
+                    {getQuickSymptoms(lang).map(s => (
+                      <button key={s.value} onClick={() => sendText(s.value)}
+                        className="symptom-tile flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-2xl bg-surface border border-border-subtle hover:border-sage/50 hover:shadow-md transition-all active:scale-95 group cursor-pointer">
+                        <span className="text-2xl group-hover:scale-110 transition-transform">{s.emoji}</span>
+                        <span className="text-xs font-bold text-primary truncate max-w-full">{s.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <SymptomChips disabled={loading} onPick={val => sendText(val)} />
                 </div>
-                {/* Text chips */}
-                <SymptomChips disabled={loading} onPick={val => sendText(val)} />
               </div>
-            </div>
-          ) : (
-            /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                ACTIVE CHAT — message bubbles
-               ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-            <div className="max-w-2xl mx-auto w-full px-2.5 sm:px-4 py-3 sm:py-6 space-y-2.5 sm:space-y-4">
-              {messages.map((msg, idx) => (
-                <MessageBubble
-                  key={idx}
-                  msg={msg}
-                  conversationId={conversationIdRef.current}
-                  turnIndex={idx}
-                  patientMember={currentFamilyMember}
-                  isSpeaking={speakingMsgIdx === idx}
-                  isDownloading={downloadingIdx?.startsWith(`${idx}-`)}
-                  downloadingFormat={downloadingIdx?.replace(`${idx}-`, '')}
-                  isLatestBot={idx === lastBotIdx}
-                  currentPhase={currentPhase}
-                  isCorrecting={correctingIdx === idx}
-                  correctionText={correctionText}
-                  onStartCorrection={() => {
-                    setCorrectionText(lastUserText);
-                    setCorrectingIdx(idx);
-                  }}
-                  onCancelCorrection={() => setCorrectingIdx(null)}
-                  onCorrectionChange={setCorrectionText}
-                  onSubmitCorrection={handleCorrectionSubmit}
-                  onReadAloud={() => readAloud(msg.text, idx, msg.spoken_text || msg.spoken_reply_text)}
-                  onStopSpeaking={() => {
-                    stopSpeakingRef.current?.();
-                    setSpeakingMsgIdx(null);
-                  }}
-                  onDownloadReport={(format) => handleDownloadReport(msg, idx, format)}
-                  onShowReferralQR={(data) => setQrModalData(data)}
-                  onOpenJanAushadhi={() => setShowJanAushadhiModal(true)}
-                />
-              ))}
-              {loading && <div className="py-1"><CalmLoader /></div>}
-              <div ref={chatEndRef} />
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="max-w-3xl mx-auto w-full space-y-4">
+                {messages.map((msg, idx) => (
+                  <MessageBubble
+                    key={idx}
+                    msg={msg}
+                    conversationId={conversationIdRef.current}
+                    turnIndex={idx}
+                    patientMember={currentFamilyMember}
+                    isSpeaking={speakingMsgIdx === idx}
+                    isDownloading={downloadingIdx?.startsWith(`${idx}-`)}
+                    downloadingFormat={downloadingIdx?.replace(`${idx}-`, '')}
+                    isLatestBot={idx === lastBotIdx}
+                    currentPhase={currentPhase}
+                    isCorrecting={correctingIdx === idx}
+                    correctionText={correctionText}
+                    onStartCorrection={() => {
+                      setCorrectionText(lastUserText);
+                      setCorrectingIdx(idx);
+                    }}
+                    onCancelCorrection={() => setCorrectingIdx(null)}
+                    onCorrectionChange={setCorrectionText}
+                    onSubmitCorrection={handleCorrectionSubmit}
+                    onReadAloud={() => readAloud(msg.text, idx, msg.spoken_text || msg.spoken_reply_text)}
+                    onStopSpeaking={() => {
+                      stopSpeakingRef.current?.();
+                      setSpeakingMsgIdx(null);
+                    }}
+                    onDownloadReport={(format) => handleDownloadReport(msg, idx, format)}
+                    onShowReferralQR={(data) => setQrModalData(data)}
+                    onOpenJanAushadhi={() => setShowJanAushadhiModal(true)}
+                  />
+                ))}
+                {loading && <div className="py-1"><CalmLoader /></div>}
+                <div ref={chatEndRef} />
+              </div>
+            )}
+          </div>
 
-        {/* ── INPUT BAR — permanently docked ─────────────────── */}
-        <div className="shrink-0 bg-white/95 dark:bg-[#131E2B]/95 backdrop-blur-md border-t border-sage/12 dark:border-gray-800 z-10">
-          {/* Condition strip */}
-          {knownConditions.length > 0 && (
-            <div className="max-w-2xl mx-auto px-3 sm:px-4 pt-1.5 sm:pt-2 flex items-center gap-1.5">
-              <Leaf className="w-3 h-3 text-sage shrink-0" />
-              <span className="text-[9px] sm:text-[10px] text-muted truncate">{l('स्थितियां:', 'Conditions:', 'Sthitiyan:')} {knownConditions.join(', ')}</span>
-            </div>
-          )}
-
-          {/* 1-Tap Bilingual Symptom Starter Chips (Zero-Typing Start on GREETING) */}
-          {messages.length === 1 && currentPhase === 'GREETING' && (
-            <div className="max-w-2xl mx-auto px-3 sm:px-4 pt-2 pb-1 animate-fadeIn">
-              <p className="text-[10px] font-extrabold text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-gold-warm" />
-                <span>{l('1-टैप मुख्य लक्षण (Zero-Typing Start):', '1-Tap Common Symptoms (Zero-Typing Start):', '1-Tap Lakshan:')}</span>
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto no-scrollbar">
+          {/* Bottom Composer Dock */}
+          <div className="shrink-0 bg-surface/50 border-t border-border-subtle p-2.5 sm:p-3.5 space-y-2">
+            {/* Quick-Select / Quick-Reply Chip Rail */}
+            {messages.length === 1 && currentPhase === 'GREETING' ? (
+              <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap no-scrollbar animate-fadeIn">
                 {STARTER_SYMPTOM_CHIPS.map((chip, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => sendText(chip.text)}
                     disabled={loading}
-                    className="touch-target text-left text-xs px-3 py-2 rounded-xl bg-surface hover:bg-sage/15 text-primary border border-border-subtle hover:border-sage/40 transition-all font-medium flex items-center justify-between gap-2 shadow-2xs cursor-pointer group"
+                    className="touch-target shrink-0 text-xs px-3 py-1.5 rounded-full bg-surface hover:bg-sage/15 text-primary border border-border-subtle hover:border-sage/40 transition-all font-medium shadow-2xs cursor-pointer active:scale-95 whitespace-nowrap"
                   >
-                    <span className="truncate">{chip.label}</span>
-                    <span className="text-sage opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                    {chip.label}
                   </button>
                 ))}
               </div>
-            </div>
-          )}
+            ) : contextualQuickReplies.length > 0 ? (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar animate-fadeIn">
+                <span className="text-[10px] font-bold text-muted uppercase tracking-wider shrink-0 flex items-center gap-1">
+                  <MessageCircle className="w-3 h-3 text-sage" />
+                  <span>{l('त्वरित उत्तर:', 'Quick Reply:', 'Jaldi Jawab:')}</span>
+                </span>
+                {contextualQuickReplies.map((pill, pIdx) => (
+                  <button
+                    key={pIdx}
+                    type="button"
+                    onClick={() => sendText(pill)}
+                    disabled={loading}
+                    className="touch-target shrink-0 text-xs px-3 py-1.5 rounded-full bg-sage/15 hover:bg-sage/25 text-sage border border-sage/30 hover:border-sage transition-all font-semibold cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
+                  >
+                    {pill}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
-          {/* Contextual Quick-Reply Pills During CONSULTATION */}
-          {contextualQuickReplies.length > 0 && (
-            <div className="max-w-2xl mx-auto px-3 sm:px-4 pt-2 pb-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar animate-fadeIn">
-              <span className="text-[10px] font-bold text-muted uppercase tracking-wider shrink-0 flex items-center gap-1">
-                <MessageCircle className="w-3 h-3 text-sage" />
-                <span>{l('त्वरित उत्तर:', 'Quick Reply:', 'Jaldi Jawab:')}</span>
+            {/* Input Row */}
+            <form onSubmit={handleSend} className="flex items-center gap-2">
+              {/* Mic Button */}
+              <button
+                type="button"
+                onClick={toggleListening}
+                className={`min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                  isListening
+                    ? 'bg-rose-soft text-white animate-pulse ring-2 ring-rose-soft/30 shadow-md'
+                    : 'bg-sage/10 hover:bg-sage/20 border border-sage/30 text-sage'
+                }`}
+                aria-label="Voice input"
+                title={isListening ? l('सुनना बंद करें', 'Stop listening') : l('बोलकर बताएं', 'Speak symptoms')}
+              >
+                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+
+              {/* Camera Vision Scanner */}
+              <button
+                type="button"
+                onClick={() => setShowVisionModal(true)}
+                disabled={loading}
+                className="min-w-[44px] min-h-[44px] rounded-xl border border-border-subtle bg-surface hover:bg-sage/15 text-muted hover:text-primary flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                title={l('दवा पर्ची या लक्षण फोटो स्कैन करें', 'Scan Rx, medicine strip or symptom photo')}
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+
+              {/* Text Input */}
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={isListening ? l('सुन रहा हूँ… 🎙️', 'Listening… 🎙️') : l('लक्षण लिखें या बोलें...', 'Type or speak your symptoms...')}
+                disabled={loading}
+                className="flex-1 py-2.5 px-4 text-sm bg-surface text-primary border border-border-subtle rounded-xl focus:outline-none focus:ring-2 focus:ring-sage/40 transition-all placeholder:text-muted"
+              />
+
+              {/* Send Button */}
+              <button
+                type="submit"
+                disabled={!inputText.trim() || loading}
+                className="min-w-[44px] min-h-[44px] bg-sage hover:bg-sage/90 text-white rounded-xl flex items-center justify-center transition-all disabled:opacity-40 shadow-sm cursor-pointer"
+                aria-label="Send"
+              >
+                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* ════════════════════════════════════════════════════════
+            RIGHT CLINICAL CONTEXT SIDEBAR (Desktop Only)
+            ════════════════════════════════════════════════════ */}
+        <div className="hidden lg:flex lg:col-span-4 xl:col-span-3 flex-col gap-4 h-full overflow-y-auto no-scrollbar">
+          {/* Card 1 — Consultation Stage */}
+          <div className="bg-card rounded-2xl p-4 border border-border-subtle shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif font-bold text-sm text-primary flex items-center gap-1.5">
+                <Stethoscope className="w-4 h-4 text-sage" />
+                <span>{l('परामर्श प्रगति', 'Consultation Progress', 'Consultation Progress')}</span>
+              </h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sage/15 text-sage">
+                {currentPhase}
               </span>
-              {contextualQuickReplies.map((pill, pIdx) => (
-                <button
-                  key={pIdx}
-                  type="button"
-                  onClick={() => sendText(pill)}
-                  disabled={loading}
-                  className="touch-target shrink-0 text-xs px-3 py-1.5 rounded-full bg-sage/15 hover:bg-sage/25 text-sage dark:text-booti-glow border border-sage/30 hover:border-sage transition-all font-semibold cursor-pointer shadow-2xs active:scale-95"
-                >
-                  {pill}
-                </button>
-              ))}
             </div>
-          )}
 
-          <form onSubmit={handleSend} className="max-w-2xl mx-auto flex items-end gap-1.5 sm:gap-2 px-2 py-1.5 sm:p-2.5">
-            {/* Mic */}
-            <button type="button" onClick={toggleListening}
-              className={`shrink-0 w-9 h-9 sm:w-11 sm:h-11 mb-0.5 rounded-xl flex items-center justify-center transition-all ${
-                isListening
-                  ? 'bg-rose-soft text-white animate-pulse ring-3 ring-[#B85042]/20 shadow-md'
-                  : 'bg-sage/10 border border-sage/30 text-sage dark:text-booti-glow hover:bg-sage/15'
-              }`}
-              aria-label="Voice input"
-            >
-              {isListening ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
-            </button>
-
-            {/* Camera / Medical Vision Scan Button */}
-            <button
-              type="button"
-              onClick={() => setShowVisionModal(true)}
-              disabled={loading}
-              className="shrink-0 w-9 h-9 sm:w-11 sm:h-11 mb-0.5 rounded-xl border border-sage/30 bg-sage/10 hover:bg-sage/20 dark:bg-booti-glow/10 dark:border-booti-glow/30 text-sage dark:text-booti-glow flex items-center justify-center transition-all cursor-pointer shadow-2xs"
-              title={l('दवा पर्ची या लक्षण फोटो स्कैन करें', 'Scan Rx, medicine strip or symptom photo', 'Dawa parchi ya rash scan karein')}
-            >
-              <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-
-            {/* Manual EN/HI STT Voice Toggle */}
-            <button
-              type="button"
-              onClick={() => {
-                const current = sttLangOverride || (detectedLanguage === 'english' ? 'en-IN' : 'hi-IN');
-                const next = current === 'en-IN' ? 'hi-IN' : 'en-IN';
-                setSttLangOverride(next);
-                toast.success(l(`वॉइस भाषा: ${next === 'en-IN' ? 'अंग्रेज़ी' : 'हिंदी'}`, `Voice language: ${next === 'en-IN' ? 'English' : 'Hindi'}`, `Voice bhasha: ${next === 'en-IN' ? 'English' : 'Hindi'}`));
-              }}
-              className="shrink-0 h-9 sm:h-11 mb-0.5 px-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1A2538] text-[10px] sm:text-xs font-bold text-sage dark:text-booti-glow hover:bg-sage/10 transition-all flex items-center justify-center cursor-pointer"
-              title={l('वॉइस भाषा बदलें (EN/HI)', 'Voice Language Toggle (EN/HI)', 'Voice Bhasha Badlein (EN/HI)')}
-            >
-              {(sttLangOverride || (detectedLanguage === 'english' ? 'en-IN' : 'hi-IN')) === 'en-IN' ? 'EN' : 'HI'}
-            </button>
-
-            {/* Compact Responsive Textarea */}
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={isListening ? l('सुन रहा हूँ… 🎙️', 'Listening… 🎙️', 'Sun raha hoon… 🎙️') : l('लक्षण लिखें या बोलें...', 'Type or speak your symptoms...', 'Lakshan likhein ya bolein...')}
-              disabled={loading}
-              className="flex-1 min-w-0 bg-mist dark:bg-[#0F1521] border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm text-primary focus:outline-none focus:ring-2 focus:ring-sage/50 disabled:opacity-60 placeholder-gray-400 dark:placeholder-gray-500 resize-none overflow-y-auto leading-normal min-h-[36px] max-h-[110px] transition-[height] duration-75 ease-out"
+            <PhaseProgress
+              currentPhase={currentPhase}
+              turnCount={messages.length}
+              symptomProfile={latestSymptomProfile}
             />
 
-            {/* Send */}
-            <button type="submit" disabled={!inputText.trim() || loading}
-              className="shrink-0 w-9 h-9 sm:w-11 sm:h-11 mb-0.5 bg-sage hover:bg-sage/90 text-white rounded-xl flex items-center justify-center transition-all disabled:opacity-40 shadow-sm"
-              aria-label="Send"
+            <p className="text-xs text-muted leading-relaxed bg-surface/50 p-2.5 rounded-xl border border-border-subtle/60">
+              {getPhaseDescription()}
+            </p>
+          </div>
+
+          {/* Card 2 — Patient Health Profile & Comorbidities */}
+          <div className="bg-card rounded-2xl p-4 border border-border-subtle shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif font-bold text-sm text-primary flex items-center gap-1.5">
+                <HeartPulse className="w-4 h-4 text-rose-soft" />
+                <span>{l('स्वास्थ्य प्रोफ़ाइल व सुरक्षा', 'Health Profile & Safeguards', 'Health Profile')}</span>
+              </h3>
+              <span className="text-[10px] text-muted font-bold">
+                {knownConditions.length} {l('सक्रिय', 'Active')}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {getComorbidityOptions(l).map((opt) => {
+                const on = knownConditions.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => toggleCondition(opt.value)}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-semibold transition-all text-xs border cursor-pointer ${
+                      on
+                        ? 'bg-sage text-white border-sage shadow-2xs font-bold'
+                        : 'bg-surface text-muted border-border-subtle hover:border-sage/40'
+                    }`}
+                  >
+                    <span>{opt.icon}</span>
+                    <span>{on ? '✓ ' : ''}{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="text-[11px] text-muted leading-relaxed bg-surface/40 p-2.5 rounded-xl border border-border-subtle/50">
+              {l(
+                '💡 सक्रिय स्थितियां नेटवर्क-एक्स सुरक्षा ग्राफ द्वारा अनुचित जड़ी-बूटियों को स्वतः हटा देती हैं।',
+                '💡 Active conditions automatically filter out contraindicated herbs via the NetworkX Safety Graph.',
+                '💡 Active conditions automatically filter out contraindicated remedies.'
+              )}
+            </p>
+          </div>
+
+          {/* Card 3 — Quick Clinical Tools */}
+          <div className="bg-card rounded-2xl p-4 border border-border-subtle shadow-sm mt-auto space-y-3">
+            <h3 className="font-serif font-bold text-xs uppercase tracking-wider text-muted">
+              {l('त्वरित नैदानिक साधन', 'Quick Clinical Tools', 'Quick Tools')}
+            </h3>
+
+            {/* Direct shortcut to Eye Biomarker Scan */}
+            <Link
+              to="/patient/screen"
+              className="flex items-center justify-between p-3 rounded-xl bg-surface hover:bg-sage/10 text-primary border border-border-subtle hover:border-sage/30 transition-all text-xs font-semibold group"
             >
-              {loading ? <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-            </button>
-          </form>
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-sage" />
+                <span>{l('नेत्र बायोमार्कर जांच', 'Eye Biomarker Scan', 'Aankh Jaanch')}</span>
+              </div>
+              <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-sage group-hover:translate-x-0.5 transition-all" />
+            </Link>
+
+            {/* Emergency Helpline Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <a
+                href="tel:108"
+                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-rose-soft hover:bg-rose-soft/90 text-white text-xs font-bold shadow-xs transition-transform active:scale-95"
+                title="108 Emergency Ambulance"
+              >
+                <PhoneCall className="w-3.5 h-3.5 animate-pulse" />
+                <span>108 SOS</span>
+              </a>
+              <a
+                href="tel:104"
+                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-surface hover:bg-sage/15 text-primary border border-border-subtle text-xs font-bold transition-all"
+                title="104 National Health Helpline"
+              >
+                <span>104 Health</span>
+              </a>
+            </div>
+
+            {/* Recent Sessions Quick Switcher */}
+            {sessions.length > 0 && (
+              <div className="pt-2 border-t border-border-subtle/60">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-1.5 flex items-center justify-between">
+                  <span>{l('इतिहास', 'History', 'Itihas')}</span>
+                  <span className="text-[9px] font-normal">{sessions.length} records</span>
+                </p>
+                <div className="space-y-1 max-h-24 overflow-y-auto no-scrollbar">
+                  {sessions.slice(0, 3).map((s) => (
+                    <button
+                      key={s.conversationId}
+                      type="button"
+                      onClick={() => handleSelectSession(s)}
+                      className="w-full text-left p-1.5 rounded-lg hover:bg-surface text-[11px] truncate flex items-center gap-1.5 cursor-pointer text-muted hover:text-primary transition-colors"
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.tier === 'Red' ? 'bg-rose-soft' : s.tier === 'Yellow' ? 'bg-gold-warm' : 'bg-sage'}`} />
+                      <span className="truncate flex-1">{s.summary || 'Consultation'}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
       </div>

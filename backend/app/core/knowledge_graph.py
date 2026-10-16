@@ -130,6 +130,21 @@ class SafetyKnowledgeGraph:
         "newborn": "infantunder1year",
         "navjaat": "infantunder1year",
         "नवजात": "infantunder1year",
+
+        # Ear Discharge
+        "eardischarge": "eardischarge",
+        "ear discharge": "eardischarge",
+        "ear pus": "eardischarge",
+        "pus from ear": "eardischarge",
+        "kaan behna": "eardischarge",
+        "kan behna": "eardischarge",
+        "kaan se mavad": "eardischarge",
+        "kaan se mad": "eardischarge",
+        "kan se mavad": "eardischarge",
+        "mavad": "eardischarge",
+        "कान बहना": "eardischarge",
+        "कान से मवाद": "eardischarge",
+        "मवाद": "eardischarge",
     }
 
     def map_condition(self, condition: str) -> str:
@@ -199,6 +214,17 @@ class SafetyKnowledgeGraph:
                 mapped_conditions.add(canonical)
                 mapped_conditions.add(re.sub(r'[^a-z0-9]', '', canonical.lower()))
                 mapped_conditions.add(re.sub(r'[^a-z0-9]', '', c.lower()))
+
+        # Check explicit contraindicated_conditions on remedy dict if available
+        if isinstance(remedy_text, dict) or "remedy_dict" in locals():
+            r_dict = locals().get("remedy_dict") or (remedy_text if isinstance(remedy_text, dict) else {})
+            for c_cond in r_dict.get("contraindicated_conditions", []):
+                c_canon = self.map_condition(c_cond)
+                c_norm = re.sub(r'[^a-z0-9]', '', c_cond.lower())
+                c_canon_norm = re.sub(r'[^a-z0-9]', '', c_canon.lower())
+                for cond in mapped_conditions:
+                    if cond and (cond == c_canon or cond in c_norm or c_norm in cond or cond in c_canon_norm or c_canon_norm in cond):
+                        return False, f"Contraindication Alert [CRITICAL]: Strictly contraindicated when {c_cond} is present."
 
         for herb, target_condition, attrs in self.graph.edges(data=True):
             herb_aliases = [alias.strip().lower() for alias in herb.split("/")]

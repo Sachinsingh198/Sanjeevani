@@ -10,6 +10,13 @@ class SymptomProfile(TypedDict, total=False):
     severity: str
     associated_symptoms: List[str]
     comorbidities_asked: bool
+    symptom_characteristics: List[str]
+    aggravating_relieving_factors: str
+    agni_koshtha_notes: str
+    inferred_dosha: str
+    clinical_impression: str
+    rag_search_query: str
+    comorbidities_checked: bool
 
 
 class _AgentStateRequired(TypedDict):

@@ -133,7 +133,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-mist text-primary flex items-center justify-center px-4 py-12 relative overflow-hidden transition-colors duration-300">
+    <div className="min-h-[calc(100dvh-4.5rem)] bg-mist text-primary flex items-center justify-center px-4 py-8 relative overflow-hidden transition-colors duration-300">
       
       {/* Mountain Contour Background */}
       <div className="absolute top-10 left-0 right-0 pointer-events-none opacity-25 dark:opacity-15 z-0">
@@ -142,13 +142,13 @@ export default function Login() {
 
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gradient-to-b from-sage/15 via-[#D4A359]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-sm relative z-10 space-y-6">
+      <div className="w-full max-w-sm relative z-10 space-y-5">
         
         {/* Back Link */}
         <div className="text-left">
           <Link
             to="/"
-            className="touch-target inline-flex items-center gap-1.5 text-xs font-semibold text-muted dark:text-muted hover:text-primary transition-colors"
+            className="min-h-[44px] inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Home Par Wapas</span>
@@ -156,57 +156,64 @@ export default function Login() {
         </div>
 
         {/* Brand Header */}
-        <div className="text-center mb-4">
-          <div className="inline-block mb-3 animate-slow-float">
-            <SanjeevaniOrb state="idle" size={54} />
+        <div className="text-center mb-2">
+          <div className="inline-block mb-2 animate-slow-float">
+            <SanjeevaniOrb state="idle" size={50} />
           </div>
           <h1 className="font-serif text-2xl sm:text-3xl font-bold text-primary">
             Sanjeevani Login
           </h1>
-          <p className="text-xs sm:text-sm text-muted dark:text-muted mt-1 flex items-center justify-center gap-1.5">
+          <p className="text-xs sm:text-sm text-muted mt-1 flex items-center justify-center gap-1.5">
             <Leaf className="w-3.5 h-3.5 text-sage" />
             Apne Khate Me Pravesh Karein
           </p>
         </div>
 
-        {/* 1-Click Role Quick Fill Bar (DEV builds only) */}
-        {import.meta.env.DEV && (
-          <div className="bg-card dark:bg-card backdrop-blur-sm rounded-2xl p-3.5 border border-gray-200/80 dark:border-gray-800 shadow-xs">
-            <p className="text-[11px] font-bold text-gold-warm dark:text-gold-warm uppercase tracking-wider mb-2 flex items-center gap-1.5">
+        {/* Demo Credentials Box with 1-Tap Fill Demo Admin */}
+        <div className="bg-card backdrop-blur-sm rounded-2xl p-3.5 border border-border-subtle shadow-xs space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold text-gold-warm uppercase tracking-wider flex items-center gap-1.5">
               <KeyRound className="w-3.5 h-3.5" />
-              1-Click Demo Quick Login
+              Demo Credentials
             </p>
-            <div className="grid grid-cols-3 xs-grid-cols-1 gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('patient')}
-                className="touch-target flex flex-col items-center py-2 px-1 rounded-xl bg-sage/10 dark:bg-sage/20 hover:bg-sage/20 dark:hover:bg-sage/30 border border-sage/30 text-primary transition-all cursor-pointer"
-              >
-                <User className="w-4 h-4 text-sage dark:text-booti-glow mb-0.5" />
-                <span className="text-[11px] font-bold leading-tight">User</span>
-                <span className="text-[9px] text-muted dark:text-muted">Mitra</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('asha')}
-                className="touch-target flex flex-col items-center py-2 px-1 rounded-xl bg-gold-warm/15 dark:bg-gold-warm/20 hover:bg-gold-warm/25 border border-gold-warm/30 text-primary transition-all cursor-pointer"
-              >
-                <Users className="w-4 h-4 text-gold-warm dark:text-gold-warm mb-0.5" />
-                <span className="text-[11px] font-bold leading-tight">ASHA</span>
-                <span className="text-[9px] text-muted dark:text-muted">Worker</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin')}
-                className="touch-target flex flex-col items-center py-2 px-1 rounded-xl bg-warm-indigo/10 dark:bg-white/10 hover:bg-warm-indigo/15 border border-warm-indigo/20 text-primary transition-all cursor-pointer"
-              >
-                <Shield className="w-4 h-4 text-primary dark:text-booti-glow mb-0.5" />
-                <span className="text-[11px] font-bold leading-tight">Admin</span>
-                <span className="text-[9px] text-muted dark:text-muted">PHC Desk</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => handleQuickFill('admin')}
+              className="min-h-[28px] text-[10px] font-bold px-2.5 py-1 rounded-lg bg-sage/15 text-sage hover:bg-sage/25 border border-sage/30 transition-colors cursor-pointer flex items-center gap-1"
+            >
+              <span>⚡ Fill Demo Admin</span>
+            </button>
           </div>
-        )}
+          <div className="grid grid-cols-3 gap-1.5">
+            <button
+              type="button"
+              onClick={() => handleQuickFill('patient')}
+              className="min-h-[44px] flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-sage/10 hover:bg-sage/20 border border-sage/30 text-primary transition-all cursor-pointer"
+            >
+              <User className="w-4 h-4 text-sage mb-0.5" />
+              <span className="text-[11px] font-bold leading-tight">User / Mitra</span>
+              <span className="text-[9px] text-muted">patient</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFill('asha')}
+              className="min-h-[44px] flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-gold-warm/15 hover:bg-gold-warm/25 border border-gold-warm/30 text-primary transition-all cursor-pointer"
+            >
+              <Users className="w-4 h-4 text-gold-warm mb-0.5" />
+              <span className="text-[11px] font-bold leading-tight">ASHA Worker</span>
+              <span className="text-[9px] text-muted">asha</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFill('admin')}
+              className="min-h-[44px] flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-warm-indigo/10 dark:bg-white/10 hover:bg-warm-indigo/15 border border-border-subtle text-primary transition-all cursor-pointer"
+            >
+              <Shield className="w-4 h-4 text-primary mb-0.5" />
+              <span className="text-[11px] font-bold leading-tight">Admin PHC</span>
+              <span className="text-[9px] text-muted">admin</span>
+            </button>
+          </div>
+        </div>
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="bg-white/95 dark:bg-card backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-gray-200/80 dark:border-gray-800 space-y-4">

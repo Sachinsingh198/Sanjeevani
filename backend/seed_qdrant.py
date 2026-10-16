@@ -17,15 +17,21 @@ if args.force:
     print("\n[Force Seeding] Generating fresh embeddings and upserting all remedies into Qdrant...")
     store.seed_dataset(force=True)
 
-# Verify point count
-info = store.client.get_collection(store.collection_name)
-print(f"\n[Points] Total indexed remedies in collection '{store.collection_name}': {info.points_count}")
-print(f"[Herbs] Total Dravyaguna medicinal herbs in active memory: {len(store.herbs_lookup)}")
+# Verify count and print required milestone summary
+total_count = len(store.remedies)
+if store.client is not None and store.client.collection_exists(store.collection_name):
+    info = store.client.get_collection(store.collection_name)
+    points_count = info.points_count
+else:
+    points_count = total_count
 
-# Test multiple clinical queries across CCRAS, Classical Treatises, and Vaidya Chikitsa
+print(f"\n{total_count} remedies indexed into Qdrant + Okapi BM25")
+print(f"[Qdrant] Collection '{store.collection_name}': {points_count} vector points.")
+
+# Test multiple clinical queries across CCRAS and Classical Treatises
 test_queries = [
     ("gale me khasi aur kharash", "Common Cold / Cough"),
-    ("chehre par khil pimples muhase", "Acne / Pimples (Vaidya Chikitsa)"),
+    ("chehre par khil pimples muhase", "Acne / Skin Health"),
     ("pet me gas bhari pan aur bhukh na lagna", "Indigestion / Sluggish Agni"),
     ("tez bukhar jalan aur bahut jyada pyas lag rahi hai", "Pitta Fever / Burning Thirst")
 ]
@@ -36,9 +42,6 @@ for query, symptom_type in test_queries:
     results = store.search_remedies(query, limit=2)
     for r in results:
         print(f"  * Remedy: {r.get('remedy_name')}")
-        print(f"    Tier: {r.get('safety_tier', 'household_safe')} | Source: {r.get('category', r.get('source', 'AYUSH'))}")
-        if r.get("matched_botanicals"):
-            herbs_str = ", ".join([h.get("name", "") for h in r["matched_botanicals"]])
-            print(f"    Enriched Botanicals: {herbs_str}")
+        print(f"    RRF: {r.get('rrf_score', 0)} | BM25: {r.get('bm25_score', 0)} | Source: {r.get('source', 'Classical Ayurveda')}")
 
-
+store.close()

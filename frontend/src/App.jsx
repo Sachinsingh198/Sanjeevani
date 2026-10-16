@@ -8,7 +8,6 @@ import Navbar from './components/Navbar';
 import OfflineBanner from './components/OfflineBanner';
 import SanjeevaniOrb from './components/SanjeevaniOrb';
 import ErrorBoundary from './components/ErrorBoundary';
-import MobileBottomNav from './components/MobileBottomNav';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 
 // Public pages (lazy loaded)
@@ -49,7 +48,7 @@ export default function App() {
         }`}>
           <OfflineBanner />
           <Navbar />
-          <main id="main-content" className={isChatPage ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 animate-fadeIn safe-bottom-nav'}>
+          <main id="main-content" className={isChatPage ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 animate-fadeIn pb-20 md:pb-0'}>
             <ErrorBoundary>
               <React.Suspense fallback={<RouteLoadingFallback />}>
                 <Routes>
@@ -207,7 +206,6 @@ export default function App() {
           </React.Suspense>
         </ErrorBoundary>
       </main>
-      <MobileBottomNav />
       <PwaInstallPrompt />
 
       {!isChatPage && (

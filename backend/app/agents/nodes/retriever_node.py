@@ -138,7 +138,15 @@ def build_retriever_query(state: AgentState, llm=None) -> str:
     Builds a clean search query combining English chief complaint, local complaint,
     and active symptoms while stripping filler words.
     """
+    custom_query = state.get("custom_search_query") or state.get("search_query")
+    if custom_query and isinstance(custom_query, str) and custom_query.strip():
+        return custom_query.strip()[:200]
+
     sym_prof = state.get("symptom_profile") or {}
+    rag_query = sym_prof.get("rag_search_query")
+    if rag_query and isinstance(rag_query, str) and rag_query.strip():
+        return rag_query.strip()[:200]
+
     cc_eng = sym_prof.get("chief_complaint_english", "")
     cc = sym_prof.get("chief_complaint", "")
     notes = state.get("consultation_notes", "")
@@ -164,7 +172,8 @@ def retriever_node_sync(state: AgentState) -> AgentState:
     query = build_retriever_query(state, llm)
     patient_conditions = state.get("patient_conditions", [])
 
-    candidates = store.search_remedies(query, limit=5)
+    inferred_dosha = state.get("symptom_profile", {}).get("inferred_dosha") if isinstance(state.get("symptom_profile"), dict) else None
+    candidates = store.search_remedies(query, limit=5, inferred_dosha=inferred_dosha)
     verified_remedies = []
     blocked_remedies = list(state.get("blocked_remedies", []))
 
@@ -184,7 +193,7 @@ def retriever_node_sync(state: AgentState) -> AgentState:
         full_text = f"{r_name} {r_text}"
 
         is_safe, reason = knowledge_graph.validate_remedy(
-            full_text,
+            item,
             patient_conditions,
             age=patient_age,
             gender=patient_gender,
@@ -222,8 +231,9 @@ async def retriever_node(state: AgentState) -> AgentState:
     query = build_retriever_query(state, llm)
     patient_conditions = state.get("patient_conditions", [])
 
-    # 1. Non-blocking Vector RAG Search using asyncio.to_thread
-    candidates = await asyncio.to_thread(store.search_remedies, query, limit=5)
+    # 1. Non-blocking Vector RAG Search using asyncio.to_thread with inferred_dosha alignment
+    inferred_dosha = state.get("symptom_profile", {}).get("inferred_dosha") if isinstance(state.get("symptom_profile"), dict) else None
+    candidates = await asyncio.to_thread(store.search_remedies, query, 5, inferred_dosha)
     verified_remedies = []
     blocked_remedies = list(state.get("blocked_remedies", []))
 
@@ -245,7 +255,7 @@ async def retriever_node(state: AgentState) -> AgentState:
         full_text = f"{r_name} {r_text}"
 
         is_safe, reason = knowledge_graph.validate_remedy(
-            full_text,
+            item,
             patient_conditions,
             age=patient_age,
             gender=patient_gender,

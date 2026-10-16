@@ -470,7 +470,7 @@ export default function PatientDashboard() {
         <MountainRidge tone="pine" className="w-full h-44 object-cover" />
       </div>
 
-      <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 relative z-10">
+      <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 space-y-6 relative z-10">
 
         {/* ── TOP ICONIC NAVIGATION BAR (PAGE-INSIDE-PAGE TABS) ─────── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -497,447 +497,366 @@ export default function PatientDashboard() {
                     <Icon className="w-4 h-4 sm:w-4.5 sm:h-4.5 mb-0.5" />
                     {tab.badge && (
                       <span className={`absolute -top-1.5 -right-2 text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                        isActive ? 'bg-white text-sage' : 'bg-sage/20 text-sage dark:text-booti-glow'
+                        isActive ? 'bg-white text-sage' : 'bg-sage/20 text-sage'
                       }`}>
                         {tab.badge}
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] sm:text-xs font-bold leading-tight truncate">{tab.label}</span>
-                  <span className={`text-[10px] hidden sm:block leading-none mt-0.5 ${isActive ? 'text-white/80' : 'opacity-70'}`}>
-                    {tab.sub}
+                  <span className="text-[10px] sm:text-xs font-bold tracking-tight text-center leading-none mt-0.5">
+                    {tab.label}
                   </span>
                 </button>
               );
             })}
           </div>
-
-          {/* User Control: Toggle Tab Narration On/Off or Stop Audio */}
-          {/* <div className="flex items-center justify-end gap-1.5 self-end sm:self-center shrink-0">
-            <button
-              type="button"
-              onClick={toggleTabNarration}
-              className={`touch-target inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-2xs ${
-                tabNarrationEnabled
-                  ? 'bg-sage/15 text-sage dark:text-booti-glow border-sage/40 hover:bg-sage/25'
-                  : 'bg-white/80 dark:bg-card/80 text-muted border-gray-200 dark:border-gray-700 hover:text-primary'
-              }`}
-              title={tabNarrationEnabled ? l('आवाज़ी वाचन चालू - बंद करने हेतु दबाएं', 'Audio narration on - click to disable') : l('आवाज़ी वाचन बंद - चालू करने हेतु दबाएं', 'Audio narration off - click to enable')}
-              aria-label={l('आवाज़ी वाचन बदलें', 'Toggle Section Audio Narration')}
-            >
-              {tabNarrationEnabled ? (
-                <>
-                  <Volume2 className="w-3.5 h-3.5 text-sage dark:text-booti-glow animate-pulse" />
-                  <span className="text-[11px] sm:text-xs">{l('आवाज़ चालू', 'Voice On')}</span>
-                </>
-              ) : (
-                <>
-                  <VolumeX className="w-3.5 h-3.5" />
-                  <span className="text-[11px] sm:text-xs">{l('आवाज़ बंद', 'Voice Off')}</span>
-                </>
-              )}
-            </button>
-
-            {isSpeaking && (
-              <button
-                type="button"
-                onClick={() => {
-                  stopCue();
-                  setIsSpeaking(false);
-                }}
-                className="touch-target inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-soft text-white text-xs font-bold cursor-pointer hover:bg-rose-soft/90 animate-pulse shadow-xs"
-                title="बोलना तुरंत रोकें / Stop Audio Now"
-              >
-                <Square className="w-3 h-3 fill-current" />
-                <span>रोकें</span>
-              </button>
-            )}
-          </div> */}
         </div>
 
-        {/* ── TAB 1: MAIN HUB (ICONIC & AUDIO-FIRST CENTERPIECE) ───── */}
+        {/* ── TAB 1: MAIN HUB (BENTO GRID ARRANGEMENT) ───── */}
         {activeTab === 'hub' && (
-          <div className="space-y-4 sm:space-y-6 animate-fadeIn">
+          <div className="space-y-6 animate-fadeIn">
 
-            {/* ── Family Profile Switcher ── */}
+            {/* Family Profile Switcher */}
             <FamilyProfileSelector onProfileChange={setActiveFamilyMember} />
 
-            {/* ── Page Voice Guide Banner ── */}
+            {/* Page Voice Guide Banner */}
             <PageVoiceGuide pageKey="mitra" />
-            
-            {/* Welcoming Centerpiece Banner */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-sage/15 via-card to-gold-warm/10 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-sage/20 dark:border-gray-800 shadow-sm text-center">
-              <div className="flex flex-col items-center justify-center">
-                
-                {/* Living Orb */}
-                <div className="inline-block mb-2 sm:mb-3 animate-slow-float">
-                  <div className="hidden sm:block"><SanjeevaniOrb state="idle" size={62} /></div>
-                  <div className="sm:hidden"><SanjeevaniOrb state="idle" size={42} /></div>
+
+            {/* ── ROW 1: COMPACT WELCOME & INLINE HEALTH PROFILE BANNER ── */}
+            <div className="bg-card rounded-3xl p-5 sm:p-6 border border-border-subtle shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-sage/15 dark:bg-sage/25 text-sage dark:text-booti-glow flex items-center justify-center shrink-0 border border-sage/20">
+                  <SanjeevaniOrb state="idle" size={38} />
                 </div>
-
-                <div className="inline-flex items-center gap-1.5 sm:gap-2 bg-sage/10 dark:bg-sage/25 text-sage dark:text-booti-glow px-3 sm:px-4 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold mb-1.5 sm:mb-2">
-                  <Leaf className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold-warm" />
-                  <span>{l('संजीवनी मित्र', 'Sanjeevani Mitra')}</span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-sage dark:text-booti-glow flex items-center gap-1">
+                      <Leaf className="w-3.5 h-3.5 text-gold-warm" />
+                      {l('संजीवनी मित्र • नागरिक स्वास्थ्य', 'Sanjeevani Mitra • Rural Health')}
+                    </span>
+                  </div>
+                  <h1 className="font-serif text-xl sm:text-2xl font-bold text-primary mt-0.5">
+                    {l('नमस्ते', 'Namaste')}, {activeFamilyMember?.name ? activeFamilyMember.name : (user?.name || l('आदरणीय मित्र', 'Friend'))} 🙏
+                  </h1>
+                  <p className="text-xs text-muted mt-0.5 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-gold-warm shrink-0" />
+                    <span>{user?.village || l('चमोली, उत्तराखंड', 'Chamoli, Uttarakhand')} • {l('डिजिटल स्वास्थ्य केंद्र', 'Digital Health Center')}</span>
+                  </p>
                 </div>
+              </div>
 
-                <h1 className="font-serif text-xl sm:text-4xl font-bold text-primary">
-                  {l('नमस्ते', 'Namaste')}, {activeFamilyMember?.name ? activeFamilyMember.name : (user?.name || l('आदरणीय मित्र', 'Friend'))} 🙏
-                </h1>
+              {/* Inline Health Profile (Comorbidity Safeguards) */}
+              <div className="flex flex-col sm:items-end gap-2 border-t lg:border-t-0 pt-3 lg:pt-0 border-border-subtle">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-sage dark:text-booti-glow">
+                  <ShieldCheck className="w-4 h-4 text-sage" />
+                  <span>{l('स्वास्थ्य सुरक्षा प्रोफ़ाइल (Comorbidities)', 'My Health Profile (Comorbidities)')}</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { id: 'BP / Hypertension', label: 'BP / Hypertension' },
+                    { id: 'Gastric Ulcer', label: l('पेट में छाला (Ulcer)', 'Gastric Ulcer') },
+                    { id: 'Pregnancy', label: l('गर्भावस्था', 'Pregnancy') },
+                    { id: 'Diabetes', label: l('मधुमेह (Diabetes)', 'Diabetes') },
+                  ].map((cond) => {
+                    const isChecked = knownConditions.includes(cond.id);
+                    return (
+                      <button
+                        key={cond.id}
+                        type="button"
+                        onClick={() => toggleCondition(cond.id)}
+                        className={`min-h-[38px] px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                          isChecked
+                            ? 'bg-sage text-white border-sage shadow-xs'
+                            : 'bg-surface hover:bg-sage/10 text-muted border-border-subtle'
+                        }`}
+                      >
+                        <span>{cond.label}</span>
+                        <CheckCircle2 className={`w-3.5 h-3.5 ${isChecked ? 'opacity-100 text-white' : 'opacity-30'}`} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
 
-                <p className="text-[11px] sm:text-sm text-muted dark:text-muted mt-1 flex items-center justify-center gap-1 sm:gap-1.5">
-                  <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold-warm" />
-                  <span>{user?.village || l('चमोली, उत्तराखंड', 'Chamoli, Uttarakhand')} • {l('डिजिटल स्वास्थ्य केंद्र', 'Digital Health Center')}</span>
-                </p>
-
-                {/* Primary Voice Consultation Trigger */}
-                <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 w-full sm:w-auto">
-                  <button
-                    onClick={() => setShowLiveRoom(true)}
-                    className="touch-target group w-full sm:w-auto inline-flex items-center justify-center gap-2.5 sm:gap-3 px-5 sm:px-8 py-3 sm:py-4.5 rounded-full bg-gradient-to-r from-sage to-[#4a6346] hover:from-[#4a6346] hover:to-[#3b5038] text-white font-extrabold text-sm sm:text-lg shadow-md sm:shadow-lg shadow-sage/30 hover:scale-102 active:scale-98 transition-all cursor-pointer"
-                  >
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0">
-                      <Mic className="w-4 h-4 sm:w-5 sm:h-5 animate-bounce" />
-                    </div>
-                    <span>{l('🎙 बोलकर बताएं', '🎙 Speak Now')}</span>
-                  </button>
-
+            {/* ── ROW 2: PRIMARY ACTION TRIO ── */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Card 1: Talk Live (Voice Room) */}
+              <div className="bg-card rounded-3xl p-5 border-2 border-sage/40 shadow-sm relative overflow-hidden flex flex-col justify-between group hover:border-sage transition-all">
+                <div className="absolute top-3 right-3">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-sage text-white px-2.5 py-0.5 rounded-full shadow-xs">
+                    {l('अनुशंसित • Recommended', 'Recommended')}
+                  </span>
+                </div>
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-sage/15 text-sage flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                    <Mic className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-sage">
+                    {l('आवाज़ से बातचीत', 'Voice-First AI')}
+                  </span>
+                  <h3 className="font-serif font-bold text-lg text-primary mt-0.5">
+                    {l('बोलकर सलाह लें (Live Room)', 'Talk Live (Voice Room)')}
+                  </h3>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                    {l('हिंदी व गढ़वाली में बोलकर लक्षण बताएं और लाइव डॉक्टर परामर्श पाएं।', 'Speak naturally in Hindi or Garhwali for instant voice triage with Dr. Sanjeevani.')}
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-border-subtle">
                   <button
                     type="button"
-                    onClick={() => handleAudioGuide(l('नमस्ते! बोलकर बताएं बटन दबाकर आप आवाज में डॉक्टर से सलाह ले सकते हैं।', 'Namaste! Click speak now to start voice consultation with Dr. Sanjeevani.'), true)}
-                    className="touch-target inline-flex items-center justify-center gap-1.5 bg-mist dark:bg-card text-sage dark:text-booti-glow border border-sage/30 px-3.5 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-bold hover:bg-sage/10 transition-all cursor-pointer"
+                    onClick={() => setShowLiveRoom(true)}
+                    className="w-full min-h-[44px] rounded-xl bg-sage hover:bg-sage/90 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
                   >
-                    <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span>{l('निर्देश सुनें', 'Voice Guide')}</span>
+                    <Mic className="w-4 h-4" />
+                    <span>{l('🎙️ लाइव बातचीत शुरू करें', '🎙️ Talk Live Now')}</span>
                   </button>
                 </div>
               </div>
 
-              {/* District CMO Advisory Notice */}
-              {advisory && (
-                <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-sage/15 dark:border-gray-800 flex items-start gap-2.5 sm:gap-3 text-xs bg-gold-warm/10 dark:bg-gold-warm/15 border border-gold-warm/25 rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 text-left">
-                  <AlertCircle className="w-4 h-4 text-gold-warm dark:text-gold-warm shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <strong className="block font-bold text-gold-warm dark:text-gold-warm uppercase tracking-wider text-xs">
-                      {l('मुख्य चिकित्सा अधिकारी (CMO) स्वास्थ्य परामर्श:', 'District CMO Health Advisory:')}
-                    </strong>
-                    <span className="text-xs text-primary leading-relaxed font-medium">
-                      {advisory}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleAudioGuide(advisory, true)}
-                    className="touch-target p-1 text-gold-warm dark:text-gold-warm hover:scale-110"
-                    title={l('परामर्श सुनें', 'Listen to Advisory')}
-                  >
-                    <Volume2 className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* 4 Core Pillar Tiles — 2x2 Icon-Dominant Grid on Mobile, 4-col on Desktop */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
-              
-              {/* 1. Sehat (AI Doctor) */}
-              <Link
-                to="/mitra/chat"
-                className="touch-target group flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-warm-indigo border border-sage/25 hover:border-sage transition-all shadow-xs tactile-card"
-              >
+              {/* Card 2: Symptom Triage Chat */}
+              <div className="bg-card rounded-3xl p-5 border border-border-subtle shadow-sm flex flex-col justify-between group hover:border-sage/60 transition-all">
                 <div>
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-sage/15 dark:bg-sage/25 text-sage dark:text-booti-glow flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-108 transition-transform">
-                    <Stethoscope className="w-5 h-5 sm:w-7 sm:h-7" />
+                  <div className="w-12 h-12 rounded-2xl bg-sage/10 text-sage flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                    <MessageSquare className="w-6 h-6" />
                   </div>
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-sage dark:text-booti-glow block truncate">
-                    {l('चिकित्सक सहयोग', 'Doctor Consultation', 'Doctor Paramarsh')}
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-sage">
+                    {l('क्लीनिकल चैट', 'MTS Assessment')}
                   </span>
-                  <h3 className="font-serif font-bold text-sm sm:text-lg text-primary mt-0.5 leading-snug">
-                    {l('स्वास्थ्य परामर्श', 'Doctor Clinic', 'Doctor Clinic')}
+                  <h3 className="font-serif font-bold text-lg text-primary mt-0.5">
+                    {l('लक्षण जांच चैट (Triage Chat)', 'Symptom Triage Chat')}
                   </h3>
-                  <p className="text-xs text-muted dark:text-muted mt-1 hidden sm:block">
-                    {l('लक्षण जांच, प्राथमिक निदान एवं डॉक्टर से परामर्श लें।', 'Symptom triage, primary diagnosis and clinical advice.', 'Lakshan jaanch, prathmik nidan aur doctor se salah.')}
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                    {l('मैनचेस्टर ट्राइएज और 16+ आयुष फॉर्मूलरी से सत्यापित उपचार पर्चा बनाएं।', 'Negation-aware clinical assessment with contraindication checks and CCRAS remedies.')}
                   </p>
                 </div>
-                <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-xs font-bold text-sage dark:text-booti-glow pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>{l('परामर्श लें', 'Consult Now', 'Salah Lein')}</span>
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
+                <div className="mt-4 pt-3 border-t border-border-subtle">
+                  <Link
+                    to="/patient/chat"
+                    className="w-full min-h-[44px] rounded-xl bg-surface hover:bg-sage/15 text-primary hover:text-sage border border-border-subtle text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <span>{l('परामर्श शुरू / जारी रखें', 'Start or Resume Consultation')}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
                 </div>
-              </Link>
+              </div>
 
-              {/* 2. Arogyashala (Unified Wellness Studio) */}
+              {/* Card 3: Ocular Biomarker Scan */}
+              <div className="bg-card rounded-3xl p-5 border border-border-subtle shadow-sm flex flex-col justify-between group hover:border-gold-warm/60 transition-all">
+                <div>
+                  <div className="w-12 h-12 rounded-2xl bg-gold-warm/15 text-gold-warm flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                    <Eye className="w-6 h-6" />
+                  </div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-gold-warm">
+                    {l('एज कंप्यूटर विज़न', 'Edge Computer Vision')}
+                  </span>
+                  <h3 className="font-serif font-bold text-lg text-primary mt-0.5">
+                    {l('नेत्र बायोमार्कर स्कैन (Eye Scan)', 'Ocular Biomarker Scan')}
+                  </h3>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                    {l('पलक व आंख की सफेदी से एनीमिया व पीलिया की गैर-आक्रामक मोबाइल जांच।', 'Anemia & Jaundice Camera Check using CIELAB and HSV colorimetry in natural daylight.')}
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-border-subtle">
+                  <Link
+                    to="/patient/screen"
+                    className="w-full min-h-[44px] rounded-xl bg-surface hover:bg-gold-warm/15 text-primary hover:text-gold-warm border border-border-subtle text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <span>{l('नेत्र जांच शुरू करें', 'Run Biomarker Scan')}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* ── ROW 3: 2-COLUMN ACTIVITY & INSIGHTS SPLIT ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left (lg:col-span-7) — Recent Consultations Card */}
+              <div className="lg:col-span-7 bg-card rounded-3xl p-5 sm:p-6 border border-border-subtle shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between pb-3 border-b border-border-subtle mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-sage/15 text-sage flex items-center justify-center">
+                        <MessageSquare className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="font-serif font-bold text-base text-primary">
+                          {l('हाल के परामर्श (Recent Consultations)', 'Recent Consultations')}
+                        </h3>
+                        <p className="text-[11px] text-muted">
+                          {recentConsultations.length} {l('परामर्श रिकॉर्ड सहेजे गए', 'sessions saved')}
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      to="/patient/chat"
+                      className="text-xs font-bold text-sage hover:underline flex items-center gap-1"
+                    >
+                      <span>{l('नया चैट', 'New Chat')}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {recentConsultations.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-muted border border-dashed border-border-subtle rounded-2xl">
+                        {l('कोई पूर्व परामर्श नहीं मिला। नया चैट शुरू करें।', 'No prior consultations found. Start a new session.')}
+                      </div>
+                    ) : (
+                      recentConsultations.slice(0, 3).map((item, idx) => (
+                        <div
+                          key={item.id || idx}
+                          className="p-3.5 rounded-2xl bg-surface/70 border border-border-subtle flex items-center justify-between gap-3 text-xs hover:border-sage/40 transition-colors"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  item.tier === 'Red'
+                                    ? 'bg-red-500/15 text-red-600'
+                                    : item.tier === 'Yellow'
+                                    ? 'bg-gold-warm/20 text-yellow-700'
+                                    : 'bg-sage/15 text-sage'
+                                }`}
+                              >
+                                {item.tier || 'Green'} Tier
+                              </span>
+                              <span className="text-[11px] text-muted">{item.date}</span>
+                            </div>
+                            <p className="font-semibold text-primary truncate">{item.symptom || 'General Consultation'}</p>
+                            <p className="text-[11px] text-muted truncate mt-0.5">{item.status}</p>
+                          </div>
+                          <Link
+                            to="/patient/chat"
+                            className="min-h-[38px] px-3 rounded-xl bg-sage/10 text-sage hover:bg-sage/20 font-bold flex items-center gap-1 text-xs shrink-0 transition-colors"
+                          >
+                            <span>{l('खोलें', 'Open')}</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </Link>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right (lg:col-span-5) — Recent Ocular Screenings & Hill Wellness Card */}
+              <div className="lg:col-span-5 flex flex-col gap-4">
+                {/* Screenings Card */}
+                <div className="bg-card rounded-3xl p-5 border border-border-subtle shadow-sm">
+                  <div className="flex items-center justify-between pb-3 border-b border-border-subtle mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-gold-warm/15 text-gold-warm flex items-center justify-center">
+                        <Eye className="w-4 h-4" />
+                      </div>
+                      <h3 className="font-serif font-bold text-sm sm:text-base text-primary">
+                        {l('बायोमार्कर स्कैन (Ocular Scans)', 'Recent Vision Screenings')}
+                      </h3>
+                    </div>
+                    <Link
+                      to="/patient/screen"
+                      className="text-xs font-bold text-gold-warm hover:underline flex items-center gap-1"
+                    >
+                      <span>{l('नई जांच', 'New Scan')}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+
+                  <div className="space-y-2">
+                    {recentScreenings.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-muted border border-dashed border-border-subtle rounded-xl">
+                        {l('कोई पूर्व बायोमार्कर स्कैन दर्ज नहीं है।', 'No prior scans recorded yet.')}
+                      </div>
+                    ) : (
+                      recentScreenings.slice(0, 2).map((scan, sIdx) => (
+                        <div
+                          key={scan.id || sIdx}
+                          className="p-3 rounded-xl bg-surface/70 border border-border-subtle flex items-center justify-between gap-2 text-xs"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sage/15 text-sage">
+                                {scan.risk || 'NORMAL'}
+                              </span>
+                              <span className="text-[10px] text-muted">{scan.date}</span>
+                            </div>
+                            <p className="font-semibold text-primary truncate mt-0.5">{scan.type}</p>
+                            <p className="text-[10px] text-muted">
+                              Index: {typeof scan.calculated_index === 'number' ? scan.calculated_index.toFixed(3) : scan.calculated_index}
+                            </p>
+                          </div>
+                          <Link
+                            to="/patient/screen"
+                            className="p-2 rounded-xl bg-gold-warm/15 text-gold-warm hover:bg-gold-warm/25 transition-colors shrink-0"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </Link>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Compact Hill Wellness Advisory Card */}
+                <div className="bg-gradient-to-br from-gold-warm/15 via-card to-sage/10 rounded-3xl p-5 border border-gold-warm/30 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Wind className="w-4 h-4 text-gold-warm" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-gold-warm">
+                      {l('उत्तराखंड पहाड़ी स्वास्थ्य परामर्श', 'Uttarakhand Hill Wellness')}
+                    </span>
+                  </div>
+                  <h4 className="font-serif font-bold text-sm text-primary">
+                    {l('शीत ऋतु व उच्च पर्वतीय स्वास्थ्य देखरेख', 'Seasonal High-Altitude Wellness')}
+                  </h4>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                    {advisory || l('चमोली व गोपेश्वर क्षेत्र में सुबह गर्म पानी, अदरक-तुलसी काढ़ा लें। सांस फूलने या होंठ नीले पड़ने पर तुरंत 108 या निकटतम पीएचसी पर संपर्क करें।', 'In Chamoli & Gopeshwar, hydrate with warm herbal tea and keep warm. In severe shortness of breath or hypothermia, call 108.')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Arogyashala & PMBJP Generic Medicines Quick Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Link
                 to="/mitra/wellness"
-                className="touch-target group flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-warm-indigo border border-gold-warm/30 hover:border-gold-warm transition-all shadow-xs tactile-card"
+                className="p-4 rounded-3xl bg-surface/70 border border-sage/20 hover:border-sage transition-all flex items-center justify-between gap-3 group"
               >
-                <div>
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gold-warm/15 dark:bg-gold-warm/25 text-gold-warm dark:text-gold-warm flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-108 transition-transform">
-                    <Sparkles className="w-5 h-5 sm:w-7 sm:h-7" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-sage/15 text-sage flex items-center justify-center shrink-0">
+                    <Sparkles className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-gold-warm dark:text-gold-warm block truncate">
-                    {l('योग • ध्यान • नाद', 'Yoga • Meditation • Sound', 'Yoga • Dhyan • Naad')}
-                  </span>
-                  <h3 className="font-serif font-bold text-sm sm:text-lg text-primary mt-0.5 leading-snug">
-                    {l('आरोग्यशाला', 'Wellness Studio', 'Arogyashala')}
-                  </h3>
-                  <p className="text-xs text-muted dark:text-muted mt-1 hidden sm:block">
-                    {l('मुद्रा एआई, 5 वैदिक प्राणायाम, ध्यान कथा और सुखद ध्वनियां।', 'Pose AI, 5 Vedic Pranayamas, guided meditation and soundscapes.', 'Mudra AI, 5 Vedic Pranayama, dhyan katha aur soothing aawazein.')}
-                  </p>
+                  <div>
+                    <h4 className="font-serif font-bold text-sm text-primary group-hover:text-sage transition-colors">
+                      {l('आरोग्यशाला स्टूडियो', 'Arogyashala Wellness Studio')}
+                    </h4>
+                    <p className="text-[11px] text-muted">
+                      {l('योग, प्राणायाम और ध्यान साधना', 'Yoga, Pranayama & Himalayan sound')}
+                    </p>
+                  </div>
                 </div>
-                <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-xs font-bold text-gold-warm dark:text-gold-warm pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>{l('स्टूडियो खोलें', 'Open Studio', 'Studio Kholein')}</span>
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
+                <ArrowRight className="w-4 h-4 text-muted group-hover:text-sage group-hover:translate-x-1 transition-all" />
               </Link>
 
-              {/* 3. Saathi (Companion) */}
-              <Link
-                to="/mitra/saathi"
-                className="touch-target group flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-warm-indigo border border-rose-soft/25 hover:border-rose-soft transition-all shadow-xs tactile-card"
-              >
-                <div>
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-rose-soft/15 dark:bg-rose-soft/25 text-rose-soft dark:text-rose-soft flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-108 transition-transform">
-                    <HeartHandshake className="w-5 h-5 sm:w-7 sm:h-7" />
-                  </div>
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-rose-soft dark:text-rose-soft block truncate">
-                    {l('सदा आपके साथ', 'Elder Companion', 'Hamesha Aapke Saath')}
-                  </span>
-                  <h3 className="font-serif font-bold text-sm sm:text-lg text-primary mt-0.5 leading-snug">
-                    {l('साथी', 'Companion', 'Saathi')}
-                  </h3>
-                  <p className="text-xs text-muted dark:text-muted mt-1 hidden sm:block">
-                    {l('अकेलेपन में आत्मीय बातचीत, पुराने किस्से और स्नेहपूर्ण सम्बल।', 'Warm comforting conversations, storytelling, and emotional support.', 'Akelepan me aatmiya baatcheet, purane kisse aur sahara.')}
-                  </p>
-                </div>
-                <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-xs font-bold text-rose-soft dark:text-rose-soft pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>{l('बातचीत करें', 'Talk to Companion', 'Baatcheet Karein')}</span>
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-
-              {/* 4. Aankhon Ki Jaanch (Eye Screening) */}
-              <Link
-                to="/mitra/screen"
-                className="touch-target group flex flex-col justify-between p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-warm-indigo border border-warm-indigo/25 hover:border-warm-indigo transition-all shadow-xs tactile-card"
-              >
-                <div>
-                  <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-warm-indigo/15 dark:bg-warm-indigo/25 text-primary dark:text-muted flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-108 transition-transform">
-                    <Eye className="w-5 h-5 sm:w-7 sm:h-7" />
-                  </div>
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-primary dark:text-muted block truncate">
-                    {l('नेत्र जांच', 'Eye Screening', 'Aankhon Ki Jaanch')}
-                  </span>
-                  <h3 className="font-serif font-bold text-sm sm:text-lg text-primary mt-0.5 leading-snug">
-                    {l('स्क्रीनिंग', 'Eye Health Scan', 'Screening')}
-                  </h3>
-                  <p className="text-xs text-muted dark:text-muted mt-1 hidden sm:block">
-                    {l('कैमरे से पलक की तस्वीर लेकर एनीमिया व पीलिया के संकेत जांचें।', 'Scan eyelid image to detect signs of anemia and jaundice.', 'Camera se palak ki tasveer lekar anemia aur peeliya ki jaanch karein.')}
-                  </p>
-                </div>
-                <div className="mt-2.5 sm:mt-4 flex items-center justify-between text-[11px] sm:text-xs font-bold text-primary dark:text-muted pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span>{l('जांच शुरू करें', 'Start Screening', 'Jaanch Shuru Karein')}</span>
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-
-            </div>
-
-            {/* Daily Himalayan Wellness Journey Callout */}
-            <div className="bg-gradient-to-r from-sage/10 via-[#D4A359]/15 to-sage/10 dark:from-sage/20 dark:via-[#D4A359]/10 dark:to-[#1E2A43] rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-sage/30 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 tactile-card">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-sage text-white flex items-center justify-center shrink-0 shadow-md shadow-sage/25">
-                  <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 animate-pulse text-mist" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] sm:text-xs bg-sage text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                      {l('दैनिक साधना', 'Daily Routine', 'Dainik Sadhana')}
-                    </span>
-                    <span className="text-[11px] text-gold-warm dark:text-gold-warm font-bold">{l('15 मिनट • हिमालयी स्फूर्ति', '15 Mins • Himalayan Vitality', '15 Min • Himalayi Sphoorti')}</span>
-                  </div>
-                  <h3 className="font-serif font-bold text-base sm:text-xl text-primary mt-1">
-                    {l('सुबह की ऊर्जा साधना', 'Himalayan Morning Flow', 'Subah Ki Urja Sadhana')}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-muted dark:text-muted mt-0.5">
-                    {l('अनुलोम विलोम प्राणायाम + ताड़ासन व वृक्षासन मुद्रा जांच + गायन पात्र नाद।', 'Anulom Vilom breathwork + Mountain & Tree pose alignment + Singing bowls.', 'Anulom Vilom pranayam + Tadasana aur Vrikshasana posture check + Dhwani dhyan.')}
-                  </p>
-                </div>
-              </div>
-              <Link
-                to="/mitra/wellness?tab=flow"
-                className="touch-target w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-extrabold text-white bg-sage hover:bg-sage/90 px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl transition-all shadow-sm hover:scale-102 cursor-pointer"
-              >
-                <span>{l('आरंभ करें', 'Start Flow', 'Shuru Karein')}</span>
-                <ArrowRight className="w-4 h-4 ml-0.5" />
-              </Link>
-            </div>
-
-            {/* Jan Aushadhi Generic Medicine Savings Banner */}
-            <div className="bg-gradient-to-r from-emerald-600/10 via-sage/15 to-teal-500/10 dark:from-emerald-950/30 dark:to-teal-950/20 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-emerald-600/30 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 tactile-card">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-700/25">
-                  <Pill className="w-6 h-6 sm:w-7 sm:h-7" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] sm:text-xs bg-emerald-700 text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                      {l('जन औषधि केंद्र', 'PMBJP Generics', 'Jan Aushadhi')}
-                    </span>
-                    <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">
-                      {l('50%-90% तक सस्ती दवाएं', 'Save 50%-90% on Medicines', '50%-90% Sasti Dawayein')}
-                    </span>
-                  </div>
-                  <h3 className="font-serif font-bold text-base sm:text-xl text-primary mt-1">
-                    {l('सस्ती जेनेरिक दवा कैलकुलेटर व केंद्र', 'Generic Medicine Savings & Centers', 'Generic Dawa Savings & Kendras')}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-muted dark:text-muted mt-0.5">
-                    {l('ब्रांडेड दवाओं के मुकाबले चमोली व उत्तराखंड के जन औषधि केंद्रों से पाएं 90% तक कम कीमत में दवाएं।', 'Compare market vs Jan Aushadhi generic prices and find verified Kendras in Chamoli.', 'Branded dawaon ke muqable Jan Aushadhi se 90% tak sasti dawa paayein.')}
-                  </p>
-                </div>
-              </div>
               <button
                 type="button"
                 onClick={() => setActiveTab('facilities')}
-                className="touch-target w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 text-xs sm:text-sm font-extrabold text-white bg-emerald-700 hover:bg-emerald-800 px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl transition-all shadow-sm hover:scale-102 cursor-pointer"
+                className="p-4 rounded-3xl bg-surface/70 border border-emerald-600/20 hover:border-emerald-600 transition-all flex items-center justify-between gap-3 group text-left cursor-pointer"
               >
-                <span>{l('दरें व केंद्र देखें', 'View Prices & Kendras', 'Rates & Kendra Dekhein')}</span>
-                <ArrowRight className="w-4 h-4 ml-0.5" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-700/15 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <Pill className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-serif font-bold text-sm text-primary group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
+                      {l('जन औषधि केंद्र (PMBJP)', 'Jan Aushadhi Generic Savings')}
+                    </h4>
+                    <p className="text-[11px] text-muted">
+                      {l('50%-90% सस्ती दवाएं व केंद्र खोजें', 'Save 50%-90% on generic medicines')}
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-muted group-hover:text-emerald-700 dark:group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
               </button>
-            </div>
-
-            {/* Interactive Health Conditions Profile (Synced with Chat Safety Graph) */}
-            <div className="bg-surface/80 dark:bg-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-sage/20 shadow-xs space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <div className="inline-flex items-center gap-1.5 text-xs font-bold text-sage dark:text-booti-glow uppercase tracking-wider">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>{l('स्वास्थ्य सुरक्षा प्रोफ़ाइल (Health & Comorbidities Profile)', 'Health & Comorbidities Profile', 'Svasthya Suraksha Profile')}</span>
-                  </div>
-                  <p className="text-xs text-muted mt-0.5">
-                    {l('अपनी ज्ञात स्वास्थ्य स्थितियां चुनें ताकि चैट में सुरक्षित, परहेज़-युक्त उपचार मिले।', 'Select your health conditions to ensure safe, contraindication-free herbal advice.')}
-                  </p>
-                </div>
-                <span className="text-[11px] font-bold text-sage bg-sage/10 px-2.5 py-1 rounded-full self-start sm:self-auto">
-                  {knownConditions.length} {l('सक्रिय स्थितियां', 'Active Conditions')}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                {[
-                  { id: 'BP / Hypertension', label: l('हाई बीपी (BP / Hypertension)', 'BP / Hypertension', 'High BP') },
-                  { id: 'Gastric Ulcer', label: l('पेट में छाला (Gastric Ulcer)', 'Gastric Ulcer', 'Pet Ka Chhala') },
-                  { id: 'Pregnancy', label: l('गर्भावस्था (Pregnancy)', 'Pregnancy', 'Garbhavastha') },
-                  { id: 'Diabetes', label: l('मधुमेह (Diabetes)', 'Diabetes', 'Sugar (Diabetes)') },
-                ].map((cond) => {
-                  const isChecked = knownConditions.includes(cond.id);
-                  return (
-                    <button
-                      key={cond.id}
-                      type="button"
-                      onClick={() => toggleCondition(cond.id)}
-                      className={`touch-target p-3 rounded-xl border text-left transition-all flex items-center justify-between gap-2 cursor-pointer shadow-2xs ${
-                        isChecked
-                          ? 'bg-sage text-white border-sage shadow-xs'
-                          : 'bg-elevated hover:bg-sage/10 text-primary border-border-subtle'
-                      }`}
-                    >
-                      <span className="text-xs font-bold leading-snug">{cond.label}</span>
-                      <CheckCircle2 className={`w-4 h-4 shrink-0 transition-opacity ${isChecked ? 'opacity-100 text-white' : 'opacity-25'}`} />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Recent Consultations & Ocular Screenings Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Recent Consultations */}
-              <div className="bg-surface/80 dark:bg-card rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-sage/20 shadow-xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-sage" />
-                    <h3 className="font-serif font-bold text-sm sm:text-base text-primary">
-                      {l('हाल के परामर्श (Recent Consultations)', 'Recent Consultations', 'Haal Ke Paramarsh')}
-                    </h3>
-                  </div>
-                  <Link to="/mitra/chat" className="text-xs font-bold text-sage hover:underline flex items-center gap-1">
-                    <span>{l('नया परामर्श', 'New Chat')}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-
-                <div className="space-y-2">
-                  {recentConsultations.slice(0, 3).map((item, idx) => (
-                    <div key={item.id || idx} className="p-3 rounded-xl bg-elevated border border-border-subtle flex items-center justify-between gap-3 text-xs">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            item.tier === 'Red' ? 'bg-red-500/15 text-red-600' : item.tier === 'Yellow' ? 'bg-gold-warm/20 text-yellow-700' : 'bg-sage/15 text-sage'
-                          }`}>
-                            {item.tier || 'Green'}
-                          </span>
-                          <span className="text-[11px] text-muted">{item.date}</span>
-                        </div>
-                        <p className="font-semibold text-primary truncate mt-1">{item.symptom || 'General Consultation'}</p>
-                        <p className="text-[11px] text-muted truncate">{item.status}</p>
-                      </div>
-                      <Link
-                        to="/mitra/chat"
-                        className="touch-target p-2 rounded-xl bg-sage/10 text-sage hover:bg-sage/20 transition-colors shrink-0"
-                        title={l('चैट जारी रखें', 'Continue Chat')}
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recent Screenings */}
-              <div className="bg-surface/80 dark:bg-card rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-sage/20 shadow-xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Eye className="w-4 h-4 text-gold-warm" />
-                    <h3 className="font-serif font-bold text-sm sm:text-base text-primary">
-                      {l('हाल की बायोमार्कर जांचें (Recent Screenings)', 'Recent Vision Screenings', 'Haal Ki Jaanch')}
-                    </h3>
-                  </div>
-                  <Link to="/mitra/screen" className="text-xs font-bold text-gold-warm hover:underline flex items-center gap-1">
-                    <span>{l('नई जांच', 'New Scan')}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-
-                <div className="space-y-2">
-                  {recentScreenings.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-muted border border-dashed border-border-subtle rounded-xl">
-                      {l('कोई पूर्व बायोमार्कर स्कैन दर्ज नहीं है।', 'No prior scans recorded yet.')}
-                    </div>
-                  ) : (
-                    recentScreenings.slice(0, 3).map((scan, sIdx) => (
-                      <div key={scan.id || sIdx} className="p-3 rounded-xl bg-elevated border border-border-subtle flex items-center justify-between gap-3 text-xs">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sage/15 text-sage">
-                              {scan.risk || 'NORMAL'}
-                            </span>
-                            <span className="text-[11px] text-muted">{scan.date}</span>
-                          </div>
-                          <p className="font-semibold text-primary truncate mt-1">{scan.type}</p>
-                          <p className="text-[11px] text-muted truncate">
-                            Index: {typeof scan.calculated_index === 'number' ? scan.calculated_index.toFixed(3) : scan.calculated_index} (Cutoff: {scan.cutoff_threshold})
-                          </p>
-                        </div>
-                        <Link
-                          to="/mitra/screen"
-                          className="touch-target p-2 rounded-xl bg-gold-warm/15 text-gold-warm hover:bg-gold-warm/25 transition-colors shrink-0"
-                          title={l('जांच देखें', 'View Screening')}
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </Link>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
             </div>
 
             {/* 24/7 Emergency 108 Call Strip */}
@@ -959,14 +878,14 @@ export default function PatientDashboard() {
               <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
                 <a
                   href="tel:108"
-                  className="touch-target flex-1 sm:flex-initial justify-center bg-rose-soft hover:bg-rose-soft/90 text-white text-xs sm:text-sm font-bold px-3.5 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-xs flex items-center gap-1.5"
+                  className="min-h-[44px] flex-1 sm:flex-initial justify-center bg-rose-soft hover:bg-rose-soft/90 text-white text-xs sm:text-sm font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-xs flex items-center gap-2"
                 >
-                  <PhoneCall className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <PhoneCall className="w-4 h-4" />
                   <span>{l('108 एम्बुलेंस', '108 Ambulance')}</span>
                 </a>
                 <a
                   href="tel:104"
-                  className="touch-target bg-warm-indigo hover:bg-warm-indigo text-white text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-xs"
+                  className="min-h-[44px] bg-warm-indigo hover:bg-warm-indigo text-white text-xs sm:text-sm font-bold px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all shadow-xs flex items-center justify-center"
                 >
                   <span>{l('104 स्वास्थ्य सलाह', '104 Health Advice')}</span>
                 </a>

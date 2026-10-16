@@ -1,10 +1,12 @@
+import uuid
 import pytest
 from app.agents.graph import sanjeevani_workflow
 
 def test_workflow_red_tier_emergency():
     """Emergency chest pain must halt at emergency_node without RAG remedies."""
+    sid = f"test-emergency-101-{uuid.uuid4().hex[:8]}"
     initial_state = {
-        "conversation_id": "test-emergency-101",
+        "conversation_id": sid,
         "raw_user_message": "Mera seene me bahut tezz dard aur ghutan ho rahi hai",
         "normalized_message": "",
         "patient_conditions": [],
@@ -15,7 +17,7 @@ def test_workflow_red_tier_emergency():
         "escalation_triggered": False
     }
 
-    config = {"configurable": {"thread_id": "test-emergency-101"}}
+    config = {"configurable": {"thread_id": sid}}
     result = sanjeevani_workflow.invoke(initial_state, config=config)
 
     assert result["detected_tier"] == "Red"
@@ -25,8 +27,9 @@ def test_workflow_red_tier_emergency():
 
 def test_workflow_green_tier_routine():
     """Routine cough query must retrieve verified AYUSH remedies and stay in Green tier."""
+    sid = f"test-routine-102-{uuid.uuid4().hex[:8]}"
     initial_state = {
-        "conversation_id": "test-routine-102",
+        "conversation_id": sid,
         "raw_user_message": "Gale me halki khasi aur kharash hai, nuskha batao",
         "normalized_message": "",
         "patient_conditions": [],
@@ -38,7 +41,7 @@ def test_workflow_green_tier_routine():
         "escalation_triggered": False
     }
 
-    config = {"configurable": {"thread_id": "test-routine-102"}}
+    config = {"configurable": {"thread_id": sid}}
     result = sanjeevani_workflow.invoke(initial_state, config=config)
 
     assert result["detected_tier"] == "Green"
@@ -67,7 +70,7 @@ def test_workflow_conversational_comorbidity_filtering():
     """
     from app.agents.graph import sanjeevani_workflow
 
-    session_id = "test-multi-turn-comorbidity-001"
+    session_id = f"test-multi-turn-comorbidity-001-{uuid.uuid4().hex[:8]}"
     config = {"configurable": {"thread_id": session_id}}
 
     # Turn 1: Symptom report
