@@ -59,12 +59,14 @@ class BhashiniVoiceEngine:
         """
         Scans text for regional hill idioms and replaces them with standard clinical terms.
         Case-insensitive and preserves surrounding punctuation and sentence structure.
+        Sorts lexicon keys by descending length so longer multi-word idioms match before shorter substrings.
         """
         if not text or not self.lexicon:
             return text or ""
 
         normalized = text
-        for regional_phrase, standard_term in self.lexicon.items():
+        sorted_lexicon = sorted(self.lexicon.items(), key=lambda x: len(x[0]), reverse=True)
+        for regional_phrase, standard_term in sorted_lexicon:
             pattern = re.compile(re.escape(regional_phrase), re.IGNORECASE)
             normalized = pattern.sub(standard_term, normalized)
 

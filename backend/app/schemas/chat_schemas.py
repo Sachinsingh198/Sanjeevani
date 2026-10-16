@@ -45,6 +45,7 @@ class MedicalVisionResponse(BaseModel):
     recommended_tier: str = "Green"
     plain_language_summary: str
     image_url: Optional[str] = None
+    annotated_image_url: Optional[str] = None
 
 class ChatResponse(BaseModel):
     conversation_id: str
@@ -62,6 +63,9 @@ class ChatResponse(BaseModel):
     audio_base64: Optional[str] = None
     audio_format: Optional[str] = None
     consultation_summary: Optional[ConsultationSummary] = None
+    blocked_remedies: List[dict] = Field(default_factory=list)
+    detected_conditions: List[str] = Field(default_factory=list)
+    symptom_profile: Optional[dict] = None
 
 class TTSRequest(BaseModel):
     text: str

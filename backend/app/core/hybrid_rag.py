@@ -3,7 +3,7 @@ import os
 import re
 import time
 import concurrent.futures
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple, Set
 from qdrant_client import QdrantClient, models
 from fastembed import TextEmbedding
 from app.config import settings
@@ -443,7 +443,31 @@ class HybridRemedyStore:
         "dizzy": ["chakkar", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
         "dizziness": ["chakkar", "vertigo", "giddiness", "bhrama", "bhram", "lightheadedness"],
         "vertigo": ["chakkar", "dizziness", "giddiness", "bhrama", "bhram"],
+        "pyas": ["thirst", "trishna", "excessive thirst", "dehydration", "heat"],
+        "thirst": ["pyas", "trishna", "excessive thirst", "dehydration"],
+        "jalan": ["burning", "burning sensation", "daha", "pitta", "acidity", "heat"],
+        "burning": ["jalan", "daha", "burning sensation", "pitta", "heat"],
+        "tez": ["high", "acute", "severe", "tivr"],
     }
+
+    STOP_WORDS = {
+        "hai", "hain", "hona", "hota", "hoti", "hote", "raha", "rahi", "rahe",
+        "lag", "laga", "lagi", "lagna", "tha", "thi", "the", "ko", "se", "me",
+        "mein", "ka", "ki", "ke", "par", "aur", "and", "in", "is", "for", "to",
+        "with", "the", "a", "an", "le", "lo", "kar", "karein", "karna", "bhi"
+    }
+
+    def _extract_query_tokens(self, query_text: str) -> Tuple[List[str], Set[str]]:
+        """Extracts cleaned keywords, filtering common conversational stop words."""
+        tokens = [w for w in re.split(r'[^\w\u0900-\u097F]+', query_text.lower()) if len(w) > 2]
+        raw_tokens = [w for w in tokens if w not in self.STOP_WORDS]
+        if not raw_tokens:
+            raw_tokens = tokens
+        expanded_tokens = set(raw_tokens)
+        for t in raw_tokens:
+            if t in self.CLINICAL_SYNONYM_MAP:
+                expanded_tokens.update(self.CLINICAL_SYNONYM_MAP[t])
+        return raw_tokens, expanded_tokens
 
     def keyword_search_fallback(self, query_text: str, limit: int = 2) -> List[Dict[str, Any]]:
         """
@@ -458,12 +482,61 @@ class HybridRemedyStore:
                 logger.warning(f"[RAG] Failed to load dataset for keyword fallback: {e}")
                 self._all_cached_remedies = []
 
-        SYNONYM_MAP = self.CLINICAL_SYNONYM_MAP
-        raw_tokens = [w for w in re.split(r'\W+', query_text.lower()) if len(w) > 2]
-        expanded_tokens = set(raw_tokens)
-        for t in raw_tokens:
-            if t in SYNONYM_MAP:
-                expanded_tokens.update(SYNONYM_MAP[t])
+    def _compute_lexical_score(self, payload: Dict[str, Any], raw_tokens: List[str], expanded_tokens: Set[str]) -> Tuple[float, int]:
+        """
+        Computes deterministic bilingual lexical / BM25 keyword score over:
+        - keywords
+        - condition_name
+        - remedy_name
+        Returns (lexical_score, lexical_overlap_count).
+        """
+        keywords_list = payload.get("keywords", [])
+        if isinstance(keywords_list, list):
+            kw_list = [str(k).lower() for k in keywords_list]
+        else:
+            kw_list = [str(keywords_list).lower()]
+        kw_str = " ".join(kw_list)
+
+        cond_name = str(payload.get("condition_name", "")).lower()
+        rem_name = str(payload.get("remedy_name", "")).lower()
+        searchable_core = f"{cond_name} {kw_str} {rem_name}"
+        searchable_full = f"{searchable_core} {str(payload.get('remedy_text', '')).lower()} {str(payload.get('preparation', '')).lower()}"
+
+        overlap_count = 0
+        score = 0.0
+
+        for token in raw_tokens:
+            if token in searchable_core:
+                overlap_count += 1
+                if token in cond_name or token in rem_name:
+                    score += 4.0
+                elif token in kw_str:
+                    score += 3.0
+            elif token in searchable_full:
+                score += 1.0
+
+        for token in expanded_tokens:
+            if token in searchable_core:
+                score += 1.5
+            elif token in searchable_full:
+                score += 0.5
+
+        return score, overlap_count
+
+    def keyword_search_fallback(self, query_text: str, limit: int = 2) -> List[Dict[str, Any]]:
+        """
+        In-memory keyword / BM25 lexical search fallback over remedies dataset.
+        Always sets source: 'fallback_keyword' and never crashes.
+        Filters out unrelated queries with 0 lexical overlap.
+        """
+        if not hasattr(self, "_all_cached_remedies") or not self._all_cached_remedies:
+            try:
+                self._all_cached_remedies = self.load_all_remedies()
+            except Exception as e:
+                logger.warning(f"[RAG] Failed to load dataset for keyword fallback: {e}")
+                self._all_cached_remedies = []
+
+        raw_tokens, expanded_tokens = self._extract_query_tokens(query_text)
 
         scored = []
         for r in self._all_cached_remedies:
@@ -471,158 +544,129 @@ class HybridRemedyStore:
             if r.get("safety_tier") in ("clinical_emergency", "requires_consultation"):
                 continue
 
-            keywords_list = r.get("keywords", [])
-            symptoms_list = r.get("symptoms", [])
-            kw_str = " ".join(keywords_list) if isinstance(keywords_list, list) else str(keywords_list)
-            sym_str = " ".join(symptoms_list) if isinstance(symptoms_list, list) else str(symptoms_list)
+            lex_score, lex_overlap = self._compute_lexical_score(r, raw_tokens, expanded_tokens)
+            if lex_overlap == 0 and lex_score == 0:
+                continue
 
-            searchable = (
-                f"{r.get('remedy_name', '')} {r.get('condition_name', '')} {r.get('ailment', '')} "
-                f"{kw_str} {sym_str} {r.get('remedy_text', '')} {r.get('preparation', '')} "
-                f"{r.get('ingredients', '')} {r.get('searchable_text', '')} {r.get('ayurvedic_note', '')}"
-            ).lower()
+            # Prioritize proven CCRAS / AYUSH household remedies
+            is_household = r.get("is_primary_household") or r.get("is_household") or (
+                r.get("source") in [
+                    "CCRAS / Ministry of AYUSH Guidelines",
+                    "AYUSH Ayurvedic Home Formularies",
+                    "AYUSH Home Formularies",
+                    "CCRAS Ayurvedic Home Formularies & Classical Treatise"
+                ]
+            )
+            if is_household:
+                lex_score += 6.0
 
-            # Direct token match
-            score = sum(3 for token in raw_tokens if token in searchable)
-            # Synonym token match
-            score += sum(1 for token in expanded_tokens if token in searchable)
-
-            # Extra weight for condition/remedy title match
-            for t in raw_tokens:
-                if t in r.get('remedy_name', '').lower() or t in r.get('condition_name', '').lower():
-                    score += 4
-
-            if score > 0:
-                item = dict(r)
-                if not item.get("remedy_text"):
-                    item["remedy_text"] = item.get("preparation") or item.get("treatment") or ""
-                if not item.get("ayurvedic_note"):
-                    item["ayurvedic_note"] = item.get("causes") or item.get("classical_medicines_note") or item.get("safety_precaution") or ""
+            item = dict(r)
+            if not item.get("remedy_text"):
+                item["remedy_text"] = item.get("preparation") or item.get("treatment") or ""
+            if not item.get("ayurvedic_note"):
+                item["ayurvedic_note"] = item.get("causes") or item.get("classical_medicines_note") or item.get("safety_precaution") or ""
+            if not item.get("source"):
                 item["source"] = "fallback_keyword"
-                item["similarity_score"] = min(1.0, float(score) / (len(raw_tokens) * 3 + 1))
-                scored.append((score, self._enrich_with_botanicals(item)))
+            item["similarity_score"] = min(1.0, float(lex_score) / (max(len(raw_tokens), 1) * 4.0 + 1.0))
+            item["lexical_score"] = lex_score
+            item["hybrid_score"] = item["similarity_score"]
+            scored.append((lex_score, self._enrich_with_botanicals(item)))
 
         scored.sort(key=lambda x: x[0], reverse=True)
         results = [s[1] for s in scored[:limit]]
-
-        # If no specific keyword matched, safely return up to 'limit' category-matching or household safe remedies
-        if not results and self._all_cached_remedies:
-            q_lower = query_text.lower()
-            category_target = None
-            if any(w in q_lower for w in ["allergic rhinitis", "chronic allergy", "dust allergy", "dhool se allergy"]):
-                category_target = "rhinitis"
-            elif any(w in q_lower for w in ["cold", "zukaam", "zukam", "jukham", "jukhaam", "sardi", "naak behna", "chheenk", "naak", "pratishyaya"]):
-                category_target = "cold"
-            elif any(w in q_lower for w in ["jod", "ghutna", "jakdan", "sandhi", "joint", "arthritis"]):
-                category_target = "joint"
-            elif any(w in q_lower for w in ["pet", "gas", "apach", "marod", "stomach", "digest"]):
-                category_target = "digest"
-            elif any(w in q_lower for w in ["khansi", "khang", "gala", "cough", "throat"]):
-                category_target = "cough"
-            elif any(w in q_lower for w in ["bukhar", "fever", "thand"]):
-                category_target = "fever"
-            elif any(w in q_lower for w in ["sar", "sir", "mund", "headache"]):
-                category_target = "headache"
-
-            if category_target:
-                for r in self._all_cached_remedies:
-                    if r.get("safety_tier") == "household_safe":
-                        text_blob = f"{r.get('condition_name', '')} {r.get('remedy_name', '')} {r.get('keywords', '')}".lower()
-                        if category_target in text_blob:
-                            item = dict(r)
-                            if not item.get("remedy_text"):
-                                item["remedy_text"] = item.get("preparation") or ""
-                            if not item.get("ayurvedic_note"):
-                                item["ayurvedic_note"] = item.get("causes") or ""
-                            item["source"] = "fallback_keyword"
-                            results.append(self._enrich_with_botanicals(item))
-                            if len(results) >= limit:
-                                break
-
-            # Universal household safe remedies with guaranteed non-empty preparation text
-            if not results:
-                for r in self._all_cached_remedies:
-                    if r.get("safety_tier") == "household_safe" and (r.get("remedy_text") or r.get("preparation")):
-                        item = dict(r)
-                        if not item.get("remedy_text"):
-                            item["remedy_text"] = item.get("preparation") or ""
-                        if not item.get("ayurvedic_note"):
-                            item["ayurvedic_note"] = item.get("causes") or ""
-                        item["source"] = "fallback_keyword"
-                        results.append(self._enrich_with_botanicals(item))
-                        if len(results) >= limit:
-                            break
-
         return results
 
-    def search_remedies(self, query_text: str, limit: int = 2, min_score: float = 0.25, timeout: float = 5.0) -> List[Dict[str, Any]]:
+    def search_remedies(self, query_text: str, limit: int = 2, min_score: float = 0.25, timeout: float = 25.0) -> List[Dict[str, Any]]:
         """
-        Embeds the query text and retrieves top matching remedies from Qdrant with a 5.0s timeout.
-        On timeout or connection failure, retries once (for cloud) and falls back to keyword search.
+        Embeds the query text and retrieves top matching remedies from Qdrant with a resilient timeout.
+        On timeout or connection failure, retries (for cloud) and falls back to BM25 keyword search.
+        Uses Hybrid Reciprocal Rank Fusion (RRF) combining dense embeddings and sparse lexical scores.
         """
         if self.client is None:
             logger.warning("[RAG] Qdrant search timed out / failed, falling back to BM25 / keyword search")
             return self.keyword_search_fallback(query_text, limit=limit)
 
+        effective_timeout = max(timeout, 25.0) if getattr(self, "is_cloud", False) else timeout
+
         def _do_qdrant_query():
             query_embedding = list(self.embedding_model.embed([query_text]))[0].tolist()
-            # Fetch a wider candidate pool from Qdrant to enable hybrid clinical re-ranking
-            candidate_limit = max(limit * 8, 30)
+            # Fetch a balanced candidate pool from Qdrant to enable hybrid clinical re-ranking
+            candidate_limit = max(limit * 8, 40)
             search_result = self.client.query_points(
                 collection_name=self.collection_name,
                 query=query_embedding,
                 limit=candidate_limit,
-                timeout=int(timeout)
+                timeout=int(effective_timeout)
             )
             BANNED_HOME_TERMS = (
                 "tobacco", "snuff", "tambaku", "opium", "afeem", "cannabis", "ganja", "bhang",
                 "syphilis", "upadansh", "gonorrhea", "flesh decay", "foul odor", "kshar oil"
             )
 
-            raw_tokens = [w for w in re.split(r'\W+', query_text.lower()) if len(w) > 2]
-            expanded_tokens = set(raw_tokens)
-            for t in raw_tokens:
-                if t in self.CLINICAL_SYNONYM_MAP:
-                    expanded_tokens.update(self.CLINICAL_SYNONYM_MAP[t])
+            raw_tokens, expanded_tokens = self._extract_query_tokens(query_text)
 
-            candidates = []
+            # 1. Collect dense candidates from Qdrant query_points
+            dense_map: Dict[str, Dict[str, Any]] = {}
             for point in search_result.points:
                 if not point.payload:
                     continue
-                if hasattr(point, "score") and point.score is not None and point.score < min_score:
+                name_key = point.payload.get("remedy_name", "").strip().lower()
+                if name_key:
+                    dense_map[name_key] = {
+                        "payload": point.payload,
+                        "vec_score": float(getattr(point, "score", 0.0) or 0.0)
+                    }
+
+            # 2. Collect sparse lexical candidates from all curated remedies
+            all_remedies = self._all_cached_remedies or self.load_all_remedies()
+            lexical_map: Dict[str, Dict[str, Any]] = {}
+            for r in all_remedies:
+                if r.get("safety_tier") in ("clinical_emergency", "requires_consultation"):
                     continue
-                payload_desc = f"{point.payload.get('remedy_name', '')} {point.payload.get('preparation', '')} {point.payload.get('remedy_text', '')} {point.payload.get('causes', '')}".lower()
+                name_key = r.get("remedy_name", "").strip().lower()
+                if not name_key:
+                    continue
+                l_score, l_overlap = self._compute_lexical_score(r, raw_tokens, expanded_tokens)
+                if l_score > 0 or name_key in dense_map:
+                    lexical_map[name_key] = {
+                        "payload": r,
+                        "lex_score": l_score,
+                        "lex_overlap": l_overlap
+                    }
+
+            # 3. Dense ranking
+            dense_sorted = sorted(dense_map.items(), key=lambda x: x[1]["vec_score"], reverse=True)
+            dense_rank_map = {k: rank for rank, (k, _) in enumerate(dense_sorted, start=1)}
+
+            # 4. Lexical ranking
+            lex_sorted = sorted(lexical_map.items(), key=lambda x: x[1]["lex_score"], reverse=True)
+            lex_rank_map = {k: rank for rank, (k, _) in enumerate(lex_sorted, start=1)}
+
+            # 5. Fused candidates pool across Dense & Lexical channels
+            all_keys = set(dense_map.keys()) | set(lexical_map.keys())
+            fused_candidates = []
+
+            for k in all_keys:
+                payload = dense_map[k]["payload"] if k in dense_map else lexical_map[k]["payload"]
+                vec_score = dense_map[k]["vec_score"] if k in dense_map else 0.0
+                dense_rank = dense_rank_map.get(k, 120)
+                lex_score = lexical_map[k]["lex_score"] if k in lexical_map else 0.0
+                lex_overlap = lexical_map[k]["lex_overlap"] if k in lexical_map else 0
+                lex_rank = lex_rank_map.get(k, 120)
+
+                payload_desc = f"{payload.get('remedy_name', '')} {payload.get('preparation', '')} {payload.get('remedy_text', '')} {payload.get('causes', '')}".lower()
                 if any(b in payload_desc for b in BANNED_HOME_TERMS):
                     continue
 
-                enriched = self._enrich_with_botanicals(point.payload)
-                if not enriched.get("remedy_text"):
-                    enriched["remedy_text"] = enriched.get("preparation") or enriched.get("treatment") or ""
-                if not enriched.get("ayurvedic_note"):
-                    enriched["ayurvedic_note"] = enriched.get("causes") or enriched.get("classical_medicines_note") or ""
+                # Relevance Threshold: Filter out remedies whose dense similarity score is < 0.25 and lexical overlap is 0
+                if vec_score < min_score and lex_overlap == 0:
+                    continue
 
-                vec_score = float(getattr(point, "score", 0.0) or 0.0)
+                # Reciprocal Rank Fusion: 1/(60 + dense_rank) + 1/(60 + lex_rank)
+                rrf = (1.0 / (60.0 + dense_rank)) + (1.0 / (60.0 + lex_rank))
 
-                # Hybrid lexical match calculation
-                kw_str = " ".join(point.payload.get("keywords", [])) if isinstance(point.payload.get("keywords"), list) else str(point.payload.get("keywords", ""))
-                sym_str = " ".join(point.payload.get("symptoms", [])) if isinstance(point.payload.get("symptoms"), list) else str(point.payload.get("symptoms", ""))
-                searchable = (
-                    f"{point.payload.get('remedy_name', '')} {point.payload.get('condition_name', '')} "
-                    f"{kw_str} {sym_str} {point.payload.get('remedy_text', '')}"
-                ).lower()
-
-                # Score boosts for symptom/keyword matches
-                lexical_hits = sum(3.0 for token in raw_tokens if token in searchable)
-                lexical_hits += sum(1.0 for token in expanded_tokens if token in searchable)
-                for t in raw_tokens:
-                    if t in point.payload.get("remedy_name", "").lower() or t in point.payload.get("condition_name", "").lower():
-                        lexical_hits += 2.0
-
-                hybrid_score = vec_score + (0.04 * lexical_hits)
-
-                # Prioritize proven CCRAS / AYUSH household remedies over rare single-herb botanical monographs
-                is_household = point.payload.get("is_primary_household") or point.payload.get("is_household") or (
-                    point.payload.get("source") in [
+                is_household = payload.get("is_primary_household") or payload.get("is_household") or (
+                    payload.get("source") in [
                         "CCRAS / Ministry of AYUSH Guidelines",
                         "AYUSH Ayurvedic Home Formularies",
                         "AYUSH Home Formularies",
@@ -630,24 +674,33 @@ class HybridRemedyStore:
                     ]
                 )
                 if is_household:
-                    hybrid_score += 0.45
+                    rrf += 0.003
+
+                enriched = self._enrich_with_botanicals(payload)
+                if not enriched.get("remedy_text"):
+                    enriched["remedy_text"] = enriched.get("preparation") or enriched.get("treatment") or ""
+                if not enriched.get("ayurvedic_note"):
+                    enriched["ayurvedic_note"] = enriched.get("causes") or enriched.get("classical_medicines_note") or ""
 
                 enriched["similarity_score"] = vec_score
-                enriched["hybrid_score"] = hybrid_score
-                candidates.append((hybrid_score, enriched))
+                enriched["lexical_score"] = lex_score
+                enriched["rrf_score"] = rrf
+                enriched["hybrid_score"] = rrf
 
-            candidates.sort(key=lambda x: x[0], reverse=True)
-            matched = [c[1] for c in candidates[:limit]]
+                fused_candidates.append((rrf, enriched))
+
+            fused_candidates.sort(key=lambda x: x[0], reverse=True)
+            matched = [c[1] for c in fused_candidates[:limit]]
             return matched
 
-        max_attempts = 2 if getattr(self, "is_cloud", False) else 1
+        max_attempts = 3 if getattr(self, "is_cloud", False) else 2
         last_error = None
 
         for attempt in range(max_attempts):
             try:
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                     future = executor.submit(_do_qdrant_query)
-                    matched = future.result(timeout=timeout)
+                    matched = future.result(timeout=effective_timeout)
                 if matched:
                     return matched
                 # If matched is empty but search succeeded, return keyword fallback

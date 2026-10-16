@@ -642,6 +642,27 @@ def _format_vision_consultation_reply(state: AgentState, llm) -> AgentState:
     return state
 
 
+def _build_blocked_remedies_warning(blocked: list, lang: str, is_devanagari: bool) -> str:
+    if not blocked:
+        return ""
+    lines = []
+    for b in blocked:
+        r_n = b.get("remedy_name", "Aushadhi")
+        reason = b.get("reason", "Suraksha niyam ke kaaran")
+        lines.append(f"- **{r_n}:** {reason}")
+    items_str = "\n".join(lines)
+    if lang == "english":
+        return f"\n\n⚠️ **Safety Notice:**\nFor your health safety, the following remedy was excluded due to your condition:\n{items_str}"
+    elif lang == "garhwali":
+        if is_devanagari:
+            return f"\n\n⚠️ **सुरक्षा सूचना (Suraksha Suchna):**\nत्वरि बीमारी/स्थिति खातिर यै नुस्खा नी दीणि च्छा:\n{items_str}"
+        return f"\n\n⚠️ **Suraksha Suchna:**\nTwari bimari/sthiti khatir yai nuskha ni deeni chha:\n{items_str}"
+    else:
+        if is_devanagari:
+            return f"\n\n⚠️ **सुरक्षा सूचना (Suraksha Suchna):**\nआपकी स्वास्थ्य स्थिति को ध्यान में रखते हुए निम्न नुस्खे को शामिल नहीं किया गया है:\n{items_str}"
+        return f"\n\n⚠️ **Suraksha Suchna:**\nAapki health condition ke anusaar nimn nuskhe ko suraksha ke kaaran shaamil nahi kiya gaya hai:\n{items_str}"
+
+
 def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
     """Formats final prescription output from retrieved verified remedies using canonical Hindi."""
     remedies = state.get("retrieved_remedies", [])
@@ -659,6 +680,34 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
 
     # 1. No verified remedy candidate available
     if not remedies:
+        blocked = state.get("blocked_remedies", [])
+        known = state.get("patient_conditions", [])
+        if blocked and known:
+            conds_str = ", ".join(known)
+            if lang == "english":
+                base_hin = (
+                    f"Based on your health condition ({conds_str}), standard home remedies are not medically safe and have been withheld for your protection.\n\n"
+                    "Please do not self-medicate and consult a qualified medical professional at your nearest **PHC** or call **104** (e-Sanjeevani)."
+                )
+            elif lang == "garhwali":
+                base_hin = (
+                    f"त्वरि स्थिति ({conds_str}) का कारण घरेलू नुस्खा सुरक्षित नी च्छा। सुरक्षा खातिर नुस्खा रोकी दिये।\n\n"
+                    "कृप्या नजदीकी **PHC** मा डॉक्टर थैं दिखौण या **104** पर फोन करा।"
+                    if is_devanagari else
+                    f"Twari sthiti ({conds_str}) ke kaaran gharelu nuskha surakshit ni chha. Suraksha khatir nuskha roki diye.\n\n"
+                    "Kripya nazdiki **PHC** ma doctor thain dikhon ya **104** par phone kara."
+                )
+            else:
+                base_hin = (
+                    f"आपकी स्थिति ({conds_str}) को देखते हुए सामान्य घरेलू नुस्खे सुरक्षित नहीं हैं और आपकी सुरक्षा के लिए इन्हें रोक दिया गया है।\n\n"
+                    "कृपया बिना डॉक्टर की सलाह के कोई औषधि न लें और तुरंत नजदीकी **PHC** जाएं या **104** (ई-संजीवनी) पर संपर्क करें।"
+                    if is_devanagari else
+                    f"Aapki sthiti ({conds_str}) ko dekhte hue saamaanya gharelu nuskhe surakshit nahi hain aur aapki suraksha ke liye inhe rok diya gaya hai.\n\n"
+                    f"Kripya bina doctor ki salah ke koi aushadhi na lein aur turant nazdiki **PHC** jaayein ya **104** par sampark karein."
+                )
+            state["final_reply_text"] = base_hin
+            return state
+
         base_hin = (
             "Aapki puri baat sun li.\n\n"
             "Is waqt mere paas aapki takleef ke liye verified nuskha nahi mila.\n"
@@ -959,8 +1008,12 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
                 if lang == "garhwali" else
                 "⚕️ Yeh sirf prathmik swasthya margdarshan hai, chikitsa parishad ka vivaranik upchar nahi. Kripya gambhir ya lagatar takleef mein doctor se zaroor milein."
             )
+            safety_notice = _build_blocked_remedies_warning(state.get("blocked_remedies", []), lang, is_devanagari)
+            if safety_notice:
+                state["final_reply_text"] = f"{state['final_reply_text']}{safety_notice}"
             state["disclaimer"] = disclaimer_str
             state["final_reply_text"] = f"{state['final_reply_text']}\n\n{disclaimer_str}"
+            state["final_reply_text"] = re.sub(r"##SEARCH_QUERY:[^#]*##", "", state["final_reply_text"], flags=re.IGNORECASE).replace("##CONCLUDE##", "").strip()
 
             state["spoken_reply_text"] = _build_complete_spoken_remedy(
                 r_name=r_name,
@@ -1052,8 +1105,12 @@ def _format_concluded_remedy(state: AgentState, llm) -> AgentState:
         if lang == "garhwali" else
         "⚕️ Yeh sirf prathmik swasthya margdarshan hai, chikitsa parishad ka vivaranik upchar nahi. Kripya gambhir ya lagatar takleef mein doctor se zaroor milein."
     )
+    safety_notice = _build_blocked_remedies_warning(state.get("blocked_remedies", []), lang, is_devanagari)
+    if safety_notice:
+        state["final_reply_text"] = f"{state['final_reply_text']}{safety_notice}"
     state["disclaimer"] = disclaimer_str
     state["final_reply_text"] = f"{state['final_reply_text']}\n\n{disclaimer_str}"
+    state["final_reply_text"] = re.sub(r"##SEARCH_QUERY:[^#]*##", "", state["final_reply_text"], flags=re.IGNORECASE).replace("##CONCLUDE##", "").strip()
 
     state["spoken_reply_text"] = _build_complete_spoken_remedy(
         r_name=r_name,
@@ -1558,6 +1615,12 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
         turn_count = state.get("turn_count", 1)
         patient_text = raw_msg or user_msg
 
+        # Maintain dialogue_history with user's incoming message
+        if "dialogue_history" not in state or state["dialogue_history"] is None:
+            state["dialogue_history"] = []
+        if not state["dialogue_history"] or state["dialogue_history"][-1].get("content") != patient_text:
+            state["dialogue_history"].append({"role": "user", "content": patient_text})
+
         # Structured Symptom Profile tracking
         stored_profile_dict = state.get("structured_symptoms")
         profile = StructuredSymptomProfile.from_dict(stored_profile_dict)
@@ -1600,10 +1663,65 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
             or has_vision
         )
 
+        # Structured Checklist State Tracking (4 slots)
+        sym_prof = state.get("symptom_profile") or {}
+        if not sym_prof.get("chief_complaint"):
+            if profile.chief_complaint:
+                sym_prof["chief_complaint"] = profile.chief_complaint
+            elif has_actual_symptoms:
+                sym_prof["chief_complaint"] = patient_text[:100]
 
-        has_sufficient = _has_sufficient_info(updated_notes) or profile.is_clinically_sufficient()
+        # Duration detection
+        if not sym_prof.get("duration"):
+            dur_match = re.search(r"\b(\d+)\s*(?:din|days|hafte|weeks|ghante|hours|दिन|हफ्ते)\b", patient_text, re.I)
+            if dur_match:
+                sym_prof["duration"] = dur_match.group(0)
+            elif sym_prof.get("duration_days"):
+                sym_prof["duration"] = f"{sym_prof['duration_days']} din"
+            elif any(w in patient_text.lower() for w in ("aaj se", "kal se", "parso se", "subah se", "shaam se", "kal se bukhar", "आज से", "कल से")):
+                sym_prof["duration"] = "recent (1-2 din)"
+
+        # Associated symptoms detection (mentioned or denied)
+        if not sym_prof.get("associated_symptoms"):
+            if any(w in patient_text.lower() for w in ("aur koi", "kuch nahi", "nahi hai", "nahin hai", "bas yahi", "no other", "nothing else", "कुछ नहीं", "नहीं है", "बस यही")):
+                sym_prof["associated_symptoms"] = ["none_reported"]
+            elif any(w in patient_text.lower() for w in ("ulti", "vomit", "dast", "loose motion", "chakkar", "bukhar", "fever", "khansi", "cough", "jalan", "dard", "उल्टी", "दस्त", "बुखार", "खांसी", "दर्द")):
+                sym_prof["associated_symptoms"] = [patient_text[:100]]
+
+        # Comorbidities asked / answered
+        if state.get("patient_conditions") or any(w in patient_text.lower() for w in ("bp", "sugar", "diabetes", "acidity", "gas", "ulcer", "garbhavastha", "pregnant", "koi bimari nahi", "koi rog nahi", "बीपी", "शुगर", "डायबिटीज", "एसिडिटी")):
+            sym_prof["comorbidities_asked"] = True
+        elif turn_count >= 3:
+            last_bot_q = ""
+            for m in reversed(state["dialogue_history"]):
+                if m.get("role") == "assistant":
+                    last_bot_q = m.get("content", "")
+                    break
+            if any(w in last_bot_q.lower() for w in ("koi purani bimari", "pehle se bimari", "bp", "sugar", "diabetes", "garbh", "acidity")):
+                sym_prof["comorbidities_asked"] = True
+
+        state["symptom_profile"] = sym_prof
+
+        slots_status = {
+            "chief_complaint": bool(sym_prof.get("chief_complaint")),
+            "duration": bool(sym_prof.get("duration") or sym_prof.get("duration_days")),
+            "associated_symptoms": bool(sym_prof.get("associated_symptoms")),
+            "comorbidities_asked": bool(sym_prof.get("comorbidities_asked")),
+        }
+        all_slots_filled = all(slots_status.values())
+
+        if not slots_status["duration"]:
+            next_slot_to_ask = "duration (Kab se yeh takleef hai?)"
+        elif not slots_status["associated_symptoms"]:
+            next_slot_to_ask = "associated_symptoms (Kya koi aur lakshan jaise bukhar, ulti ya dast bhi hai?)"
+        elif not slots_status["comorbidities_asked"]:
+            next_slot_to_ask = "comorbidities (Kya koi pehle se bimari jaise BP, sugar ya acidity hai?)"
+        else:
+            next_slot_to_ask = "conclude (Sabhi zaroori jankari mil gayi hai)"
+
+        has_sufficient = _has_sufficient_info(updated_notes) or profile.is_clinically_sufficient() or all_slots_filled
         can_conclude = (has_sufficient or turn_count >= 2) and has_actual_symptoms
-        force_conclude = (turn_count >= 5) and has_actual_symptoms
+        force_conclude = (turn_count >= 5) or all_slots_filled
 
         sym_data = get_symptom_data(updated_notes)
 
@@ -1616,42 +1734,46 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                 "Ek asali, chatur aur sahanubhooti-purna doctor ki tarah clinical jaanch (consultation) kar.\n\n"
                 "CLINICAL CONSULTATION & DIAGNOSIS RULES:\n"
                 "1. EMPATHY & LISTENING FIRST:\n"
+                "   - Speak in warm, natural, empathetic Hindi/Hinglish (or mirror Devanagari if the user writes in Devanagari).\n"
                 "   - Patient ki baat ko pehle 2-3 shabdon mein dhyan se acknowledge kar (jaise 'Maine aapki baat suni...', 'Achha, ghutne mein dard hai...').\n"
-                "   - Jo lakshan patient ne pehle hi mana kar diya ho (e.g. agar patient ne kaha 'bukhar nahi hai', 'chot nahi lagi'), USE DUBARA KABHI MAT POOCHHNA!\n"
-                "2. CONDITION-SPECIFIC DIAGNOSTIC QUESTIONS (No generic repeated questions):\n"
-                "   - Apne sawaal ko patient ki MUKHYA TAKLEEF ke anusaar hi poochh, bewajah har kisi se bukhar ya khansi mat poochh:\n"
-                "     * Pet / Acidity / Gas: Jalan kab hoti hai (khana khane ke baad ya khali pet), khatti dakar ya ji michlana to nahi?\n"
-                "     * Jodon / Ghutne ka dard: Kya subah uthne par jakadan hoti hai, ya chalne-phirne mein soojan/dard badhta hai?\n"
-                "     * Sar dard: Sar mein dard kahan hai (aage, dono taraf ya peeche), aur kya neend na aane ya tanav se hai?\n"
-                "     * Sardi / Zukaam: Naak beh rahi hai ya band hai, aur kya gala kharab ya halki thand lag rahi hai?\n"
-                "     * Khansi: Khansi sookhi hai ya balgam wali?\n"
-                "3. NATURAL HINDI ONLY — NO ENGLISH MEDICAL JARGON:\n"
-                "   - 'nausea', 'heartburn', 'regurgitation', 'fatigue', 'gastric', 'inflammation' jaise angrezi shabdon ka prayog bilkul MAT karo!\n"
-                "   - Inki jagah aam bolchal ke shabdon ka prayog karo: 'ji michlana', 'chhati mein jalan', 'khatti dakar', 'kamzori/thakan', 'soojan'.\n"
-                "4. CONVERSATIONAL ECONOMY & TURN PACING (2-3 Turns Maximum):\n"
-                "   - Turn 1: Duration aur mukhya takleef ka pattern poochho (ek chhota, apnepan bhara sawaal).\n"
-                "   - Turn 2: Agar duration aur lakshan spasht hain, toh ek antim sambandhit rule-out sawaal poochho ya agar sab spasht ho chuka hai toh conclude karo.\n"
-                "   - Turn 3+: Agar patient ne duration aur mukhya lakshan bata diye hain aur koi red-flag nahi hai, toh TURANT 'has_enough_info': true aur 'conclude': true karke nuskha deliver karo. Patient ko lambe sawalon mein mat uljhao!\n"
-                "5. ACCURATE DIAGNOSIS:\n"
-                "   - Aam sardi-zukam ko Pratishyaya / Common Cold hi maano (Allergic Rhinitis tabhi jab patient purani allergy bataye).\n"
-                "6. ONLY ASK QUESTIONS DURING INQUIRY TURNS (No premature advice/drugs):\n"
-                "   - Jab tak 'conclude': true na ho, tab tak patient ko koi nuskha, gharelu totka, ya dawa (jaise paracetamol) bilkul MAT batao!\n"
-                "   - Inquiry turns mein 'reply' mein sirf aur sirf ek sateek clinical sawaal hona chahiye.\n"
-                "7. EK BAAR MEIN SIRF EK CHHOTA SAWAAL (15-20 words max), bilkul aam bolchal mein.\n"
-                "8. OUTPUT FORMAT: Respond strictly in valid JSON format:\n"
-                '{\n  "has_enough_info": true/false,\n  "reply": "Doctor ka agla sateek clinical sawaal ya nuskhe ki or badhne ka sandesh",\n  "conclude": true/false\n}\n'
+                "   - Jo lakshan ya sawaal patient pehle hi bata chuka hai, USE DUBARA KABHI MAT POOCHHNA!\n"
+                "2. STRUCTURED INTAKE CHECKLIST (Track these 4 slots):\n"
+                "   (1) Chief Complaint (Mukhya takleef)\n"
+                "   (2) Duration (Kab se hai)\n"
+                "   (3) Associated Symptoms (Ulti, dast, bukhar ya anya lakshan)\n"
+                "   (4) Comorbidities (High BP, Sugar, Acidity, Garbhavastha)\n"
+                "3. CONVERSATIONAL ECONOMY & SINGLE QUESTION AT A TIME:\n"
+                "   - Ek baar mein sirf ek missing slot ka chhota, aam bolchal ka sawaal poochh (15-20 words max).\n"
+                "   - Never prescribe any herb, medicine or home remedy during CONSULTATION before safety checks run.\n"
+                "4. CONCLUDE WHEN READY:\n"
+                "   - As soon as all 4 slots are answered or sufficient info is collected, output '##CONCLUDE##' (optionally with '##SEARCH_QUERY: <english clinical keywords>##').\n"
+                "5. OUTPUT FORMAT: Respond strictly in valid JSON format:\n"
+                '{\n  "has_enough_info": true/false,\n  "reply": "Doctor ka agla sateek clinical sawaal (or conclude message with ##CONCLUDE##)",\n  "conclude": true/false\n}\n'
                 "Do NOT output markdown code blocks or text outside the JSON."
             )
             if lang == "garhwali":
                 canonical_consultation_prompt += f"\n\n{bhashini_engine.get_garhwali_guidance(is_devanagari)}"
 
+            # Format explicit dialogue history turns
+            formatted_turns = []
+            for turn in state.get("dialogue_history", []):
+                role_name = "Doctor" if turn.get("role") == "assistant" else "Patient"
+                formatted_turns.append(f"{role_name}: {turn.get('content', '')}")
+            formatted_transcript = "\n".join(formatted_turns) if formatted_turns else updated_notes
+
             clinical_summary = profile.to_clinical_summary()
             human_content = (
-                f"Conversation History:\n{updated_notes}\n\n"
-                f"Structured Clinical Profile: {clinical_summary}\n\n"
+                f"Consultation Transcript:\n{formatted_transcript}\n\n"
+                f"Known Patient Conditions: {state.get('patient_conditions', [])}\n"
+                f"Intake Checklist Status:\n"
+                f"- Chief Complaint: {'Answered (' + str(sym_prof.get('chief_complaint')) + ')' if slots_status['chief_complaint'] else 'PENDING'}\n"
+                f"- Duration: {'Answered (' + str(sym_prof.get('duration') or sym_prof.get('duration_days')) + ')' if slots_status['duration'] else 'PENDING'}\n"
+                f"- Associated Symptoms: {'Answered' if slots_status['associated_symptoms'] else 'PENDING'}\n"
+                f"- Comorbidities Asked/Known: {'Answered (' + str(state.get('patient_conditions', [])) + ')' if slots_status['comorbidities_asked'] else 'PENDING'}\n\n"
+                f"Next Missing Slot to Ask: {next_slot_to_ask}\n"
                 f"Turn Count: {turn_count}/5\n"
                 f"Patient just said: \"{patient_text}\"\n\n"
-                "Evaluate clinical information sufficiency. Respond as Dr. Sanjeevani with valid JSON: "
+                "Evaluate clinical intake sufficiency. If all 4 slots are answered or sufficient info is collected, output ##CONCLUDE##. Otherwise ask the single next missing question in valid JSON: "
                 '{"has_enough_info": true/false, "reply": "...", "conclude": true/false}'
             )
             reply = _try_llm(llm, [
@@ -1682,21 +1804,16 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                     patient_text.lower()
                 )) or ("no_other_symptoms" in profile.denied_symptoms)
 
-                # Clinical guardrail on premature conclusion:
-                # On Turn 1, only conclude if the patient provided a comprehensive narrative containing duration AND denial of other symptoms.
-                # Otherwise, doctor MUST ask at least one clarifying diagnostic question.
                 duration_pattern = r"\b(?:\d+\s*(?:din|hafte|ghante|mahine|days?|hours?|weeks?|months?)|kal\s*se|aaj\s*se|parso\s*se|subah\s*se|shaam\s*se|raat\s*se|since\s+\w+|katga\s*din|kaba\s*bati)\b"
-                has_explicit_duration = bool(re.search(duration_pattern, patient_text.lower())) or bool(re.search(duration_pattern, updated_notes.lower()))
+                has_explicit_duration = bool(re.search(duration_pattern, patient_text.lower())) or bool(re.search(duration_pattern, updated_notes.lower())) or bool(sym_prof.get("duration"))
                 if turn_count <= 1 and not (patient_denied_other and has_explicit_duration):
                     llm_conclude = False
                     llm_has_info = False
 
-                # Conclude when:
-                # - LLM confirms it has enough info after at least 1 diagnostic exchange
-                # - OR turn_count >= 2 and (has_sufficient or patient_denied_other)
-                # - OR force_conclude (turn_count >= 5)
                 can_finish = (
                     force_conclude
+                    or all_slots_filled
+                    or ("##CONCLUDE##" in reply)
                     or (llm_conclude and llm_has_info and (turn_count >= 2 or (patient_denied_other and has_explicit_duration)))
                     or (turn_count >= 2 and has_sufficient and patient_denied_other)
                     or (turn_count >= 3 and has_sufficient)
@@ -1707,6 +1824,7 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                     conclude_llm = llm
                 else:
                     clean_reply = re.sub(r"^\{.*\"reply\":\s*\"([^\"]+)\".*\}$", r"\1", reply_content).strip()
+                    clean_reply = re.sub(r"##SEARCH_QUERY:[^#]*##", "", clean_reply, flags=re.IGNORECASE)
                     clean_reply = clean_reply.replace("##CONCLUDE##", "").strip()
                     if not clean_reply:
                         clean_reply = "Aapko yeh takleef kab se hai?"
@@ -1725,10 +1843,7 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
 
         # Deterministic fallback when no LLM
         if not should_conclude:
-            if turn_count >= 5 or force_conclude:
-                should_conclude = True
-                conclude_llm = None
-            elif has_sufficient:
+            if turn_count >= 5 or force_conclude or all_slots_filled:
                 should_conclude = True
                 conclude_llm = None
             elif not has_actual_symptoms:
@@ -1741,8 +1856,7 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                 else:
                     base_intake = "आपको क्या तकलीफ या लक्षण महसूस हो रहे हैं? कृपया बताएं (जैसे बुखार, सर्दी, सिर दर्द, या पेट दर्द) ताकि मैं सही जांच कर सकूं।"
                     reply = localize_clinical_text(base_intake, lang, is_devanagari)
-            elif turn_count <= 1:
-                # Turn 1: Probe duration
+            elif not slots_status["duration"]:
                 if lang == "garhwali":
                     reply = sym_data["t1_garh_dev"] if is_devanagari else sym_data["t1_garh_rom"]
                 elif lang == "english":
@@ -1751,38 +1865,27 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                     reply = sym_data["t1_hin"]
                 else:
                     reply = localize_clinical_text(sym_data["t1_hin"], lang, is_devanagari)
-            elif turn_count == 2:
-                # Turn 2: Probe key warning / associated symptoms (e.g. ulti / dast / vomit)
+            elif not slots_status["associated_symptoms"]:
                 if lang == "garhwali":
                     reply = sym_data.get("t2_garh_dev", "क्या दगड़ मा उलटी या दस्त भी छ?") if is_devanagari else sym_data.get("t2_garh_rom", "Kya dagad ma ulti ya dast bhi chha?")
                 elif lang == "english":
-                    reply = sym_data.get("t2_eng", "Do you also have nausea, vomiting, or loose motions?")
+                    reply = sym_data.get("t2_eng", "Do you also have nausea, vomiting, or fever?")
                 elif lang == "hindi":
                     reply = sym_data.get("t2_hin", "Kya iske sath ulti, dast ya bukhar bhi hai?")
                 else:
                     reply = localize_clinical_text(sym_data.get("t2_hin", "क्या इसके साथ उल्टी, दस्त या बुखार भी है?"), lang, is_devanagari)
-            elif turn_count == 3:
-                # Turn 3: Probe continuity / pattern (checks for lagatar)
+            elif not slots_status["comorbidities_asked"]:
+                sym_prof["comorbidities_asked"] = True
+                state["symptom_profile"] = sym_prof
                 if lang == "garhwali":
-                    reply = "क्या यै तकलीफ लगातार बणी रयी छ या कभिक-कभि होंदी छ?" if is_devanagari else "Kya yai takleef lagatar bani rayi chha ya kabhik-kabhi hondi chha?"
+                    reply = "क्या त्वै पैली बटि कोइ बीमारी छ, जैसि हाई बीपी, शुगर, या एसिडिटी?" if is_devanagari else "Kya twai paili bati koi bimaari chha, jaisi high BP, sugar, ya acidity?"
                 elif lang == "english":
-                    reply = "Is this discomfort continuous throughout the day or does it come and go?"
+                    reply = "Do you have any pre-existing health conditions such as High Blood Pressure, Diabetes, Acidity, or Pregnancy?"
                 elif lang == "hindi":
-                    reply = "Kya yeh takleef lagatar bani rehti hai ya ruk-ruk kar aati hai?"
+                    reply = "Kya aapko pehle se koi bimari hai, jaise High BP, Sugar, Acidity ya Garbhavastha?"
                 else:
-                    reply = localize_clinical_text("क्या यह तकलीफ लगातार बनी रहती है या रुक-रुक कर आती है?", lang, is_devanagari)
-            elif turn_count == 4:
-                # Turn 4: Probe appetite / weakness (checks for kamzori or khana)
-                if lang == "garhwali":
-                    reply = "क्या भूख नी लगणी छ या बहुत कमजोरी महसूस होणी छ?" if is_devanagari else "Kya bhookh ni lagni chha ya bahut kamzori mehsoos honi chha?"
-                elif lang == "english":
-                    reply = "Are you experiencing severe weakness or difficulty eating food?"
-                elif lang == "hindi":
-                    reply = "Kya khana khane mein pareshani hai ya bahut kamzori mehsoos ho rahi hai?"
-                else:
-                    reply = localize_clinical_text("क्या खाना खाने में परेशानी है या बहुत कमजोरी महसूस हो रही है?", lang, is_devanagari)
+                    reply = localize_clinical_text("क्या आपको पहले से कोई बीमारी है, जैसे हाई बीपी, शुगर, एसिडिटी या गर्भावस्था?", lang, is_devanagari)
             else:
-                # Turn >= 5: Hard cap reached -> must conclude
                 should_conclude = True
                 conclude_llm = None
 
@@ -1792,10 +1895,6 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
                 return state
 
         if should_conclude:
-            # DESIGN EXCEPTION (Task 9): responder_node owns exactly ONE phase transition:
-            # CONSULTATION -> CONCLUDED when information is sufficient or hard cap reached.
-            # This is the sole phase mutation in this module, allowing LangGraph's route_after_consultation edge
-            # to retrieve verified remedies and format the prescription.
             state["dialogue_phase"] = "CONCLUDED"
             return _format_concluded_remedy(state, conclude_llm)
 
@@ -1813,6 +1912,16 @@ def doctor_consultation_node(state: AgentState) -> AgentState:
     """
     out = _doctor_consultation_inner(state)
     phase = out.get("dialogue_phase", "GREETING")
+
+    final_reply = out.get("final_reply_text", "")
+    if final_reply:
+        final_reply = re.sub(r"##SEARCH_QUERY:[^#]*##", "", final_reply, flags=re.IGNORECASE)
+        final_reply = final_reply.replace("##CONCLUDE##", "").strip()
+        out["final_reply_text"] = final_reply
+        if "dialogue_history" not in out or out["dialogue_history"] is None:
+            out["dialogue_history"] = []
+        if not out["dialogue_history"] or out["dialogue_history"][-1].get("role") != "assistant":
+            out["dialogue_history"].append({"role": "assistant", "content": final_reply})
 
     if not out.get("spoken_reply_text"):
         out["spoken_reply_text"] = _clean_text_for_speech(out.get("final_reply_text", ""))

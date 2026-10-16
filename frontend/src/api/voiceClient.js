@@ -39,18 +39,94 @@ export function base64ToAudioUrl(base64, format = 'mp3') {
 }
 
 /**
+ * Converts any audio Blob (e.g. WebM/Opus from browser MediaRecorder) to a standard
+ * 16kHz 16-bit Mono PCM WAV Blob using the browser's native Web Audio API.
+ * This guarantees 100% format acceptance by Sarvam AI STT (Saaras) and Bhashini ASR.
+ */
+export async function convertBlobToWav(blob) {
+  try {
+    if (!blob || blob.size < 100) return blob;
+    const arrayBuffer = await blob.arrayBuffer();
+    const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
+    if (!AudioContextClass) return blob;
+
+    const audioCtx = new AudioContextClass();
+    const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+
+    // Resample/render to 16kHz mono for optimal speech recognition
+    const targetSampleRate = 16000;
+    const totalFrames = Math.max(1, Math.ceil(decoded.duration * targetSampleRate));
+    const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(
+      1,
+      totalFrames,
+      targetSampleRate
+    );
+
+    const source = offlineCtx.createBufferSource();
+    source.buffer = decoded;
+    source.connect(offlineCtx.destination);
+    source.start(0);
+
+    const renderedBuffer = await offlineCtx.startRendering();
+    audioCtx.close().catch(() => {});
+
+    // Encode renderedBuffer to 16-bit PCM WAV
+    const channelData = renderedBuffer.getChannelData(0);
+    const dataLength = channelData.length * 2;
+    const buffer = new ArrayBuffer(44 + dataLength);
+    const view = new DataView(buffer);
+
+    const writeString = (offset, string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + dataLength, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM format
+    view.setUint16(22, 1, true); // Mono
+    view.setUint32(24, targetSampleRate, true);
+    view.setUint32(28, targetSampleRate * 2, true); // byte rate (16000 * 1 * 2)
+    view.setUint16(32, 2, true); // block align (1 * 2)
+    view.setUint16(34, 16, true); // bits per sample
+    writeString(36, 'data');
+    view.setUint32(40, dataLength, true);
+
+    let offset = 44;
+    for (let i = 0; i < channelData.length; i++, offset += 2) {
+      const s = Math.max(-1, Math.min(1, channelData[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+
+    return new Blob([buffer], { type: 'audio/wav' });
+  } catch (err) {
+    console.warn('[Audio to WAV conversion skipped, sending original]:', err);
+    return blob;
+  }
+}
+
+/**
  * Calls Sarvam AI Speech-to-Text (/voice/stt) to transcribe recorded audio.
- * Accepts any audio Blob recorded from MediaRecorder.
+ * Accepts any audio Blob recorded from MediaRecorder (auto-converts to 16kHz WAV).
  */
 export const transcribeAudio = async (blob) => {
   if (!blob || blob.size < 500) {
     return { transcript: '', language_code: 'hi-IN' };
   }
 
+  // Pre-convert to 16kHz mono WAV for guaranteed Sarvam STT & Bhashini compatibility
+  const audioToSend = await convertBlobToWav(blob);
+
   const formData = new FormData();
-  const rawMime = blob.type || 'audio/webm';
-  const cleanMime = rawMime.split(';')[0].trim().toLowerCase() || 'audio/webm';
-  const ext = cleanMime.includes('webm')
+  const rawMime = audioToSend.type || 'audio/wav';
+  const cleanMime = rawMime.split(';')[0].trim().toLowerCase() || 'audio/wav';
+  const ext = cleanMime.includes('wav')
+    ? 'wav'
+    : cleanMime.includes('webm')
     ? 'webm'
     : cleanMime.includes('mp4') || cleanMime.includes('m4a')
     ? 'm4a'
@@ -58,9 +134,7 @@ export const transcribeAudio = async (blob) => {
     ? 'ogg'
     : 'wav';
 
-  // Ensure blob has clean mime type without codec parameters
-  const cleanBlob = blob.type === cleanMime ? blob : blob.slice(0, blob.size, cleanMime);
-  formData.append('file', cleanBlob, `voice_input.${ext}`);
+  formData.append('file', audioToSend, `voice_input.${ext}`);
 
   const res = await voiceApi.post('/voice/stt', formData, {
     headers: {

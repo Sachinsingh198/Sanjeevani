@@ -36,9 +36,11 @@ export default function LiveVoiceRoom({ onClose }) {
   const effectiveLangRef   = useRef(effectiveLang);
   effectiveLangRef.current = effectiveLang;
 
-  const convId             = useRef(getOrCreateConversationId());
+  const sessionIdRef       = useRef('live-session-' + Date.now());
   const convStateRef       = useRef('idle');
+  convStateRef.current     = convState;
   const isLiveActiveRef    = useRef(true);
+  isLiveActiveRef.current  = isLiveActive;
   const tierRef            = useRef('Green');
   tierRef.current          = tier;
   const recognitionRef     = useRef(null);
@@ -206,7 +208,7 @@ export default function LiveVoiceRoom({ onClose }) {
 
     try {
       // High-speed combined call: returns triage text AND inline Sarvam TTS audio
-      const res = await sendChatMessage(convId.current, cleanText, [], 'auto', true, 'female');
+      const res = await sendChatMessage(sessionIdRef.current, cleanText, [], 'auto', true, 'female');
       if (res.detected_language) {
         setDetectedLanguage(res.detected_language);
       }

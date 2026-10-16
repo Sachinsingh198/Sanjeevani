@@ -75,20 +75,24 @@ class SarvamSTTClient:
         if not audio_bytes or len(audio_bytes) < 10:
             return {"transcript": "", "language_code": language_code or "hi-IN", "language_probability": 0.0}
 
-        # Determine safe file extension and clean MIME type
-        clean_ct = (content_type or "audio/wav").split(";")[0].strip().lower()
-        if not clean_ct or clean_ct == "application/octet-stream":
-            clean_ct = "audio/webm" if (content_type and "webm" in content_type) else "audio/wav"
+        # Detect RIFF header or determine safe file extension and clean MIME type
+        if audio_bytes.startswith(b"RIFF"):
+            clean_ct = "audio/wav"
+            ext = "wav"
+        else:
+            clean_ct = (content_type or "audio/wav").split(";")[0].strip().lower()
+            if not clean_ct or clean_ct == "application/octet-stream":
+                clean_ct = "audio/webm" if (content_type and "webm" in content_type) else "audio/wav"
 
-        ext = "wav"
-        if "webm" in clean_ct:
-            ext = "webm"
-        elif "mp4" in clean_ct or "m4a" in clean_ct:
-            ext = "m4a"
-        elif "mp3" in clean_ct or "mpeg" in clean_ct:
-            ext = "mp3"
-        elif "ogg" in clean_ct or "opus" in clean_ct:
-            ext = "ogg"
+            ext = "wav"
+            if "webm" in clean_ct:
+                ext = "webm"
+            elif "mp4" in clean_ct or "m4a" in clean_ct:
+                ext = "m4a"
+            elif "mp3" in clean_ct or "mpeg" in clean_ct:
+                ext = "mp3"
+            elif "ogg" in clean_ct or "opus" in clean_ct:
+                ext = "ogg"
 
         client = self._get_client()
         headers = {

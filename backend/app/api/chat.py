@@ -85,9 +85,15 @@ async def _execute_chat_pipeline(
 
             if prior_cp and prior_cp.checkpoint:
                 prior_vals = prior_cp.checkpoint.get("channel_values", {})
-                for k in ("consultation_notes", "vision_analysis", "dialogue_phase", "turn_count", "detected_tier", "clinical_flags", "retrieved_remedies", "structured_symptoms"):
+                for k in ("consultation_notes", "vision_analysis", "dialogue_phase", "turn_count", "detected_tier", "clinical_flags", "retrieved_remedies", "structured_symptoms", "dialogue_history", "blocked_remedies", "symptom_profile"):
                     if prior_vals.get(k) is not None:
                         initial_state[k] = prior_vals[k]
+                if prior_vals.get("patient_conditions"):
+                    existing_conds = list(initial_state.get("patient_conditions") or [])
+                    for c in prior_vals["patient_conditions"]:
+                        if c not in existing_conds:
+                            existing_conds.append(c)
+                    initial_state["patient_conditions"] = existing_conds
         except Exception as seed_err:
             logger.debug(f"[Chat] Prior checkpoint seeding notice: {seed_err}")
 
@@ -310,6 +316,26 @@ async def _execute_chat_pipeline(
         except Exception as consult_err:
             logger.error(f"[Consultation Persistence Error]: {consult_err}")
 
+        # Persist triage encounter log into triage_logs table (Task 7)
+        try:
+            from app.models import log_triage_encounter
+            s_prof = result.get("symptom_profile") or {}
+            log_triage_encounter(
+                session_id=req.conversation_id,
+                tier=tier,
+                user_id=user["id"] if user else None,
+                chief_complaint=s_prof.get("chief_complaint") or req.message,
+                symptoms=json.dumps(s_prof.get("associated_symptoms", []), ensure_ascii=False),
+                clinical_flags=json.dumps(result.get("clinical_flags", []), ensure_ascii=False),
+                remedies_suggested=json.dumps([r.get("remedy_name") for r in (result.get("retrieved_remedies") or [])], ensure_ascii=False),
+                detected_conditions=json.dumps(result.get("patient_conditions", []), ensure_ascii=False),
+                blocked_remedies=json.dumps(result.get("blocked_remedies", []), ensure_ascii=False),
+                dialogue_phase=result.get("dialogue_phase", ""),
+                language=detected_lang
+            )
+        except Exception as triage_log_err:
+            logger.debug(f"[Triage Log Error]: {triage_log_err}")
+
         # Aggregate analytics logging (fire-and-forget, zero PII)
         if result.get("turn_count", 0) <= 1:
             log_analytics_event("consultation_started", tier=None, language=detected_lang)
@@ -367,6 +393,9 @@ async def _execute_chat_pipeline(
             audio_base64=audio_b64,
             audio_format=audio_fmt,
             consultation_summary=result.get("consultation_summary"),
+            blocked_remedies=result.get("blocked_remedies", []),
+            detected_conditions=result.get("patient_conditions", []),
+            symptom_profile=result.get("symptom_profile"),
         )
 
     except Exception as e:
@@ -1016,15 +1045,26 @@ async def scan_medical_image(
             flags_json = json.dumps(res.safety_warnings, ensure_ascii=False)
             remedies_data = []
             if res.ayurvedic_interaction_note:
-                remedies_data.append({
-                    "remedy_name": "त्वचा देखभाल (आयुर्वेदिक लेप)",
-                    "remedy_text": res.ayurvedic_interaction_note,
-                    "ayurvedic_note": res.ayurvedic_interaction_note,
-                    "dosage": "दिन में 1-2 बार प्रभावित त्वचा पर हल्के हाथ से लगाएं (केवल बाहरी उपयोग हेतु)।",
-                    "source": "आयुर्वेदिक त्वचा देखभाल",
-                    "safety_check": "त्वचा पर लगाने के लिए सुरक्षित",
-                    "is_topical": True,
-                })
+                if scan_type == "prescription_medicine":
+                    remedies_data.append({
+                        "remedy_name": "दवा एवं आयुर्वेदिक इंटरेक्शन सलाह",
+                        "remedy_text": res.ayurvedic_interaction_note,
+                        "ayurvedic_note": res.ayurvedic_interaction_note,
+                        "dosage": "एलोपैथिक दवा और आयुर्वेदिक काढ़े/दवा के बीच कम से कम 1 से 2 घंटे का अंतर रखें।",
+                        "source": "आयुर्वेदिक इंटरेक्शन मार्गदर्शिका",
+                        "safety_check": "दवा सुरक्षा जांच",
+                        "is_topical": False,
+                    })
+                else:
+                    remedies_data.append({
+                        "remedy_name": "त्वचा देखभाल (आयुर्वेदिक लेप व काढ़ा)",
+                        "remedy_text": res.ayurvedic_interaction_note,
+                        "ayurvedic_note": res.ayurvedic_interaction_note,
+                        "dosage": "दिन में 1-2 बार प्रभावित त्वचा पर हल्के हाथ से लगाएं (केवल बाहरी उपयोग हेतु)।",
+                        "source": "आयुर्वेदिक त्वचा देखभाल",
+                        "safety_check": "त्वचा पर लगाने के लिए सुरक्षित",
+                        "is_topical": True,
+                    })
             remedies_json = json.dumps(remedies_data, ensure_ascii=False)
 
             vision_summary_text = (

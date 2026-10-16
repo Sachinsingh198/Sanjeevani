@@ -170,8 +170,8 @@ export default function MedicalVisionModal({
             <AlertCircle className="w-4 h-4 text-gold-warm shrink-0 mt-0.5" />
             <p>
               {scanType === 'prescription_medicine'
-                ? l('डॉ. संजीवनी दवाओं की खुराक, समय और आयुर्वेदिक काढ़े के साथ संभावित इंटरेक्शन की जांच करेंगी।', 'Dr. Sanjeevani will verify dosage, timings and potential interactions with home remedies.', 'Dr. Sanjeevani dosage, timing aur home remedies ke sath interaction check karengi.')
-                : l('दृश्य विश्लेषण प्राथमिक सलाह के लिए है। किसी भी गंभीर चकत्ते या सांस की समस्या में तुरंत डॉक्टर से मिलें।', 'Visual analysis is for preliminary screening. Consult a doctor immediately for rapid spreading or breathing distress.', 'Visual analysis prathmik jankari ke liye hai. Gambhir rash me turant PHC doctor ko dikhayein.')}
+                ? l('दवा का नाम (उदा. Paracetamol 500mg, Amoxicillin आदि) और खुराक वाली साइड साफ रोशनी में स्कैन करें। डॉ. संजीवनी दवा का पूरा विवरण, डॉक्टर की अनुशंसित खुराक, समय और काढ़े के साथ इंटरेक्शन बताएंगी।', 'Scan the side with printed medicine name (e.g. Paracetamol 500mg, Amoxicillin) and dosage. Dr. Sanjeevani will identify what the medicine is for, doctor dosage recommendations, timings, and Ayurvedic interactions.', 'Dawa ka naam aur mg wali printed side scan karein. Dr. Sanjeevani dawa ka upyog, doctor ki dosage salah aur kadhe ke sath interaction batayengi.')
+                : l('प्रभावित त्वचा या चकत्ते को प्राकृतिक रोशनी में केंद्र में रखकर फोटो लें। संजीवनी का कंप्यूटर विज़न एरिथेमा (लालिमा) और खुरदरेपन की जांच कर प्राथमिक फर्स्ट-एड व सलाह देगा।', 'Center the affected skin rash or lesion in clear daylight. Sanjeevani computer vision will evaluate erythema index (redness) and border scaling for triage.', 'Twacha ke rash ko roshni me center karke photo lein. Sanjeevani computer vision laalima aur sujan scan karegi.')}
             </p>
           </div>
 

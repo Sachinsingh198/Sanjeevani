@@ -84,32 +84,101 @@ class SafetyKnowledgeGraph:
 
         return True, "Verified safe against lifecycle policies."
 
+    CONDITION_SYNONYMS = {
+        # Hypertension
+        "bp": "hypertension",
+        "high bp": "hypertension",
+        "high blood pressure": "hypertension",
+        "hypertension": "hypertension",
+        "uchch raktchaap": "hypertension",
+        "हाई बीपी": "hypertension",
+        "उच्च रक्तचाप": "hypertension",
+
+        # Hyperacidity / Peptic Ulcer
+        "acidity": "hyperacidity/pepticulcer",
+        "hyperacidity": "hyperacidity/pepticulcer",
+        "ulcer": "hyperacidity/pepticulcer",
+        "gastric ulcer": "hyperacidity/pepticulcer",
+        "peptic ulcer": "hyperacidity/pepticulcer",
+        "hyperacidity/pepticulcer": "hyperacidity/pepticulcer",
+        "pet me jalan": "hyperacidity/pepticulcer",
+        "khatti dakar": "hyperacidity/pepticulcer",
+        "एसिडिटी": "hyperacidity/pepticulcer",
+        "अल्सर": "hyperacidity/pepticulcer",
+        "पेट में जलन": "hyperacidity/pepticulcer",
+
+        # Pregnancy
+        "pregnancy": "pregnancy",
+        "pregnant": "pregnancy",
+        "garbhavastha": "pregnancy",
+        "garbhvati": "pregnancy",
+        "गर्भावस्था": "pregnancy",
+        "गर्भवती": "pregnancy",
+
+        # Diabetes
+        "diabetes": "diabetes",
+        "sugar": "diabetes",
+        "madhumeh": "diabetes",
+        "blood sugar": "diabetes",
+        "शुगर": "diabetes",
+        "मधुमेह": "diabetes",
+
+        # Infant Under 1 Year
+        "infant": "infantunder1year",
+        "infantunder1year": "infantunder1year",
+        "baby": "infantunder1year",
+        "newborn": "infantunder1year",
+        "navjaat": "infantunder1year",
+        "नवजात": "infantunder1year",
+    }
+
+    def map_condition(self, condition: str) -> str:
+        """Maps diverse clinical and colloquial condition expressions to canonical ontology keys."""
+        if not condition:
+            return ""
+        cond_raw = condition.strip().lower()
+        if cond_raw in self.CONDITION_SYNONYMS:
+            return self.CONDITION_SYNONYMS[cond_raw]
+        for k, v in self.CONDITION_SYNONYMS.items():
+            if k in cond_raw:
+                return v
+        return cond_raw
+
     def validate_remedy(
         self,
-        remedy_text: str,
+        remedy_text: Any,
         patient_conditions: Optional[List[str]] = None,
         age: Optional[int] = None,
         gender: Optional[str] = None,
         is_pregnant: Optional[bool] = None,
-        is_lactating: Optional[bool] = None
+        is_lactating: Optional[bool] = None,
+        remedy_name: Optional[str] = None,
     ) -> Tuple[bool, str]:
         """
         Validates a candidate remedy against patient conditions and demographic lifecycle.
+        Inspects both remedy_name and remedy_text for botanical contraindications.
         Returns:
             (is_safe: bool, reason: str)
         """
-        if not remedy_text:
+        # If passed a dictionary object directly, unpack remedy_name and remedy_text
+        if isinstance(remedy_text, dict):
+            remedy_dict = remedy_text
+            remedy_name = remedy_dict.get("remedy_name", "") or remedy_name
+            remedy_text = remedy_dict.get("remedy_text", "")
+
+        full_text = f"{remedy_name or ''} {remedy_text or ''}".strip()
+        if not full_text:
             return True, "Verified safe."
 
         # 1. Lifecycle validations (pregnancy, age constraints)
         # Infer pregnancy from conditions if not passed as boolean flag
         if is_pregnant is None and patient_conditions:
             conds_lower = " ".join(c.lower() for c in patient_conditions)
-            if any(term in conds_lower for term in ["pregnant", "pregnancy", "garbh", "garbhavastha"]):
+            if any(term in conds_lower for term in ["pregnant", "pregnancy", "garbh", "garbhavastha", "गर्भावस्था", "गर्भवती"]):
                 is_pregnant = True
 
         safe_lifecycle, lifecycle_reason = self.validate_lifecycle(
-            remedy_text=remedy_text,
+            remedy_text=full_text,
             age=age,
             gender=gender,
             is_pregnant=is_pregnant,
@@ -122,26 +191,44 @@ class SafetyKnowledgeGraph:
         if not patient_conditions:
             return True, "No patient comorbidities specified. Verified safe."
 
-        remedy_lower = remedy_text.lower()
-        normalized_conditions = [
-            re.sub(r'[^a-z0-9]', '', c.lower()) for c in patient_conditions if c
-        ]
+        remedy_lower = full_text.lower()
+        mapped_conditions = set()
+        for c in patient_conditions:
+            if c:
+                canonical = self.map_condition(c)
+                mapped_conditions.add(canonical)
+                mapped_conditions.add(re.sub(r'[^a-z0-9]', '', canonical.lower()))
+                mapped_conditions.add(re.sub(r'[^a-z0-9]', '', c.lower()))
 
         for herb, target_condition, attrs in self.graph.edges(data=True):
             herb_aliases = [alias.strip().lower() for alias in herb.split("/")]
 
-            # Check if any alias of contraindicated herb is present
+            # Check if any alias of contraindicated herb is present in full_text
             herb_matched = False
             for alias in herb_aliases:
-                pattern = rf"\b{re.escape(alias)}\b"
-                if re.search(pattern, remedy_lower):
-                    herb_matched = True
-                    break
+                if re.search(r"[\u0900-\u097F]", alias):
+                    if alias in remedy_lower:
+                        herb_matched = True
+                        break
+                else:
+                    pattern = rf"\b{re.escape(alias)}\b"
+                    if re.search(pattern, remedy_lower):
+                        herb_matched = True
+                        break
 
             if herb_matched:
+                target_canonical = self.map_condition(target_condition)
                 target_norm = re.sub(r'[^a-z0-9]', '', target_condition.lower())
-                for cond in normalized_conditions:
-                    if cond and (cond in target_norm or target_norm in cond):
+                target_canon_norm = re.sub(r'[^a-z0-9]', '', target_canonical.lower())
+
+                for cond in mapped_conditions:
+                    if cond and (
+                        cond == target_canonical
+                        or cond in target_norm
+                        or target_norm in cond
+                        or cond in target_canon_norm
+                        or target_canon_norm in cond
+                    ):
                         severity = attrs.get("severity", "HIGH")
                         reason = attrs.get("reason", "Contraindication detected.")
                         return False, f"Contraindication Alert [{severity}]: {reason}"

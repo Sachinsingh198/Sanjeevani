@@ -266,26 +266,42 @@ export default function Chat() {
 
   const handleVisionScanComplete = useCallback((scanResult) => {
     if (!scanResult) return;
+    const isMedicine = scanResult.scan_type === 'prescription_medicine';
     const userMsg = {
       sender: 'user',
-      text: l('मेडिकल स्कैन तस्वीर भेजी गई', 'Uploaded medical scan photo for analysis', 'Medical scan photo upload kiya'),
+      text: isMedicine
+        ? l('दवा पर्ची / स्ट्रिप की फोटो भेजी गई', 'Uploaded medicine strip/Rx photo for analysis', 'Dawa strip photo upload kiya')
+        : l('त्वचा लक्षण / चकत्ते की फोटो भेजी गई', 'Uploaded skin rash photo for analysis', 'Skin rash photo upload kiya'),
       image: scanResult.image_url,
       isDocument: true,
     };
+    const remedyList = scanResult.ayurvedic_interaction_note ? [{
+      remedy_name: isMedicine
+        ? l('दवा एवं आयुर्वेदिक इंटरेक्शन सलाह', 'Medicine & Ayurvedic Interaction Advisory', 'Dawa aur Ayurvedic Interaction Salah')
+        : l('त्वचा देखभाल (आयुर्वेदिक लेप व काढ़ा)', 'Skin Care (Ayurvedic Lepa & Wash)', 'Twacha Care (Ayurvedic Lepa)'),
+      remedy_text: scanResult.ayurvedic_interaction_note,
+      ayurvedic_note: scanResult.ayurvedic_interaction_note,
+      dosage: isMedicine
+        ? l('एलोपैथिक दवा और आयुर्वेदिक काढ़े के बीच कम से कम 1 से 2 घंटे का अंतर रखें।', 'Maintain 1-2 hours gap between allopathic medication and Ayurvedic herbal decoctions.', 'Dawa aur kadhe me 1-2 ghante ka gap rakhein.')
+        : l('दिन में 1-2 बार प्रभावित त्वचा पर हल्के हाथ से लगाएं (केवल बाहरी उपयोग हेतु)।', 'Apply gently to affected area 1-2 times daily (topical use only).', 'Din me 1-2 baar halka lagayein.'),
+      source: l('आयुर्वेदिक दिशानिर्देश', 'Ayurvedic Clinical Guidance', 'Ayurvedic Margdarshika'),
+      safety_check: l('सुरक्षित उपयोग मार्गदर्शिका', 'Safety Verified Guidance', 'Safety Check'),
+    }] : [];
+
     const botMsg = {
       sender: 'bot',
       text: scanResult.plain_language_summary,
       tier: scanResult.recommended_tier || 'Green',
       phase: 'CONCLUDED',
       visionAnalysis: scanResult,
-      remedies: [],
+      remedies: remedyList,
       flags: scanResult.safety_warnings || [],
     };
     setMessages(prev => {
       const nextMsgs = [...prev, userMsg, botMsg];
       recordSessionTurn({
         conversationId: conversationIdRef.current,
-        summary: scanResult.title || 'Medical Vision Scan',
+        summary: scanResult.title || (isMedicine ? 'Medicine Strip Scan' : 'Skin Rash Scan'),
         tier: scanResult.recommended_tier || 'Green',
         userId: user?.id,
         messages: nextMsgs,
@@ -779,6 +795,10 @@ export default function Chat() {
       const phase = (res.phase !== undefined && res.phase !== null && res.phase !== '') ? res.phase : inferPhase(res);
       setCurrentPhase(phase);
 
+      if (Array.isArray(res.detected_conditions) && res.detected_conditions.length > 0) {
+        setKnownConditions(prev => Array.from(new Set([...prev, ...res.detected_conditions])));
+      }
+
       const finalBotMsg = {
         sender: 'bot',
         text: res.reply_text,
@@ -786,6 +806,9 @@ export default function Chat() {
         tier: res.tier,
         flags: res.flags ?? [],
         remedies: res.remedies ?? [],
+        blocked_remedies: res.blocked_remedies ?? [],
+        detected_conditions: res.detected_conditions ?? [],
+        symptom_profile: res.symptom_profile ?? null,
         escalation: res.escalation_triggered,
         phase,
         consultation_summary: res.consultation_summary,
@@ -1118,6 +1141,32 @@ export default function Chat() {
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </div>
+        </div>
+
+        {/* ── Patient Tags Quick Bar ──────────────────── */}
+        <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-gray-50/90 dark:bg-[#101924]/90 border-b border-sage/10 dark:border-gray-800/60 overflow-x-auto text-[11px] no-scrollbar">
+          <span className="font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-[10px] shrink-0 flex items-center gap-1">
+            <span>{l('मरीज टैग:', 'Patient Tags:', 'Patient Tags:')}</span>
+          </span>
+          {getComorbidityOptions(l).map(opt => {
+            const on = knownConditions.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggleCondition(opt.value)}
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-semibold transition-all shrink-0 cursor-pointer text-[11px] border ${
+                  on
+                    ? 'bg-sage text-white border-sage shadow-2xs font-bold ring-1 ring-sage/40'
+                    : 'bg-white/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-sage/40'
+                }`}
+                title={on ? l('टैग हटाएं', 'Remove tag') : l('टैग जोड़ें', 'Add tag')}
+              >
+                <span>{opt.icon}</span>
+                <span>{on ? '✓ ' : ''}{opt.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* ── Settings Panel ──────────────────────────────────── */}
@@ -1533,27 +1582,111 @@ function MessageBubble({
           ) : (
             <>
               {msg.visionAnalysis && (
-                <div className="mb-3 p-3 rounded-2xl bg-sage/10 dark:bg-gray-800/80 border border-sage/20 dark:border-gray-700 space-y-2 text-left">
-                  <div className="flex items-center justify-between border-b border-sage/15 dark:border-gray-700 pb-1.5">
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-sage dark:text-booti-glow">
-                      <Sparkles className="w-3.5 h-3.5" />
+                <div className="mb-3.5 p-3.5 sm:p-4 rounded-2xl bg-sage/10 dark:bg-gray-800/90 border border-sage/20 dark:border-gray-700 space-y-2.5 text-left shadow-xs">
+                  {/* Header with Title & Tier Badge */}
+                  <div className="flex items-center justify-between border-b border-sage/15 dark:border-gray-700 pb-2">
+                    <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm text-sage dark:text-booti-glow">
+                      {msg.visionAnalysis.scan_type === 'prescription_medicine' ? (
+                        <Pill className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <Sparkles className="w-4 h-4 shrink-0 text-sage dark:text-booti-glow" />
+                      )}
                       <span>{msg.visionAnalysis.title}</span>
                     </div>
                     <TierBadge tier={msg.visionAnalysis.recommended_tier || 'Green'} />
                   </div>
-                  {msg.visionAnalysis.key_findings && (
-                    <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">{msg.visionAnalysis.key_findings}</p>
-                  )}
-                  {msg.visionAnalysis.dosage_instructions && (
-                    <div className="p-2 rounded-xl bg-white dark:bg-gray-800 text-xs border border-gray-100 dark:border-gray-700">
-                      <strong className="block text-[10px] text-gray-500 uppercase">{l('खुराक / निर्देश:', 'Dosage / Instructions:', 'Dosage / Nirdesh:')}</strong>
-                      <span>{msg.visionAnalysis.dosage_instructions}</span>
+
+                  {/* Identified Item Pills */}
+                  {Array.isArray(msg.visionAnalysis.identified_items) && msg.visionAnalysis.identified_items.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {msg.visionAnalysis.identified_items.map((item, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white/80 dark:bg-gray-900/80 text-primary dark:text-cream text-[11px] font-semibold border border-sage/20 dark:border-gray-700 shadow-2xs"
+                        >
+                          {msg.visionAnalysis.scan_type === 'prescription_medicine' ? (
+                            <Pill className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          ) : (
+                            <Stethoscope className="w-3 h-3 text-sage dark:text-booti-glow shrink-0" />
+                          )}
+                          {item}
+                        </span>
+                      ))}
                     </div>
                   )}
+
+                  {/* Key Findings: What this medicine / skin condition is all about */}
+                  {msg.visionAnalysis.key_findings && (
+                    <div className="p-2.5 rounded-xl bg-white/80 dark:bg-gray-800/90 text-xs border border-sage/15 dark:border-gray-700/80 space-y-1">
+                      <strong className="block text-[10px] font-bold tracking-wider text-sage dark:text-booti-glow uppercase">
+                        {msg.visionAnalysis.scan_type === 'prescription_medicine'
+                          ? l('दवा का विवरण एवं कार्य (Medicine Overview & Purpose):', 'Medicine Overview & Indications:', 'Dawa Ka Vivaran Aur Upyog:')
+                          : l('त्वचा जांच निष्कर्ष (Visual Skin & Rash Findings):', 'Skin Examination Findings:', 'Twacha Jaanch Nishkarsh:')}
+                      </strong>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
+                        {msg.visionAnalysis.key_findings}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Doctor's Recommendation / Dosage instructions */}
+                  {msg.visionAnalysis.dosage_instructions && (
+                    <div className="p-2.5 rounded-xl bg-emerald-50/90 dark:bg-emerald-950/40 text-xs border border-emerald-200/70 dark:border-emerald-800/50 space-y-1 text-emerald-950 dark:text-emerald-200">
+                      <strong className="block text-[10px] font-bold tracking-wider text-emerald-700 dark:text-emerald-400 uppercase">
+                        {msg.visionAnalysis.scan_type === 'prescription_medicine'
+                          ? l('डॉक्टर की सलाह एवं खुराक (Doctor Recommendation & Dosage):', 'Doctor Recommendation & Dosage:', 'Doctor Ki Salah Aur Dosage:')
+                          : l('प्राथमिक देखभाल एवं निर्देश (First Aid & Hygiene Instructions):', 'First Aid & Hygiene Guidelines:', 'Prathmik Dekhbhal Nirdesh:')}
+                      </strong>
+                      <span className="leading-relaxed font-medium block">{msg.visionAnalysis.dosage_instructions}</span>
+                    </div>
+                  )}
+
+                  {/* Safety Warnings & Precautions */}
+                  {Array.isArray(msg.visionAnalysis.safety_warnings) && msg.visionAnalysis.safety_warnings.length > 0 && (
+                    <div className="p-2.5 rounded-xl bg-rose-50/90 dark:bg-rose-950/40 text-xs border border-rose-200/70 dark:border-rose-800/50 space-y-1.5 text-rose-950 dark:text-rose-200">
+                      <div className="flex items-center gap-1.5 font-bold text-[10px] tracking-wider uppercase text-rose-700 dark:text-rose-400">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{l('महत्वपूर्ण चेतावनियां व सावधानियां (Safety Precautions):', 'Safety Precautions & Warnings:', 'Zaroori Chetawaniyan:')}</span>
+                      </div>
+                      <ul className="list-disc list-inside space-y-0.5 text-[11px] text-rose-900 dark:text-rose-300">
+                        {msg.visionAnalysis.safety_warnings.map((warn, wIdx) => (
+                          <li key={wIdx} className="leading-snug">{warn}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Ayurvedic Interaction Advice */}
                   {msg.visionAnalysis.ayurvedic_interaction_note && (
-                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-900 dark:text-amber-200 text-[11px] border border-amber-500/20">
-                      <strong className="block text-[10px] uppercase font-bold text-amber-700 dark:text-amber-300">{l('आयुर्वेदिक इंटरेक्शन सलाह:', 'Ayurvedic Interaction Advice:', 'Ayurvedic Interaction Salah:')}</strong>
-                      <span>{msg.visionAnalysis.ayurvedic_interaction_note}</span>
+                    <div className="p-2.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 text-amber-950 dark:text-amber-200 text-xs border border-amber-200/70 dark:border-amber-800/50 space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-[10px] tracking-wider uppercase text-amber-800 dark:text-amber-300">
+                        <Leaf className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                        <span>
+                          {msg.visionAnalysis.scan_type === 'prescription_medicine'
+                            ? l('आयुर्वेदिक काढ़ा व दवा का अंतर (Herb-Drug Interaction):', 'Herb-Drug Interaction Advisory:', 'Ayurvedic Kadha Aur Dawa Gap:')
+                            : l('आयुर्वेदिक देखभाल व घरेलू उपचार (Ayurvedic Soothing Care):', 'Ayurvedic Soothing Options:', 'Ayurvedic Upchar Aur Dekhbhal:')}
+                        </span>
+                      </div>
+                      <span className="leading-relaxed font-medium text-[11px] block">{msg.visionAnalysis.ayurvedic_interaction_note}</span>
+                    </div>
+                  )}
+
+                  {/* Annotated Image Overlay Toggle (if available for skin rash) */}
+                  {msg.visionAnalysis.annotated_image_url && (
+                    <div className="pt-1">
+                      <details className="group rounded-xl border border-sage/20 dark:border-gray-700 bg-white/70 dark:bg-gray-900/70 p-2 text-xs cursor-pointer">
+                        <summary className="font-semibold text-sage dark:text-booti-glow flex items-center justify-between select-none">
+                          <span>{l('कंप्यूटर विज़न विश्लेषित तस्वीर देखें', 'View Computer Vision Biomarker Overlay', 'Computer Vision Annotated Photo Dekhein')}</span>
+                          <span className="text-[10px] text-muted group-open:rotate-180 transition-transform">▼</span>
+                        </summary>
+                        <div className="mt-2 rounded-lg overflow-hidden border border-sage/20">
+                          <img
+                            src={msg.visionAnalysis.annotated_image_url}
+                            alt="Annotated clinical vision overlay"
+                            className="w-full max-h-56 object-contain mx-auto bg-black/5"
+                          />
+                        </div>
+                      </details>
                     </div>
                   )}
                 </div>
@@ -1655,6 +1788,36 @@ function MessageBubble({
             )}
           </div>
         )}
+
+        {/* Safety Notice Banner for Blocked/Contraindicated Remedies */}
+        {!isUser && Array.isArray(msg.blocked_remedies) && msg.blocked_remedies.length > 0 && (
+          <div className="mt-2.5 p-3 rounded-xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-1.5 shadow-2xs animate-fadeIn">
+            <div className="flex items-center gap-1.5 font-bold text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>{l('सुरक्षा सूचना • रोके गए घरेलू उपचार (Safety Notice)', 'Safety Notice • Contraindicated Remedies Withheld', 'Suraksha Suchna • Withheld Remedies')}</span>
+            </div>
+            <p className="text-[11px] leading-relaxed">
+              {l(
+                'आपकी मौजूदा स्वास्थ्य स्थिति के अनुसार निम्नलिखित उपचार सुरक्षित नहीं पाए गए और सुरक्षा कारणों से रोक दिए गए हैं:',
+                'Based on your reported health condition, the following remedies were identified as contraindicated and safely withheld:',
+                'Aapki svasthya sthiti ke mutabik yeh nuskhe surakshit nahi hain aur rok diye gaye hain:'
+              )}
+            </p>
+            <ul className="space-y-1 pt-0.5">
+              {msg.blocked_remedies.map((b, bIdx) => (
+                <li key={bIdx} className="flex items-start gap-1.5 text-[11px] bg-white/70 dark:bg-gray-900/60 p-2 rounded-lg border border-amber-500/20">
+                  <span className="font-semibold text-amber-800 dark:text-amber-300">
+                    {typeof b === 'object' ? (b.remedy_name || b.remedy || 'Remedy') : b}:
+                  </span>
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {typeof b === 'object' ? (b.reason || 'Contraindicated for your condition') : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {!isUser && msg.phase === 'CONCLUDED' && msg.remedies?.length > 0 && (
           <div className="mt-2.5 sm:mt-3 space-y-2 pt-2 border-t border-sage/10 dark:border-gray-700/40">
             <div className="text-[10px] sm:text-[11px] font-bold text-sage dark:text-booti-glow uppercase tracking-wider">

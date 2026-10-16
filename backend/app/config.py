@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "openai/gpt-oss-120b"
     
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODEL: str = "gemini-3.8-flash"
 
     # Hugging Face Token (for gated models like ai4bharat/indic-parler-tts)
     HF_TOKEN: Optional[str] = None

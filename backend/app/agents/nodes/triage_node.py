@@ -1,38 +1,139 @@
 import re
+from typing import List, Optional
 from app.agents.state import AgentState
 from app.core.triage_engine import ClinicalTriageEngine, SeverityTier
 from app.core.bhashini_engine import BhashiniVoiceEngine
-from app.core.dialogue_manager import classify_intent, GREETING_PATTERNS
+from app.core.dialogue_manager import classify_intent
 
 triage_engine = ClinicalTriageEngine()
 bhashini_engine = BhashiniVoiceEngine()
+
+
+def extract_patient_conditions_from_text(text: str, last_bot_question: str = "") -> List[str]:
+    """
+    Extracts canonical comorbidities mentioned by the patient while respecting negation cues.
+    Returns canonical strings: 'hypertension', 'hyperacidity/pepticulcer', 'pregnancy', 'diabetes'.
+    """
+    t = text.lower()
+    last_q = (last_bot_question or "").lower()
+    detected = []
+
+    # 1. Hypertension (BP)
+    bp_pos = bool(
+        re.search(r"\b(?:high\s+bp|high\s+blood\s+pressure|hypertension|raktchaap|raktchap|बीपी|उच्च\s+रक्तचाप|हाई\s+बीपी)\b", t)
+        or (re.search(r"\bbp\b", t) and not re.search(r"\bbp\s+(?:nahi|nahin|free|mat|na|ना|नहीं)\b", t))
+    )
+    bp_neg = bool(
+        re.search(r"\b(?:bp|blood\s+pressure|hypertension|बीपी)\s+(?:nahi|nahin|ke\s+bina|free|mat|na|नहीं|ना)\b|\b(?:no|without)\s+bp\b", t)
+    )
+    if ("bp" in last_q or "blood pressure" in last_q or "बीपी" in last_q) and re.search(r"\b(?:haan|ji\s+haan|yes|yep|ha|हाँ|हां|जी)\b", t) and not re.search(r"\b(?:nahi|nahin|no|नहीं)\b", t):
+        bp_pos = True
+    if bp_pos and not bp_neg:
+        detected.append("hypertension")
+
+    # 2. Hyperacidity / Peptic Ulcer
+    acid_pos = bool(
+        re.search(r"\b(?:acidity|acid\s+reflux|gerd|peptic\s+ulcer|ulcer|gastric\s+ulcer|amlapitta|pet\s+me\s+jalan|khatti\s+dakar|एसिडिटी|अल्सर)\b", t)
+    )
+    acid_neg = bool(
+        re.search(r"\b(?:acidity|ulcer|gerd|amlapitta|एसिडिटी|अल्सर)\s+(?:nahi|nahin|na|mat|नहीं|ना)\b|\b(?:no|without)\s+(?:acidity|ulcer)\b", t)
+    )
+    if ("acidity" in last_q or "ulcer" in last_q or "एसिडिटी" in last_q) and re.search(r"\b(?:haan|ji\s+haan|yes|yep|ha|हाँ|हां|जी)\b", t) and not re.search(r"\b(?:nahi|nahin|no|नहीं)\b", t):
+        acid_pos = True
+    if acid_pos and not acid_neg:
+        detected.append("hyperacidity/pepticulcer")
+
+    # 3. Pregnancy
+    preg_pos = bool(
+        re.search(r"\b(?:pregnant|pregnancy|garbhavastha|garbhvati|garbh|गर्भावस्था|गर्भवती)\b", t)
+        or re.search(r"\bpet\s+se\s+hoon\b", t)
+    )
+    preg_neg = bool(
+        re.search(r"\b(?:pregnant|pregnancy|garbh|गर्भवती)\s+(?:nahi|nahin|na|नहीं|ना)\b|\b(?:not\s+pregnant|no\s+pregnancy)\b", t)
+    )
+    if ("pregnant" in last_q or "pregnancy" in last_q or "गर्भवती" in last_q) and re.search(r"\b(?:haan|ji\s+haan|yes|yep|ha|हाँ|हां|जी)\b", t) and not re.search(r"\b(?:nahi|nahin|no|नहीं)\b", t):
+        preg_pos = True
+    if preg_pos and not preg_neg:
+        detected.append("pregnancy")
+
+    # 4. Diabetes / Sugar
+    diab_pos = bool(
+        re.search(r"\b(?:diabetes|sugar|madhumeh|blood\s+sugar|शुगर|मधुमेह)\b", t)
+    )
+    diab_neg = bool(
+        re.search(r"\b(?:diabetes|sugar|madhumeh|शुगर|मधुमेह)\s+(?:nahi|nahin|na|mat|नहीं|ना)\b|\b(?:no|without)\s+(?:diabetes|sugar)\b", t)
+    )
+    if ("diabetes" in last_q or "sugar" in last_q or "शुगर" in last_q) and re.search(r"\b(?:haan|ji\s+haan|yes|yep|ha|हाँ|हां|जी)\b", t) and not re.search(r"\b(?:nahi|nahin|no|नहीं)\b", t):
+        diab_pos = True
+    if diab_pos and not diab_neg:
+        detected.append("diabetes")
+
+    return detected
+
+
+def extract_duration_days(text: str) -> Optional[int]:
+    """Extracts numeric symptom duration in days from text."""
+    t = text.lower()
+    m = re.search(r"\b(\d+)\s*(?:din|days?|ghante|mahine|hafte|दिन|घंटे|महीने|हफ्ते)\b", t)
+    if m:
+        num = int(m.group(1))
+        if "hafte" in m.group(0) or "हफ्ते" in m.group(0):
+            return num * 7
+        return num
+
+    word_map = {
+        "ek": 1, "do": 2, "teen": 3, "chaar": 4, "char": 4, "paanch": 5, "panch": 5,
+        "chhe": 6, "saat": 7, "aath": 8, "nau": 9, "das": 10,
+        "एक": 1, "दो": 2, "तीन": 3, "चार": 4, "पांच": 5, "पाँच": 5,
+        "छह": 6, "सात": 7, "आठ": 8, "नौ": 9, "दस": 10,
+        "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+        "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+        "hafte": 7, "hafta": 7, "week": 7, "weeks": 7, "हफ्ता": 7, "हफ्ते": 7
+    }
+    for word, days in word_map.items():
+        if re.search(rf"\b{re.escape(word)}\s*(?:din|days|दिन)\b", t):
+            return days
+    if re.search(r"\b(?:ek\s+hafte|1\s+hafte|ek\s+hafta|एक\s+हफ्ते)\b", t):
+        return 7
+    return None
+
 
 def triage_node(state: AgentState) -> AgentState:
     raw_text = state.get("raw_user_message", "")
     normalized = bhashini_engine.normalize_dialect(raw_text)
 
-    # 1. Evaluate current turn message
-    tier_current, flags_current = triage_engine.evaluate(normalized)
+    # 1. Comorbidities extraction & deduplication
+    last_bot_msg = ""
+    for d in reversed(state.get("dialogue_history", [])):
+        if d.get("role") in ("assistant", "doctor"):
+            last_bot_msg = d.get("content", "")
+            break
 
-    # 1.1 Evaluate cumulative consultation context for cross-turn emergent flags
-    consultation_notes = state.get("consultation_notes", "") or ""
-    cumulative_text = f"{consultation_notes}\n{normalized}".strip()
-    tier_cumulative, flags_cumulative = triage_engine.evaluate(cumulative_text)
+    detected_conditions = extract_patient_conditions_from_text(normalized, last_bot_msg)
+    existing_conds = list(state.get("patient_conditions") or [])
+    for cond in detected_conditions:
+        if cond not in existing_conds:
+            existing_conds.append(cond)
+    state["patient_conditions"] = existing_conds
 
-    if tier_cumulative.value == "Red" or tier_current.value == "Red":
-        tier = SeverityTier.RED
-        flags = flags_current + flags_cumulative
-    elif tier_cumulative.value == "Yellow" or tier_current.value == "Yellow":
-        tier = SeverityTier.YELLOW
-        flags = flags_current + flags_cumulative
+    # 2. Duration extraction
+    duration_days = extract_duration_days(normalized)
+    if "symptom_profile" not in state or state["symptom_profile"] is None:
+        state["symptom_profile"] = {}
+    if duration_days is not None:
+        state["symptom_profile"]["duration_days"] = duration_days
+        state["symptom_profile"]["duration"] = f"{duration_days} days"
     else:
-        tier = tier_current
-        flags = flags_current
+        duration_days = state["symptom_profile"].get("duration_days")
+
+    # 3. Contextual Triage Evaluation (combining current turn with accumulated context)
+    consultation_notes = state.get("consultation_notes", "") or ""
+    tier, flags = triage_engine.evaluate_with_context(normalized, consultation_notes, duration_days)
 
     # Clean and deduplicate flags while preserving order
     flags = [f for f in dict.fromkeys(flags) if not (len(flags) > 1 and "GREEN_FLAG" in f)]
 
-    # 1.2 Demographic risk auto-escalation based on age
+    # 4. Demographic risk auto-escalation based on age
     age = state.get("patient_age")
     combined_lower = f"{consultation_notes.lower()} {normalized.lower()}"
 
@@ -56,10 +157,10 @@ def triage_node(state: AgentState) -> AgentState:
 
     intent = classify_intent(normalized)
 
-    # 1.5 Multi-Language Auto-Detection across all Indian languages
+    # 5. Multi-Language Auto-Detection across all Indian languages
     detected_language = bhashini_engine.detect_language(raw_text, hint=state.get("language_hint"))
 
-    # 2. Update state tracking
+    # 6. Update state tracking
     current_phase = state.get("dialogue_phase", "GREETING")
     prior_turn_count = state.get("turn_count", 0)
     turn_count = prior_turn_count + 1
@@ -82,7 +183,6 @@ def triage_node(state: AgentState) -> AgentState:
         state["dialogue_phase"] = "EMERGENCY"
 
     elif intent == "LANGUAGE_REQUEST":
-        # User is requesting language switch or translation/explanation (e.g. 'hindi main batao')
         if current_phase in ("CONCLUDED", "EMERGENCY"):
             state["dialogue_phase"] = "CONCLUDED"
         elif current_phase == "CONSULTATION" and prior_turn_count > 0:
@@ -93,15 +193,15 @@ def triage_node(state: AgentState) -> AgentState:
             state["dialogue_phase"] = "GREETING"
 
     elif intent == "GREETING":
-        # Only allow a full reset-to-GREETING when in initial/guardrail phase or turn_count == 0.
-        # If in active CONSULTATION with turn_count > 0, treat greeting as a benign acknowledgment:
-        # keep CONSULTATION phase and retain all consultation notes.
         if current_phase == "CONSULTATION" and prior_turn_count > 0:
             pass
         elif current_phase in ("GREETING", "GUARDRAIL_BLOCKED", None, "") or prior_turn_count == 0:
             state["dialogue_phase"] = "GREETING"
+            state["dialogue_history"] = []
             state["consultation_notes"] = ""
+            state["symptom_profile"] = {}
             state["retrieved_remedies"] = []
+            state["blocked_remedies"] = []
             state["turn_count"] = 0
             state["detected_tier"] = "Green"
             state["clinical_flags"] = []
@@ -121,11 +221,13 @@ def triage_node(state: AgentState) -> AgentState:
         if has_new_symptoms and not any(w in msg_lower for w in remedy_words):
             # Patient describes a genuine new medical complaint → start new consultation
             state["dialogue_phase"] = "CONSULTATION"
+            state["dialogue_history"] = []
             state["consultation_notes"] = ""
+            state["symptom_profile"] = {}
             state["retrieved_remedies"] = []
+            state["blocked_remedies"] = []
             state["turn_count"] = 1
         else:
-            # Retain CONCLUDED phase so it maintains the verified remedy and does not wipe consultation notes
             state["dialogue_phase"] = "CONCLUDED"
 
     elif current_phase in ("GREETING", "GUARDRAIL_BLOCKED", None, ""):
@@ -134,6 +236,5 @@ def triage_node(state: AgentState) -> AgentState:
 
     elif current_phase == "CONSULTATION":
         pass  # Stay in CONSULTATION until responder_node concludes
-
 
     return state

@@ -1,5 +1,5 @@
 import re
-from typing import List, Tuple, Set
+from typing import List, Tuple, Set, Optional
 from enum import Enum
 from app.core.clinical_lexicon import NEGATION_CUES, RED_PATTERNS, YELLOW_PATTERNS
 
@@ -14,12 +14,13 @@ class ClinicalTriageEngine:
     Evaluates urgency with:
     1. Clause-bounded bi-directional negation detection (English prefix + Hindi postfix).
     2. Temporal awareness for prior cardiac/critical history.
-    3. Flexible multi-word clinical discriminators (e.g., "pressure in chest", "seene me bahut tezz dard").
+    3. Flexible multi-word clinical discriminators across English, Hindi, and Devanagari.
+    4. Multi-turn cross-context evaluation for emergent prolonged symptom risks.
     """
 
     def __init__(self):
-        self.negation_window = 20
-        self.negation_cues: Set[str] = NEGATION_CUES
+        self.negation_window = 40
+        self.negation_cues: Set[str] = set(NEGATION_CUES) | {"नहीं", "ना", "बिना", "मत", "कोई नहीं"}
         self.red_patterns = RED_PATTERNS
         self.yellow_patterns = YELLOW_PATTERNS
         self.temporal_past_cues: Set[str] = {
@@ -29,44 +30,43 @@ class ClinicalTriageEngine:
     def _is_negated(self, text: str, match_start: int, match_end: int) -> bool:
         """
         Determines whether a clinical match is genuinely negated.
-        1. Confines negation checking to the specific clause containing the match.
-        2. Detects temporal markers: past-tense critical symptoms ("pehle tha, ab nahi")
+        1. Truncates negation checking to the clause immediately adjacent to the match.
+        2. Splits preceding_text on clause delimiters and inspects ONLY the last segment.
+        3. Splits succeeding_text on clause delimiters and relief words and inspects ONLY the first segment.
+        4. Detects temporal markers: past-tense critical symptoms ("pehle tha, ab nahi")
            are NOT negated as they remain clinically urgent.
-        3. Looks at 3 tokens before and 3 tokens after within the clause.
         """
-        # Find clause boundaries around the match (commas, semicolons, conjunctions)
-        clause_boundaries = [
-            m.start() for m in re.finditer(r'[,;!?]|\b(?:lekin|par|magar|but|however|aur|aur\s+saath)\b', text, re.IGNORECASE)
-        ]
-        clause_start = max([0] + [b for b in clause_boundaries if b < match_start])
-        # If clause boundary starts with delimiter/word, advance past it
-        clause_end_candidates = [b for b in clause_boundaries if b > match_end]
-        clause_end = min([len(text)] + clause_end_candidates) if clause_end_candidates else len(text)
+        preceding_text = text[max(0, match_start - self.negation_window):match_start].lower()
+        succeeding_text = text[match_end:min(len(text), match_end + self.negation_window)].lower()
 
-        clause_text = text[clause_start:clause_end].strip().lower()
+        clause_delim = r"[,.;!?\n]|\b(?:par|lekin|magar|but|aur|and|phir\s+bhi|jabki|halaanki|लेकिन|पर|मगर|और)\b"
+        succeeding_delim = r"[,.;!?\n]|\b(?:par|lekin|magar|but|aur|and|phir\s+bhi|jabki|halaanki|लेकिन|पर|मगर|और|aaram|fayda|rahat|आराम|फायदा|राहत)\b"
+
+        pre_segments = re.split(clause_delim, preceding_text, flags=re.IGNORECASE)
+        last_pre_segment = pre_segments[-1] if pre_segments else ""
+
+        post_segments = re.split(succeeding_delim, succeeding_text, flags=re.IGNORECASE)
+        first_post_segment = post_segments[0] if post_segments else ""
 
         # Check temporal past awareness:
         # If the symptom occurred earlier ("pehle dard tha, ab nahi hai"), it is a medical flag, NOT an absent symptom
-        clause_tokens = set(re.findall(r"\b\w+\b", clause_text))
+        combined_clause = f"{last_pre_segment} {first_post_segment}"
+        clause_tokens = set(re.findall(r"[^\s,.;!?]+", combined_clause))
         if any(past_cue in clause_tokens for past_cue in self.temporal_past_cues):
-            # Past critical occurrence reported -> do NOT negate
             return False
 
-        # Match offset inside the clause
-        rel_start = max(0, match_start - clause_start)
-        rel_end = min(len(clause_text), match_end - clause_start)
+        # Token extraction using Unicode-friendly regex so Devanagari matras are intact
+        pre_tokens = re.findall(r"[^\s,.;!?]+", last_pre_segment)
+        post_tokens = re.findall(r"[^\s,.;!?]+", first_post_segment)
 
-        pre_clause = clause_text[:rel_start]
-        post_clause = clause_text[rel_end:]
-
-        pre_tokens = re.findall(r"\b\w+\b", pre_clause)
-        post_tokens = re.findall(r"\b\w+\b", post_clause)
-
-        # Check within 3 tokens before or after the match in the same clause
-        if any(cue in pre_tokens[-3:] for cue in self.negation_cues):
-            return True
-        if any(cue in post_tokens[:3] for cue in self.negation_cues):
-            return True
+        # Check within 3 tokens before or after the match in the same clause segment
+        for cue in self.negation_cues:
+            if " " in cue:
+                if cue in last_pre_segment or cue in first_post_segment:
+                    return True
+            else:
+                if cue in pre_tokens[-3:] or cue in post_tokens[:3]:
+                    return True
 
         return False
 
@@ -94,3 +94,56 @@ class ClinicalTriageEngine:
 
         # 3. Default to Green Tier (Routine / Self-Care)
         return SeverityTier.GREEN, ["GREEN_FLAG: Routine/Community level symptoms"]
+
+    def evaluate_with_context(
+        self,
+        current_text: str,
+        accumulated_notes: str = "",
+        duration_days: Optional[int] = None
+    ) -> Tuple[SeverityTier, List[str]]:
+        """
+        Multi-turn context evaluation helper:
+        1. First evaluates current_text. If Red, return immediately.
+        2. Evaluates accumulated_notes for Yellow-tier patterns or combined symptom + duration triggers.
+        """
+        tier_cur, flags_cur = self.evaluate(current_text)
+        if tier_cur == SeverityTier.RED:
+            return tier_cur, flags_cur
+
+        # Extract only patient statements from accumulated_notes to ignore doctor's screening questions
+        patient_notes_lines = []
+        for line in accumulated_notes.splitlines():
+            line_str = line.strip()
+            if line_str.startswith("Doctor:") or line_str.startswith("Assistant:"):
+                continue
+            if line_str.startswith("Patient:"):
+                line_str = line_str[len("Patient:"):].strip()
+            if line_str:
+                patient_notes_lines.append(line_str)
+        patient_notes = " ".join(patient_notes_lines) if patient_notes_lines else accumulated_notes
+
+        # Check combined symptom + duration triggers (>=3 days)
+        dur_match = re.search(r"\b(?:[3-9]|\d{2,}|तीन|चार|पांच|पाँच)\s*(?:din|days|दिन)\b", current_text, re.IGNORECASE)
+        is_prolonged = (duration_days is not None and duration_days >= 3) or bool(dur_match)
+
+        combined_context = f"{patient_notes} {current_text}".lower()
+        fever_or_vomit = any(
+            sym in combined_context
+            for sym in [
+                "bukhar", "fever", "बुखार", "taap", "ताप",
+                "ulti", "vomit", "vomiting", "उल्टी", "dast", "diarrhea", "दस्त"
+            ]
+        )
+
+        if is_prolonged and fever_or_vomit:
+            return SeverityTier.YELLOW, ["YELLOW_FLAG: prolonged_symptom_duration ('>=3 days')"]
+
+        if tier_cur == SeverityTier.YELLOW:
+            return tier_cur, flags_cur
+
+        if patient_notes:
+            tier_notes, flags_notes = self.evaluate(patient_notes)
+            if tier_notes in (SeverityTier.RED, SeverityTier.YELLOW):
+                return tier_notes, flags_notes
+
+        return tier_cur, flags_cur

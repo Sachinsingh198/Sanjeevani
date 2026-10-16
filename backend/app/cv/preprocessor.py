@@ -45,3 +45,18 @@ class ImagePreprocessor:
         l_enhanced = clahe.apply(l)
 
         return cv2.cvtColor(cv2.merge([l_enhanced, a, b]), cv2.COLOR_LAB2BGR)
+
+    @staticmethod
+    def extract_center_roi(image_bgr: np.ndarray, crop_fraction: float = 0.6) -> np.ndarray:
+        """
+        Extracts a centered region of interest (ROI) from an image based on crop_fraction.
+        Default crop_fraction = 0.6 extracts the central 60% of the image along height and width.
+        """
+        if image_bgr is None or image_bgr.size == 0:
+            return image_bgr
+        h, w = image_bgr.shape[:2]
+        crop_fraction = max(0.1, min(1.0, float(crop_fraction)))
+        dh = int(h * (1.0 - crop_fraction) / 2.0)
+        dw = int(w * (1.0 - crop_fraction) / 2.0)
+        roi = image_bgr[dh:h - dh, dw:w - dw]
+        return roi if roi.size > 0 else image_bgr

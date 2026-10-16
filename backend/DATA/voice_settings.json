@@ -1,6 +1,6 @@
 {
-  "provider": "bhashini",
-  "primary": "bhashini",
+  "provider": "sarvam",
+  "primary": "sarvam",
   "sarvam_model": "bulbul:v3",
   "sarvam_speaker": "shubh",
   "bhashini_model": "ai4bharat/indic-tts-coqui-dravidian-gpu--t4",

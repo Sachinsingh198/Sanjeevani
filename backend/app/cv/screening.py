@@ -173,6 +173,13 @@ class DiagnosticScreeningEngine:
         conf, quality_notes = self._assess_image_quality(image_bgr)
         roi, (rx, ry, rw, rh), loc_method = self._localize_conjunctiva_roi(image_bgr)
 
+        # Extract center ROI and apply illumination calibration on non-uniform images
+        roi = ImagePreprocessor.extract_center_roi(roi, crop_fraction=0.6)
+        spatial_variance = float(np.std(cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY))) if len(roi.shape) == 3 and roi.shape[2] == 3 else float(np.std(roi))
+        if spatial_variance > 5.0:
+            roi = ImagePreprocessor.apply_gray_world(roi)
+            roi = ImagePreprocessor.apply_clahe(roi)
+
         # Step 1: Convert to CIELAB space
         img_float = roi.astype(np.float32) / 255.0
         lab = cv2.cvtColor(img_float, cv2.COLOR_BGR2LAB)
@@ -271,6 +278,13 @@ class DiagnosticScreeningEngine:
 
         conf, quality_notes = self._assess_image_quality(image_bgr)
         roi, (rx, ry, rw, rh), loc_method = self._localize_sclera_roi(image_bgr)
+
+        # Extract center ROI and apply illumination calibration on non-uniform images
+        roi = ImagePreprocessor.extract_center_roi(roi, crop_fraction=0.6)
+        spatial_variance = float(np.std(cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY))) if len(roi.shape) == 3 and roi.shape[2] == 3 else float(np.std(roi))
+        if spatial_variance > 5.0:
+            roi = ImagePreprocessor.apply_gray_world(roi)
+            roi = ImagePreprocessor.apply_clahe(roi)
 
         # Step 1: Convert to HSV & CIELAB
         hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)

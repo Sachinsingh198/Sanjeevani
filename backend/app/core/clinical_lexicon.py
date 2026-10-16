@@ -100,7 +100,8 @@ ADVERSARIAL_PATTERNS: List[str] = [
 # ─────────────────────────────────────────────────────────────────────────────
 NEGATION_CUES: Set[str] = {
     "no", "not", "without", "denies", "free of", "never",
-    "nahi", "nahin", "koi nahi", "na", "bina", "mat"
+    "nahi", "nahin", "koi nahi", "na", "bina", "mat",
+    "नहीं", "ना", "बिना", "मत", "कोई नहीं"
 }
 
 RED_PATTERNS: Dict[str, List[str]] = {
@@ -108,31 +109,39 @@ RED_PATTERNS: Dict[str, List[str]] = {
         r"\bchest\s+(?:tightness|pressure|pain|discomfort)\b",
         r"\b(?:pressure|pain|tightness|heaviness)\s+(?:in\s+(?:the\s+|my\s+)?)?chest\b",
         r"\b(?:seene|chhati|dil)\s+(?:me\s+)?(?:\w+\s+){0,3}dard\b",
+        r"(?:सीने|छाती|दिल)\s+(?:में\s+)?(?:\S+\s+){0,3}(?:दर्द|दबाव|जकड़न)",
         r"\bleft\s+arm\s+pain\b",
         r"\bheart\s+pain\b"
     ],
     "acute_respiratory_distress": [
         r"\b(?:shortness\s+of\s+breath|difficulty\s+breathing|cannot\s+breathe|gasping)\b",
         r"\bsaans\s+(?:lene\s+me\s+)?(?:\w+\s+){0,2}(?:takleef|dikkat|phoolna)\b",
+        r"(?:सांस|साँस)\s+(?:लेने\s+में\s+)?(?:\S+\s+){0,2}(?:तकलीफ|दिक्कत|फूलना)",
+        r"दम\s+घुट",
         r"\bdum\s+ghutna\b",
         r"\bghutan\s+ho\s+rahi\b"
     ],
     "altered_mental_status": [
         r"\b(?:unconscious|unresponsive|fainted|passed\s+out|seizure|convulsion)\b",
-        r"\b(?:behosh|daura|chakkar\s+khakar\s+girna)\b"
+        r"\b(?:behosh|daura|chakkar\s+khakar\s+girna)\b",
+        r"(?:बेहोश|दौरा|चक्कर\s+खाकर\s+गिर)"
     ],
     "severe_hemorrhage": [
         r"\b(?:heavy\s+bleeding|coughing\s+blood|vomiting\s+blood|bleeding\s+profusely)\b",
         r"\bkhoon\s+ki\s+(?:ulti|khasi)\b",
+        r"खून\s+की\s+(?:उल्टी|खांसी|खाँसी)",
+        r"ज्यादा\s+खून\s+बह",
         r"\bzyada\s+khoon\s+behna\b"
     ],
     "infant_high_fever": [
         r"\b(?:infant|baby|newborn)\s+high\s+fever\b",
-        r"\b(?:navjaat|chote\s+bachhe)\s+(?:ko\s+)?(?:\w+\s+){0,2}tezz\s+bukhar\b"
+        r"\b(?:navjaat|chote\s+bachhe)\s+(?:ko\s+)?(?:\w+\s+){0,2}tezz\s+bukhar\b",
+        r"(?:नवजात|छोटे\s+बच्चे)\s+(?:को\s+)?(?:\S+\s+){0,2}तेज\s+बुखार"
     ],
     "anaphylaxis_stroke": [
         r"\b(?:face\s+drooping|slurred\s+speech|throat\s+closing|lips\s+blue)\b",
-        r"\b(?:chehra\s+tedha|gala\s+band\s+hona|muh\s+tedha)\b"
+        r"\b(?:chehra\s+tedha|gala\s+band\s+hona|muh\s+tedha)\b",
+        r"(?:चेहरा\s+टेढ़ा|गला\s+बंद|मुंह\s+टेढ़ा)"
     ]
 }
 
@@ -140,23 +149,31 @@ YELLOW_PATTERNS: Dict[str, List[str]] = {
     "prolonged_fever": [
         r"\bfever\s+(?:for\s+)?(?:[3-9]|\d{2,})\s+days\b",
         r"\b(?:[3-9]|\d{2,})\s+din\s+se\s+bukhar\b",
+        r"(?:[3-9]|\d{2,}|तीन|चार|पांच|पाँच)\s+दिन\s+से\s+बुखार",
+        r"लगातार\s+बुखार",
         r"\blagaatar\s+bukhar\b",
         r"\bpersistent\s+fever\b"
     ],
     "severe_localized_pain": [
         r"\bsevere\s+(?:abdominal|stomach)\s+pain\b",
         r"\bpet\s+me\s+(?:bahut\s+)?tezz\s+dard\b",
+        r"पेट\s+में\s+(?:बहुत\s+)?तेज\s+दर्द",
         r"\bsir\s+me\s+asahniya\s+dard\b",
+        r"सिर\s+में\s+असहनीय\s+दर्द",
         r"\bintense\s+headache\b"
     ],
     "dehydration_signs": [
         r"\b(?:no\s+urine|not\s+passing\s+urine|sunken\s+eyes|extreme\s+thirst)\b",
         r"\bpeshab\s+(?:band|na\s+aana)\b",
+        r"पेशाब\s+(?:बंद|न\s+आना|नहीं\s+आ)",
+        r"आंखें\s+धंस",
         r"\baankhe\s+dhasna\b"
     ],
     "persistent_vomiting": [
         r"\b(?:continuous|persistent|repeated)\s+vomiting\b",
         r"\blagaatar\s+ulti\b",
+        r"(?:लगातार|बार\s+बार|बार-बार)\s+उल्टी",
         r"\bbaar\s+baar\s+ulti\b"
     ]
 }
+

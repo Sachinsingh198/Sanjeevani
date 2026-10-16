@@ -16,6 +16,8 @@ from app.db.schema import (
     system_settings_table,
     cmo_broadcasts_table,
     outbreak_actions_table,
+    triage_logs_table,
+    screening_logs_table,
     create_all_tables,
 )
 from app.db.session import (

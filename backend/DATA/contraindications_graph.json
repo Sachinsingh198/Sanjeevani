@@ -1,7 +1,7 @@
 {
   "contraindications": [
     {
-      "herb": "Ginger/Sunthi",
+      "herb": "Ginger/Sunthi/Adrak/सोंठ/अदरक",
       "target_condition": "Hyperacidity/PepticUlcer",
       "severity": "HIGH",
       "reason": "Increases Pitta and irritates inflamed gastric mucosa."
@@ -19,7 +19,7 @@
       "reason": "Stimulates bile flow which may precipitate biliary colic."
     },
     {
-      "herb": "Black Pepper/Maricha",
+      "herb": "Black Pepper/Maricha/Kali Mirch/काली मिर्च",
       "target_condition": "Hyperacidity/PepticUlcer",
       "severity": "HIGH",
       "reason": "Direct irritant to active gastrointestinal ulcerations and mucosal erosions."
@@ -37,9 +37,9 @@
       "reason": "Relaxes lower esophageal sphincter and causes acid reflux flare."
     },
     {
-      "herb": "Mulethi/Licorice/Yashtimadhu",
+      "herb": "Mulethi/Licorice/Yashtimadhu/मुलेठी",
       "target_condition": "Hypertension",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "reason": "Excessive licorice causes pseudoaldosteronism, sodium retention, and elevates blood pressure."
     },
     {
@@ -61,7 +61,7 @@
       "reason": "High intake associated with preterm labor and endocrine disruption."
     },
     {
-      "herb": "Guggulu",
+      "herb": "Guggulu/गुग्गुलु",
       "target_condition": "Pregnancy",
       "severity": "CRITICAL",
       "reason": "Possesses mild emmenagogue and uterine stimulant properties; strictly avoided during pregnancy."
@@ -85,7 +85,7 @@
       "reason": "Stimulates thyroid activity; may interfere with thyroid hormone replacement therapy."
     },
     {
-      "herb": "Vasa/Adhatoda",
+      "herb": "Vasa/Adhatoda/अडूसा/वासा",
       "target_condition": "Pregnancy",
       "severity": "CRITICAL",
       "reason": "Contains uterotonic alkaloids (vasicine, vasicinone); induces uterine contractions."
@@ -109,10 +109,10 @@
       "reason": "Immunostimulatory actions may exacerbate autoimmune conditions like Lupus, MS, or RA."
     },
     {
-      "herb": "Ashwagandha",
+      "herb": "Ashwagandha/अश्वगंधा",
       "target_condition": "Pregnancy",
-      "severity": "CRITICAL",
-      "reason": "Possesses abortifacient potential in high pharmacological doses."
+      "severity": "HIGH",
+      "reason": "Possesses abortifacient potential in high pharmacological doses; avoid during pregnancy without clinical supervision."
     },
     {
       "herb": "Ashwagandha",
@@ -139,10 +139,22 @@
       "reason": "Aperient action promotes bowel evacuation, aggravating electrolyte loss."
     },
     {
-      "herb": "Triphala",
+      "herb": "Triphala/Haritaki/त्रिफला/हरड़",
       "target_condition": "Pregnancy",
       "severity": "HIGH",
-      "reason": "Downward moving Apana Vayu stimulation and laxative action may trigger uterine irritability."
+      "reason": "Downward moving Apana Vayu stimulation and laxative action may trigger uterine irritability; contraindicated in pregnancy."
+    },
+    {
+      "herb": "Honey/Madhu/शहद",
+      "target_condition": "InfantUnder1Year",
+      "severity": "CRITICAL",
+      "reason": "Risk of infant botulism in babies under 12 months."
+    },
+    {
+      "herb": "Sugar/Sharkara/Misri/मिश्री/चीनी",
+      "target_condition": "Diabetes",
+      "severity": "MEDIUM",
+      "reason": "Avoid concentrated sugar/jaggery in uncontrolled diabetes."
     },
     {
       "herb": "Haridra/Turmeric/Curcumin",

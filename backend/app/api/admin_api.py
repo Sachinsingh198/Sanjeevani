@@ -163,12 +163,24 @@ async def get_system_stats(request: Request, admin: Dict[str, Any] = Depends(req
                 select(func.count()).select_from(conversation_index_table)
             ).scalar() or 0
 
+        # Real-time encounter counts from triage_logs and screening_logs (Task 7)
+        total_triage_encounters = 0
+        total_vision_screenings = 0
+        try:
+            from app.db.schema import triage_logs_table, screening_logs_table
+            total_triage_encounters = conn.execute(select(func.count()).select_from(triage_logs_table)).scalar() or 0
+            total_vision_screenings = conn.execute(select(func.count()).select_from(screening_logs_table)).scalar() or 0
+        except Exception:
+            pass
+
         return {
             "total_users": total_users,
             "patients": patients,
             "asha_workers": asha_workers,
             "admins": admins,
             "total_consultations": total_consultations,
+            "total_triage_encounters": total_triage_encounters,
+            "total_vision_screenings": total_vision_screenings,
             "recent_registrations_7d": recent,
             "village_distribution": village_distribution,
             "triage_distribution": triage_dist,

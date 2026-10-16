@@ -14,6 +14,8 @@ from app.db.schema import (
     conversation_index_table,
     patient_encounters_table,
     analytics_events_table,
+    triage_logs_table,
+    screening_logs_table,
     create_all_tables,
 )
 from app.db.session import (
@@ -144,6 +146,75 @@ def get_db():
 def create_tables():
     """Creates all tables using SQLAlchemy Core metadata and applies necessary schema migrations."""
     create_all_tables(engine)
+    metadata.create_all(engine, tables=[triage_logs_table, screening_logs_table], checkfirst=True)
+
+
+def log_triage_encounter(
+    session_id: str,
+    tier: str,
+    user_id: Optional[int] = None,
+    chief_complaint: str = "",
+    symptoms: str = "",
+    clinical_flags: str = "",
+    remedies_suggested: str = "",
+    detected_conditions: str = "",
+    blocked_remedies: str = "",
+    dialogue_phase: str = "",
+    language: str = "hi"
+) -> int:
+    """Logs a clinical triage encounter into the triage_logs table."""
+    try:
+        with get_db_connection() as conn:
+            stmt = insert(triage_logs_table).values(
+                session_id=session_id,
+                user_id=user_id,
+                tier=tier,
+                chief_complaint=chief_complaint,
+                symptoms=symptoms,
+                clinical_flags=clinical_flags,
+                remedies_suggested=remedies_suggested,
+                detected_conditions=detected_conditions,
+                blocked_remedies=blocked_remedies,
+                dialogue_phase=dialogue_phase,
+                language=language
+            )
+            res = conn.execute(stmt)
+            return res.inserted_primary_key[0] if res.inserted_primary_key else 0
+    except Exception as e:
+        logger.error(f"[DB Error] Failed to log triage encounter: {e}")
+        return 0
+
+
+def log_vision_screening(
+    screening_type: str,
+    risk_level: str,
+    user_id: Optional[int] = None,
+    biomarker: str = "",
+    calculated_index: str = "",
+    estimated_metric: str = "",
+    confidence_score: str = "",
+    roi_localization_method: str = "",
+    abdm_report_id: str = ""
+) -> int:
+    """Logs a computer vision biomarker screening encounter into screening_logs table."""
+    try:
+        with get_db_connection() as conn:
+            stmt = insert(screening_logs_table).values(
+                screening_type=screening_type,
+                risk_level=risk_level,
+                user_id=user_id,
+                biomarker=biomarker,
+                calculated_index=str(calculated_index),
+                estimated_metric=str(estimated_metric),
+                confidence_score=str(confidence_score),
+                roi_localization_method=roi_localization_method,
+                abdm_report_id=abdm_report_id
+            )
+            res = conn.execute(stmt)
+            return res.inserted_primary_key[0] if res.inserted_primary_key else 0
+    except Exception as e:
+        logger.error(f"[DB Error] Failed to log vision screening: {e}")
+        return 0
 
 
 def seed_default_admin():

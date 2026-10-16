@@ -70,4 +70,35 @@ def test_backend_and_frontend_red_patterns_sync():
         f"CRITICAL CLINICAL SAFETY MISMATCH: Backend and frontend RED_PATTERNS categories diverged! "
         f"Difference: {diff}. If you add/change a category or regex on one side, "
         f"you MUST mirror it on the other side."
-    )
+    )
+
+def test_clause_bounded_negation(engine):
+    """Ensure negation in preceding clause does not negate symptom in next clause."""
+    narrative = "Mujhe khasi nahi hai, par seene me bahut tezz dard hai"
+    tier, flags = engine.evaluate(narrative)
+    assert tier == SeverityTier.RED
+    assert any("cardiac_chest_pain" in f for f in flags)
+
+def test_postfix_relief_negation(engine):
+    """Ensure lack of relief ('aaram nahi') does not falsely negate chest pain."""
+    narrative = "Seene me dard hai, dawa se aaram nahi mil raha"
+    tier, flags = engine.evaluate(narrative)
+    assert tier == SeverityTier.RED
+    assert any("cardiac_chest_pain" in f for f in flags)
+
+def test_devanagari_emergency_triage(engine):
+    """Ensure Devanagari cardiac emergency narrative triggers RED tier."""
+    narrative = "मरीज को सीने में तेज दर्द और सांस लेने में तकलीफ है"
+    tier, flags = engine.evaluate(narrative)
+    assert tier == SeverityTier.RED
+    assert any("cardiac_chest_pain" in f or "acute_respiratory_distress" in f for f in flags)
+
+def test_multi_turn_context_evaluation_prolonged_symptom(engine):
+    """Ensure evaluate_with_context escalates to YELLOW when fever was mentioned earlier and duration >= 3 days is provided."""
+    tier, flags = engine.evaluate_with_context(
+        current_text="Mujhe 4 din se ho raha hai",
+        accumulated_notes="Patient reported: bukhar aur thakan",
+        duration_days=4
+    )
+    assert tier == SeverityTier.YELLOW
+    assert any("prolonged_symptom_duration" in f for f in flags)

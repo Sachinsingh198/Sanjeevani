@@ -211,6 +211,42 @@ outbreak_actions_table = Table(
     Column("created_at", DateTime, nullable=False, server_default=func.now(), index=True),
 )
 
+# 14. Triage Encounter Audit Logs Table
+triage_logs_table = Table(
+    "triage_logs",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("session_id", String(255), nullable=False, index=True),
+    Column("user_id", Integer, nullable=True, index=True),
+    Column("tier", String(50), nullable=False, index=True),
+    Column("chief_complaint", Text, nullable=True),
+    Column("symptoms", Text, nullable=True),
+    Column("clinical_flags", Text, nullable=True),
+    Column("remedies_suggested", Text, nullable=True),
+    Column("detected_conditions", Text, nullable=True),
+    Column("blocked_remedies", Text, nullable=True),
+    Column("dialogue_phase", String(50), nullable=True),
+    Column("language", String(50), nullable=True),
+    Column("created_at", DateTime, nullable=False, server_default=func.now(), index=True),
+)
+
+# 15. Computer Vision Screening Audit Logs Table
+screening_logs_table = Table(
+    "screening_logs",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("screening_type", String(50), nullable=False, index=True),
+    Column("risk_level", String(100), nullable=False, index=True),
+    Column("biomarker", String(255), nullable=True),
+    Column("calculated_index", String(50), nullable=True),
+    Column("estimated_metric", String(255), nullable=True),
+    Column("confidence_score", String(50), nullable=True),
+    Column("roi_localization_method", String(50), nullable=True),
+    Column("abdm_report_id", String(255), nullable=True),
+    Column("user_id", Integer, nullable=True, index=True),
+    Column("created_at", DateTime, nullable=False, server_default=func.now(), index=True),
+)
+
 
 def _migrate_columns_safely(engine):
     """

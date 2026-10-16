@@ -1,3 +1,4 @@
+import re
 import asyncio
 from typing import Optional
 from langchain_core.runnables import RunnableLambda
@@ -132,19 +133,40 @@ def extract_active_symptoms(notes: str, normalized_msg: str, llm=None) -> str:
     return clean_query if clean_query.strip() else normalized_msg
 
 
+def build_retriever_query(state: AgentState, llm=None) -> str:
+    """
+    Builds a clean search query combining English chief complaint, local complaint,
+    and active symptoms while stripping filler words.
+    """
+    sym_prof = state.get("symptom_profile") or {}
+    cc_eng = sym_prof.get("chief_complaint_english", "")
+    cc = sym_prof.get("chief_complaint", "")
+    notes = state.get("consultation_notes", "")
+    norm_msg = state.get("normalized_message", "")
+
+    # Clean filler words
+    raw_query = f"{cc_eng} {cc} {notes} {norm_msg}"
+    filler_pattern = r"\b(?:haan|ji|haanji|nahi|nahin|na|din|din se|days|since|hours|ghante|mujhe|hai|ho|raha|rahi|hain|kripya|batayein)\b"
+    cleaned = re.sub(filler_pattern, " ", raw_query, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+    active_symptoms = extract_active_symptoms(notes, norm_msg, llm)
+    combined = f"{active_symptoms} {cleaned}".strip()
+    return combined[:200] if combined else (cc or norm_msg)
+
+
 def retriever_node_sync(state: AgentState) -> AgentState:
     """Synchronous execution of remedy retrieval for synchronous runners."""
     from app.agents.nodes.responder_node import get_llm
     llm = get_llm()
     store = get_remedy_store()
-    notes = state.get("consultation_notes", "")
-    norm_msg = state.get("normalized_message", "")
 
-    query = extract_active_symptoms(notes, norm_msg, llm)
+    query = build_retriever_query(state, llm)
     patient_conditions = state.get("patient_conditions", [])
 
-    candidates = store.search_remedies(query, limit=4)
+    candidates = store.search_remedies(query, limit=5)
     verified_remedies = []
+    blocked_remedies = list(state.get("blocked_remedies", []))
 
     if state.get("detected_language") == "garhwali":
         garhwali_docs = store.search_garhwali(query, limit=3)
@@ -157,27 +179,32 @@ def retriever_node_sync(state: AgentState) -> AgentState:
     patient_pregnancy = state.get("patient_pregnancy")
 
     for item in candidates:
+        r_name = item.get("remedy_name", "")
+        r_text = item.get("remedy_text", "")
+        full_text = f"{r_name} {r_text}"
+
         is_safe, reason = knowledge_graph.validate_remedy(
-            item.get("remedy_text", ""),
+            full_text,
             patient_conditions,
             age=patient_age,
             gender=patient_gender,
-            is_pregnant=patient_pregnancy
+            is_pregnant=patient_pregnancy,
+            remedy_name=r_name,
         )
         if is_safe:
-            # If a top remedy is already selected, only accept candidate 2 if genuinely relevant
-            if verified_remedies:
-                top_score = verified_remedies[0].get("similarity_score") or 0.5
-                item_score = item.get("similarity_score") or 0.0
-                if item_score < 0.40 or item_score < (0.70 * top_score):
-                    continue
-            verified_item = dict(item)
-            verified_item["safety_check"] = reason
-            verified_remedies.append(verified_item)
-            if len(verified_remedies) >= 2:
-                break
+            if len(verified_remedies) < 2:
+                verified_item = dict(item)
+                verified_item["safety_check"] = reason
+                verified_remedies.append(verified_item)
+        else:
+            if not any(b.get("remedy_name") == r_name for b in blocked_remedies):
+                blocked_remedies.append({
+                    "remedy_name": r_name,
+                    "reason": reason
+                })
 
     state["retrieved_remedies"] = verified_remedies
+    state["blocked_remedies"] = blocked_remedies
     state["retrieval_attempted"] = True
     return state
 
@@ -191,15 +218,14 @@ async def retriever_node(state: AgentState) -> AgentState:
     from app.agents.nodes.responder_node import get_llm
     llm = get_llm()
     store = get_remedy_store()
-    notes = state.get("consultation_notes", "")
-    norm_msg = state.get("normalized_message", "")
 
-    query = extract_active_symptoms(notes, norm_msg, llm)
+    query = build_retriever_query(state, llm)
     patient_conditions = state.get("patient_conditions", [])
 
     # 1. Non-blocking Vector RAG Search using asyncio.to_thread
-    candidates = await asyncio.to_thread(store.search_remedies, query, limit=4)
+    candidates = await asyncio.to_thread(store.search_remedies, query, limit=5)
     verified_remedies = []
+    blocked_remedies = list(state.get("blocked_remedies", []))
 
     # 1.5 Non-blocking Garhwali Context Retrieval using asyncio.to_thread
     if state.get("detected_language") == "garhwali":
@@ -214,26 +240,32 @@ async def retriever_node(state: AgentState) -> AgentState:
     patient_pregnancy = state.get("patient_pregnancy")
 
     for item in candidates:
+        r_name = item.get("remedy_name", "")
+        r_text = item.get("remedy_text", "")
+        full_text = f"{r_name} {r_text}"
+
         is_safe, reason = knowledge_graph.validate_remedy(
-            item.get("remedy_text", ""),
+            full_text,
             patient_conditions,
             age=patient_age,
             gender=patient_gender,
-            is_pregnant=patient_pregnancy
+            is_pregnant=patient_pregnancy,
+            remedy_name=r_name,
         )
         if is_safe:
-            if verified_remedies:
-                top_score = verified_remedies[0].get("similarity_score") or 0.5
-                item_score = item.get("similarity_score") or 0.0
-                if item_score < 0.40 or item_score < (0.70 * top_score):
-                    continue
-            verified_item = dict(item)
-            verified_item["safety_check"] = reason
-            verified_remedies.append(verified_item)
-            if len(verified_remedies) >= 2:
-                break
+            if len(verified_remedies) < 2:
+                verified_item = dict(item)
+                verified_item["safety_check"] = reason
+                verified_remedies.append(verified_item)
+        else:
+            if not any(b.get("remedy_name") == r_name for b in blocked_remedies):
+                blocked_remedies.append({
+                    "remedy_name": r_name,
+                    "reason": reason
+                })
 
     state["retrieved_remedies"] = verified_remedies
+    state["blocked_remedies"] = blocked_remedies
     state["retrieval_attempted"] = True
     return state
 

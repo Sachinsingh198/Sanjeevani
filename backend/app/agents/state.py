@@ -4,9 +4,12 @@ from typing import TypedDict, List, Dict, Any, Optional
 class SymptomProfile(TypedDict, total=False):
     """Optional structured symptom intake extracted during consultation."""
     chief_complaint: str
+    chief_complaint_english: str
     duration: str
+    duration_days: Optional[int]
     severity: str
     associated_symptoms: List[str]
+    comorbidities_asked: bool
 
 
 class _AgentStateRequired(TypedDict):
@@ -51,6 +54,12 @@ class AgentState(_AgentStateRequired, total=False):
     structured_symptoms: Optional[Dict[str, Any]]
     yellow_clarification_turn: Optional[int]
 
+    # Multi-turn transcript tracking: stores [{"role": "user"|"assistant", "content": "..."}]
+    dialogue_history: List[Dict[str, str]]
+
+    # Blocked remedies rejected by Safety Knowledge Graph
+    blocked_remedies: List[Dict[str, str]]
+
     # Accumulated patient information across turns — passed to LLM as context each turn.
     # The responder_node appends to this as new symptoms/answers are shared.
     consultation_notes: str
@@ -65,4 +74,4 @@ class AgentState(_AgentStateRequired, total=False):
     vision_analysis: Optional[Dict[str, Any]]
 
     # Retrieval guardrail flag to prevent cycle between retriever_node and doctor_consultation_node
-    retrieval_attempted: Optional[bool]
+    retrieval_attempted: Optional[bool]
