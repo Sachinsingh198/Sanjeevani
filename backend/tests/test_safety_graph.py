@@ -73,7 +73,9 @@ def test_canonical_synonym_normalization(kg):
 def test_ear_discharge_blocks_ear_drops(kg):
     """Ear drops / Karnapurana (rem_038) must be strictly blocked when ear discharge is present."""
     import json
-    with open("DATA/remedies_dataset.json", encoding="utf-8") as f:
+    import os
+    data_path = "DATA/remedies_dataset.json" if os.path.exists("DATA/remedies_dataset.json") else os.path.join(os.path.dirname(os.path.dirname(__file__)), "DATA", "remedies_dataset.json")
+    with open(data_path, encoding="utf-8") as f:
         data = json.load(f)
     rem_038 = next(r for r in data if r.get("id") == "rem_038")
 

@@ -81,8 +81,9 @@ class HybridRemedyStore:
         self,
         data_path: str = "DATA/remedies_dataset.json",
         qdrant_path: Optional[str] = None,
+        collection_name: Optional[str] = None,
     ):
-        self.collection_name = "ayush_remedies"
+        self.collection_name = collection_name or os.getenv("QDRANT_COLLECTION_NAME", "sanjeevani_remedies")
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         self.full_data_path = os.path.join(base_dir, data_path)
         cache_dir = os.path.join(base_dir, "models_cache")
@@ -92,20 +93,36 @@ class HybridRemedyStore:
             cache_dir=cache_dir,
         )
 
-        resolved_qdrant_path = qdrant_path or os.getenv("QDRANT_PATH", ":memory:")
-        if resolved_qdrant_path == ":memory:":
-            self.client = QdrantClient(":memory:")
-        else:
-            full_qdrant_path = (
-                resolved_qdrant_path
-                if os.path.isabs(resolved_qdrant_path)
-                else os.path.join(base_dir, resolved_qdrant_path)
-            )
+        qdrant_url = os.getenv("QDRANT_URL")
+        qdrant_api_key = os.getenv("QDRANT_API_KEY")
+
+        self.client = None
+        if qdrant_url and qdrant_url.strip():
             try:
-                self.client = QdrantClient(path=full_qdrant_path)
-            except Exception as lock_err:
-                logger.warning(f"[Qdrant] Storage locked or unavailable ({lock_err}). Using :memory: client.")
+                candidate_client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key, timeout=5)
+                # Actively verify remote cluster connectivity
+                candidate_client.collection_exists(self.collection_name)
+                self.client = candidate_client
+                logger.info(f"[Qdrant] Connected to Qdrant Cloud cluster at {qdrant_url}")
+            except Exception as cloud_err:
+                logger.warning(f"[Qdrant] Cloud cluster unreachable ({cloud_err}). Falling back to local storage.")
+                self.client = None
+
+        if self.client is None:
+            resolved_qdrant_path = qdrant_path or os.getenv("QDRANT_PATH", ":memory:")
+            if resolved_qdrant_path == ":memory:":
                 self.client = QdrantClient(":memory:")
+            else:
+                full_qdrant_path = (
+                    resolved_qdrant_path
+                    if os.path.isabs(resolved_qdrant_path)
+                    else os.path.join(base_dir, resolved_qdrant_path)
+                )
+                try:
+                    self.client = QdrantClient(path=full_qdrant_path)
+                except Exception as lock_err:
+                    logger.warning(f"[Qdrant] Storage locked or unavailable ({lock_err}). Using :memory: client.")
+                    self.client = QdrantClient(":memory:")
 
         self.remedies: List[Dict[str, Any]] = []
         self.bm25 = OkapiBM25Index()
@@ -141,35 +158,38 @@ class HybridRemedyStore:
         ]
         self.bm25.build(corpus_texts)
 
-        # Check if Qdrant collection exists AND matches current dataset size (e.g., 100 vs old 16)
+        # Check if Qdrant collection exists AND matches or exceeds current dataset size
         needs_reseed = True
-        if self.client is not None and self.client.collection_exists(self.collection_name):
-            info = self.client.get_collection(self.collection_name)
-            if info.points_count == len(self.remedies):
-                needs_reseed = False
-            else:
-                self.client.delete_collection(self.collection_name)
+        try:
+            if self.client is not None and self.client.collection_exists(self.collection_name):
+                info = self.client.get_collection(self.collection_name)
+                if info.points_count >= len(self.remedies):
+                    needs_reseed = False
+                else:
+                    self.client.delete_collection(self.collection_name)
 
-        if needs_reseed and self.remedies and self.client is not None:
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=models.VectorParams(
-                    size=384,
-                    distance=models.Distance.COSINE,
-                ),
-            )
-            docs_to_embed = [self._build_searchable_text(item) for item in self.remedies]
-            embeddings = list(self.embedding_model.embed(docs_to_embed))
-
-            points = [
-                models.PointStruct(
-                    id=idx + 1,
-                    vector=embeddings[idx].tolist(),
-                    payload=item,
+            if needs_reseed and self.remedies and self.client is not None:
+                self.client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=models.VectorParams(
+                        size=384,
+                        distance=models.Distance.COSINE,
+                    ),
                 )
-                for idx, item in enumerate(self.remedies)
-            ]
-            self.client.upsert(collection_name=self.collection_name, points=points)
+                docs_to_embed = [self._build_searchable_text(item) for item in self.remedies]
+                embeddings = list(self.embedding_model.embed(docs_to_embed))
+
+                points = [
+                    models.PointStruct(
+                        id=idx + 1,
+                        vector=embeddings[idx].tolist(),
+                        payload=item,
+                    )
+                    for idx, item in enumerate(self.remedies)
+                ]
+                self.client.upsert(collection_name=self.collection_name, points=points)
+        except Exception as seed_err:
+            logger.warning(f"[Qdrant] Collection check/seed exception ({seed_err}). BM25 lexical index remains active.")
 
     def seed_dataset(self, force: bool = False) -> None:
         """Forces re-creation and upserting into collection."""
@@ -278,9 +298,16 @@ class HybridRemedyStore:
         dense_scores: Dict[str, float] = {}
 
         try:
+            target_col = self.collection_name
+            if not self.client.collection_exists(target_col):
+                if self.client.collection_exists("sanjeevani_remedies"):
+                    target_col = "sanjeevani_remedies"
+                elif self.client.collection_exists("ayush_remedies"):
+                    target_col = "ayush_remedies"
+
             query_vector = list(self.embedding_model.embed([query]))[0].tolist()
             dense_response = self.client.query_points(
-                collection_name=self.collection_name,
+                collection_name=target_col,
                 query=query_vector,
                 limit=min(25, len(self.remedies)),
             ).points
