@@ -7,7 +7,7 @@
       "reason": "Ear drops (Karnapurana) are strictly contraindicated in tympanic membrane perforation or active ear discharge (pus/fluid/Putikarna)."
     },
     {
-      "herb": "Ginger/Sunthi/Adrak/सोंठ/अदरक",
+      "herb": "Ginger/Sunthi/Adrak/Trikatu/त्रिकटु/सोंठ/अदरक",
       "target_condition": "Hyperacidity/PepticUlcer",
       "severity": "HIGH",
       "reason": "Increases Pitta and irritates inflamed gastric mucosa."
@@ -43,7 +43,7 @@
       "reason": "Relaxes lower esophageal sphincter and causes acid reflux flare."
     },
     {
-      "herb": "Mulethi/Licorice/Yashtimadhu/मुलेठी",
+      "herb": "Mulethi/Licorice/Yashtimadhu/Glycyrrhiza/Glycyrrhiza glabra/मुलेठी",
       "target_condition": "Hypertension",
       "severity": "MEDIUM",
       "reason": "Excessive licorice causes pseudoaldosteronism, sodium retention, and elevates blood pressure."
@@ -79,7 +79,7 @@
       "reason": "Metabolized extensively by hepatic enzymes; potentially hepatotoxic in liver compromise."
     },
     {
-      "herb": "Guggulu",
+      "herb": "Guggulu/Garlic/Lahsun/लहसुन",
       "target_condition": "BleedingDisorders",
       "severity": "HIGH",
       "reason": "Inhibits platelet aggregation and increases hemorrhage risk."
@@ -686,6 +686,10 @@
         "pippalimool",
         "chitrak",
         "eranda",
+        "erand",
+        "castor",
+        "hing",
+        "asafoetida",
         "shilajit",
         "kanchanar",
         "manjistha",
@@ -725,6 +729,9 @@
     {
       "lifecycle": "pediatric_under_2",
       "excluded_herbs": [
+        "honey",
+        "shahad",
+        "madhu",
         "all_kashaya",
         "kashaya",
         "all_bhasma",

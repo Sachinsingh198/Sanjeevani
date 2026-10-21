@@ -30,19 +30,18 @@ class ClinicalTriageEngine:
     def _is_negated(self, text: str, match_start: int, match_end: int) -> bool:
         """
         Determines whether a clinical match is genuinely negated.
-        1. Truncates negation checking to the clause immediately adjacent to the match.
-        2. Splits preceding_text on clause delimiters and inspects ONLY the last segment.
-        3. Splits succeeding_text on clause delimiters and relief words and inspects ONLY the first segment.
-        4. Detects temporal markers: past-tense critical symptoms ("pehle tha, ab nahi")
-           are NOT negated as they remain clinically urgent.
+        1. Evaluates preceding context bounded by contrastive delimiters (but, par, lekin, terminal punctuation).
+        2. Evaluates succeeding context bounded by contrastive delimiters and lack-of-relief cues (aaram, rahat).
+        3. Preserves temporal history ("pehle dard tha, ab nahi").
         """
-        preceding_text = text[max(0, match_start - self.negation_window):match_start].lower()
-        succeeding_text = text[match_end:min(len(text), match_end + self.negation_window)].lower()
+        preceding_text = text[max(0, match_start - 60):match_start].lower()
+        succeeding_text = text[match_end:min(len(text), match_end + 60)].lower()
 
-        clause_delim = r"[,.;!?\n]|\b(?:par|lekin|magar|but|aur|and|phir\s+bhi|jabki|halaanki|लेकिन|पर|मगर|और)\b"
-        succeeding_delim = r"[,.;!?\n]|\b(?:par|lekin|magar|but|aur|and|phir\s+bhi|jabki|halaanki|लेकिन|पर|मगर|और|aaram|fayda|rahat|आराम|फायदा|राहत)\b"
+        # Contrastive boundary delimiters that separate independent symptom clauses
+        contrast_delim = r"[.;!?\n]|\b(?:par|lekin|magar|but|phir\s+bhi|jabki|halaanki|लेकिन|पर|मगर)\b"
+        succeeding_delim = r"[.;!?\n]|\b(?:par|lekin|magar|but|phir\s+bhi|jabki|halaanki|लेकिन|पर|मगर|aaram|fayda|rahat|आराम|फायदा|राहत)\b"
 
-        pre_segments = re.split(clause_delim, preceding_text, flags=re.IGNORECASE)
+        pre_segments = re.split(contrast_delim, preceding_text, flags=re.IGNORECASE)
         last_pre_segment = pre_segments[-1] if pre_segments else ""
 
         post_segments = re.split(succeeding_delim, succeeding_text, flags=re.IGNORECASE)
@@ -59,13 +58,16 @@ class ClinicalTriageEngine:
         pre_tokens = re.findall(r"[^\s,.;!?]+", last_pre_segment)
         post_tokens = re.findall(r"[^\s,.;!?]+", first_post_segment)
 
-        # Check within 3 tokens before or after the match in the same clause segment
+        # 1. Check multi-word negation cues in clause
         for cue in self.negation_cues:
             if " " in cue:
                 if cue in last_pre_segment or cue in first_post_segment:
                     return True
-            else:
-                if cue in pre_tokens[-3:] or cue in post_tokens[:3]:
+
+        # 2. Check single-word negation cues within the contrast-bounded clause
+        for cue in self.negation_cues:
+            if " " not in cue:
+                if cue in pre_tokens or cue in post_tokens[:4]:
                     return True
 
         return False

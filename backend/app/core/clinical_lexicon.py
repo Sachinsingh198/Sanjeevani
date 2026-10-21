@@ -101,55 +101,70 @@ ADVERSARIAL_PATTERNS: List[str] = [
 NEGATION_CUES: Set[str] = {
     "no", "not", "without", "denies", "free of", "never",
     "nahi", "nahin", "koi nahi", "na", "bina", "mat",
-    "नहीं", "ना", "बिना", "मत", "कोई नहीं"
+    "ni", "ni cha", "ni chha",
+    "नहीं", "ना", "बिना", "मत", "कोई नहीं", "नी"
 }
 
 RED_PATTERNS: Dict[str, List[str]] = {
     "cardiac_chest_pain": [
         r"\bchest\s+(?:tightness|pressure|pain|discomfort)\b",
-        r"\b(?:pressure|pain|tightness|heaviness)\s+(?:in\s+(?:the\s+|my\s+)?)?chest\b",
-        r"\b(?:seene|chhati|dil)\s+(?:me\s+)?(?:\w+\s+){0,3}dard\b",
-        r"(?:सीने|छाती|दिल)\s+(?:में\s+)?(?:\S+\s+){0,3}(?:दर्द|दबाव|जकड़न)",
+        r"\b(?:pressure|pain|tightness|heaviness|crushing\s+pain)\s+(?:in\s+(?:the\s+|my\s+)?)?chest\b",
+        r"\bcrushing\s+(?:chest\s+)?pain\b",
+        r"\b(?:seene|chhati|dil)\s+(?:me\s+)?(?:\w+\s+){0,3}(?:dard|dabav|jalan)\b",
+        r"\bchhati\s+ma\s+(?:bhari\s+)?(?:peed|peer)\b",
+        r"(?:सीने|छाती|दिल)\s+(?:में|मा\s+)?(?:\S+\s+){0,3}(?:दर्द|दबाव|जकड़न|जलन)",
         r"\bleft\s+arm\s+pain\b",
-        r"\bheart\s+pain\b"
+        r"\bheart\s+(?:pain|attack)\b"
     ],
     "acute_respiratory_distress": [
-        r"\b(?:shortness\s+of\s+breath|difficulty\s+breathing|cannot\s+breathe|gasping)\b",
-        r"\bsaans\s+(?:lene\s+me\s+)?(?:\w+\s+){0,2}(?:takleef|dikkat|phoolna)\b",
-        r"(?:सांस|साँस)\s+(?:लेने\s+में\s+)?(?:\S+\s+){0,2}(?:तकलीफ|दिक्कत|फूलना)",
+        r"\b(?:shortness\s+of\s+breath|difficulty\s+breathing|cannot\s+breathe|hardly\s+breathe|unable\s+to\s+breathe|gasping)\b",
+        r"\bsaans\s+(?:lene\s+me\s+)?(?:\w+\s+){0,2}(?:takleef|dikkat|phoolna|phool\s+rahi)\b",
+        r"\bsaans\s+(?:ni\s+aani|lene\s+ma\s+khati\s+takleef)\b",
+        r"(?:सांस|साँस)\s+(?:लेने\s+में|मा\s+)?(?:\S+\s+){0,2}(?:तकलीफ|दिक्कत|फूलना)",
         r"दम\s+घुट",
         r"\bdum\s+ghutna\b",
-        r"\bghutan\s+ho\s+rahi\b"
+        r"\bghutan\s+ho\s+rahi\b",
+        r"\b(?:hont|lips)\s+(?:neele|blue)\b",
+        r"\b(?:turning\s+blue|cyanosis)\b",
+        r"\b(?:stridor|squeaking\s+noise\s+when\s+breathing|wheezing\s+severely)\b",
+        r"\bthroat\s+(?:is\s+)?swelling\b"
     ],
     "altered_mental_status": [
-        r"\b(?:unconscious|unresponsive|fainted|passed\s+out|seizure|convulsion)\b",
-        r"\b(?:behosh|daura|chakkar\s+khakar\s+girna)\b",
-        r"(?:बेहोश|दौरा|चक्कर\s+खाकर\s+गिर)"
+        r"\b(?:unconscious|unresponsive|fainted|passed\s+out|seizures?|convulsions?|fits?)\b",
+        r"\b(?:behosh|daura|chakkar\s+khakar\s+girna|jhatke\s+aa\s+rahe|hosh\s+me\s+nahi|gir\s+pada)\b",
+        r"(?:बेहोश|दौरा|चक्कर\s+खाकर\s+गिर|झटके)"
     ],
     "severe_hemorrhage": [
         r"\b(?:heavy\s+bleeding|coughing\s+blood|vomiting\s+blood|bleeding\s+profusely)\b",
         r"\bkhoon\s+ki\s+(?:ulti|khasi)\b",
+        r"\b(?:taaza|fresh|deep\s+red)\s+khoon\b",
+        r"\b(?:khoon\s+nikal|khoon\s+beh)\s+raha\b",
         r"खून\s+की\s+(?:उल्टी|खांसी|खाँसी)",
-        r"ज्यादा\s+खून\s+बह",
-        r"\bzyada\s+khoon\s+behna\b"
+        r"(?:ज्यादा\s+खून|ताज़ा\s+खून|गहरा\s+लाल\s+खून)\s+बह",
+        r"\bzyada\s+khoon\s+behna\b",
+        r"\b(?:pathar\s+jaisa\s+sakht|board-like\s+rigidity|sakht\s+pet)\b"
     ],
     "infant_high_fever": [
         r"\b(?:infant|baby|newborn)\s+high\s+fever\b",
-        r"\b(?:navjaat|chote\s+bachhe)\s+(?:ko\s+)?(?:\w+\s+){0,2}tezz\s+bukhar\b",
-        r"(?:नवजात|छोटे\s+बच्चे)\s+(?:को\s+)?(?:\S+\s+){0,2}तेज\s+बुखार"
+        r"\b(?:navjaat|chote\s+bachhe|bachhe)\s+(?:ko\s+)?(?:\w+\s+){0,3}(?:tezz\s+bukhar|10[3-6]\s*degree)\b",
+        r"(?:नवजात|छोटे\s+बच्चे)\s+(?:को\s+)?(?:\S+\s+){0,2}तेज\s+बुखार",
+        r"\b10[3-6]\s*(?:degree|°|f)\b"
     ],
     "anaphylaxis_stroke": [
-        r"\b(?:face\s+drooping|slurred\s+speech|throat\s+closing|lips\s+blue)\b",
-        r"\b(?:chehra\s+tedha|gala\s+band\s+hona|muh\s+tedha)\b",
-        r"(?:चेहरा\s+टेढ़ा|गला\s+बंद|मुंह\s+टेढ़ा)"
+        r"\b(?:face\s+drooping|facial\s+droop|slurred\s+speech|throat\s+closing|lips\s+blue|throat\s+swelling)\b",
+        r"\b(?:chehra\s+tedha|gala\s+band\s+hona|muh\s+tedha|chehra\s+dhalak|jaban\s+ladkhada)\b",
+        r"\b(?:arm|haath|shareer)\s+(?:has\s+)?gone\s+(?:completely\s+)?numb\b",
+        r"\b(?:hath|haath)\s+sunn\b",
+        r"(?:चेहरा\s+टेढ़ा|गला\s+बंद|मुंह\s+टेढ़ा|चेहरे\s+का\s+एक\s+तरफ\s+ढलक|जबान\s+लड़खड़ा)",
+        r"\bthroat\s+(?:is\s+)?swelling\s+shut\b"
     ]
 }
 
 YELLOW_PATTERNS: Dict[str, List[str]] = {
     "prolonged_fever": [
         r"\bfever\s+(?:for\s+)?(?:[3-9]|\d{2,})\s+days\b",
-        r"\b(?:[3-9]|\d{2,})\s+din\s+se\s+bukhar\b",
-        r"(?:[3-9]|\d{2,}|तीन|चार|पांच|पाँच)\s+दिन\s+से\s+बुखार",
+        r"\b(?:[3-9]|\d{2,}|chaar|char|teen)\s+din\s+(?:se|bati)\s+(?:lagatar\s+)?(?:tej\s+)?bukhar\b",
+        r"(?:[3-9]|\d{2,}|तीन|चार|पांच|पाँच)\s+दिन\s+(?:से|बटि)\s+.*बुखार",
         r"लगातार\s+बुखार",
         r"\blagaatar\s+bukhar\b",
         r"\bpersistent\s+fever\b"
@@ -157,6 +172,8 @@ YELLOW_PATTERNS: Dict[str, List[str]] = {
     "severe_localized_pain": [
         r"\bsevere\s+(?:abdominal|stomach)\s+pain\b",
         r"\bpet\s+me\s+(?:bahut\s+)?tezz\s+dard\b",
+        r"\b(?:sharp\s+pain|pain)\s+in\s+the\s+lower\s+right\s+side\s+of\s+(?:my\s+)?stomach\b",
+        r"\bright\s+(?:lower\s+quadrant|iliac\s+fossa)\s+pain\b",
         r"पेट\s+में\s+(?:बहुत\s+)?तेज\s+दर्द",
         r"\bsir\s+me\s+asahniya\s+dard\b",
         r"सिर\s+में\s+असहनीय\s+दर्द",
@@ -164,16 +181,27 @@ YELLOW_PATTERNS: Dict[str, List[str]] = {
     ],
     "dehydration_signs": [
         r"\b(?:no\s+urine|not\s+passing\s+urine|sunken\s+eyes|extreme\s+thirst)\b",
-        r"\bpeshab\s+(?:band|na\s+aana)\b",
-        r"पेशाब\s+(?:बंद|न\s+आना|नहीं\s+आ)",
-        r"आंखें\s+धंस",
-        r"\baankhe\s+dhasna\b"
+        r"\bpeshab\s+(?:band|na\s+aana|nahi\s+kiya)\b",
+        r"पेशाब\s+(?:बंद|न\s+आना|नहीं\s+आ|नहीं\s+किया)",
+        r"(?:आंखें|आँखें)\s+धंस",
+        r"\baankhe\s+dhasna\b",
+        r"\bdast\s+lagatar\b"
     ],
     "persistent_vomiting": [
         r"\b(?:continuous|persistent|repeated)\s+vomiting\b",
-        r"\blagaatar\s+ulti\b",
+        r"\blagaatar\s+ulti(?:yan)?\b",
         r"(?:लगातार|बार\s+बार|बार-बार)\s+उल्टी",
-        r"\bbaar\s+baar\s+ulti\b"
+        r"\bbaar\s+baar\s+ulti\b",
+        r"\bpaani\s+ki\s+ghunt\b"
+    ],
+    "deep_jaundice": [
+        r"\b(?:aankhein|aankh)\s+(?:bohot\s+)?peeli\b",
+        r"\b(?:peela\s+peshab|dark\s+yellow\s+urine|deep\s+jaundice|icterus)\b",
+        r"(?:आंखें|आँखें)\s+(?:बहुत\s+)?पीली"
+    ],
+    "ear_discharge": [
+        r"\b(?:peela\s+peep|kaan\s+se\s+peep|kan\s+se\s+mavad|ear\s+discharge|ear\s+pus)\b",
+        r"(?:पीला\s+पीप|कान\s+से\s+मवाद|कान\s+बहना)"
     ]
 }
 

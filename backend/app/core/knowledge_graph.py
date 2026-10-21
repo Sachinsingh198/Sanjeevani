@@ -100,6 +100,7 @@ class SafetyKnowledgeGraph:
         "ulcer": "hyperacidity/pepticulcer",
         "gastric ulcer": "hyperacidity/pepticulcer",
         "peptic ulcer": "hyperacidity/pepticulcer",
+        "peptic_ulcer": "hyperacidity/pepticulcer",
         "hyperacidity/pepticulcer": "hyperacidity/pepticulcer",
         "pet me jalan": "hyperacidity/pepticulcer",
         "khatti dakar": "hyperacidity/pepticulcer",
@@ -126,14 +127,30 @@ class SafetyKnowledgeGraph:
         # Infant Under 1 Year
         "infant": "infantunder1year",
         "infantunder1year": "infantunder1year",
+        "infant_under_1_year": "infantunder1year",
+        "infant under 1 year": "infantunder1year",
         "baby": "infantunder1year",
         "newborn": "infantunder1year",
         "navjaat": "infantunder1year",
         "नवजात": "infantunder1year",
 
+        # Bleeding Disorders & Anticoagulant Therapy
+        "bleedingdisorders": "bleedingdisorders",
+        "bleeding disorders": "bleedingdisorders",
+        "bleeding disorder": "bleedingdisorders",
+        "anticoagulant": "bleedingdisorders",
+        "anticoagulants": "bleedingdisorders",
+        "anticoagulant_therapy": "bleedingdisorders",
+        "blood thinners": "bleedingdisorders",
+        "blood thinner": "bleedingdisorders",
+        "warfarin": "bleedingdisorders",
+        "aspirin": "bleedingdisorders",
+
         # Ear Discharge
         "eardischarge": "eardischarge",
         "ear discharge": "eardischarge",
+        "ear_discharge": "eardischarge",
+        "otorrhea": "eardischarge",
         "ear pus": "eardischarge",
         "pus from ear": "eardischarge",
         "kaan behna": "eardischarge",
