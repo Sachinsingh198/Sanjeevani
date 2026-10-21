@@ -12,6 +12,8 @@ from app.schemas.chat_schemas import MedicalVisionResponse
 @pytest.mark.asyncio
 async def test_medicine_strip_ocr_analysis():
     """Verify medicine blister strip recognition extracts real drug name, indications, and doctor recommendation."""
+    if MedicalVisionService._get_ocr_engine() is None:
+        pytest.skip("RapidOCR engine unavailable on this platform (e.g. Python 3.13 without rapidocr-onnxruntime)")
     img = Image.new('RGB', (450, 160), color='white')
     d = ImageDraw.Draw(img)
     d.text((25, 20), 'Paracetamol Tablets IP 500 mg', fill='black')

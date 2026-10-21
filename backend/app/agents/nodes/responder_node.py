@@ -1429,7 +1429,12 @@ def _doctor_consultation_inner(state: AgentState) -> AgentState:
             return state
 
     # Handle conversational follow-up questions in CONCLUDED phase (retaining existing remedy & scan)
-    if phase == "CONCLUDED" and state.get("prev_dialogue_phase") == "CONCLUDED" and state.get("consultation_summary"):
+    if phase == "CONCLUDED" and state.get("prev_dialogue_phase") == "CONCLUDED" and (
+        state.get("consultation_summary")
+        or has_vision
+        or state.get("retrieved_remedies")
+        or state.get("consultation_notes")
+    ):
         patient_query = (raw_msg or user_msg).strip()
         remedies = state.get("retrieved_remedies", [])
         re_remedy_req = bool(re.search(r"\b(remedy|dawa|nuskha|prescription|upchar|parcha|दवा|नुस्खा|उपचार|पर्चा|रेमेडी)\b", patient_query, re.IGNORECASE))
