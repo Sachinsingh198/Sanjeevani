@@ -43,13 +43,8 @@ class MedicalVisionService:
                 cls._ocr_engine = RapidOCR()
                 logger.info("[Vision] RapidOCR engine initialized successfully.")
             except Exception as e:
-                try:
-                    from rapidocr import RapidOCR
-                    cls._ocr_engine = RapidOCR()
-                    logger.info("[Vision] RapidOCR engine initialized successfully.")
-                except Exception as e2:
-                    logger.warning(f"[Vision] RapidOCR not available in this environment: {e}")
-                    cls._ocr_engine = None
+                logger.warning(f"[Vision] RapidOCR not available in this environment: {e}")
+                cls._ocr_engine = None
         return cls._ocr_engine
 
     @classmethod
