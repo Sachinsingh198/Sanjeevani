@@ -1,4 +1,5 @@
 import base64
+from typing import Optional
 from fastapi import APIRouter, HTTPException, UploadFile, File, Request
 from fastapi.responses import StreamingResponse
 from app.config import settings
@@ -141,20 +142,40 @@ async def synthesize_speech(request: Request, req: TTSRequest):
     return await _synthesize_fallback(clean, req)
 
 
-def _create_tts_stream_response(clean_text: str, language: str, gender: str) -> StreamingResponse:
+def _create_tts_stream_response(
+    clean_text: str,
+    language: str,
+    gender: str,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+    speaker: Optional[str] = None,
+) -> StreamingResponse:
     if not clean_text:
         clean_text = "Namaste."
+
+    stream_kwargs = {}
+    if provider:
+        stream_kwargs["provider"] = provider
+    if model:
+        stream_kwargs["model"] = model
+    if speaker:
+        stream_kwargs["speaker"] = speaker
 
     return StreamingResponse(
         _indic_tts_engine.synthesize_stream(
             text=clean_text,
             language=language,
             gender=gender,
+            **stream_kwargs,
         ),
         media_type="audio/mpeg",
         headers={
             "Cache-Control": "no-cache",
-            "X-TTS-Provider": getattr(_indic_tts_engine, "last_provider", _indic_tts_engine.get_primary_provider()),
+            "X-TTS-Provider": getattr(
+                _indic_tts_engine,
+                "last_provider",
+                provider or _indic_tts_engine.get_primary_provider(),
+            ),
         },
     )
 
@@ -166,7 +187,14 @@ async def synthesize_speech_stream(request: Request, req: TTSRequest):
     Streams synthesized audio chunks directly from active provider for low-latency playback.
     """
     clean = _voice_engine.format_tts_payload(req.text, target_lang=req.language)["clean_text"]
-    return _create_tts_stream_response(clean, req.language, req.gender)
+    return _create_tts_stream_response(
+        clean,
+        req.language,
+        req.gender,
+        provider=req.provider,
+        model=req.model,
+        speaker=req.speaker,
+    )
 
 
 @router.get("/tts/stream")
@@ -176,12 +204,22 @@ async def synthesize_speech_stream_get(
     text: str = "Namaste",
     language: str = "hi",
     gender: str = "female",
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+    speaker: Optional[str] = None,
 ):
     """
     GET variant allowing native browser <audio> progressive stream buffering.
     """
     clean = _voice_engine.format_tts_payload(text, target_lang=language)["clean_text"]
-    return _create_tts_stream_response(clean, language, gender)
+    return _create_tts_stream_response(
+        clean,
+        language,
+        gender,
+        provider=provider,
+        model=model,
+        speaker=speaker,
+    )
 
 
 @router.post("/stt", response_model=STTResponse)

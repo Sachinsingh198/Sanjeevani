@@ -28,12 +28,13 @@ import PathyaApathyaCard from '../components/PathyaApathyaCard';
 import FollowUpBanner from '../components/FollowUpBanner';
 import LiveVoiceRoom from '../components/LiveVoiceRoom';
 import JanAushadhiCard from '../components/JanAushadhiCard';
+import VoiceProviderSwitcher from '../components/VoiceProviderSwitcher';
 import { getActiveFamilyMember } from '../lib/familyStore';
 import { scheduleFollowUp } from '../lib/followUpStore';
 import {
   sendChatMessage, streamChatMessage, getOrCreateConversationId, resetConversationId, setStoredConversationId, getConversationDetails, checkBackendHealth,
 } from '../api/client';
-import { speakText, transcribeAudio } from '../api/voiceClient';
+import { speakText, transcribeAudio, getVoiceProviderConfig, getCachedVoiceConfig } from '../api/voiceClient';
 import { downloadConsultationReport } from '../api/reportsClient';
 import { listSessions, clearSessionHistory, deleteSession, recordSessionTurn, fetchServerSessions, saveSessionMessages, loadSessionMessages } from '../lib/sessionStore';
 import { useAuth } from '../context/AuthContext';
@@ -266,6 +267,7 @@ export default function Chat() {
 
   useEffect(() => {
     refreshSessions();
+    getVoiceProviderConfig().catch(() => {});
   }, [user, refreshSessions]);
 
   const handleFamilyMemberChange = useCallback((member) => {
@@ -669,7 +671,6 @@ export default function Chat() {
 
     stopSpeakingRef.current = speakText(candidateText, {
       language: detectedLanguage === 'english' || lang === 'en' ? 'en' : 'hi',
-      gender: 'female',
       onStart: () => setSpeakingMsgIdx(idx),
       onEnd: () => setSpeakingMsgIdx(cur => cur === idx ? null : cur),
     });
@@ -1048,13 +1049,18 @@ export default function Chat() {
                   <TierBadge tier={activeTier} />
                 </div>
                 <p className="text-[10px] text-muted truncate leading-tight">
-                  Bhashini · MTS Triage
+                  {getCachedVoiceConfig()?.primary === 'sarvam'
+                    ? `Sarvam (${getCachedVoiceConfig()?.sarvam_speaker || 'Bulbul'})`
+                    : `Bhashini (${getCachedVoiceConfig()?.bhashini_gender === 'male' ? 'Male' : 'Female'})`} · MTS Triage
                 </p>
               </div>
             </div>
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Voice Model Switcher */}
+              <VoiceProviderSwitcher mode="compact" />
+
               {/* Mobile-only toggle for Context & Comorbidities */}
               <button
                 type="button"
@@ -1595,49 +1601,11 @@ function MessageBubble({
   );
   const visibleText = shouldStream ? displayText : msg.text;
   const [feedback, setFeedback] = useState(null);
-  const [isPlayingTTS, setIsPlayingTTS] = useState(false);
 
-  useEffect(() => {
-    return () => {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, []);
-
-  const handleToggleLocalTTS = () => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      onReadAloud?.();
-      return;
-    }
-
-    if (isPlayingTTS || isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsPlayingTTS(false);
+  const handleToggleTTS = () => {
+    if (isSpeaking) {
       onStopSpeaking?.();
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-    const rawText = msg.spoken_text || msg.spoken_reply_text || visibleText || msg.text || '';
-    const cleanText = rawText
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-      .replace(/[*_#`~>]/g, ' ')
-      .replace(/https?:\/\/\S+/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    if (!cleanText) return;
-
-    try {
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = 'hi-IN';
-      utterance.rate = 0.92;
-      utterance.onend = () => setIsPlayingTTS(false);
-      utterance.onerror = () => setIsPlayingTTS(false);
-      setIsPlayingTTS(true);
-      window.speechSynthesis.speak(utterance);
-    } catch {
+    } else {
       onReadAloud?.();
     }
   };
@@ -1646,8 +1614,8 @@ function MessageBubble({
     <div className={`flex gap-1.5 sm:gap-2.5 ${isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
       {!isUser && (
         <div className="shrink-0 mt-0.5">
-          <div className="hidden sm:block"><SanjeevaniOrb state={isSpeaking || isPlayingTTS ? 'speaking' : (isStreaming || msg.isLiveStreaming ? 'thinking' : 'idle')} size={28} /></div>
-          <div className="sm:hidden"><SanjeevaniOrb state={isSpeaking || isPlayingTTS ? 'speaking' : (isStreaming || msg.isLiveStreaming ? 'thinking' : 'idle')} size={22} /></div>
+          <div className="hidden sm:block"><SanjeevaniOrb state={isSpeaking ? 'speaking' : (isStreaming || msg.isLiveStreaming ? 'thinking' : 'idle')} size={28} /></div>
+          <div className="sm:hidden"><SanjeevaniOrb state={isSpeaking ? 'speaking' : (isStreaming || msg.isLiveStreaming ? 'thinking' : 'idle')} size={22} /></div>
         </div>
       )}
       <div className={`max-w-[88%] sm:max-w-[75%] rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm shadow-xs ${
@@ -1671,10 +1639,10 @@ function MessageBubble({
                 Dr. Sanjeevani
               </span>
             )}
-            {isPlayingTTS || isSpeaking ? (
+            {isSpeaking ? (
               <button
                 type="button"
-                onClick={handleToggleLocalTTS}
+                onClick={handleToggleTTS}
                 className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 text-[10px] font-bold border border-amber-500/30 transition-all cursor-pointer shadow-2xs"
                 title={l('आवाज़ रोकें', 'Stop voice playback')}
               >
@@ -1684,10 +1652,10 @@ function MessageBubble({
             ) : (
               <button
                 type="button"
-                onClick={handleToggleLocalTTS}
+                onClick={handleToggleTTS}
                 className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sage/15 hover:bg-sage/25 text-sage dark:text-booti-glow text-[10px] font-bold border border-sage/30 transition-all cursor-pointer shadow-2xs"
-                aria-label="Read aloud in Hindi"
-                title={l('हिंदी में सुनें', 'Listen aloud in Hindi')}
+                aria-label="Read aloud"
+                title={l('आवाज़ में सुनें', 'Listen aloud')}
               >
                 <Volume2 className="w-3 h-3 text-sage" />
                 <span>{l('🔊 Suniye', '🔊 Listen')}</span>

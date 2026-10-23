@@ -288,6 +288,7 @@ class IndicTTSEngine:
     """
     def __init__(self):
         self._client: Optional[httpx.AsyncClient] = None
+        self.primary_provider: str = getattr(settings, "PRIMARY_VOICE_PROVIDER", "bhashini")
         self.last_provider: str = settings.TTS_PROVIDER
         self.sarvam_model: str = getattr(settings, "SARVAM_TTS_MODEL", "bulbul:v3") or "bulbul:v3"
         self.sarvam_speaker: str = getattr(settings, "SARVAM_FEMALE_SPEAKER", "meera") or "meera"
@@ -307,6 +308,7 @@ class IndicTTSEngine:
                 if isinstance(data, dict):
                     saved_provider = data.get("provider") or data.get("primary")
                     if saved_provider in ("bhashini", "sarvam"):
+                        self.primary_provider = saved_provider
                         settings.PRIMARY_VOICE_PROVIDER = saved_provider
                         settings.TTS_PROVIDER = saved_provider
                         self.last_provider = saved_provider
@@ -391,7 +393,7 @@ class IndicTTSEngine:
 
     def get_primary_provider(self) -> str:
         """Returns normalized active primary voice provider ('bhashini' or 'sarvam')."""
-        p = getattr(settings, "PRIMARY_VOICE_PROVIDER", None) or getattr(settings, "TTS_PROVIDER", "bhashini")
+        p = getattr(self, "primary_provider", None) or getattr(settings, "PRIMARY_VOICE_PROVIDER", None) or getattr(settings, "TTS_PROVIDER", "bhashini")
         return (p or "bhashini").lower().strip()
 
     def set_primary_provider(self, provider: str) -> str:
@@ -399,6 +401,7 @@ class IndicTTSEngine:
         norm = (provider or "").lower().strip()
         if norm not in ("bhashini", "sarvam"):
             raise ValueError(f"Provider must be 'bhashini' or 'sarvam', received: {provider}")
+        self.primary_provider = norm
         settings.PRIMARY_VOICE_PROVIDER = norm
         settings.TTS_PROVIDER = norm
         self.last_provider = norm
@@ -839,7 +842,12 @@ class IndicTTSEngine:
         return None
 
     async def _synthesize_sarvam_stream(
-        self, text: str, language: str = "hi", gender: str = "female"
+        self,
+        text: str,
+        language: str = "hi",
+        gender: str = "female",
+        model: Optional[str] = None,
+        speaker: Optional[str] = None,
     ) -> AsyncGenerator[bytes, None]:
         """
         Synthesizes speech via Sarvam AI's streaming text-to-speech endpoint,
@@ -852,10 +860,10 @@ class IndicTTSEngine:
         lang_lower = language.lower()
         if lang_lower in ("en", "english"):
             target_lang = "en-IN"
-            speaker = "shreya" if gender == "female" else "rahul"
+            eff_speaker = speaker or ("shreya" if gender == "female" else "rahul")
         else:
             target_lang = "hi-IN"
-            speaker = settings.SARVAM_FEMALE_SPEAKER if gender == "female" else settings.SARVAM_MALE_SPEAKER
+            eff_speaker = speaker or self.sarvam_speaker or (settings.SARVAM_FEMALE_SPEAKER if gender == "female" else settings.SARVAM_MALE_SPEAKER)
 
         url = "https://api.sarvam.ai/text-to-speech/stream"
         headers = {
@@ -870,10 +878,10 @@ class IndicTTSEngine:
             payload = {
                 "text": chunk_text,
                 "target_language_code": target_lang,
-                "speaker": speaker,
+                "speaker": eff_speaker,
                 "pace": 1.0,
                 "speech_sample_rate": 22050,
-                "model": settings.SARVAM_TTS_MODEL or "bulbul:v3",
+                "model": model or self.sarvam_model or settings.SARVAM_TTS_MODEL or "bulbul:v3",
             }
             try:
                 async with client.stream("POST", url, json=payload, headers=headers) as response:
@@ -888,7 +896,13 @@ class IndicTTSEngine:
                 logger.warning(f"[Sarvam Streaming TTS Exception]: {e}")
 
     async def synthesize_stream(
-        self, text: str, language: str = "hi", gender: str = "female"
+        self,
+        text: str,
+        language: str = "hi",
+        gender: str = "female",
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        speaker: Optional[str] = None,
     ) -> AsyncGenerator[bytes, None]:
         """
         Main streaming entry point:
@@ -899,13 +913,19 @@ class IndicTTSEngine:
         if not clean_text:
             clean_text = "Namaste."
 
-        primary = self.get_primary_provider()
+        primary = (provider or self.get_primary_provider()).lower().strip()
         streamed = False
         has_sarvam = bool(settings.SARVAM_API_KEY or os.getenv("SARVAM_API_KEY", ""))
 
         if primary == "sarvam" and has_sarvam:
             try:
-                async for chunk in self._synthesize_sarvam_stream(clean_text, language=language, gender=gender):
+                async for chunk in self._synthesize_sarvam_stream(
+                    clean_text,
+                    language=language,
+                    gender=gender,
+                    model=model,
+                    speaker=speaker,
+                ):
                     streamed = True
                     self.last_provider = "sarvam_stream"
                     yield chunk
@@ -913,7 +933,14 @@ class IndicTTSEngine:
                 logger.warning(f"[Synthesize Stream Fallback]: {stream_err}")
 
         if not streamed:
-            audio_bytes, _ = await self.synthesize(clean_text, language=language, gender=gender)
+            audio_bytes, _ = await self.synthesize(
+                clean_text,
+                language=language,
+                gender=gender,
+                provider=provider,
+                model=model,
+                speaker=speaker,
+            )
             yield audio_bytes
 
     async def synthesize(
@@ -963,8 +990,8 @@ class IndicTTSEngine:
 
         # 0. Check in-memory LRU cache (< 5ms response time)
         mem_cached = self.memory_cache.get(cache_key)
-        if not mem_cached:
-            # Also check generic cache key (e.g. pre-seeded or cross-provider cached)
+        if not mem_cached and not provider and not model and not speaker:
+            # Also check generic cache key (e.g. pre-seeded or cross-provider cached) for default requests
             gen_cache_key = get_audio_cache_key(clean_text, language=language, gender=effective_gender)
             mem_cached = self.memory_cache.get(gen_cache_key)
         if mem_cached:

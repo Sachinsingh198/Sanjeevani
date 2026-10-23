@@ -5,5 +5,5 @@
   "sarvam_speaker": "shreya",
   "bhashini_model": "ai4bharat/indic-tts-coqui-dravidian-gpu--t4",
   "bhashini_gender": "male",
-  "tts_speed": 1.2
+  "tts_speed": 1.0
 }

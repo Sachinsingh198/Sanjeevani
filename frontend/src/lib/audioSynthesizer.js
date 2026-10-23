@@ -396,7 +396,6 @@ export function speakCue(text, lang = 'hi-IN', { onStart, onEnd } = {}) {
 
   currentCueStop = speakText(clean, {
     language: isHindi ? 'hi' : 'en',
-    gender: 'female',
     onStart: () => {
       onStart?.();
     },

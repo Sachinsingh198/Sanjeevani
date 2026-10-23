@@ -504,20 +504,91 @@ export const previewVoiceAudio = async ({
   }
 };
 
+export const SARVAM_MALE_SPEAKERS = [
+  'shubh', 'arjun', 'rahul', 'aditya', 'amit', 'dev', 'rohan', 'ratan', 'varun'
+];
+
+/**
+ * Resolves active voice parameters honoring the user's selected provider, model,
+ * speaker, and gender from settings, while allowing per-call overrides.
+ */
+export function getActiveVoiceSettings(overrides = {}) {
+  const config = getCachedVoiceConfig() || {};
+  const primary = (overrides.provider || config.primary || config.provider || 'bhashini').toLowerCase().trim();
+
+  let model = overrides.model;
+  let speaker = overrides.speaker;
+  let gender = overrides.gender;
+
+  if (primary === 'sarvam') {
+    model = model || config.sarvam_model || 'bulbul:v3';
+    speaker = speaker || config.sarvam_speaker || 'meera';
+    if (!gender) {
+      gender = SARVAM_MALE_SPEAKERS.includes(speaker.toLowerCase().trim()) ? 'male' : 'female';
+    }
+  } else {
+    // bhashini
+    model = model || config.bhashini_model || 'ai4bharat/indic-tts-coqui-indo_aryan-gpu--t4';
+    gender = gender || config.bhashini_gender || 'female';
+    speaker = speaker || gender;
+  }
+
+  const tts_speed = overrides.tts_speed !== undefined ? overrides.tts_speed : (config.tts_speed || getPlaybackRate());
+
+  return {
+    provider: primary,
+    model,
+    speaker,
+    gender: gender || 'female',
+    tts_speed,
+  };
+}
+
 /**
  * Calls the backend Neural Indic (/voice/tts) endpoint and returns a
  * playable object URL. Uses in-memory caching for zero-latency repeats.
+ * Always honors the user's selected provider, model, and speaker.
  */
-export const synthesizeSpeech = async (text, language = 'hi', gender = 'female') => {
-  const cleanText = cleanTextForTTS(text, language);
+export const synthesizeSpeech = async (text, language = 'hi', gender, options = {}) => {
+  const cleanText = cleanTextForTTS(text, typeof language === 'string' ? language : 'hi');
   if (!cleanText) throw new Error('Empty text for speech synthesis');
 
-  const cacheKey = `${cleanText}_${language}_${gender}`;
+  let opts = options;
+  let lang = language;
+  let gen = gender;
+  if (typeof language === 'object' && language !== null) {
+    opts = language;
+    lang = opts.language || 'hi';
+    gen = opts.gender;
+  } else if (typeof gender === 'object' && gender !== null) {
+    opts = gender;
+    gen = opts.gender;
+  }
+
+  const activeSettings = getActiveVoiceSettings({
+    gender: gen,
+    ...opts,
+  });
+
+  const provider = activeSettings.provider;
+  const model = activeSettings.model;
+  const speaker = activeSettings.speaker;
+  const effectiveGender = activeSettings.gender || 'female';
+  const effectiveLang = typeof lang === 'string' ? lang : 'hi';
+
+  const cacheKey = `${cleanText}_${effectiveLang}_${effectiveGender}_${provider}_${model}_${speaker}`;
   if (audioBlobCache.has(cacheKey)) {
     return audioBlobCache.get(cacheKey);
   }
 
-  const res = await voiceApi.post('/voice/tts', { text: cleanText, language, gender });
+  const res = await voiceApi.post('/voice/tts', {
+    text: cleanText,
+    language: effectiveLang,
+    gender: effectiveGender,
+    provider,
+    model,
+    speaker,
+  });
   const { audio_base64, format } = res.data;
   const audioUrl = base64ToAudioUrl(audio_base64, format || 'mp3');
   
@@ -536,20 +607,35 @@ export const synthesizeSpeech = async (text, language = 'hi', gender = 'female')
 /**
  * Streams synthesized speech audio progressive chunks from /voice/tts/stream
  * for minimal latency in live consultations.
+ * Honors user's chosen provider, model, and speaker.
  * Returns a cancel function.
  */
-export const streamSpeech = (text, { language = 'hi', gender = 'female', onStart, onEnd, onError } = {}) => {
+export const streamSpeech = (text, { language = 'hi', gender, provider, model, speaker, onStart, onEnd, onError } = {}) => {
   let cancelled = false;
   let audioEl = null;
   const abortController = new AbortController();
   const cleanedText = cleanTextForTTS(text, language);
+
+  const activeSettings = getActiveVoiceSettings({
+    provider,
+    model,
+    speaker,
+    gender,
+  });
 
   (async () => {
     try {
       const response = await fetch(`${API_BASE}/voice/tts/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanedText, language, gender }),
+        body: JSON.stringify({
+          text: cleanedText,
+          language,
+          gender: activeSettings.gender || 'female',
+          provider: activeSettings.provider,
+          model: activeSettings.model,
+          speaker: activeSettings.speaker,
+        }),
         signal: abortController.signal,
       });
 
@@ -666,9 +752,11 @@ export const streamSpeech = (text, { language = 'hi', gender = 'female', onStart
  * Preloads audio in the background (e.g. for greetings or quick prompts)
  * so it plays with zero delay when triggered.
  */
-export const preloadSpeech = async (text, language = 'hi', gender = 'female') => {
+export const preloadSpeech = async (text, language = 'hi', gender, options = {}) => {
   try {
-    await synthesizeSpeech(text, language, gender);
+    const opts = typeof gender === 'object' && gender !== null ? gender : options;
+    const gen = typeof gender === 'string' ? gender : undefined;
+    await synthesizeSpeech(text, language, gen, opts);
   } catch (err) {
     // Non-blocking prefetch failure
     console.debug('[Sanjeevani Voice] Preload skipped:', err?.message);
@@ -719,14 +807,14 @@ function pickBestHindiVoice(voices, language) {
 
 /**
  * Authentic voice playback helper with accurate state synchronization:
- *   1. Synthesizes with high-fidelity Neural Indic TTS (edge-tts / Microsoft Swara Neural).
+ *   1. Synthesizes with user-configured Primary Voice Provider (Bhashini or Sarvam AI Bulbul).
  *   2. Only activates onStart when the sound is genuinely emitting to avoid visual delay mismatch.
  *   3. If network fails and a true Hindi/Indian voice is installed in the browser, falls back gracefully.
  *      Does NOT force American robotic voices (David/Mark) to butcher Hindi words.
  *
  * Returns a cleanup function you can call to stop playback early.
  */
-export const speakText = (text, { language = 'hi', gender = 'female', onStart, onEnd } = {}) => {
+export const speakText = (text, { language = 'hi', gender, provider, model, speaker, onStart, onEnd } = {}) => {
   stopAllVoiceAudio();
   let audioEl = null;
   let cancelled = false;
@@ -735,6 +823,13 @@ export const speakText = (text, { language = 'hi', gender = 'female', onStart, o
     onEnd?.();
     return () => {};
   }
+
+  const activeSettings = getActiveVoiceSettings({
+    provider,
+    model,
+    speaker,
+    gender,
+  });
 
   const fallbackToBrowserTTS = () => {
     if (cancelled || !window.speechSynthesis) {
@@ -775,7 +870,11 @@ export const speakText = (text, { language = 'hi', gender = 'female', onStart, o
     window.speechSynthesis.speak(utterance);
   };
 
-  synthesizeSpeech(text, language, gender)
+  synthesizeSpeech(clean, language, activeSettings.gender, {
+    provider: activeSettings.provider,
+    model: activeSettings.model,
+    speaker: activeSettings.speaker,
+  })
     .then((url) => {
       if (cancelled) return;
       audioEl = new Audio(url);
