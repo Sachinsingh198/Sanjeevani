@@ -80,7 +80,8 @@ export const sendChatMessage = async (
   arg4 = 'auto',
   arg5 = false,
   arg6 = 'female',
-  arg7 = []
+  arg7 = [],
+  arg8 = {}
 ) => {
   let conversationId;
   let message;
@@ -116,6 +117,11 @@ export const sendChatMessage = async (
       pregnancy: (typeof arg1 === 'object' && arg1?.patient_context?.pregnancy) || (typeof arg1 === 'object' && arg1?.pregnancy) || undefined,
     };
 
+    const requestConfig = (typeof arg1 === 'object' && arg1?.options) || (typeof arg8 === 'object' ? arg8 : {});
+    if (typeof arg1 === 'object' && arg1?.signal && !requestConfig.signal) {
+      requestConfig.signal = arg1.signal;
+    }
+
     const res = await api.post('/chat/message', {
       conversation_id: conversationId,
       message: message,
@@ -123,9 +129,14 @@ export const sendChatMessage = async (
       patient_context: patientContext,
       include_audio: includeAudio,
       voice_gender: voiceGender,
-    });
+    }, requestConfig);
     return res.data;
   } catch (err) {
+    // If request was explicitly aborted/cancelled (e.g. user interrupted or ended call), re-throw immediately
+    if (axios.isCancel(err) || err?.name === 'CanceledError' || err?.name === 'AbortError' || err?.code === 'ERR_CANCELED') {
+      throw err;
+    }
+
     // If backend is unreachable, times out, network is offline, or database throws a 500 error:
     // Seamlessly engage On-Device Clinical Triage & AYUSH Engine so the patient is NEVER left stranded!
     console.warn('[Sanjeevani] Backend unavailable or encountering network/database issue — engaging On-Device Clinical Triage & AYUSH Engine.');

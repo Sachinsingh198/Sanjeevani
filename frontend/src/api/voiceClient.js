@@ -383,12 +383,19 @@ export const savePersistedAppSettings = async (settings) => {
 // Active audio elements and request tracking to strictly prevent overlapping voices
 let globalActiveAudio = null;
 let globalAbortController = null;
+let globalActiveCanceller = null;
 
 /**
  * Halts ALL voice audio currently playing and cancels any pending TTS requests.
  * Guarantees that two voices can NEVER overlap or play at the same time.
  */
 export function stopAllVoiceAudio() {
+  if (globalActiveCanceller) {
+    try {
+      globalActiveCanceller();
+    } catch {}
+    globalActiveCanceller = null;
+  }
   if (globalAbortController) {
     try {
       globalAbortController.abort();
@@ -581,14 +588,18 @@ export const synthesizeSpeech = async (text, language = 'hi', gender, options = 
     return audioBlobCache.get(cacheKey);
   }
 
-  const res = await voiceApi.post('/voice/tts', {
-    text: cleanText,
-    language: effectiveLang,
-    gender: effectiveGender,
-    provider,
-    model,
-    speaker,
-  });
+  const res = await voiceApi.post(
+    '/voice/tts',
+    {
+      text: cleanText,
+      language: effectiveLang,
+      gender: effectiveGender,
+      provider,
+      model,
+      speaker,
+    },
+    opts.signal ? { signal: opts.signal } : undefined
+  );
   const { audio_base64, format } = res.data;
   const audioUrl = base64ToAudioUrl(audio_base64, format || 'mp3');
   
@@ -818,6 +829,33 @@ export const speakText = (text, { language = 'hi', gender, provider, model, spea
   stopAllVoiceAudio();
   let audioEl = null;
   let cancelled = false;
+  const abortController = new AbortController();
+  globalAbortController = abortController;
+
+  const cancelFn = () => {
+    cancelled = true;
+    try {
+      abortController.abort();
+    } catch {}
+    if (audioEl) {
+      try {
+        audioEl.pause();
+        audioEl.currentTime = 0;
+        audioEl.src = '';
+      } catch {}
+      if (globalActiveAudio === audioEl) {
+        globalActiveAudio = null;
+      }
+    }
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
+  };
+
+  globalActiveCanceller = cancelFn;
+
   const clean = cleanTextForTTS(text, language);
   if (!clean) {
     onEnd?.();
@@ -864,8 +902,14 @@ export const speakText = (text, { language = 'hi', gender, provider, model, spea
     utterance.onstart = () => {
       if (!cancelled) onStart?.();
     };
-    utterance.onend   = () => onEnd?.();
-    utterance.onerror = () => onEnd?.();
+    utterance.onend   = () => {
+      if (globalActiveCanceller === cancelFn) globalActiveCanceller = null;
+      if (!cancelled) onEnd?.();
+    };
+    utterance.onerror = () => {
+      if (globalActiveCanceller === cancelFn) globalActiveCanceller = null;
+      if (!cancelled) onEnd?.();
+    };
 
     window.speechSynthesis.speak(utterance);
   };
@@ -874,6 +918,7 @@ export const speakText = (text, { language = 'hi', gender, provider, model, spea
     provider: activeSettings.provider,
     model: activeSettings.model,
     speaker: activeSettings.speaker,
+    signal: abortController.signal,
   })
     .then((url) => {
       if (cancelled) return;
@@ -885,17 +930,23 @@ export const speakText = (text, { language = 'hi', gender, provider, model, spea
         if (!cancelled) onStart?.();
       };
       audioEl.onended = () => {
+        if (globalActiveCanceller === cancelFn) globalActiveCanceller = null;
         if (globalActiveAudio === audioEl) globalActiveAudio = null;
-        onEnd?.();
+        if (!cancelled) onEnd?.();
       };
-      audioEl.onerror = () => fallbackToBrowserTTS();
+      audioEl.onerror = () => {
+        if (cancelled) return;
+        fallbackToBrowserTTS();
+      };
 
       audioEl.play().catch((playErr) => {
+        if (cancelled || playErr?.name === 'AbortError') return;
         console.warn('[Sanjeevani Voice] Direct playback prevented by autoplay policy:', playErr);
         fallbackToBrowserTTS();
       });
     })
     .catch((err) => {
+      if (cancelled || axios.isCancel(err) || err?.name === 'CanceledError' || err?.name === 'AbortError') return;
       console.warn('[Sanjeevani Voice] Neural Indic backend error, attempting local fallback:', err?.message);
       if (window.speechSynthesis && window.speechSynthesis.getVoices().length === 0) {
         window.speechSynthesis.onvoiceschanged = () => {
@@ -907,15 +958,5 @@ export const speakText = (text, { language = 'hi', gender, provider, model, spea
       }
     });
 
-  return () => {
-    cancelled = true;
-    if (audioEl) {
-      audioEl.pause();
-      audioEl.src = '';
-      if (globalActiveAudio === audioEl) {
-        globalActiveAudio = null;
-      }
-    }
-    window.speechSynthesis?.cancel();
-  };
+  return cancelFn;
 };
