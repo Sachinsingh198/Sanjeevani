@@ -12,15 +12,15 @@ Welcome to the comprehensive technical and operational documentation for **Proje
 | **02** | [02. Architecture & System Workflow](./02_ARCHITECTURE_AND_WORKFLOW.md) | High-level system architecture, client-server topology, dataflow diagrams, and end-to-end request lifecycles. |
 | **03** | [03. Clinical Triage & Safety Engine](./03_CLINICAL_TRIAGE_AND_SAFETY_ENGINE.md) | Manchester Triage System (MTS) adaptation, bi-directional negation algorithm, 3 severity tiers, and emergency protocols. |
 | **04** | [04. LangGraph Agent & Dialogue Flow](./04_LANGGRAPH_AGENT_AND_DIALOGUE_FLOW.md) | LangGraph state machine, `AgentState` schema, 4 execution nodes, SQLite checkpoints, and LLM failover. |
-| **05** | [05. Multilingual Voice & Speech Subsystem](./05_MULTILINGUAL_VOICE_AND_SPEECH.md) | Sarvam AI Saaras v3 STT, Bulbul v3 streaming TTS, Edge-TTS fallback, AI4Bharat offline engine, and conversational voice constraints. |
+| **05** | [05. Multilingual Voice & Speech Subsystem](./05_MULTILINGUAL_VOICE_AND_SPEECH.md) | Sarvam AI Saaras v3 STT, Bulbul v3 streaming TTS, Edge-TTS fallback, conversational turn-taking, barge-in cancellation, and AEC. |
 | **06** | [06. AYUSH Hybrid RAG & Knowledge Store](./06_AYUSH_HYBRID_RAG_AND_KNOWLEDGE_STORE.md) | CCRAS validated remedies, classical Ayurveda treatise parser, Garhwali dialect glossary, FastEmbed, and Qdrant vector search. |
-| **07** | [07. Edge Computer Vision Diagnostics](./07_EDGE_COMPUTER_VISION_DIAGNOSTICS.md) | Non-invasive edge CV algorithms: CIELAB Erythema Index (Anemia), Scleral Icterus (Jaundice), Oral Leukoplakia, and Skin lesions. |
+| **07** | [07. Edge Computer Vision Diagnostics](./07_EDGE_COMPUTER_VISION_DIAGNOSTICS.md) | Non-invasive optical CV (Anemia, Jaundice, Oral Leukoplakia, Skin) and local ONNX RapidOCR for medicine packaging and prescriptions. |
 | **08** | [08. Community Wellness & Elder Companion](./08_COMMUNITY_WELLNESS_AND_ELDER_COMPANION.md) | Sanjeevani Saathi (elder loneliness companion), Himalayan folk stories, Yogashala posture guide, and Dhyan Guru Pranayama timer. |
 | **09** | [09. User Roles & Portals](./09_USER_ROLES_AND_PORTALS.md) | Three user portals: Citizen/Patient Hub (`/mitra`), ASHA Worker Dashboard (`/asha`), and District Admin Portal (`/admin`). |
 | **10** | [10. LangSmith Observability & Tracing](./10_LANGSMITH_OBSERVABILITY_AND_TRACING.md) | Production telemetry, LangSmith project setup, trace tree structure, span inspection, latency monitoring, and token tracking. |
 | **11** | [11. API Reference & Endpoints](./11_API_REFERENCE_AND_ENDPOINTS.md) | Comprehensive REST API catalog covering Auth, Chat, Voice, Vision, Companion, Reports, and Admin endpoints. |
 | **12** | [12. Developer Setup & Deployment Guide](./12_DEVELOPER_SETUP_AND_DEPLOYMENT_GUIDE.md) | Step-by-step local environment setup, `.env` guide, demo accounts, Pytest commands, and production deployment guidelines. |
-| **13** | [13. System Workflows & Mermaid Diagrams Master Guide](./13_SYSTEM_WORKFLOWS_AND_MERMAID_DIAGRAMS.md) | **Master Visual Guide**: Comprehensive collection of intuitive Mermaid diagrams covering patient journey, triage, doctor intake, offline sync, voice loop, and computer vision. |
+| **13** | [13. System Workflows & Mermaid Diagrams Master Guide](./13_SYSTEM_WORKFLOWS_AND_MERMAID_DIAGRAMS.md) | **Master Visual Guide**: Comprehensive collection of intuitive Mermaid diagrams covering patient journey, triage, doctor intake, offline sync, voice turn-taking/barge-in, and edge RapidOCR. |
 
 ---
 

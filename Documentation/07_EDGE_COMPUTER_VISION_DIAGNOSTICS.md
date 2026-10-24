@@ -156,3 +156,42 @@ flowchart TD
 
     ResultFormatter --> ResponsePayload["Structured JSON Response\n(Estimated Value, Unit, Status, Action, Base64 JPEG)"]
 ```
+
+---
+
+## 6. Edge Document OCR & Medicine Blister Strip Recognition (`RapidOCR`)
+
+Implemented in [`backend/app/core/vision_service.py`](file:///d:/Sanjeevani/backend/app/core/vision_service.py).
+
+In rural healthcare, elderly and illiterate patients frequently lose printed doctor prescriptions and carry loose medicine blister strips to village ASHA workers or community health camps. To assist with drug identification, Sanjeevani integrates an embedded **ONNX-based optical character recognition (OCR)** engine powered by **`rapidocr-onnxruntime`**.
+
+### 1. Zero Cloud Dependency & Edge Execution
+- **Architecture**: Employs a lazy-loaded singleton `RapidOCR` instance running on the ONNX runtime:
+  ```python
+  @classmethod
+  def _get_ocr_engine(cls):
+      """Lazy-loaded singleton for RapidOCR ONNX engine."""
+      if cls._ocr_engine is None:
+          try:
+              from rapidocr_onnxruntime import RapidOCR
+              cls._ocr_engine = RapidOCR()
+              logger.info("[Vision] RapidOCR engine initialized successfully.")
+          except Exception as e:
+              logger.warning(f"[Vision] RapidOCR not available in this environment: {e}")
+              cls._ocr_engine = None
+      return cls._ocr_engine
+  ```
+- **Privacy & Connectivity**: Medicine packaging is processed strictly in-memory on the local server without sending high-resolution images to external proprietary vision endpoints.
+
+### 2. Extracted Clinical Fields
+When a patient or ASHA worker uploads a photo of a blister strip (`scan_type="prescription_medicine"`):
+1. **Drug Brand Name**: (e.g., *Dolo-650*, *Azithral*, *Pantocid-DSR*).
+2. **Active Salts & Composition**: (e.g., *Paracetamol IP*, *Azithromycin 500mg*).
+3. **Strength & Form**: (e.g., *650 mg Tablets*, *5 ml Suspension*).
+4. **Manufacturer & Expiry Verification**: Reads batch codes and expiry dates (`EXP: 11/2027`) to flag expired medicines.
+
+### 3. Multimodal Clinical Synthesis
+Raw OCR text is automatically synthesized through a specialized clinical pharmacist reasoning prompt:
+- Cross-references the detected drug against the patient's recorded conditions (e.g., flagging NSAIDs like Ibuprofen for patients with recorded peptic ulcers or chronic kidney disease).
+- Explains the drug's therapeutic purpose, standard dosage timing (before or after food), and safety precautions in simple conversational Hindi, Garhwali, or English.
+

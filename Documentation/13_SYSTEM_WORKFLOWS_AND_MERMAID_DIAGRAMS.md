@@ -15,8 +15,8 @@ Whether you are a healthcare practitioner, clinical evaluator, software engineer
 5. [Emergency Red-Tier Short-Circuit & Rapid Response](#5-emergency-red-tier-short-circuit--rapid-response)
 6. [AYUSH Hybrid RAG, Knowledge Graph & Safety Exclusion Pipeline](#6-ayush-hybrid-rag-knowledge-graph--safety-exclusion-pipeline)
 7. [Offline-First Resilience & Bi-Directional Synchronization](#7-offline-first-resilience--bi-directional-synchronization)
-8. [Real-Time Multilingual Voice Consultation Loop](#8-real-time-multilingual-voice-consultation-loop)
-9. [Edge Non-Invasive Optical Diagnostic Suite](#9-edge-non-invasive-optical-diagnostic-suite)
+8. [Real-Time Multilingual Voice Consultation & Conversational Turn-Taking](#8-real-time-multilingual-voice-consultation--conversational-turn-taking)
+9. [Edge Non-Invasive Optical Diagnostic Suite & RapidOCR](#9-edge-non-invasive-optical-diagnostic-suite--rapidocr)
 10. [Multi-Stakeholder Healthcare Collaboration Ecosystem](#10-multi-stakeholder-healthcare-collaboration-ecosystem)
 
 ---
@@ -360,9 +360,11 @@ sequenceDiagram
 
 ---
 
-## 8. Real-Time Multilingual Voice Consultation Loop
+## 8. Real-Time Multilingual Voice Consultation & Conversational Turn-Taking
 
-Designed specifically for elderly villagers who cannot read or type, the voice loop achieves an end-to-end latency of under 1.5 seconds.
+Designed specifically for elderly villagers who cannot read or type, the voice loop achieves an end-to-end latency of under 1.5 seconds, complete with real-time barge-in cancellation and acoustic echo isolation.
+
+### 8.1 Audio Ingestion & Neural Synthesis Pipeline
 
 ```mermaid
 flowchart LR
@@ -393,11 +395,63 @@ flowchart LR
     end
 ```
 
+### 8.2 Conversational Turn-Taking, Barge-In & In-Flight Cancellation Lifecycle
+
+The following sequence diagram illustrates how `LiveVoiceRoom.jsx` arbitrates conversational state transitions (`idle` ➔ `listening` ➔ `thinking` ➔ `speaking`), cancels in-flight LLM/TTS generation upon patient barge-in via `AbortController`, and prevents acoustic echo loopback.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Patient as 🧑‍🌾 Rural Patient
+    participant Mic as 🎙️ Browser Mic (LiveVoiceRoom)
+    participant Engine as ⚙️ State Machine (convState)
+    participant Client as 💻 client.js (AbortController)
+    participant Backend as 🌐 FastAPI (/chat/message)
+    participant Audio as 🔊 Audio / TTS Output
+
+    Note over Mic,Audio: Initial State: IDLE ➔ Call Connected ➔ State: LISTENING
+
+    Patient->>Mic: "Gale mein dard hai aur bukhar hai"
+    Mic->>Engine: Speech recognition onresult (Final transcript)
+    Engine->>Engine: Silence debounce (1000ms) ➔ Transition to THINKING
+    Engine->>Mic: Isolate Speech Recognition (prevent trailing echo)
+    Engine->>Client: Send Message (assign requestId: 1, init AbortController)
+    Client->>Backend: POST /chat/message (signal: AbortSignal)
+
+    Backend-->>Client: Returns JSON { reply: "..." }
+    Client->>Engine: Deliver Doctor Reply
+    Engine->>Audio: Synthesize / Play TTS Audio
+    Engine->>Engine: Transition to SPEAKING
+    Audio->>Patient: Plays Hindi audio response aloud
+
+    alt Scenario A: Patient Listens to Completion
+        Audio-->>Engine: Audio onended event fired
+        Engine->>Engine: Transition back to LISTENING
+        Engine->>Mic: Resume Speech Recognition
+    else Scenario B: Patient Interrupts / Barges In
+        Patient->>Mic: Patient starts speaking ("Aur dawai kya loon?")
+        Mic->>Engine: Barge-in speech activity detected
+        Engine->>Client: abortInFlightRequest() (AbortController.abort())
+        Engine->>Audio: stopAllVoiceAudio() (audio.pause() + clear buffers)
+        Note over Audio: Playback stops instantly with zero audio leakage
+        Engine->>Engine: Transition to LISTENING (new requestId: 2)
+        Engine->>Mic: Resume Speech Recognition for new turn
+    else Scenario C: Patient Ends Call
+        Patient->>Engine: Clicks "End Call"
+        Engine->>Client: abortInFlightRequest()
+        Engine->>Audio: stopAllVoiceAudio()
+        Engine->>Mic: micStream.getTracks().forEach(track => track.stop())
+        Engine->>Engine: Transition to IDLE & unmount
+    end
+```
+
 ---
 
-## 9. Edge Non-Invasive Optical Diagnostic Suite
+## 9. Edge Non-Invasive Optical Diagnostic Suite & RapidOCR
 
-Sanjeevani performs non-invasive optical screening entirely on standard CPU hardware using mathematical color-space transformations.
+Sanjeevani performs non-invasive optical screening and document text extraction entirely on standard CPU hardware using mathematical color-space transformations and lightweight ONNX runtime engines.
+
+### 9.1 Non-Invasive Optical Color-Space Screening (Anemia, Jaundice, Oral & Skin)
 
 ```mermaid
 flowchart TD
@@ -456,6 +510,37 @@ flowchart TD
     SkinAlert --> RenderVisual
 
     RenderVisual --> UI_Card["Interactive Visual Diagnostic Card\n(Clinical Score, Uncertainty Metric & Medical Next Steps)"]
+```
+
+### 9.2 Edge Medicine Packaging & Prescription OCR Pipeline (`RapidOCR`)
+
+The following diagram illustrates how medicine strip packaging and written doctor prescriptions are processed on edge CPU hardware to feed verified pharmacological data into clinical prompts.
+
+```mermaid
+flowchart TD
+    PackImage["Medicine Blister Strip / Prescription Image\n(Camera Capture / Gallery Upload)"] --> Preprocess["Grayscale Normalization & Contrast Boost"]
+    Preprocess --> OCRInit{"Check RapidOCR Engine"}
+    OCRInit -->|First Run| LoadONNX["Lazy Load RapidOCR Singleton\n(rapidocr-onnxruntime ONNX engine)"]
+    OCRInit -->|Cached| EngineReady["RapidOCR Engine Ready (CPU)"]
+    LoadONNX --> EngineReady
+
+    EngineReady --> DetModel["1. Text Detection Model (DBNet ONNX)\nLocates Character Bounding Boxes"]
+    DetModel --> ClsModel["2. Direction Angle Classifier (ONNX)\nAuto-Rotates Inverted 90°/180° Packaging"]
+    ClsModel --> RecModel["3. Text Recognition Model (CRNN / SVTR ONNX)\nTranscribes Characters to UTF-8 Strings"]
+
+    RecModel --> RawText["Extracted Raw Text Lines & Confidence Scores"]
+    RawText --> ParsingRules{"Clinical Entity Regex & Pattern Matcher"}
+
+    ParsingRules --> Brand["Medicine Brand Name\n(e.g., Paracetamol, Amoxicillin, Combiflam)"]
+    ParsingRules --> Strength["Dosage & Strength\n(e.g., 500mg, 650mg, 250mg/5ml)"]
+    ParsingRules --> BatchExp["Batch Number & Expiry Date\n(e.g., Exp: 12/2027)"]
+
+    Brand --> ClinicalPrompt["Multimodal Clinical Pharmacist Context"]
+    Strength --> ClinicalPrompt
+    BatchExp --> ClinicalPrompt
+
+    ClinicalPrompt --> LLMDoctor["LangGraph Clinical Node\n(Evaluates Interactions, Verifies Expiry, Explains Usage in Dialect)"]
+    LLMDoctor --> PatientVoice["🔊 Spoken Patient Explanation + Medicine Card"]
 ```
 
 ---

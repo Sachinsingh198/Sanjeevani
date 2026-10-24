@@ -4,6 +4,36 @@ All notable changes to the Sanjeevani AI Rural Himalayan Health Platform are doc
 
 ---
 
+## [2.4.0] - 2026-10-24 — Real-Time Conversational Turn-Taking, Edge RapidOCR & Acoustic Cancellation Isolation
+
+### Real-Time Conversational Voice Turn-Taking & Interruption Engine (`LiveVoiceRoom.jsx`)
+- **Conversational State Machine (`idle` ➔ `listening` ➔ `thinking` ➔ `speaking`):**
+  - Implemented rigorous state transitions to coordinate speech recognition, LLM reasoning, and audio playback.
+  - Speech recognition (`rec.onresult`) is isolated during `thinking` and `speaking` states to eliminate trailing self-abort loops and prevent the microphone from detecting assistant output.
+- **In-Flight Request Cancellation & Monotonic Sequence Tracking:**
+  - Added `AbortController` and monotonic request IDs (`currentRequestIdRef`) to abort pending LLM/TTS generation immediately when a user interrupts or cancels.
+  - Prevented stale network responses from playing over newer queries or triggering spurious audio playback.
+- **Acoustic Echo Isolation & Hardware Constraints:**
+  - Configured `getUserMedia` audio constraints with `echoCancellation: true`, `noiseSuppression: true`, and `autoGainControl: true` to prevent speaker acoustic loopback into browser speech recognition.
+- **Immediate Call Teardown & Error Handling:**
+  - Added `stopAllVoiceAudio()` and `abortInFlightRequest()` directly to `handleEndCall()` to terminate all pending audio buffers and network requests the moment the patient hangs up.
+  - Guarded all `audio.play().catch()` handlers against `AbortError` to eliminate unintended fallback text-to-speech triggers when audio is stopped intentionally.
+
+### Edge Medicine Packaging & Prescription OCR (`RapidOCR`)
+- **Local ONNX-Runtime Document OCR (`vision_service.py`):**
+  - Integrated `rapidocr-onnxruntime` engine into the computer vision suite for zero-cloud local extraction of medicine blister packs and doctor prescriptions.
+  - Lazy-loaded singleton architecture minimizes memory usage until OCR analysis is requested.
+  - Automatically parses brand names, active pharmaceutical ingredients (APIs), dosages/strengths, batch numbers, and expiry dates directly on edge compute.
+- **Multimodal Clinical Ingestion:**
+  - Extracted packaging text is injected directly into clinical pharmacist evaluation prompts, enabling immediate drug-drug interaction screening and dosage verification.
+
+### Robust Client Cancellation Handling (`client.js`)
+- **AbortSignal Passing in `sendChatMessage`:**
+  - Enabled cancellation propagation through `client.js` via `options.signal`.
+  - Guarded the offline fallback catch block so explicit user cancellations (`CanceledError` / `AbortError`) do not generate confusing offline consultation answers.
+
+---
+
 ## [2.3.0] - 2026-10-13 — In-App Modal Governance, Family Member Stacking Fix & Clinical UX Refinements
 
 ### In-App Modal Governance & Browser Alert Deprecation

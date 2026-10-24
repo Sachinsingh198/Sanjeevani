@@ -52,10 +52,10 @@ Rural mountainous terrains such as **Chamoli, Pauri, and Tehri Garhwal in Uttara
 ## ⚡ Key Architectural Highlights
 
 - **Deterministic Safety Guarantee**: LLMs are **strictly forbidden** from independently triaging emergencies. Urgency is classified by an algorithmic rules engine based on the **Manchester Triage System (MTS)** with bi-directional negation awareness before any generative model is called.
-- **Ultra-Low Latency Conversational Voice (Sanjeevani Live)**: Powered by **Sarvam AI (Saaras v3 STT + Bulbul v3 TTS)** and streaming neural Indic voice pipelines, conversational turns complete in <1.5 seconds, optimized for elderly villagers.
+- **Ultra-Low Latency Conversational Voice (Sanjeevani Live)**: Powered by **Sarvam AI (Saaras v3 STT + Bulbul v3 TTS)** and streaming neural Indic voice pipelines, conversational turns complete in <1.5 seconds. Features a robust 4-state conversational turn-taking engine (`idle` ➔ `listening` ➔ `thinking` ➔ `speaking`), instant barge-in request cancellation via `AbortController`, and hardware acoustic echo cancellation.
 - **Stateful Clinical Graph**: Uses **LangGraph** with SQLite session persistence (`SqliteSaver`) to execute structured, multi-turn clinical interviews (Greeting $\rightarrow$ Symptom Intake $\rightarrow$ Differential Clarification $\rightarrow$ Remedy Delivery $\rightarrow$ Concluded).
 - **Dual-Stream AYUSH Knowledge RAG**: FastEmbed embeddings (`sentence-transformers/all-MiniLM-L6-v2`) combined with **Qdrant Vector Database** to index validated CCRAS formulas and extracted classical Ayurvedic texts alongside a Garhwali dialect lexicon.
-- **Edge Non-Invasive Vision Screening**: Pure OpenCV computer vision algorithms running on CPU to detect **Conjunctival Pallor (Anemia)** via CIELAB Erythema Index, **Scleral Icterus (Jaundice)** via chromatic shift, **Oral Hyperkeratosis/Leukoplakia**, and **Cutaneous Lesions**.
+- **Edge Non-Invasive Vision & Packaging OCR**: Pure OpenCV computer vision algorithms running on CPU to detect **Conjunctival Pallor (Anemia)** via CIELAB Erythema Index, **Scleral Icterus (Jaundice)** via chromatic shift, **Oral Hyperkeratosis/Leukoplakia**, and **Cutaneous Lesions**, coupled with **RapidOCR** (ONNX runtime) for offline medicine blister strip and prescription parsing.
 - **Observability by Design**: Full integration with **LangSmith** for distributed tracing of agent states, tool executions, token metrics, and latency analysis.
 
 ---
@@ -223,6 +223,7 @@ flowchart TD
 | **Text-to-Speech (TTS)** | **Sarvam AI (Bulbul:v3) + Edge-TTS** | Low-latency audio streaming in natural Hindi and Garhwali accents |
 | **Offline TTS Engine** | **AI4Bharat Indic-TTS / Parler-TTS** | Local neural acoustic model fallback for zero-connectivity setups |
 | **Computer Vision** | **OpenCV (`opencv-python-headless`)** | Color space conversion (RGB $\rightarrow$ CIELAB, HSV), contour mapping, and ROI masking |
+| **Document & Packaging OCR** | **RapidOCR (`rapidocr-onnxruntime`)** | Lightweight local ONNX-runtime OCR for zero-cloud medicine blister packs and prescription parsing |
 | **Relational Storage** | **SQLite3 (WAL Mode)** | Local transactional storage for user accounts, OTP authentication, and audit logs |
 
 ---
@@ -299,6 +300,11 @@ sequenceDiagram
 ```
 
 - **Voice Mode Detection**: When activated via the interactive **Sanjeevani Orb**, responses are automatically optimized for audio delivery (markdown symbols, bullet points, citations, and non-standard mathematical punctuation like trailing exclamation marks are stripped before synthesis).
+- **Conversational Turn-Taking & Barge-In Engine (`LiveVoiceRoom.jsx`)**:
+  - **4-State Lifecycle**: Coordinates explicit transitions between `idle` ➔ `listening` ➔ `thinking` ➔ `speaking`. Speech recognition results are isolated during thinking and speaking to suppress trailing self-abort loops and prevent acoustic loopback.
+  - **In-Flight Cancellation (`AbortController`)**: Employs monotonic sequence IDs (`currentRequestIdRef`). Any patient barge-in or interruption instantly aborts pending LLM/TTS generation and pauses active audio with zero lingering audio playback.
+  - **Acoustic Echo Isolation**: Employs `getUserMedia` hardware constraints (`echoCancellation: true`, `noiseSuppression: true`, `autoGainControl: true`) to prevent device speakers from re-triggering microphone inputs.
+  - **Immediate Call Teardown**: Ending a call instantly stops audio playback, releases mic tracks, and aborts pending backend network calls.
 - **Dynamic Engine Switching & Voice Personas**: The interactive `VoiceProviderSwitcher.jsx` and `/voice/provider` API let patients and clinicians switch live between **Sarvam AI**, **Bhashini**, and **Edge-TTS**, with customizable personas (Male / Female, speech rate, and pitch).
 - **MediaRecorder Opus MIME Normalization**: Incoming browser audio streams (`audio/webm;codecs=opus`) are automatically normalized to canonical `audio/webm` and `audio/wav`, preventing 400 rejection errors on downstream Indic speech APIs.
 - **Ultra-Low Latency Pre-Caching**: Frequently used clinical greetings and emergency guidance audio chunks are pre-cached with provider-aware MD5 keys, delivering instant (<50ms) speech playback.
@@ -367,6 +373,10 @@ flowchart TD
 - **Jaundice Screening (`/screen/jaundice`)**: Evaluates scleral icterus by filtering the eye white in HSV space, quantifying chromatic shift in the yellow-blue CIELAB $b^*$ axis, and estimating Serum Bilirubin.
 - **Oral Cavity Screening (`/screen/oral`)**: Evaluates mucosal hyperkeratosis (Leukoplakia white patches and Erythroplakia) vital for rural regions with high consumption of smokeless tobacco.
 - **Skin Lesion Screening (`/screen/skin`)**: Evaluates cutaneous erythema, tinea fungal rings, and eczema patterns.
+- **Medicine Blister Strip & Prescription OCR (`RapidOCR`)**:
+  - Located in [`backend/app/core/vision_service.py`](file:///d:/Sanjeevani/backend/app/core/vision_service.py).
+  - Employs a lazy-loaded singleton `RapidOCR` ONNX runtime engine (`rapidocr-onnxruntime`) on edge CPU to perform zero-cloud local extraction of medicine blister packs and doctor prescriptions.
+  - Automatically identifies drug brand names, active pharmaceutical ingredients (APIs), dosages, batch numbers, and expiry dates, feeding structured pharmacological context into clinical LLM prompts.
 
 ---
 

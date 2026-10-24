@@ -83,41 +83,6 @@ Validates the OTP and returns a session token.
 
 ---
 
-## 3. Clinical Consultation & Chat Routes (`/chat`)
-
-### `POST /chat/message`
-Submits a user message to the LangGraph clinical triage engine.
-- **Request Body**:
-  ```json
-  {
-    "conversation_id": "8fa19bc2-3c48-4091-8178-5776d63bb1c3",
-    "message": "Doctor saab, 2 din se sar me dard hai aur gala kharab hai",
-    "language_hint": "hi",
-    "include_audio": false,
-    "user_conditions": ["hypertension"]
-  }
-  ```
-- **Response `200 OK`**:
-  ```json
-  {
-    "conversation_id": "8fa19bc2-3c48-4091-8178-5776d63bb1c3",
-    "reply": "नमस्ते! आपके गले में दर्द और सिरदर्द कब से बढ़ रहा है? क्या आपको बुखार या खांसी भी महसूस हो रही है?",
-    "spoken_reply": "नमस्ते! आपके गले में दर्द और सिरदर्द कब से बढ़ रहा है? क्या आपको बुखार या खांसी भी महसूस हो रही है?",
-    "detected_tier": "Green",
-    "clinical_flags": ["GREEN_FLAG: Routine/Community level symptoms"],
-    "retrieved_remedies": [],
-    "escalation_triggered": false,
-    "audio_base64": null
-  }
-  ```
-
-### `GET /chat/history/{conversation_id}`
-Returns all stored conversational turns for a specific session.
-
----
-
-## 4. Multilingual Voice Routes (`/voice`)
-
 ### `POST /auth/refresh`
 Rotates an existing refresh token and issues a new access token + refresh token.
 - **Security Features**:
@@ -137,6 +102,43 @@ Rotates an existing refresh token and issues a new access token + refresh token.
     "token_type": "bearer"
   }
   ```
+
+---
+
+## 3. Clinical Consultation & Chat Routes (`/chat`)
+
+### `POST /chat/message`
+Submits a user message to the LangGraph clinical triage engine. Supports HTTP `AbortSignal` for instantaneous client-side cancellation during voice barge-in.
+- **Request Body**:
+  ```json
+  {
+    "conversation_id": "8fa19bc2-3c48-4091-8178-5776d63bb1c3",
+    "message": "Doctor saab, 2 din se sar me dard hai aur gala kharab hai",
+    "language_hint": "hi",
+    "include_audio": true,
+    "voice_gender": "female",
+    "patient_context": {
+      "known_conditions": ["hypertension"]
+    }
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "conversation_id": "8fa19bc2-3c48-4091-8178-5776d63bb1c3",
+    "reply_text": "नमस्ते! आपके गले में दर्द और सिरदर्द कब से बढ़ रहा है? क्या आपको बुखार या खांसी भी महसूस हो रही है?",
+    "spoken_reply_text": "नमस्ते! आपके गले में दर्द और सिरदर्द कब से बढ़ रहा है? क्या आपको बुखार या खांसी भी महसूस हो रही है?",
+    "tier": "Green",
+    "clinical_flags": ["GREEN_FLAG: Routine/Community level symptoms"],
+    "remedies": [],
+    "escalation_triggered": false,
+    "audio_base64": "//uQxAAAAAAAAAAA...",
+    "audio_format": "wav"
+  }
+  ```
+
+### `GET /chat/history/{conversation_id}`
+Returns all stored conversational turns for a specific session.
 
 ---
 
